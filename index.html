@@ -2374,35 +2374,35 @@ let currentSlotId = null;
 // pace·dribble·pass·shoot·defend·stamina
 const SEED_P = [
   // 1티어
-  {num:18,pos:'DF',detail:'수미',      foot:'오른발',name:'김현서',vest:1,note:'',pace:4,dribble:4,pass:5,shoot:3,defend:5,stamina:5},
-  {num:8, pos:'MF',detail:'중미',      foot:'오른발',name:'이찬우',vest:2,note:'',pace:4,dribble:5,pass:5,shoot:4,defend:3,stamina:5},
-  {num:5, pos:'MF',detail:'중미',      foot:'오른발',name:'김효종',vest:1,note:'',pace:4,dribble:4,pass:5,shoot:4,defend:4,stamina:5},
-  {num:6, pos:'MF',detail:'중미',      foot:'오른발',name:'곽민제',vest:1,note:'',pace:5,dribble:4,pass:4,shoot:4,defend:4,stamina:5},
-  {num:7, pos:'MF',detail:'수미, 공미',foot:'오른발',name:'장민준',vest:1,note:'',pace:4,dribble:4,pass:5,shoot:4,defend:5,stamina:4},
+  {num:18,pos:'DF',detail:'수미',      foot:'오른발',name:'김현서',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:70,defend:99,stamina:99},
+  {num:8, pos:'MF',detail:'중미',      foot:'오른발',name:'이찬우',vest:2,note:'',pace:84,dribble:99,pass:99,shoot:84,defend:70,stamina:99},
+  {num:5, pos:'MF',detail:'중미',      foot:'오른발',name:'김효종',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:84,stamina:99},
+  {num:6, pos:'MF',detail:'중미',      foot:'오른발',name:'곽민제',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:84,stamina:99},
+  {num:7, pos:'MF',detail:'수미, 공미',foot:'오른발',name:'장민준',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:99,stamina:84},
   // 2티어
-  {num:19,pos:'DF',detail:'센백',      foot:'오른발',name:'이동훈',vest:1,note:'',pace:3,dribble:3,pass:4,shoot:3,defend:5,stamina:5},
-  {num:17,pos:'DF',detail:'윙백, 센백',foot:'오른발',name:'김준영',vest:3,note:'',pace:4,dribble:4,pass:4,shoot:3,defend:5,stamina:4},
-  {num:2, pos:'MF',detail:'윙',        foot:'오른발',name:'유성현',vest:1,note:'',pace:5,dribble:4,pass:4,shoot:4,defend:2,stamina:4},
+  {num:19,pos:'DF',detail:'센백',      foot:'오른발',name:'이동훈',vest:1,note:'',pace:70,dribble:70,pass:84,shoot:70,defend:99,stamina:99},
+  {num:17,pos:'DF',detail:'윙백, 센백',foot:'오른발',name:'김준영',vest:3,note:'',pace:84,dribble:84,pass:84,shoot:70,defend:99,stamina:84},
+  {num:2, pos:'MF',detail:'윙',        foot:'오른발',name:'유성현',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:55,stamina:84},
   // 3티어
-  {num:11,pos:'FW',detail:'윙',        foot:'오른발',name:'정회민',vest:1,note:'',pace:4,dribble:4,pass:3,shoot:4,defend:2,stamina:3},
-  {num:9, pos:'GK',detail:'킾',        foot:'오른발',name:'강준영',vest:1,note:'',pace:3,dribble:2,pass:3,shoot:2,defend:5,stamina:4},
-  {num:14,pos:'DF',detail:'윙백',      foot:'오른발',name:'장현승',vest:1,note:'',pace:4,dribble:3,pass:3,shoot:3,defend:4,stamina:3},
-  {num:15,pos:'DF',detail:'윙백',      foot:'오른발',name:'양재원',vest:2,note:'',pace:3,dribble:3,pass:3,shoot:3,defend:4,stamina:4},
-  {num:1, pos:'MF',detail:'윙백',      foot:'오른발',name:'이철후',vest:1,note:'',pace:3,dribble:3,pass:3,shoot:3,defend:3,stamina:4},
+  {num:11,pos:'FW',detail:'윙',        foot:'오른발',name:'정회민',vest:1,note:'',pace:84,dribble:84,pass:70,shoot:84,defend:55,stamina:70},
+  {num:9, pos:'GK',detail:'킾',        foot:'오른발',name:'강준영',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:99,stamina:84},
+  {num:14,pos:'DF',detail:'윙백',      foot:'오른발',name:'장현승',vest:1,note:'',pace:84,dribble:70,pass:70,shoot:70,defend:84,stamina:70},
+  {num:15,pos:'DF',detail:'윙백',      foot:'오른발',name:'양재원',vest:2,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:84,stamina:84},
+  {num:1, pos:'MF',detail:'윙백',      foot:'오른발',name:'이철후',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:84},
   // 4티어
-  {num:22,pos:'MF',detail:'중미',      foot:'오른발',name:'김병룡',vest:0,note:'',pace:3,dribble:3,pass:3,shoot:2,defend:2,stamina:3},
-  {num:13,pos:'DF',detail:'윙백',      foot:'오른발',name:'이민석',vest:1,note:'',pace:3,dribble:2,pass:2,shoot:2,defend:3,stamina:3},
-  {num:20,pos:'DF',detail:'윙백',      foot:'오른발',name:'가대현',vest:1,note:'',pace:3,dribble:2,pass:3,shoot:2,defend:3,stamina:3},
-  {num:3, pos:'MF',detail:'윙, 윙백',  foot:'오른발',name:'윤가원',vest:1,note:'',pace:3,dribble:3,pass:2,shoot:3,defend:2,stamina:3},
+  {num:22,pos:'MF',detail:'중미',      foot:'오른발',name:'김병룡',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:55,defend:55,stamina:70},
+  {num:13,pos:'DF',detail:'윙백',      foot:'오른발',name:'이민석',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:55,defend:70,stamina:70},
+  {num:20,pos:'DF',detail:'윙백',      foot:'오른발',name:'가대현',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:70,stamina:70},
+  {num:3, pos:'MF',detail:'윙, 윙백',  foot:'오른발',name:'윤가원',vest:1,note:'',pace:70,dribble:70,pass:55,shoot:70,defend:55,stamina:70},
   // 5티어
-  {num:21,pos:'DF',detail:'윙백',      foot:'오른발',name:'안근수',vest:1,note:'',pace:2,dribble:2,pass:2,shoot:2,defend:3,stamina:2},
-  {num:12,pos:'FW',detail:'톱',        foot:'오른발',name:'김동찬',vest:1,note:'',pace:3,dribble:2,pass:2,shoot:3,defend:1,stamina:2},
-  {num:16,pos:'DF',detail:'윙백',      foot:'오른발',name:'김동현',vest:1,note:'',pace:2,dribble:2,pass:2,shoot:1,defend:3,stamina:2},
-  {num:10,pos:'FW',detail:'톱',        foot:'오른발',name:'정진수',vest:1,note:'',pace:2,dribble:2,pass:2,shoot:3,defend:1,stamina:2},
+  {num:21,pos:'DF',detail:'윙백',      foot:'오른발',name:'안근수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:55,defend:70,stamina:55},
+  {num:12,pos:'FW',detail:'톱',        foot:'오른발',name:'김동찬',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
+  {num:16,pos:'DF',detail:'윙백',      foot:'오른발',name:'김동현',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:40,defend:70,stamina:55},
+  {num:10,pos:'FW',detail:'톱',        foot:'오른발',name:'정진수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
   // 티어 미분류 (기본값)
-  {num:4, pos:'MF',detail:'윙백',      foot:'오른발',name:'이은철',vest:1,note:'',pace:3,dribble:3,pass:3,shoot:3,defend:3,stamina:3},
-  {num:23,pos:'MF',detail:'중미',      foot:'오른발',name:'오치헌',vest:0,note:'',pace:3,dribble:3,pass:3,shoot:3,defend:3,stamina:3},
-  {num:24,pos:'MF',detail:'',          foot:'오른발',name:'장민제',vest:0,note:'',pace:3,dribble:3,pass:3,shoot:3,defend:3,stamina:3},
+  {num:4, pos:'MF',detail:'윙백',      foot:'오른발',name:'이은철',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
+  {num:23,pos:'MF',detail:'중미',      foot:'오른발',name:'오치헌',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
+  {num:24,pos:'MF',detail:'',          foot:'오른발',name:'장민제',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
 ];
 
 // 봉사 로테이션 순서 (24명, 12쌍, 무한 순환)
@@ -2442,9 +2442,9 @@ function ovr(p) {
   return v.length ? v.reduce((a,b)=>a+b)/v.length : 0;
 }
 function ovrColor(o) {
-  if (o >= 4.5) return '#16a34a';
-  if (o >= 3.5) return '#65a30d';
-  if (o >= 2.5) return '#d97706';
+  if (o >= 85) return '#16a34a';
+  if (o >= 70) return '#65a30d';
+  if (o >= 55) return '#d97706';
   return '#dc2626';
 }
 function barColor(v) {
@@ -2680,9 +2680,9 @@ function renderHomeRecentMatch(){
     </div>`;
 }
 
-function ovrClass(v){ return v>=4.5?'ovr-s':v>=3.5?'ovr-a':v>=2.5?'ovr-b':'ovr-c'; }
-function fifaOvr(v){ return Math.round(40 + (v - 1) * 14.75); }
-function fifaClass(rawOvr){ return rawOvr>=3.5?'fifa-gold':rawOvr>=2.5?'fifa-silver':'fifa-bronze'; }
+function ovrClass(v){ return v>=85?'ovr-s':v>=70?'ovr-a':v>=55?'ovr-b':'ovr-c'; }
+function fifaOvr(v){ return Math.round(v); }
+function fifaClass(v){ return v>=84?'fifa-gold':v>=69?'fifa-silver':'fifa-bronze'; }
 
 const ABBR    = { pace:'PAC', dribble:'DRI', pass:'PAS', shoot:'SHO', defend:'DEF', stamina:'PHY' };
 const ABBR_KO = { pace:'페이스', dribble:'드리블', pass:'패스', shoot:'슈팅', defend:'수비', stamina:'체력' };
@@ -2780,7 +2780,7 @@ function openPlayerDetail(num){
         const v=Number(p[a.key])||3, fv=fifaOvr(v);
         return `<div class="pd-stat-row">
           <span class="pd-stat-lbl">${ABBR_KO[a.key]}</span>
-          <div class="pd-bar-track"><div class="pd-bar-fill" style="width:${(v/5)*100}%;background:${a.color}"></div></div>
+          <div class="pd-bar-track"><div class="pd-bar-fill" style="width:${(v/99)*100}%;background:${a.color}"></div></div>
           <span class="pd-stat-val">${fv}</span>
         </div>`;
       }).join('')}
@@ -3013,8 +3013,6 @@ function saveApiUrl(){
 /* ──────────────────────────────────────────
    PLAYER MODAL
 ────────────────────────────────────────── */
-const FIFA_STEPS=[40,55,70,84,99];
-
 function buildAttrs(){
   document.getElementById('attrsGrid').innerHTML=ATTRS.map(a=>`
     <div class="attr-field">
@@ -3028,21 +3026,16 @@ function buildAttrs(){
 }
 function setStarVal(key,val){
   const el=document.getElementById(`sv-${key}`);
-  if(!el) return;
-  const raw=Math.min(5,Math.max(1,Math.round(Number(val)||3)));
-  el.textContent=FIFA_STEPS[raw-1];
+  if(el) el.textContent=Math.min(99,Math.max(1,Math.round(Number(val)||70)));
 }
 function getStarVal(key){
   const el=document.getElementById(`sv-${key}`);
-  if(!el) return 3;
-  const idx=FIFA_STEPS.indexOf(Number(el.textContent));
-  return idx>=0 ? idx+1 : 3;
+  return el?Number(el.textContent):70;
 }
 function stepAttr(key,delta){
   const el=document.getElementById(`sv-${key}`);
   if(!el) return;
-  const idx=FIFA_STEPS.indexOf(Number(el.textContent));
-  el.textContent=FIFA_STEPS[Math.min(4,Math.max(0,(idx<0?2:idx)+delta))];
+  el.textContent=Math.min(99,Math.max(1,Number(el.textContent)+delta));
 }
 
 function onPosChange(){
@@ -3360,7 +3353,7 @@ function autoLineup() {
     const maxL = groups.length || 1;
     const fl = fitLevel(player, groups);
     const fitScore = (maxL - fl) / maxL;   // 0(완전 불일치) ~ 1(완벽)
-    const ovrScore = ovrFn(player) / 5;    // 0 ~ 1
+    const ovrScore = ovrFn(player) / 99;   // 0 ~ 1
     return fitScore * 0.40 + ovrScore * 0.60;
   }
 
