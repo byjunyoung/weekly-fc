@@ -247,6 +247,34 @@ function handleGetChannelVideos() {
   }
 }
 
+// ── 능력치 1-5 → 1-99 스케일 일괄 마이그레이션 ──────────
+function migrateStats() {
+  const SCALE = {1:40, 2:55, 3:70, 4:84, 5:99};
+  const STAT_KEYS = ['pace','dribble','pass','shoot','defend','stamina'];
+  const ss = getSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_PLAYERS);
+  if (!sheet) { Logger.log('선수명단 시트 없음'); return; }
+  const data = sheet.getDataRange().getValues();
+  let count = 0;
+  for (let i = 1; i < data.length; i++) {
+    let changed = false;
+    STAT_KEYS.forEach(function(key) {
+      const colIdx = PLAYER_COLS.indexOf(key);
+      if (colIdx < 0) return;
+      const val = Number(data[i][colIdx]);
+      if (val >= 1 && val <= 5) {
+        data[i][colIdx] = SCALE[val] || 70;
+        changed = true;
+      }
+    });
+    if (changed) {
+      sheet.getRange(i + 1, 1, 1, data[i].length).setValues([data[i]]);
+      count++;
+    }
+  }
+  Logger.log('마이그레이션 완료: ' + count + '명 업데이트');
+}
+
 // ── 유틸 ─────────────────────────────────────────
 function getOrCreateSheet(ss, name, cols) {
   let sheet = ss.getSheetByName(name);

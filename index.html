@@ -1794,7 +1794,6 @@ body.admin .comment-del-btn { display: block; }
         </div>
         <div class="player-list" id="playerList"></div>
         <button class="add-fab" id="addPlayerBtn" style="display:none" onclick="openPlayerModal(null)">+ 선수 추가</button>
-        <button class="add-fab" id="autoNumBtn" style="display:none;background:#444;margin-top:8px" onclick="autoAssignNumbers()">🔢 등번호 자동배정</button>
       </div>
 
       <!-- 포메이션 -->
@@ -2374,35 +2373,35 @@ let currentSlotId = null;
 // pace·dribble·pass·shoot·defend·stamina
 const SEED_P = [
   // 1티어
-  {num:18,pos:'DF',detail:'수미',      foot:'오른발',name:'김현서',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:70,defend:99,stamina:99},
-  {num:8, pos:'MF',detail:'중미',      foot:'오른발',name:'이찬우',vest:2,note:'',pace:84,dribble:99,pass:99,shoot:84,defend:70,stamina:99},
-  {num:5, pos:'MF',detail:'중미',      foot:'오른발',name:'김효종',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:84,stamina:99},
-  {num:6, pos:'MF',detail:'중미',      foot:'오른발',name:'곽민제',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:84,stamina:99},
-  {num:7, pos:'MF',detail:'수미, 공미',foot:'오른발',name:'장민준',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:99,stamina:84},
+  {num:2, pos:'DF',detail:'수미',      foot:'오른발',name:'김현서',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:70,defend:99,stamina:99},
+  {num:7, pos:'MF',detail:'중미',      foot:'오른발',name:'이찬우',vest:2,note:'',pace:84,dribble:99,pass:99,shoot:84,defend:70,stamina:99},
+  {num:8, pos:'MF',detail:'중미',      foot:'오른발',name:'김효종',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:84,stamina:99},
+  {num:10,pos:'MF',detail:'중미',      foot:'오른발',name:'곽민제',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:84,stamina:99},
+  {num:11,pos:'MF',detail:'수미, 공미',foot:'오른발',name:'장민준',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:99,stamina:84},
   // 2티어
-  {num:19,pos:'DF',detail:'센백',      foot:'오른발',name:'이동훈',vest:1,note:'',pace:70,dribble:70,pass:84,shoot:70,defend:99,stamina:99},
-  {num:17,pos:'DF',detail:'윙백, 센백',foot:'오른발',name:'김준영',vest:3,note:'',pace:84,dribble:84,pass:84,shoot:70,defend:99,stamina:84},
-  {num:2, pos:'MF',detail:'윙',        foot:'오른발',name:'유성현',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:55,stamina:84},
+  {num:4, pos:'DF',detail:'센백',      foot:'오른발',name:'이동훈',vest:1,note:'',pace:70,dribble:70,pass:84,shoot:70,defend:99,stamina:99},
+  {num:3, pos:'DF',detail:'윙백, 센백',foot:'오른발',name:'김준영',vest:3,note:'',pace:84,dribble:84,pass:84,shoot:70,defend:99,stamina:84},
+  {num:14,pos:'MF',detail:'윙',        foot:'오른발',name:'유성현',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:55,stamina:84},
   // 3티어
-  {num:11,pos:'FW',detail:'윙',        foot:'오른발',name:'정회민',vest:1,note:'',pace:84,dribble:84,pass:70,shoot:84,defend:55,stamina:70},
-  {num:9, pos:'GK',detail:'킾',        foot:'오른발',name:'강준영',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:99,stamina:84},
-  {num:14,pos:'DF',detail:'윙백',      foot:'오른발',name:'장현승',vest:1,note:'',pace:84,dribble:70,pass:70,shoot:70,defend:84,stamina:70},
-  {num:15,pos:'DF',detail:'윙백',      foot:'오른발',name:'양재원',vest:2,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:84,stamina:84},
-  {num:1, pos:'MF',detail:'윙백',      foot:'오른발',name:'이철후',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:84},
+  {num:9, pos:'FW',detail:'윙',        foot:'오른발',name:'정회민',vest:1,note:'',pace:84,dribble:84,pass:70,shoot:84,defend:55,stamina:70},
+  {num:1, pos:'GK',detail:'킾',        foot:'오른발',name:'강준영',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:99,stamina:84},
+  {num:5, pos:'DF',detail:'윙백',      foot:'오른발',name:'장현승',vest:1,note:'',pace:84,dribble:70,pass:70,shoot:70,defend:84,stamina:70},
+  {num:6, pos:'DF',detail:'윙백',      foot:'오른발',name:'양재원',vest:2,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:84,stamina:84},
+  {num:16,pos:'MF',detail:'윙백',      foot:'오른발',name:'이철후',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:84},
   // 4티어
-  {num:22,pos:'MF',detail:'중미',      foot:'오른발',name:'김병룡',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:55,defend:55,stamina:70},
-  {num:13,pos:'DF',detail:'윙백',      foot:'오른발',name:'이민석',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:55,defend:70,stamina:70},
-  {num:20,pos:'DF',detail:'윙백',      foot:'오른발',name:'가대현',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:70,stamina:70},
-  {num:3, pos:'MF',detail:'윙, 윙백',  foot:'오른발',name:'윤가원',vest:1,note:'',pace:70,dribble:70,pass:55,shoot:70,defend:55,stamina:70},
+  {num:26,pos:'MF',detail:'중미',      foot:'오른발',name:'김병룡',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:55,defend:55,stamina:70},
+  {num:15,pos:'DF',detail:'윙백',      foot:'오른발',name:'이민석',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:55,defend:70,stamina:70},
+  {num:13,pos:'DF',detail:'윙백',      foot:'오른발',name:'가대현',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:70,stamina:70},
+  {num:30,pos:'MF',detail:'윙, 윙백',  foot:'오른발',name:'윤가원',vest:1,note:'',pace:70,dribble:70,pass:55,shoot:70,defend:55,stamina:70},
   // 5티어
-  {num:21,pos:'DF',detail:'윙백',      foot:'오른발',name:'안근수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:55,defend:70,stamina:55},
-  {num:12,pos:'FW',detail:'톱',        foot:'오른발',name:'김동찬',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
-  {num:16,pos:'DF',detail:'윙백',      foot:'오른발',name:'김동현',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:40,defend:70,stamina:55},
-  {num:10,pos:'FW',detail:'톱',        foot:'오른발',name:'정진수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
+  {num:20,pos:'DF',detail:'윙백',      foot:'오른발',name:'안근수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:55,defend:70,stamina:55},
+  {num:17,pos:'FW',detail:'톱',        foot:'오른발',name:'김동찬',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
+  {num:21,pos:'DF',detail:'윙백',      foot:'오른발',name:'김동현',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:40,defend:70,stamina:55},
+  {num:19,pos:'FW',detail:'톱',        foot:'오른발',name:'정진수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
   // 티어 미분류 (기본값)
-  {num:4, pos:'MF',detail:'윙백',      foot:'오른발',name:'이은철',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
-  {num:23,pos:'MF',detail:'중미',      foot:'오른발',name:'오치헌',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
-  {num:24,pos:'MF',detail:'',          foot:'오른발',name:'장민제',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
+  {num:18,pos:'MF',detail:'윙백',      foot:'오른발',name:'이은철',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
+  {num:24,pos:'MF',detail:'중미',      foot:'오른발',name:'오치헌',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
+  {num:25,pos:'MF',detail:'',          foot:'오른발',name:'장민제',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
 ];
 
 // 봉사 로테이션 순서 (24명, 12쌍, 무한 순환)
@@ -2726,8 +2725,6 @@ function renderSquad(){
 
   const addBtn = document.getElementById('addPlayerBtn');
   if(addBtn) addBtn.style.display = S.adminMode ? 'block' : 'none';
-  const fab = document.getElementById('autoNumBtn');
-  if(fab) fab.style.display = S.adminMode ? 'block' : 'none';
 
   container.innerHTML=list.map(p=>{
     const o=ovr(p), fo=fifaOvr(o), fc=fifaClass(o);
@@ -3098,40 +3095,6 @@ async function deletePlayer(){
   catch(e){ showToast(e.message,true); }
 }
 
-/* ──────────────────────────────────────────
-   AUTO-ASSIGN JERSEY NUMBERS
-────────────────────────────────────────── */
-async function autoAssignNumbers(){
-  if(!S.adminMode) return;
-  if(!confirm('포지션·오버롤 기준으로 등번호를 자동배정합니다. 계속할까요?')) return;
-  const NUM_POOL = {
-    GK: [1, 12, 22],
-    DF: [2, 3, 4, 5, 6, 13, 15, 20, 21, 23],
-    MF: [7, 8, 10, 11, 14, 16, 18, 24, 25, 26],
-    FW: [9, 17, 19, 27, 28, 29],
-  };
-  const ovrFn = p => (+p.pace + +p.dribble + +p.pass + +p.shoot + +p.defend + +p.stamina) / 6;
-  let next = 30;
-  const updated = [];
-  ['GK','DF','MF','FW'].forEach(pos => {
-    const group = S.players.filter(p => p.pos === pos).sort((a, b) => ovrFn(b) - ovrFn(a));
-    const pool = NUM_POOL[pos];
-    group.forEach((p, i) => {
-      updated.push({...p, num: i < pool.length ? pool[i] : next++});
-    });
-  });
-  // players with no standard position get overflow numbers
-  S.players.filter(p => !['GK','DF','MF','FW'].includes(p.pos)).forEach(p => {
-    updated.push({...p, num: next++});
-  });
-  showToast('등번호 배정 중...');
-  for(const p of updated){
-    try{ await apiWrite('writePlayer', p); } catch(e){ showToast(e.message, true); return; }
-  }
-  S.players = updated;
-  renderSquad(); renderFormation(); renderHome();
-  showToast('등번호 자동배정 완료');
-}
 
 /* ──────────────────────────────────────────
    MATCH MODAL
