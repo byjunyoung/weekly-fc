@@ -1180,30 +1180,22 @@ body {
   border-color: rgba(255,255,255,0.9);
 }
 .home-slot .hslot-pos {
-  font-size: 6px;
-  font-weight: 800;
-  color: rgba(255,255,255,0.65);
+  font-size: 9px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.7);
   letter-spacing: 0.3px;
   line-height: 1;
 }
-.home-slot .hslot-name {
-  font-size: 9px;
-  font-weight: 900;
-  color: #fff;
-  line-height: 1;
-}
+.home-slot.filled .hslot-pos { color: #fff; }
 .home-slot .hslot-label {
   font-size: 9px;
   font-weight: 800;
-  color: #fff;
-  background: rgba(0,0,0,0.3);
-  border-radius: 4px;
-  padding: 1px 4px;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
   white-space: nowrap;
-  max-width: 48px;
+  max-width: 44px;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 1px;
 }
 
 /* ══════════════════════════════════════════════
@@ -1658,50 +1650,21 @@ body.admin .comment-del-btn { display: block; }
 .slot.filled .slot-circle { background: var(--accent); border-color: #fff; }
 .slot:active .slot-circle { transform: scale(0.93); }
 .slot-pos {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 900;
   color: var(--text-dim);
   letter-spacing: 0.5px;
   line-height: 1;
 }
-.slot.filled .slot-pos { color: rgba(255,255,255,0.8); }
-.slot-name {
-  font-size: 10px;
-  font-weight: 900;
-  color: var(--text);
-  letter-spacing: -0.3px;
-  line-height: 1;
-}
-.slot.filled .slot-name { color: #fff; }
+.slot.filled .slot-pos { color: #fff; }
 .slot-label {
   font-size: 9px;
   font-weight: 800;
-  color: rgba(255,255,255,0.85);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
   white-space: nowrap;
-  letter-spacing: 0.3px;
-}
-
-.slot-names-list {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  margin-top: 2px;
-}
-.slot-player-chip {
-  font-size: 9px;
-  font-weight: 800;
-  color: #fff;
-  background: rgba(0,0,0,0.3);
-  border-radius: 4px;
-  padding: 1px 5px;
-  text-shadow: none;
-  white-space: nowrap;
-  max-width: 52px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  letter-spacing: 0.2px;
+  margin-top: 3px;
 
 /* Formation swap selection */
 .slot.f-sel .slot-circle {
@@ -1709,8 +1672,7 @@ body.admin .comment-del-btn { display: block; }
   border-color: #fff !important;
   box-shadow: 0 0 0 3px rgba(250,204,21,0.6), 0 2px 8px rgba(0,0,0,0.35) !important;
 }
-.slot.f-sel .slot-pos  { color: rgba(0,0,0,0.55) !important; }
-.slot.f-sel .slot-name { color: #111 !important; }
+.slot.f-sel .slot-pos  { color: rgba(0,0,0,0.7) !important; }
 
 .bench-chip {
   cursor: pointer;
@@ -3463,10 +3425,9 @@ function renderFormation(){
     const circleColor = p ? (POS_COLOR[p.pos]||'var(--accent)') : '';
     el.innerHTML = `
       <div class="slot-circle"${p?` style="background:${circleColor};border-color:#fff"`:''}>
-        <span class="slot-pos">${slot.label}</span>
-        <span class="slot-name">${name.slice(0,2)}</span>
+        <span class="slot-pos">${p ? (p.pos||slot.label) : slot.label}</span>
       </div>
-      <div class="slot-names-list">${name?`<span class="slot-player-chip">${name}</span>`:''}</div>`;
+      <div class="slot-label">${name||''}</div>`;
     pitch.appendChild(el);
   });
 
@@ -3574,14 +3535,12 @@ function renderHomeSquad(){
   el.innerHTML = slots.map(slot=>{
     const p = playerFor(slot.id);
     const filled = !!p;
-    const name = p ? p.name.slice(0,2) : '';
     const circleStyle = filled ? `style="background:${POS_COLOR[p.pos]||'#555'};border-color:#fff"` : '';
     return `<div class="home-slot${filled?' filled':''}" style="left:${slot.x}%;top:${slot.y}%">
       <div class="hslot-circle" ${circleStyle}>
-        <span class="hslot-pos">${slot.label}</span>
-        ${filled?`<span class="hslot-name">${name}</span>`:''}
+        <span class="hslot-pos">${p ? (p.pos||slot.label) : slot.label}</span>
       </div>
-      ${filled?`<span class="hslot-label">${p.name}</span>`:''}
+      <span class="hslot-label">${filled ? p.name : ''}</span>
     </div>`;
   }).join('');
 }
