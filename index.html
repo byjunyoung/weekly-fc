@@ -2454,11 +2454,15 @@ function barColor(v) {
 function splitNames(s){ return s ? String(s).split(',').map(x=>x.trim()).filter(Boolean) : []; }
 function fmtDate(d){ return d ? String(d).replace(/-/g,'.') : ''; }
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const STAT_SCALE_MAP={1:40,2:55,3:70,4:84,5:99};
+const STAT_KEYS_OVR=['pace','dribble','pass','shoot','defend','stamina'];
 function normalize(arr){
   return arr.map(o=>{
     const r={...o};
     ['num','vest','pace','dribble','pass','shoot','defend','stamina','year','month','score_a','score_b']
       .forEach(k=>{ if(r[k]!==undefined&&r[k]!=='') r[k]=Number(r[k])||0; });
+    // 구버전 1-5 스케일 자동 변환
+    STAT_KEYS_OVR.forEach(k=>{ if(r[k]>=1&&r[k]<=5) r[k]=STAT_SCALE_MAP[r[k]]||70; });
     return r;
   });
 }
@@ -2467,7 +2471,7 @@ function normalize(arr){
 function applySeeds(players){
   const STAT_KEYS=['pace','dribble','pass','shoot','defend','stamina'];
   return players.map(p=>{
-    const isAllDefault=STAT_KEYS.every(k=>p[k]===3||p[k]==='3'||p[k]===undefined);
+    const isAllDefault=STAT_KEYS.every(k=>p[k]===70||p[k]==='70'||p[k]===0||p[k]===undefined);
     if(!isAllDefault) return p;
     const seed=SEED_P.find(s=>s.num==p.num);
     if(!seed) return p;
