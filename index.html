@@ -2264,10 +2264,10 @@ const ATTRS = [
 ];
 
 const DETAIL_POS = {
-  GK: ['킾','골키퍼'],
-  DF: ['센백','윙백','수미','풀백'],
-  MF: ['중미','수미','공미','박투박','윙','윙백'],
-  FW: ['윙','톱','센터포워드','인사이드 포워드','포처'],
+  GK: ['GK'],
+  DF: ['CB','WB','DM','FB'],
+  MF: ['CM','DM','AM','B2B','WG','WB'],
+  FW: ['WG','ST','CF','IF','PO'],
 };
 
 /* ──────────────────────────────────────────
@@ -2371,35 +2371,35 @@ let currentSlotId = null;
 // pace·dribble·pass·shoot·defend·stamina
 const SEED_P = [
   // 1티어
-  {num:2, pos:'DF',detail:'수미',      foot:'오른발',name:'김현서',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:70,defend:99,stamina:99},
-  {num:7, pos:'MF',detail:'중미',      foot:'오른발',name:'이찬우',vest:2,note:'',pace:84,dribble:99,pass:99,shoot:84,defend:70,stamina:99},
-  {num:8, pos:'MF',detail:'중미',      foot:'오른발',name:'김효종',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:84,stamina:99},
-  {num:10,pos:'MF',detail:'중미',      foot:'오른발',name:'곽민제',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:84,stamina:99},
-  {num:11,pos:'MF',detail:'수미, 공미',foot:'오른발',name:'장민준',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:99,stamina:84},
+  {num:2, pos:'DF',detail:'DM',      foot:'오른발',name:'김현서',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:70,defend:99,stamina:99},
+  {num:7, pos:'MF',detail:'CM',      foot:'오른발',name:'이찬우',vest:2,note:'',pace:84,dribble:99,pass:99,shoot:84,defend:70,stamina:99},
+  {num:8, pos:'MF',detail:'CM',      foot:'오른발',name:'김효종',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:84,stamina:99},
+  {num:10,pos:'MF',detail:'CM',      foot:'오른발',name:'곽민제',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:84,stamina:99},
+  {num:11,pos:'MF',detail:'DM, AM',foot:'오른발',name:'장민준',vest:1,note:'',pace:84,dribble:84,pass:99,shoot:84,defend:99,stamina:84},
   // 2티어
-  {num:4, pos:'DF',detail:'센백',      foot:'오른발',name:'이동훈',vest:1,note:'',pace:70,dribble:70,pass:84,shoot:70,defend:99,stamina:99},
-  {num:3, pos:'DF',detail:'윙백, 센백',foot:'오른발',name:'김준영',vest:3,note:'',pace:84,dribble:84,pass:84,shoot:70,defend:99,stamina:84},
-  {num:14,pos:'MF',detail:'윙',        foot:'오른발',name:'유성현',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:55,stamina:84},
-  {num:27,pos:'MF',detail:'공미',      foot:'오른발',name:'방오준',vest:1,note:'',pace:84,dribble:84,pass:84,shoot:84,defend:70,stamina:84},
+  {num:4, pos:'DF',detail:'CB',      foot:'오른발',name:'이동훈',vest:1,note:'',pace:70,dribble:70,pass:84,shoot:70,defend:99,stamina:99},
+  {num:3, pos:'DF',detail:'WB, CB',foot:'오른발',name:'김준영',vest:3,note:'',pace:84,dribble:84,pass:84,shoot:70,defend:99,stamina:84},
+  {num:14,pos:'MF',detail:'WG',        foot:'오른발',name:'유성현',vest:1,note:'',pace:99,dribble:84,pass:84,shoot:84,defend:55,stamina:84},
+  {num:27,pos:'MF',detail:'AM',      foot:'오른발',name:'방오준',vest:1,note:'',pace:84,dribble:84,pass:84,shoot:84,defend:70,stamina:84},
   // 3티어
-  {num:9, pos:'FW',detail:'윙',        foot:'오른발',name:'정회민',vest:1,note:'',pace:84,dribble:84,pass:70,shoot:84,defend:55,stamina:70},
-  {num:1, pos:'GK',detail:'킾',        foot:'오른발',name:'강준영',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:99,stamina:84},
-  {num:5, pos:'DF',detail:'윙백',      foot:'오른발',name:'장현승',vest:1,note:'',pace:84,dribble:70,pass:70,shoot:70,defend:84,stamina:70},
-  {num:6, pos:'DF',detail:'윙백',      foot:'오른발',name:'양재원',vest:2,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:84,stamina:84},
-  {num:16,pos:'MF',detail:'윙백',      foot:'오른발',name:'이철후',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:84},
+  {num:9, pos:'FW',detail:'WG',        foot:'오른발',name:'정회민',vest:1,note:'',pace:84,dribble:84,pass:70,shoot:84,defend:55,stamina:70},
+  {num:1, pos:'GK',detail:'GK',        foot:'오른발',name:'강준영',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:99,stamina:84},
+  {num:5, pos:'DF',detail:'WB',      foot:'오른발',name:'장현승',vest:1,note:'',pace:84,dribble:70,pass:70,shoot:70,defend:84,stamina:70},
+  {num:6, pos:'DF',detail:'WB',      foot:'오른발',name:'양재원',vest:2,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:84,stamina:84},
+  {num:16,pos:'MF',detail:'WB',      foot:'오른발',name:'이철후',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:84},
   // 4티어
-  {num:26,pos:'MF',detail:'중미',      foot:'오른발',name:'김병룡',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:55,defend:55,stamina:70},
-  {num:15,pos:'DF',detail:'윙백',      foot:'오른발',name:'이민석',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:55,defend:70,stamina:70},
-  {num:13,pos:'DF',detail:'윙백',      foot:'오른발',name:'가대현',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:70,stamina:70},
-  {num:30,pos:'MF',detail:'윙, 윙백',  foot:'오른발',name:'윤가원',vest:1,note:'',pace:70,dribble:70,pass:55,shoot:70,defend:55,stamina:70},
+  {num:26,pos:'MF',detail:'CM',      foot:'오른발',name:'김병룡',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:55,defend:55,stamina:70},
+  {num:15,pos:'DF',detail:'WB',      foot:'오른발',name:'이민석',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:55,defend:70,stamina:70},
+  {num:13,pos:'DF',detail:'WB',      foot:'오른발',name:'가대현',vest:1,note:'',pace:70,dribble:55,pass:70,shoot:55,defend:70,stamina:70},
+  {num:30,pos:'MF',detail:'WG, WB',  foot:'오른발',name:'윤가원',vest:1,note:'',pace:70,dribble:70,pass:55,shoot:70,defend:55,stamina:70},
   // 5티어
-  {num:20,pos:'DF',detail:'윙백',      foot:'오른발',name:'안근수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:55,defend:70,stamina:55},
-  {num:17,pos:'FW',detail:'톱',        foot:'오른발',name:'김동찬',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
-  {num:21,pos:'DF',detail:'윙백',      foot:'오른발',name:'김동현',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:40,defend:70,stamina:55},
-  {num:19,pos:'FW',detail:'톱',        foot:'오른발',name:'정진수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
+  {num:20,pos:'DF',detail:'WB',      foot:'오른발',name:'안근수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:55,defend:70,stamina:55},
+  {num:17,pos:'FW',detail:'ST',        foot:'오른발',name:'김동찬',vest:1,note:'',pace:70,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
+  {num:21,pos:'DF',detail:'WB',      foot:'오른발',name:'김동현',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:40,defend:70,stamina:55},
+  {num:19,pos:'FW',detail:'ST',        foot:'오른발',name:'정진수',vest:1,note:'',pace:55,dribble:55,pass:55,shoot:70,defend:40,stamina:55},
   // 티어 미분류 (기본값)
-  {num:18,pos:'MF',detail:'윙백',      foot:'오른발',name:'이은철',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
-  {num:24,pos:'MF',detail:'중미',      foot:'오른발',name:'오치헌',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
+  {num:18,pos:'MF',detail:'WB',      foot:'오른발',name:'이은철',vest:1,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
+  {num:24,pos:'MF',detail:'CM',      foot:'오른발',name:'오치헌',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
   {num:25,pos:'MF',detail:'',          foot:'오른발',name:'장민제',vest:0,note:'',pace:70,dribble:70,pass:70,shoot:70,defend:70,stamina:70},
 ];
 
@@ -2518,6 +2518,7 @@ async function loadAll(){
         const raw = typeof saved.assignments==='string'?JSON.parse(saved.assignments):saved.assignments;
         lineupAssign = migrateLineupAssign(raw);
         if(saved.formation) { const fs=document.getElementById('formSelect'); if(fs) fs.value=saved.formation; }
+        applyLineupFAssign();   // 저장된 라인업을 fAssign으로 복원 (홈/스쿼드 공통 소스)
       }catch{}
     }
     saveCache();
@@ -3279,25 +3280,25 @@ function autoLineup() {
 
   const slotMap = {
     GK:  [{g:'GK'}],
-    CB:  [{g:'DF',det:'센백'},{g:'DF'}],
-    LB:  [{g:'DF',det:'윙백'},{g:'DF'},{g:'MF',det:'윙백'}],
-    RB:  [{g:'DF',det:'윙백'},{g:'DF'},{g:'MF',det:'윙백'}],
-    LWB: [{g:'DF',det:'윙백'},{g:'DF'},{g:'MF',det:'윙백'}],
-    RWB: [{g:'DF',det:'윙백'},{g:'DF'},{g:'MF',det:'윙백'}],
-    DM:  [{g:'MF',det:'수미'},{g:'MF'},{g:'DF',det:'수미'}],
-    CAM: [{g:'MF',det:'공미'},{g:'MF'},{g:'FW'}],
-    CM:  [{g:'MF',det:'중미'},{g:'MF'}],
-    LM:  [{g:'MF',det:'윙'},{g:'MF'},{g:'FW',det:'윙'},{g:'FW'}],
-    RM:  [{g:'MF',det:'윙'},{g:'MF'},{g:'FW',det:'윙'},{g:'FW'}],
-    LW:  [{g:'MF',det:'윙'},{g:'FW',det:'윙'},{g:'FW'},{g:'MF'}],
-    RW:  [{g:'MF',det:'윙'},{g:'FW',det:'윙'},{g:'FW'},{g:'MF'}],
-    LF:  [{g:'FW',det:'윙'},{g:'MF',det:'윙'},{g:'FW'},{g:'MF'}],
-    RF:  [{g:'FW',det:'윙'},{g:'MF',det:'윙'},{g:'FW'},{g:'MF'}],
-    ST:  [{g:'FW',det:'톱'},{g:'FW'},{g:'MF',det:'공미'},{g:'MF'}],
-    CF:  [{g:'FW'},{g:'MF',det:'공미'},{g:'MF'}],
-    DF:  [{g:'DF',det:'윙백'},{g:'DF'},{g:'MF',det:'윙백'},{g:'MF'}],
-    FW:  [{g:'FW',det:'윙'},{g:'FW'},{g:'MF',det:'윙'},{g:'MF'}],
-    MF:  [{g:'MF',det:'중미'},{g:'MF'},{g:'FW'}],
+    CB:  [{g:'DF',det:'CB'},{g:'DF'}],
+    LB:  [{g:'DF',det:'WB'},{g:'DF'},{g:'MF',det:'WB'}],
+    RB:  [{g:'DF',det:'WB'},{g:'DF'},{g:'MF',det:'WB'}],
+    LWB: [{g:'DF',det:'WB'},{g:'DF'},{g:'MF',det:'WB'}],
+    RWB: [{g:'DF',det:'WB'},{g:'DF'},{g:'MF',det:'WB'}],
+    DM:  [{g:'MF',det:'DM'},{g:'MF'},{g:'DF',det:'DM'}],
+    CAM: [{g:'MF',det:'AM'},{g:'MF'},{g:'FW'}],
+    CM:  [{g:'MF',det:'CM'},{g:'MF'}],
+    LM:  [{g:'MF',det:'WG'},{g:'MF'},{g:'FW',det:'WG'},{g:'FW'}],
+    RM:  [{g:'MF',det:'WG'},{g:'MF'},{g:'FW',det:'WG'},{g:'FW'}],
+    LW:  [{g:'MF',det:'WG'},{g:'FW',det:'WG'},{g:'FW'},{g:'MF'}],
+    RW:  [{g:'MF',det:'WG'},{g:'FW',det:'WG'},{g:'FW'},{g:'MF'}],
+    LF:  [{g:'FW',det:'WG'},{g:'MF',det:'WG'},{g:'FW'},{g:'MF'}],
+    RF:  [{g:'FW',det:'WG'},{g:'MF',det:'WG'},{g:'FW'},{g:'MF'}],
+    ST:  [{g:'FW',det:'ST'},{g:'FW'},{g:'MF',det:'AM'},{g:'MF'}],
+    CF:  [{g:'FW'},{g:'MF',det:'AM'},{g:'MF'}],
+    DF:  [{g:'DF',det:'WB'},{g:'DF'},{g:'MF',det:'WB'},{g:'MF'}],
+    FW:  [{g:'FW',det:'WG'},{g:'FW'},{g:'MF',det:'WG'},{g:'MF'}],
+    MF:  [{g:'MF',det:'CM'},{g:'MF'},{g:'FW'}],
   };
 
   // 슬롯-선수 적합도 레벨 (낮을수록 좋음, groups.length = 매칭 없음)
@@ -3367,6 +3368,7 @@ function resetFormation(){
   fAssign = null;
   fSel    = null;
   renderFormation();
+  saveLineup();
 }
 
 function clickFormSlot(slotId){
@@ -3381,14 +3383,14 @@ function clickFormSlot(slotId){
       fAssign[fSel.id] = fAssign[slotId];
       fAssign[slotId]  = tmp;
     }
-    fSel = null; renderFormation(); return;
+    fSel = null; renderFormation(); saveLineup(); return;
   }
   if(fSel.type==='bench'){
     const benchNum = fSel.id;
     // 벤치 선수가 이미 다른 슬롯에 있으면 제거(안전장치)
     Object.keys(fAssign).forEach(sid=>{ if(fAssign[sid]==benchNum) fAssign[sid]=null; });
     fAssign[slotId] = benchNum;
-    fSel = null; renderFormation(); return;
+    fSel = null; renderFormation(); saveLineup(); return;
   }
 }
 
@@ -3405,7 +3407,7 @@ function clickFormBench(playerNum){
     const slotId = fSel.id;
     Object.keys(fAssign).forEach(sid=>{ if(fAssign[sid]==playerNum) fAssign[sid]=null; });
     fAssign[slotId] = playerNum;
-    fSel = null; renderFormation(); return;
+    fSel = null; renderFormation(); saveLineup(); return;
   }
 }
 
@@ -3489,18 +3491,37 @@ function saveSlotPicker(){
   saveLineup();
 }
 
-async function saveLineup(){
-  const formation = document.getElementById('formSelect').value;
-  const payload = { id:'default', name:'기본 라인업', formation, assignments: lineupAssign };
+let _lineupSaveTimer = null;
+// 현재 fAssign(번호 기반)을 단일 소스로 저장 → 홈/스쿼드 + 새로고침·기기 간 연동
+function saveLineup(){
+  const formation = document.getElementById('formSelect')?.value || '4-2-3-1';
+  // fAssign(번호) → assignments(이름) 변환 (백엔드 스키마 유지)
+  const assignments = {};
+  if(fAssign) Object.keys(fAssign).forEach(sid=>{
+    const num = fAssign[sid];
+    const p = num ? S.players.find(pl=>pl.num==num) : null;
+    assignments[sid] = p ? [p.name] : [];
+  });
+  const payload = { id:'default', name:'기본 라인업', formation, assignments };
   localStorage.setItem('wfc_lineup', JSON.stringify(payload));
-  if(API_URL){
-    try{
-      const pin = sessionStorage.getItem('wfc_pin')||'';
-      await apiFetch('writeLineup',{pin,payload});
-    } catch{}
+  renderHomeSquad();                       // 홈 즉시 연동
+  if(API_URL){                              // 시트 저장은 디바운스(연속 편집 시 마지막 1회)
+    clearTimeout(_lineupSaveTimer);
+    _lineupSaveTimer = setTimeout(async()=>{
+      try{ const pin=sessionStorage.getItem('wfc_pin')||''; await apiFetch('writeLineup',{pin,payload}); }catch{}
+    }, 1200);
   }
-  renderHomeSquad();
-  showToast('라인업 저장됨');
+}
+
+// 로드된 lineupAssign(이름) → fAssign(번호) 복원. 비어있으면 자동배치(null)
+function applyLineupFAssign(){
+  const fa = {};
+  Object.keys(lineupAssign||{}).forEach(sid=>{
+    const nm = (lineupAssign[sid]||[])[0];
+    const p = nm ? S.players.find(pl=>pl.name===nm) : null;
+    fa[sid] = p ? p.num : null;
+  });
+  fAssign = Object.values(fa).some(v=>v) ? fa : null;
 }
 
 function autoPickSquad(slots){
