@@ -462,6 +462,9 @@ body {
   margin-bottom: 14px;
 }
 .pd-icon { font-size: 48px; line-height: 1; flex-shrink: 0; }
+.pos-circle { border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; line-height: 1; flex-shrink: 0; }
+.pd-circle  { width: 48px; height: 48px; font-size: 15px; }
+.hpc-circle { width: 30px; height: 30px; font-size: 11px; }
 .pd-meta { flex: 1; min-width: 0; }
 .pd-card-name { font-size: 20px; font-weight: 900; color: var(--text); letter-spacing: -0.5px; }
 .pd-card-sub  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
@@ -2644,9 +2647,8 @@ function renderHomeTopPlayers(){
         const fo = fifaOvr(ovr(p));
         const fc = fifaClass(ovr(p));
         const tc = fc==='fifa-gold'?'pr-gold':fc==='fifa-silver'?'pr-silver':'pr-bronze';
-        const icon = resolveIcon(p);
         return `<div class="home-player-chip" onclick="openPlayerDetail(${p.num})">
-          <span class="hpc-icon">${icon}</span>
+          ${posCircle(p,'hpc-circle')}
           <span class="hpc-name">${p.name}</span>
           <span class="hpc-ovr ${tc}">${fo}</span>
         </div>`;
@@ -2693,15 +2695,12 @@ const ABBR    = { pace:'PAC', dribble:'DRI', pass:'PAS', shoot:'SHO', defend:'DE
 const ABBR_KO = { pace:'페이스', dribble:'드리블', pass:'패스', shoot:'슈팅', defend:'수비', stamina:'체력' };
 const STAT_L  = ['pace','dribble','pass'];
 const STAT_R  = ['shoot','defend','stamina'];
-const POS_EMOJI  = { GK:'🧤', DF:'🛡️', MF:'⚽', FW:'🔥' };
 const POS_COLOR  = { GK:'#f59e0b', DF:'#3b82f6', MF:'#10b981', FW:'#ef4444' };
-const ICON_SET  = ['⚽','🔥','⚡','🧤','🛡️','🎯','💪','🏃','👑','🌟','⭐','🦅','🦁','🐆','🦊','🐺','💥','🎪','🏆','💎','🔵','🟡','🔴','🟢'];
 
-function getPlayerIcon(num){ return localStorage.getItem('wfc_icon_'+num) || null; }
-function setPlayerIcon(num,icon){ localStorage.setItem('wfc_icon_'+num,icon); }
-function resolveIcon(p){ return getPlayerIcon(p.num) || POS_EMOJI[p.pos] || '⚽'; }
-
-// 아이콘 선택 UI는 선수 추가 폼에서 제거됨 (resolveIcon은 기존 저장값/포지션 기본값으로 동작)
+// 선수 아이콘 = 포지션 동그라미 (포메이션/스쿼드 동그라미와 동일하게 전 화면 일관 사용)
+function posCircle(p, extraCls){
+  return `<div class="pos-circle${extraCls?' '+extraCls:''}" style="background:${POS_COLOR[p.pos]||'#555'}">${p.pos||''}</div>`;
+}
 
 function renderSquad(){
   let list = S.filter==='ALL' ? [...S.players] : S.players.filter(p=>p.pos===S.filter);
@@ -2748,7 +2747,6 @@ function openPlayerDetail(num){
   if(!p) return;
   const o=ovr(p), fo=fifaOvr(o), fc=fifaClass(o);
   const tc=fc==='fifa-gold'?'pr-gold':fc==='fifa-silver'?'pr-silver':'pr-bronze';
-  const icon=resolveIcon(p);
 
   const navList = detailNavList();
   const idx = navList.findIndex(pl=>String(pl.num)===String(num));
@@ -2757,7 +2755,7 @@ function openPlayerDetail(num){
 
   document.getElementById('pd-body').innerHTML=`
     <div class="pd-header">
-      <span class="pd-icon">${icon}</span>
+      ${posCircle(p,'pd-circle')}
       <div class="pd-meta">
         <div class="pd-card-name">${p.name}</div>
         <div class="pd-card-sub">${p.pos}${p.detail?' · '+p.detail:''}</div>
