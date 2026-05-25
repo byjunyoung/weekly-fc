@@ -2025,7 +2025,7 @@ body.admin .comment-del-btn { display: block; }
       <div class="fg-row">
         <div class="fg">
           <div class="fg-label">등번호</div>
-          <input class="fg-input" id="f-num" type="number" min="1">
+          <input class="fg-input" id="f-num" type="number" min="1" placeholder="예: 7">
         </div>
         <div class="fg">
           <div class="fg-label">포지션</div>
@@ -2037,7 +2037,7 @@ body.admin .comment-del-btn { display: block; }
       <div class="fg-row">
         <div class="fg">
           <div class="fg-label">이름</div>
-          <input class="fg-input" id="f-name" type="text">
+          <input class="fg-input" id="f-name" type="text" placeholder="예: 홍길동">
         </div>
         <div class="fg">
           <div class="fg-label">상세 포지션</div>
@@ -2051,23 +2051,6 @@ body.admin .comment-del-btn { display: block; }
             <option>오른발</option><option>왼발</option><option>양발</option>
           </select>
         </div>
-        <div class="fg">
-          <div class="fg-label">조끼</div>
-          <input class="fg-input" id="f-vest" type="number" min="0">
-        </div>
-      </div>
-      <div class="fg">
-        <div class="fg-label">연락처</div>
-        <input class="fg-input" id="f-phone" type="tel" placeholder="010-0000-0000">
-      </div>
-      <div class="fg">
-        <div class="fg-label">메모 (부상 등)</div>
-        <input class="fg-input" id="f-note" type="text" placeholder="부상, 가끔 나옴...">
-      </div>
-      <div class="fg">
-        <div class="fg-label">대표 아이콘</div>
-        <div class="icon-picker" id="iconPicker"></div>
-        <input type="hidden" id="f-icon">
       </div>
       <div class="fg-label" style="margin-bottom:10px">능력치</div>
       <div class="attrs-2col" id="attrsGrid"></div>
@@ -2717,17 +2700,7 @@ function getPlayerIcon(num){ return localStorage.getItem('wfc_icon_'+num) || nul
 function setPlayerIcon(num,icon){ localStorage.setItem('wfc_icon_'+num,icon); }
 function resolveIcon(p){ return getPlayerIcon(p.num) || POS_EMOJI[p.pos] || '⚽'; }
 
-function buildIconPicker(currentIcon, posDefault){
-  const selected = currentIcon || posDefault || '⚽';
-  document.getElementById('f-icon').value = selected;
-  document.getElementById('iconPicker').innerHTML = ICON_SET.map(e =>
-    `<button type="button" class="icon-btn${e===selected?' selected':''}" onclick="selectIcon('${e}')">${e}</button>`
-  ).join('');
-}
-function selectIcon(emoji){
-  document.getElementById('f-icon').value = emoji;
-  document.querySelectorAll('.icon-btn').forEach(b => b.classList.toggle('selected', b.textContent===emoji));
-}
+// 아이콘 선택 UI는 선수 추가 폼에서 제거됨 (resolveIcon은 기존 저장값/포지션 기본값으로 동작)
 
 function renderSquad(){
   let list = S.filter==='ALL' ? [...S.players] : S.players.filter(p=>p.pos===S.filter);
@@ -3088,29 +3061,25 @@ function openPlayerModal(num){
   if(p.detail && detailOpts.includes(p.detail)) document.getElementById('f-detail').value=p.detail;
   document.getElementById('f-name').value =p.name||'';
   document.getElementById('f-foot').value =p.foot||'오른발';
-  document.getElementById('f-vest').value =p.vest||'';
-  document.getElementById('f-phone').value=p.phone||'';
-  document.getElementById('f-note').value =p.note||'';
-  buildIconPicker(getPlayerIcon(p.num||null), POS_EMOJI[p.pos||'MF']);
   ATTRS.forEach(a=>setStarVal(a.key,p[a.key]||3));
   openModal('playerOverlay');
 }
 
 async function savePlayer(){
+  const base = editPlayer || {};
   const payload={
     num:Number(document.getElementById('f-num').value),
     pos:document.getElementById('f-pos').value,
     name:document.getElementById('f-name').value.trim(),
     detail:document.getElementById('f-detail').value.trim(),
     foot:document.getElementById('f-foot').value,
-    vest:Number(document.getElementById('f-vest').value)||0,
-    phone:document.getElementById('f-phone').value.trim(),
-    note:document.getElementById('f-note').value.trim(),
+    // 폼에서 제거된 항목 — 편집 시 기존 값 보존, 신규는 기본값
+    vest:base.vest||0,
+    phone:base.phone||'',
+    note:base.note||'',
   };
   ATTRS.forEach(a=>{ payload[a.key]=getStarVal(a.key); });
   if(!payload.num||!payload.name){ showToast('번호와 이름 필수',true); return; }
-  const iconVal=document.getElementById('f-icon').value;
-  if(iconVal) setPlayerIcon(payload.num, iconVal);
   try{ await apiWrite('writePlayer',payload); closeModal('playerOverlay'); renderSquad(); renderHome(); showToast('저장됨'); }
   catch(e){ showToast(e.message,true); }
 }
