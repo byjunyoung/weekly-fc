@@ -22,6 +22,8 @@
   --yellow-pale: #fef3c7;
   --purple:      #7c3aed;
   --purple-pale: #ede9fe;
+  --green:       #059669;
+  --green-pale:  #d1fae5;
 
   --bg:          #f5f5f5;
   --card:        #ffffff;
@@ -729,6 +731,26 @@ body {
 .fine-block .fb-val { font-size: 22px; font-weight: 900; }
 .late-block .fb-val   { color: var(--yellow); }
 .noshow-block .fb-val { color: var(--red); }
+
+/* ── Rules 개편: 요약·목차·온보딩·에티켓 ── */
+.rule-card-icon.on { background: var(--blue-pale); color: var(--blue); }
+.summary-card { background: var(--accent); color:#fff; border-radius: var(--radius); padding:16px; box-shadow: var(--shadow-sm); }
+.summary-card .sc-title { font-size:12px; font-weight:800; opacity:.7; margin-bottom:12px; }
+.summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; }
+.summary-item .si-k { font-size:10px; font-weight:700; opacity:.6; margin-bottom:3px; }
+.summary-item .si-v { font-size:14px; font-weight:800; line-height:1.35; }
+.rules-toc { display:flex; flex-wrap:wrap; gap:6px; padding:2px 0; }
+.rules-toc a { font-size:12px; font-weight:700; color:var(--text-muted); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:6px 11px; text-decoration:none; }
+.rules-toc a:active { color:var(--text); border-color:var(--text); }
+.rule-group-hd { margin:16px 4px 4px; font-size:15px; font-weight:800; color:var(--text); }
+.onboard-steps { display:flex; flex-direction:column; gap:10px; margin-bottom:4px; }
+.onboard-step { display:flex; gap:10px; align-items:flex-start; }
+.os-num { width:22px; height:22px; border-radius:50%; background:var(--accent); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.os-txt { font-size:13px; color:var(--text-muted); line-height:1.5; }
+.os-txt strong { color:var(--text); }
+.intro-form { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; font-size:12.5px; line-height:1.9; color:var(--text-muted); }
+.intro-form .if-cap { font-size:11px; font-weight:700; color:var(--text-dim); margin-bottom:4px; }
+.rule-badge { display:inline-block; font-size:10px; font-weight:800; color:var(--green); background:var(--green-pale); border-radius:999px; padding:2px 8px; margin-left:6px; vertical-align:middle; }
 
 /* ══════════════════════════════════════════════
    MODALS — Bottom Sheet
@@ -1876,19 +1898,83 @@ body.admin .comment-del-btn { display: block; }
     <!-- ── RULES ─────────────────────────────── -->
     <div id="sec-rules" class="section" style="padding-bottom:8px">
       <div class="rules-content">
+
+        <div class="summary-card">
+          <div class="sc-title">한눈에 요약</div>
+          <div class="summary-grid">
+            <div class="summary-item"><div class="si-k">정규 매치</div><div class="si-v">토 10–12시 · 10인+</div></div>
+            <div class="summary-item"><div class="si-k">벌금</div><div class="si-v">지각 3만 · 노쇼 5만</div></div>
+            <div class="summary-item"><div class="si-k">봉사</div><div class="si-v">매주 2명 로테이션</div></div>
+            <div class="summary-item"><div class="si-k">모임 통장</div><div class="si-v">카뱅 7942-11-99103</div></div>
+          </div>
+        </div>
+
+        <div class="rules-toc">
+          <a href="#g1">처음 오셨나요?</a><a href="#g2">매치 참여</a><a href="#g3">비용·벌금</a><a href="#g4">봉사·운영</a><a href="#g5">모임 통장</a><a href="#g6">채팅 에티켓</a>
+        </div>
+
+        <div class="rule-group-hd" id="g1">1. 처음 오셨나요?</div>
+        <div class="rule-card">
+          <div class="rule-card-hd">
+            <div class="rule-card-icon on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 21v-4M5 12H3M21 12h-2"/><circle cx="12" cy="12" r="4.5"/></svg></div>
+            <div class="rule-card-title">첫 매치까지 3단계</div>
+          </div>
+          <div class="rule-card-body">
+            <div class="onboard-steps">
+              <div class="onboard-step"><div class="os-num">1</div><div class="os-txt"><strong>자기소개</strong> 남기고 <strong>모임 통장 초대</strong> 받기</div></div>
+              <div class="onboard-step"><div class="os-num">2</div><div class="os-txt">매주 <strong>카톡 투표</strong>로 참석 여부 표시</div></div>
+              <div class="onboard-step"><div class="os-num">3</div><div class="os-txt">매치 참석 후 <strong>당일 정산</strong> (대관비·음료비)</div></div>
+            </div>
+            <div class="intro-form">
+              <div class="if-cap">자기소개 양식 (채팅방에 붙여넣기)</div>
+              이름 :<br>연락처 :<br>선호 포지션 (축구 기준) :<br>주발 :<br>나이 (OO년생) :
+            </div>
+            <div class="rule-li" style="margin-top:4px">용병·정회원 <strong>상시 모집</strong> — 용병으로 편하게 참여하다 원하면 정회원으로 합류<span class="rule-badge">환영</span></div>
+          </div>
+        </div>
+
+        <div class="rule-group-hd" id="g2">2. 매치 참여</div>
         <div class="rule-card">
           <div class="rule-card-hd">
             <div class="rule-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l4.3 3.1-1.6 5h-5.4l-1.6-5z"/></svg></div>
             <div class="rule-card-title">정규 매치</div>
           </div>
           <div class="rule-card-body">
-            <div class="rule-li">매 주 투표, <strong>10인 이상</strong> 모일 시 진행</div>
+            <div class="rule-li">매주 <strong>카톡 투표</strong>, <strong>10인 이상</strong> 모일 시 진행</div>
             <div class="rule-li">시간: <strong>토요일 오전 10–12시</strong></div>
             <div class="rule-li">장소: 모란공원 / 위례공원 / 광주다이나믹</div>
             <div class="rule-li">대관 실패 시 일정·장소 유연하게 조정</div>
-            <div class="rule-li">대관비·음료비는 참석자(용병 포함) 정산</div>
+            <div class="rule-li">비가 오면 <strong>논의 후 진행 여부 결정</strong></div>
           </div>
         </div>
+
+        <div class="rule-group-hd" id="g3">3. 비용 · 벌금</div>
+        <div class="rule-card">
+          <div class="rule-card-hd">
+            <div class="rule-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 21 20H3z"/><path d="M12 10v4.2M12 17.3h.01"/></svg></div>
+            <div class="rule-card-title">지각 / 노쇼 규정</div>
+          </div>
+          <div class="rule-card-body">
+            <div class="fine-cards-row">
+              <div class="fine-block late-block"><div class="fb-label">지각 (시작 후 도착)</div><div class="fb-val">₩30,000</div></div>
+              <div class="fine-block noshow-block"><div class="fb-label">노쇼 (종료까지 미참)</div><div class="fb-val">₩50,000</div></div>
+            </div>
+            <div class="rule-li" style="margin-top:4px">매치 시작 <strong>전</strong> 미리 공지 시 면제</div>
+          </div>
+        </div>
+        <div class="rule-card">
+          <div class="rule-card-hd">
+            <div class="rule-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8 9.5l1.7 5 2.3-5 2.3 5 1.7-5"/><path d="M8.5 12.4h7"/></svg></div>
+            <div class="rule-card-title">정산 · 벌금 사용처</div>
+          </div>
+          <div class="rule-card-body">
+            <div class="rule-li">대관비·음료비는 <strong>참석자(용병 포함)</strong> 정산</div>
+            <div class="rule-li">벌금은 당일 구장비·음료비 정산 우선</div>
+            <div class="rule-li">잔액 → 카카오 모임 통장 공금 → 대관비 선납·공용 물품</div>
+          </div>
+        </div>
+
+        <div class="rule-group-hd" id="g4">4. 봉사 · 운영</div>
         <div class="rule-card">
           <div class="rule-card-hd">
             <div class="rule-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="4.5" width="13" height="16" rx="2"/><path d="M9 4.5V3.5h6v1"/><path d="M9 9.5h6M9 13h6M9 16.5h4"/></svg></div>
@@ -1898,38 +1984,13 @@ body.admin .comment-del-btn { display: block; }
             <div class="rule-li">대관비·음료비 <strong>선납</strong></div>
             <div class="rule-li">음료 구매, 조끼 대여·반납</div>
             <div class="rule-li">매치 종료 후 채팅방 내 정산 진행</div>
+            <div class="rule-li">봉사자는 <strong>매주 2명씩 로테이션</strong> (아래 전체 일정 참고)</div>
           </div>
         </div>
-        <div class="rule-card">
-          <div class="rule-card-hd">
-            <div class="rule-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 21 20H3z"/><path d="M12 10v4.2M12 17.3h.01"/></svg></div>
-            <div class="rule-card-title">지각 / 노쇼 규정</div>
-          </div>
-          <div class="rule-card-body">
-            <div class="fine-cards-row">
-              <div class="fine-block late-block">
-                <div class="fb-label">지각 (시작 후 도착)</div>
-                <div class="fb-val">₩30,000</div>
-              </div>
-              <div class="fine-block noshow-block">
-                <div class="fb-label">노쇼 (종료까지 미참)</div>
-                <div class="fb-val">₩50,000</div>
-              </div>
-            </div>
-            <div class="rule-li" style="margin-top:4px">매치 시작 <strong>전</strong> 미리 공지 시 면제</div>
-          </div>
-        </div>
-        <div class="rule-card">
-          <div class="rule-card-hd">
-            <div class="rule-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8 9.5l1.7 5 2.3-5 2.3 5 1.7-5"/><path d="M8.5 12.4h7"/></svg></div>
-            <div class="rule-card-title">벌금 사용처</div>
-          </div>
-          <div class="rule-card-body">
-            <div class="rule-li">당일 구장비·음료비 정산 우선</div>
-            <div class="rule-li">잔액 → 카카오 모임 통장 공금 → 대관비 선납·공용 물품</div>
-          </div>
-        </div>
+        <div class="rule-group-hd" style="font-size:13px;color:var(--text-muted)">봉사 로테이션 전체 일정</div>
+        <div class="rotation-list" id="rotListRules"></div>
 
+        <div class="rule-group-hd" id="g5">5. 모임 통장</div>
         <div class="rule-card">
           <div class="rule-card-hd">
             <div class="rule-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="12" rx="2.5"/><path d="M3.5 10h17"/><path d="M15 14.5h2.5"/></svg></div>
@@ -1942,8 +2003,18 @@ body.admin .comment-del-btn { display: block; }
           </div>
         </div>
 
-        <div style="margin:20px 4px 8px;font-size:15px;font-weight:800;color:var(--text)">봉사 로테이션 전체 일정</div>
-        <div class="rotation-list" id="rotListRules"></div>
+        <div class="rule-group-hd" id="g6">6. 채팅방 에티켓</div>
+        <div class="rule-card">
+          <div class="rule-card-hd">
+            <div class="rule-card-icon on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-4 3.5v-3.5H4z"/></svg></div>
+            <div class="rule-card-title">채팅방 에티켓</div>
+          </div>
+          <div class="rule-card-body">
+            <div class="rule-li"><strong>투표에 꼭 참여</strong>하기</div>
+            <div class="rule-li">불참 등 특이사항은 <strong>사전에 공유</strong></div>
+            <div class="rule-li">서로 <strong>존중하는 채팅</strong></div>
+          </div>
+        </div>
       </div>
     </div>
 
