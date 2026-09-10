@@ -67,7 +67,7 @@ export function drawRecap(c: HTMLCanvasElement, m: Match, ps: PitchState | null)
       const win = t.name === m.winner;
       ctx.fillStyle = win ? fg : muted;
       ctx.font = `600 34px ${font}`;
-      const teamNameLine = `${fit(ctx, t.name, colMaxW)}${win ? ' 승' : ''}${t.points != null ? `  ${t.points}점` : ''}`;
+      const teamNameLine = fit(ctx, `${t.name}${win ? ' 승' : ''}${t.points != null ? `  ${t.points}점` : ''}`, colMaxW);
       ctx.fillText(teamNameLine, x, y);
       ctx.font = `24px ${font}`;
       t.players.forEach((p, j) => {
