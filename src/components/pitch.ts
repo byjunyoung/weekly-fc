@@ -1,5 +1,6 @@
 // src/components/pitch.ts — tactics-board 엔진 이식. 원본: byjunyoung/tactics-board index.html
 import type { PitchState, PitchPlayer } from './lineup-svg';
+import { toLandscape, toPortrait, packNorm, unpackNorm } from '../lib/pitch-coords.ts';
 
 export type PitchApi = {
   getState(): PitchState;
@@ -281,9 +282,7 @@ function initBoard(): void {
 
 function toggleOrientation(): void {
   // Transform all player positions
-  const toL = (n: [number, number]): [number, number] => [n[1], 1 - n[0]];
-  const toP = (n: [number, number]): [number, number] => [1 - n[1], n[0]];
-  const fn = orientation === 'portrait' ? toL : toP;
+  const fn = orientation === 'portrait' ? toLandscape : toPortrait;
   homePlayers.forEach(p => { p._norm = fn(p._norm); });
   awayPlayers.forEach(p => { p._norm = fn(p._norm); });
   ball._norm = fn(ball._norm);
@@ -874,16 +873,16 @@ on('#tool-arrow', (b) => (b.onclick = () => setTool('arrow'))); on('#tool-zone',
 on('#orient-btn', (b) => (b.onclick = toggleOrientation)); on('#zoom-minus', (b) => (b.onclick = () => changeZoom(-0.2))); on('#zoom-plus', (b) => (b.onclick = () => changeZoom(0.2))); on('#zoom-reset', (b) => (b.onclick = resetZoom)); on('#clear-btn', (b) => (b.onclick = clearAll));
 on('#edit-ok', (b) => (b.onclick = confirmPlayerEdit)); on('#edit-cancel', (b) => (b.onclick = closePlayerEdit));
 
-const toP = (n: [number, number]): [number, number] => (orientation === 'portrait' ? n : [1 - n[1], n[0]]);
-const fromP = (n: [number, number]): [number, number] => (orientation === 'portrait' ? n : [n[1], 1 - n[0]]);
-const pack = (ps: P[]): PitchPlayer[] => ps.map((p) => { const [x, y] = toP(p._norm); return { n: p.n, pos: p.pos, x, y, ...(p.name ? { name: p.name } : {}) }; });
-const unpack = (ps: PitchPlayer[]): P[] => ps.map((p) => { const norm = fromP([p.x, p.y]); const c = normToCanvas(norm); return { n: p.n, pos: p.pos, name: p.name, _norm: norm, x: c.x, y: c.y }; });
+const pack = (ps: P[]): PitchPlayer[] => ps.map((p) => { const [x, y] = packNorm(orientation, p._norm); return { n: p.n, pos: p.pos, x, y, ...(p.name ? { name: p.name } : {}) }; });
+const unpack = (ps: PitchPlayer[]): P[] => ps.map((p) => { const norm = unpackNorm(orientation, [p.x, p.y]); const c = normToCanvas(norm); return { n: p.n, pos: p.pos, name: p.name, _norm: norm, x: c.x, y: c.y }; });
 const api: PitchApi = {
   getState: () => ({ mode, count: playerCount, home: pack(homePlayers), away: pack(awayPlayers), homeColor, awayColor,
     formation: { home: (root.querySelector('#home-form') as HTMLSelectElement).value, away: (root.querySelector('#away-form') as HTMLSelectElement).value } }),
   setState: (s) => { setMode(s.mode); if (s.count !== playerCount) { playerCount = s.count; buildFormSelects(); } homeColor = s.homeColor; awayColor = s.awayColor; (root.querySelector('#home-color') as HTMLInputElement).value = homeColor; (root.querySelector('#away-color') as HTMLInputElement).value = awayColor;
     (root.querySelector('#home-form') as HTMLSelectElement).value = s.formation.home; (root.querySelector('#away-form') as HTMLSelectElement).value = s.formation.away;
-    homePlayers = unpack(s.home); awayPlayers = unpack(s.away); arrows = []; zones = []; paths = []; render(); },
+    homePlayers = unpack(s.home); awayPlayers = unpack(s.away); arrows = []; zones = []; paths = [];
+    (root.querySelector('#count-val') as HTMLElement).textContent = String(playerCount);
+    render(); },
   loadSquad: (team, players) => { const arr = team === 'home' ? homePlayers : awayPlayers; players.slice(0, arr.length).forEach((q, i) => { arr[i].n = q.n; arr[i].name = q.name; arr[i].pos = q.pos || arr[i].pos; }); render(); },
   setMode: (m) => setMode(m), setCount: (n) => { playerCount = n; buildFormSelects(); initBoard(); (root.querySelector('#count-val') as HTMLElement).textContent = String(n); },
 };

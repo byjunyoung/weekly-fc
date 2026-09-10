@@ -90,7 +90,10 @@ import Shell from '../layouts/Shell.astro';
      색은 토큰으로: --bg→--surface, --panel→--bg, --border→--line, --text→--fg, --muted→--muted, --accent→--fg.
      border-radius는 0, box-shadow·transition은 삭제. 캔버스 내부 색(피치 초록·화살표 골드 등)은 pitch.ts에만 남아 있다. */
   .board, .board * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  .board { background: var(--surface); color: var(--fg); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  .board { background: var(--surface); color: var(--fg); height: calc(100dvh - var(--pad) * 2); display: flex; flex-direction: column; overflow: hidden; }
+  /* .board는 Shell의 .main 안에 있다 — .main의 상하 padding(과 699px 이하의 sticky .mhead)만큼 100dvh에서 뺀다. */
+  @media (max-width: 899px) { .board { height: calc(100dvh - var(--gap) * 2); } }
+  @media (max-width: 699px) { .board { height: calc(100dvh - var(--header-h) - var(--gap) * 2); } }
 
   /* ── HEADER ── */
   .board header {
@@ -224,7 +227,7 @@ import Shell from '../layouts/Shell.astro';
   let data: Data | null = null, picked: number[] = [];
   const LOCAL = 'wfc_pitch_draft';
   try { const d = localStorage.getItem(LOCAL); if (d && !wantMatch) api.setState(JSON.parse(d) as PitchState); } catch {}
-  window.addEventListener('beforeunload', () => { try { localStorage.setItem(LOCAL, JSON.stringify(api.getState())); } catch {} });
+  window.addEventListener('beforeunload', () => { if (wantMatch) return; try { localStorage.setItem(LOCAL, JSON.stringify(api.getState())); } catch {} });
   function renderActions() {
     if (!data) return;
     $('squad-actions').innerHTML = `<button id="load-squad">명단 불러오기</button>${isAdmin() ? '<button id="save-lineup">매치에 저장</button>' : ''}`;
