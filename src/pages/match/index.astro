@@ -26,6 +26,10 @@ import Shell from '../../layouts/Shell.astro';
   document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => $(b.dataset.close!).classList.remove('show')));
   const link = (m: Match) => href(`/match/?d=${encodeURIComponent(m.id)}`);
   const result = (m: Match) => (m.winner ? `${esc(m.winner)} 승` : m.teams.length ? '결과 없음' : '');
+  const freeId = (date: string): string => {
+    if (!data!.matches.some((x) => x.id === date)) return date;
+    for (let i = 2; ; i++) { const cand = `${date}-${i}`; if (!data!.matches.some((x) => x.id === cand)) return cand; }
+  };
 
   // ── 목록 ──
   function renderList(d: Data) {
@@ -87,22 +91,30 @@ import Shell from '../../layouts/Shell.astro';
 
   // ── 관리자: 참석 채우기 ──
   function openAtt(m: Match) {
-    let picked = [...m.attendees];
+    const manualAdd: string[] = [];
+    const manualRemove: string[] = [];
+    let parsed: string[] = [];
+    let unmatched: string[] = [];
     const ta = $('att-text') as HTMLTextAreaElement; ta.value = '';
-    const draw = (unmatched: string[] = []) => {
-      $('att-preview').innerHTML = `<div class="label">참석 ${picked.length}명</div><div class="chips">${picked.map((p) => `<button class="chip on" data-rm="${esc(p)}">${esc(p)} ×</button>`).join('')}</div>${unmatched.length ? `<div class="label">못 찾음</div><div class="chips">${unmatched.map((u) => `<span class="chip warn">${esc(u)}</span>`).join('')}</div>` : ''}<div class="label">명단에서 추가</div><div class="chips">${data!.players.filter((p) => !picked.includes(p.name)).map((p) => `<button class="chip" data-add="${esc(p.name)}">${esc(p.name)}</button>`).join('')}</div>`;
-      document.querySelectorAll<HTMLElement>('[data-rm]').forEach((b) => (b.onclick = () => { picked = picked.filter((x) => x !== b.dataset.rm); draw(unmatched); }));
-      document.querySelectorAll<HTMLElement>('[data-add]').forEach((b) => (b.onclick = () => { picked.push(b.dataset.add!); draw(unmatched); }));
+    const compute = (): string[] => {
+      const all = [...m.attendees, ...parsed, ...manualAdd];
+      return [...new Set(all)].filter((n) => !manualRemove.includes(n));
     };
-    ta.oninput = () => { const r = parseAttendance(ta.value, data!.players); for (const n of r.matched) if (!picked.includes(n)) picked.push(n); draw(r.unmatched); };
+    const draw = () => {
+      const picked = compute();
+      $('att-preview').innerHTML = `<div class="label">참석 ${picked.length}명</div><div class="chips">${picked.map((p) => `<button class="chip on" data-rm="${esc(p)}">${esc(p)} ×</button>`).join('')}</div>${unmatched.length ? `<div class="label">못 찾음</div><div class="chips">${unmatched.map((u) => `<span class="chip warn">${esc(u)}</span>`).join('')}</div>` : ''}<div class="label">명단에서 추가</div><div class="chips">${data!.players.filter((p) => !picked.includes(p.name)).map((p) => `<button class="chip" data-add="${esc(p.name)}">${esc(p.name)}</button>`).join('')}</div>`;
+      document.querySelectorAll<HTMLElement>('[data-rm]').forEach((b) => (b.onclick = () => { const name = b.dataset.rm!; manualRemove.push(name); const i = manualAdd.indexOf(name); if (i >= 0) manualAdd.splice(i, 1); draw(); }));
+      document.querySelectorAll<HTMLElement>('[data-add]').forEach((b) => (b.onclick = () => { const name = b.dataset.add!; manualAdd.push(name); const j = manualRemove.indexOf(name); if (j >= 0) manualRemove.splice(j, 1); draw(); }));
+    };
+    ta.oninput = () => { const r = parseAttendance(ta.value, data!.players); parsed = r.matched; unmatched = r.unmatched; draw(); };
     draw();
-    $('att-ok').onclick = async () => { try { await write('writeMatch', serializeMatch({ ...m, attendees: picked })); $('att-modal').classList.remove('show'); toast('저장됨'); } catch (e) { toast((e as Error).message); } };
+    $('att-ok').onclick = async () => { try { await write('writeMatch', serializeMatch({ ...m, attendees: compute() })); $('att-modal').classList.remove('show'); toast('저장됨'); } catch (e) { toast((e as Error).message); } };
     $('att-modal').classList.add('show');
   }
 
   // ── 관리자: 결과 적기 ──
   function openRes(m: Match) {
-    const n = m.type === '3파전' ? 3 : 2;
+    const n = Math.max(m.type === '3파전' ? 3 : 2, m.teams.length);
     const teams: Team[] = Array.from({ length: n }, (_, i) => m.teams[i] ?? { name: String.fromCharCode(65 + i), players: [], points: null });
     const draw = () => {
       $('res-form').innerHTML = teams.map((t, i) => `<div class="card"><div class="row"><label>팀 이름 <input data-t="${i}" data-f="name" value="${esc(t.name)}" class="w-tname"></label><label>승점 <input data-t="${i}" data-f="points" type="number" value="${t.points ?? ''}" class="w-points"></label></div><div class="chips res-chips">${m.attendees.map((p) => `<button class="chip ${t.players.includes(p) ? 'on' : ''}" data-t="${i}" data-p="${esc(p)}">${esc(p)}</button>`).join('') || '<span class="muted">먼저 참석을 채우세요</span>'}</div></div>`).join('') + `<label class="row">우승 <select id="res-winner"><option value="">없음</option>${teams.map((t) => `<option ${m.winner === t.name ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>`;
@@ -123,7 +135,7 @@ import Shell from '../../layouts/Shell.astro';
       const fd = new FormData($('meta-form') as HTMLFormElement); const g = (k: string) => String(fd.get(k) ?? '').trim();
       const yt = g('youtube').match(/(?:v=|youtu\.be\/|\/embed\/)([\w-]{11})/)?.[1] ?? g('youtube');
       const date = g('date'); if (!date) return;
-      const idNew = m ? m.id : data!.matches.some((x) => x.id === date) ? `${date}-2` : date;
+      const idNew = m ? m.id : freeId(date);
       try { await write('writeMatch', serializeMatch({ ...v, id: idNew, date, type: g('type') as Match['type'], location: g('location'), youtube: yt })); $('meta-modal').classList.remove('show'); if (!m) location.href = href(`/match/?d=${encodeURIComponent(idNew)}`); } catch (e) { toast((e as Error).message); }
     };
     $('meta-del').onclick = async () => { if (!m || !confirm('이 매치를 지울까요?')) return; try { await write('deleteMatch', { id: m.id }); location.href = href('/match/'); } catch (e) { toast((e as Error).message); } };
