@@ -12,6 +12,7 @@ export const PAGES = [
   'record/index.html',
   'record/fines/index.html',
   'record/duty/index.html',
+  'tactics/index.html',
 ];
 export const INDEXABLE = ['tactics/index.html', 'about/index.html'];
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');

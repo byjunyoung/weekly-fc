@@ -1,0 +1,247 @@
+---
+import Shell from '../layouts/Shell.astro';
+---
+<Shell title="축구 전술판" index={true} wide={true} description="무료 온라인 축구·풋살 전술판. 포메이션, 선수 배치, 화살표·존 드로잉. 설치 없이 브라우저에서.">
+  <Fragment slot="head">
+    <link rel="canonical" href="https://byjunyoung.github.io/weekly-fc/tactics/" />
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebApplication', name: '축구 전술판 · Football Tactics Board', url: 'https://byjunyoung.github.io/weekly-fc/tactics/', applicationCategory: 'SportsApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0' }, description: '포메이션 설정, 선수 배치, 화살표·존·펜 드로잉을 지원하는 무료 온라인 축구·풋살 전술판' })} />
+  </Fragment>
+  <div id="board" class="board">
+    <div class="page-head"><h1>전술판</h1><div class="actions" id="squad-actions"></div></div>
+
+    <div id="tip"></div>
+
+    <div id="player-edit">
+      <div id="player-edit-label">선수 수정</div>
+      <input type="number" id="player-num-input" min="1" max="99" maxlength="2" placeholder="번호">
+      <input type="text" id="player-pos-input" maxlength="6" placeholder="포지션 (예: GK, ST)">
+      <div class="edit-row">
+        <button class="edit-ok" id="edit-ok">확인</button>
+        <button class="edit-cancel" id="edit-cancel">취소</button>
+      </div>
+    </div>
+
+    <header>
+      <div class="mode-tabs">
+        <button class="mode-btn active" id="m-soccer">축구</button>
+        <button class="mode-btn" id="m-futsal">풋살</button>
+      </div>
+      <div class="form-wrap">
+        <input type="color" class="color-pick" id="home-color" value="#ffffff" title="홈 팀 색상">
+        <select class="form-select" id="home-form"></select>
+        <span class="vs-badge">HOME · vs · AWAY</span>
+        <select class="form-select" id="away-form"></select>
+        <input type="color" class="color-pick" id="away-color" value="#1a1a1a" title="어웨이 팀 색상">
+      </div>
+      <div class="count-ctrl">
+        <span class="ctrl-label">인원</span>
+        <button class="cnt-btn" id="cnt-minus">−</button>
+        <span id="count-val">11</span>
+        <button class="cnt-btn" id="cnt-plus">+</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="pitch-container">
+        <canvas id="pitch"></canvas>
+      </div>
+    </main>
+
+    <footer>
+      <div class="tool-group">
+        <button class="tool-btn active" id="tool-arrow"
+          title="화살표 도구: 빈 공간을 드래그해 화살표를 그립니다 (데스크톱: 기본 동작)">
+          <span class="tool-icon">↗</span>
+          <span>화살표</span>
+        </button>
+        <button class="tool-btn" id="tool-zone"
+          title="존 도구: 빈 공간을 드래그해 구역을 표시합니다 (데스크톱: 우클릭 드래그)">
+          <span class="tool-icon">▭</span>
+          <span>존</span>
+        </button>
+        <button class="tool-btn" id="tool-pen"
+          title="펜 도구: 빈 공간을 드래그해 자유롭게 그립니다">
+          <span class="tool-icon">✏</span>
+          <span>펜</span>
+        </button>
+      </div>
+      <div class="sep sep-hint"></div>
+      <span class="hint-text" id="hint-text">
+        선수 드래그: 이동 &nbsp;·&nbsp; 빈 공간 드래그: 화살표 &nbsp;·&nbsp; 우클릭 드래그: 존 &nbsp;·&nbsp; 선수 클릭: 번호 수정
+      </span>
+      <div class="sep"></div>
+      <div class="zoom-group">
+        <button class="zoom-btn" id="orient-btn" title="가로형으로 전환">↔</button>
+        <div class="orient-sep"></div>
+        <button class="zoom-btn" id="zoom-minus" title="축소">−</button>
+        <span id="zoom-val">100%</span>
+        <button class="zoom-btn" id="zoom-plus" title="확대">+</button>
+        <button class="zoom-btn zoom-reset" id="zoom-reset" title="줌 리셋">리셋</button>
+      </div>
+      <div class="sep"></div>
+      <button class="clear-btn" id="clear-btn" title="화살표와 존을 모두 지웁니다">지우기</button>
+    </footer>
+  </div>
+  <div class="modal-bg" id="squad-modal"><div class="modal"><h2>명단 불러오기</h2><p class="muted">고른 순서대로 홈 팀 자리에 들어갑니다. 인원 수만큼만.</p><div class="pick-list" id="squad-list"></div><div class="foot"><button data-close="squad-modal">취소</button><button class="primary" id="squad-ok">배치</button></div></div></div>
+  <div class="modal-bg" id="save-modal"><div class="modal"><h2>라인업 저장</h2><label>매치<select id="save-match" style="width:100%"></select></label><div class="foot"><button data-close="save-modal">취소</button><button class="primary" id="save-ok">저장</button></div></div></div>
+</Shell>
+<style is:global>
+  /* 원본 tactics-board(bloglish/tactics-board) 64–230행을 이식. .board 하위로만 적용되도록 전부 프리픽스.
+     색은 토큰으로: --bg→--surface, --panel→--bg, --border→--line, --text→--fg, --muted→--muted, --accent→--fg.
+     border-radius는 0, box-shadow·transition은 삭제. 캔버스 내부 색(피치 초록·화살표 골드 등)은 pitch.ts에만 남아 있다. */
+  .board, .board * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  .board { background: var(--surface); color: var(--fg); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── HEADER ── */
+  .board header {
+    border-bottom: 1px solid var(--line); background: var(--bg);
+    display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  .board .mode-tabs { display: flex; gap: 2px; background: var(--surface); padding: 3px; border-radius: 0; border: 1px solid var(--line); flex-shrink: 0; }
+  .board .mode-btn { padding: 5px 12px; font-size: 11px; font-weight: 500; border: none; background: none; border-radius: 0; cursor: pointer; color: var(--muted); white-space: nowrap; }
+  .board .mode-btn.active { background: var(--bg); color: var(--fg); }
+
+  .board .form-wrap { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 180px; justify-content: center; flex-wrap: wrap; }
+  .board .form-select {
+    appearance: none; -webkit-appearance: none; border: 1px solid var(--line); background: var(--surface);
+    padding: 5px 26px 5px 10px; border-radius: 0; font-size: 11px; font-weight: 500; color: var(--fg);
+    cursor: pointer; outline: none; min-width: 88px; max-width: 140px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center;
+  }
+  .board .form-select:hover { border-color: #bbb; }
+  .board .vs-badge { font-size: 10px; color: var(--muted); letter-spacing: .05em; flex-shrink: 0; }
+  .board .color-pick {
+    width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 0;
+    cursor: pointer; padding: 2px; background: none; flex-shrink: 0;
+  }
+
+  .board .count-ctrl { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+  .board .ctrl-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .board .cnt-btn { width: 26px; height: 26px; border: 1px solid var(--line); background: none; border-radius: 0; cursor: pointer; font-size: 14px; color: var(--fg); display: flex; align-items: center; justify-content: center; }
+  .board .cnt-btn:hover { background: var(--surface); }
+  .board #count-val { font-size: 13px; font-weight: 600; min-width: 20px; text-align: center; }
+
+  /* ── MAIN ── */
+  .board main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: hidden; min-height: 0; }
+  .board #pitch-container { position: relative; }
+  .board canvas#pitch { display: block; border-radius: 0; touch-action: none; cursor: default; }
+
+  /* ── FOOTER ── */
+  .board footer {
+    border-top: 1px solid var(--line); background: var(--bg);
+    display: flex; align-items: center; padding: 8px 16px; gap: 8px; flex-shrink: 0;
+    flex-wrap: wrap; min-height: 52px;
+  }
+  .board .tool-group { display: flex; gap: 4px; }
+  .board .tool-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 11px; font-size: 11px; font-weight: 500; border: 1px solid var(--line);
+    background: none; border-radius: 0; cursor: pointer; color: var(--fg);
+    white-space: nowrap; min-height: 34px;
+  }
+  .board .tool-btn:hover { background: var(--surface); }
+  .board .tool-btn.active { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+  .board .tool-icon { font-size: 14px; line-height: 1; }
+  .board .tool-label-sm { display: none; }
+
+  .board .sep { width: 1px; height: 22px; background: var(--line); flex-shrink: 0; align-self: center; }
+  .board .orient-sep { width: 1px; height: 16px; background: var(--line); margin: 0 2px; }
+  .board #orient-btn { font-size: 13px; }
+
+  .board .hint-text { font-size: 10px; color: var(--muted); flex: 1; min-width: 0; line-height: 1.5; }
+
+  .board .zoom-group { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+  .board .zoom-btn { width: 28px; height: 28px; border: 1px solid var(--line); background: none; border-radius: 0; cursor: pointer; font-size: 14px; color: var(--fg); display: flex; align-items: center; justify-content: center; }
+  .board .zoom-btn:hover { background: var(--surface); }
+  .board #zoom-val { font-size: 11px; color: var(--muted); min-width: 36px; text-align: center; }
+  .board .zoom-reset { width: auto !important; padding: 0 6px; font-size: 10px; font-weight: 600; color: var(--muted); }
+
+  .board .clear-btn { padding: 6px 12px; font-size: 11px; border: 1px solid var(--line); background: none; border-radius: 0; cursor: pointer; color: var(--muted); white-space: nowrap; min-height: 34px; }
+  .board .clear-btn:hover { color: #c0392b; border-color: #c0392b; }
+
+  /* ── PLAYER EDIT OVERLAY ── */
+  .board #player-edit {
+    display: none; position: fixed; z-index: 300;
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 0; padding: 12px;
+    flex-direction: column; gap: 8px; min-width: 130px;
+  }
+  .board #player-edit.show { display: flex; }
+  .board #player-edit-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .board #player-num-input {
+    width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 0;
+    font-size: 22px; font-weight: 700; text-align: center; outline: none;
+  }
+  .board #player-num-input:focus { border-color: var(--fg); }
+  .board #player-pos-input {
+    width: 100%; padding: 5px 8px; border: 1px solid var(--line); border-radius: 0;
+    font-size: 13px; font-weight: 500; text-align: center; outline: none;
+    background: var(--bg); color: var(--fg);
+  }
+  .board #player-pos-input:focus { border-color: var(--fg); }
+  .board .edit-row { display: flex; gap: 5px; }
+  .board .edit-ok { flex: 1; padding: 6px; background: var(--fg); color: var(--bg); border: none; border-radius: 0; cursor: pointer; font-size: 12px; font-weight: 700; }
+  .board .edit-ok:hover { opacity: .85; }
+  .board .edit-cancel { flex: 1; padding: 6px; background: none; border: 1px solid var(--line); border-radius: 0; cursor: pointer; font-size: 12px; color: var(--muted); }
+  .board .edit-cancel:hover { background: var(--surface); }
+
+  /* ── TOOLTIP ── */
+  .board #tip { position: fixed; background: #111; color: #fff; font-size: 11px; padding: 4px 9px; border-radius: 0; pointer-events: none; opacity: 0; z-index: 99; white-space: nowrap; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 640px) {
+    .board header { padding: 6px 10px; gap: 6px; }
+    .board .mode-tabs { order: 1; flex-shrink: 0; }
+    .board .count-ctrl { order: 2; margin-left: auto; }
+    .board .form-wrap { order: 3; width: 100%; justify-content: center; padding: 2px 0 2px; gap: 6px; }
+    .board .form-select { min-width: 80px; max-width: 120px; }
+
+    .board footer { padding: 6px 10px; gap: 6px; flex-wrap: nowrap; min-height: auto; }
+    .board .hint-text { display: none; }
+    .board .sep { display: none; }
+    .board .zoom-group { display: none; }
+    .board .clear-btn { margin-left: auto; padding: 6px 10px; }
+  }
+
+  @media (max-width: 360px) {
+    .board .vs-badge { display: none; }
+    .board .tool-btn { padding: 7px 8px; font-size: 10px; }
+    .board .color-pick { width: 22px; height: 22px; }
+  }
+</style>
+<script>
+  import { initPitch } from '../components/pitch';
+  import { onData, isAdmin, write, serializeLineup } from '../lib/api';
+  import { esc, fmtDate, toast } from '../lib/html';
+  import type { Data } from '../lib/types';
+  import type { PitchState } from '../components/lineup-svg';
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => $(b.dataset.close!).classList.remove('show')));
+  const api = initPitch($('board'));
+  const wantMatch = new URLSearchParams(location.search).get('match');
+  let data: Data | null = null, picked: number[] = [];
+  const LOCAL = 'wfc_pitch_draft';
+  try { const d = localStorage.getItem(LOCAL); if (d && !wantMatch) api.setState(JSON.parse(d) as PitchState); } catch {}
+  window.addEventListener('beforeunload', () => { try { localStorage.setItem(LOCAL, JSON.stringify(api.getState())); } catch {} });
+  function renderActions() {
+    if (!data) return;
+    $('squad-actions').innerHTML = `<button id="load-squad">명단 불러오기</button>${isAdmin() ? '<button id="save-lineup">매치에 저장</button>' : ''}`;
+    $('load-squad').onclick = () => { picked = []; drawPick(); $('squad-modal').classList.add('show'); };
+    if (isAdmin()) $('save-lineup').onclick = () => { ($('save-match') as HTMLSelectElement).innerHTML = data!.matches.map((m) => `<option value="${esc(m.id)}" ${m.id === wantMatch ? 'selected' : ''}>${fmtDate(m.date)}${m.location ? ` · ${esc(m.location)}` : ''}</option>`).join(''); $('save-modal').classList.add('show'); };
+    if (wantMatch) { const l = data.lineups.find((x) => x.match_id === wantMatch); if (l) { try { api.setState(JSON.parse(l.assignments) as PitchState); } catch {} } }
+  }
+  function drawPick() {
+    $('squad-list').innerHTML = [...data!.players].sort((a, b) => a.num - b.num).map((p) => { const i = picked.indexOf(p.num); return `<button data-n="${p.num}" class="${i >= 0 ? 'primary' : ''}">${i >= 0 ? `${i + 1}. ` : ''}${p.num} ${esc(p.name)}</button>`; }).join('');
+    $('squad-list').querySelectorAll<HTMLElement>('[data-n]').forEach((b) => (b.onclick = () => { const n = Number(b.dataset.n); picked = picked.includes(n) ? picked.filter((x) => x !== n) : [...picked, n]; drawPick(); }));
+  }
+  $('squad-ok').onclick = () => { const ps = picked.map((n) => data!.players.find((p) => p.num === n)!).map((p) => ({ n: p.num, name: p.name, pos: p.pos })); api.loadSquad('home', ps); $('squad-modal').classList.remove('show'); };
+  $('save-ok').onclick = async () => {
+    const match_id = ($('save-match') as HTMLSelectElement).value; if (!match_id) return;
+    const existing = data!.lineups.find((l) => l.match_id === match_id);
+    try { await write('writeLineup', serializeLineup({ id: existing?.id ?? String(Date.now()), match_id, name: '', formation: api.getState().formation.home, assignments: JSON.stringify(api.getState()) })); $('save-modal').classList.remove('show'); toast('저장됨'); } catch (e) { toast((e as Error).message); }
+  };
+  window.addEventListener('wfc:admin', renderActions);
+  onData((d) => { data = d; renderActions(); });
+</script>
