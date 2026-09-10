@@ -1,60 +1,24 @@
-# WEEKLY FC — 설정 가이드
+# WEEKLY FC 포탈
 
-## 1. Google Sheets 생성
+매주 토요일 모이는 풋살 팀의 포탈. https://byjunyoung.github.io/weekly-fc/
 
-새 Google Sheets 파일 생성 후 아래 4개 시트를 만든다.  
-(첫 번째 저장 시 Apps Script가 자동으로 헤더를 추가함)
+- 스택: Astro 정적 사이트 + Google Apps Script(구글시트). 프레임워크·외부 라이브러리 없음.
+- 설계: `docs/superpowers/specs/2026-09-10-weekly-fc-portal-design.md`. 결정을 바꾸면 그 문서부터.
+- 배포: `main` push → GitHub Actions → Pages.
 
-| 시트명 | 설명 |
-|---|---|
-| `선수명단` | 선수 기본 정보 + 능력치 + 봉사 로테이션 순번(`rot`) |
-| `매치기록` | 경기 결과 기록 |
-| `봉사로테이션` | 월별 봉사자 일정 |
-| `벌금` | 지각/노쇼 벌금 내역 |
+## 개발
 
-## 2. Apps Script 배포
-
-1. Google Sheets에서 **확장 프로그램 > Apps Script** 열기
-2. `apps-script.gs` 파일 내용 전체 붙여넣기
-3. **프로젝트 설정** (톱니바퀴 아이콘) > **스크립트 속성** > 속성 추가:
-   - 속성 이름: `ADMIN_PIN`
-   - 값: 원하는 4자리 숫자 (예: `1234`)
-4. **배포 > 새 배포 > 유형: 웹 앱**
-   - 실행 계정: **나 (본인 계정)**
-   - 액세스 권한: **모든 사용자**
-5. 배포 완료 후 **웹 앱 URL** 복사
-
-## 3. 웹앱 연결
-
-1. `index.html`을 브라우저에서 열기
-2. 우상단 **⚙ API** 버튼 클릭
-3. 복사한 Apps Script 웹 앱 URL 붙여넣기 → **저장 및 연결**
-
-## 4. 관리자 모드
-
-- 우상단 🔒 클릭 → PIN 입력
-- Apps Script에서 설정한 `ADMIN_PIN` 사용
-- 편집/추가/삭제 기능 활성화
-
----
-
-## 데이터 위치
-
-선수 명단·능력치·봉사 로테이션 순번은 모두 Google Sheets에 있고, 앱 소스에는 두지 않는다.  
-API를 연결하지 않으면 명단이 빈 상태로 열리며, 관리자 모드에서 넣은 내용은 브라우저 localStorage에만 저장된다.
-
-### 봉사 로테이션
-
-`선수명단` 시트의 `rot` 열에 1부터 순번을 매긴 순서대로 매월 2명씩 순환한다.  
-`rot`이 비어 있는 선수는 로테이션에서 제외된다.
-
----
-
-## 파일 구조
-
+```bash
+npm install        # ~/Documents는 iCloud라 node_modules는 .nosync 심링크 구조 (memory 참고)
+npm run dev        # http://localhost:4321/weekly-fc/
+npm test           # 단위 테스트 + 빌드 + dist 검사
 ```
-weekly-fc/
-├── index.html       # 메인 웹앱 (단일 파일)
-├── apps-script.gs   # Google Apps Script 백엔드 코드
-└── README.md        # 이 파일
-```
+
+## 데이터
+
+전부 구글시트에 있고 소스에는 없다. 시트: `선수명단`(rot 열이 봉사 순번) · `매치기록` · `봉사로테이션` · `벌금` · `라인업`.
+Apps Script는 standalone 프로젝트 `weekly fc`(`script.google.com/u/1/home/my`). 재배포는 "배포 관리 > 새 버전"으로 주소를 유지한다. 스크립트 속성 `SPREADSHEET_ID`·`ADMIN_PIN` 필요.
+
+## 규칙 상수
+
+벌금·시간·장소·통장은 `src/lib/rules.ts` 한 곳. 소개 페이지와 정산 화면이 같은 값을 쓴다.
