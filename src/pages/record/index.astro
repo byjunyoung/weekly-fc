@@ -1,0 +1,53 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import Tabs from '../../components/Tabs.astro';
+import { href } from '../../lib/url.ts';
+const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record/fines/'), label: '정산' }, { href: href('/record/duty/'), label: '봉사' }];
+---
+<Shell title="기록">
+  <div class="page-head"><h1>기록</h1><div class="actions"><select id="year"></select></div></div>
+  <Tabs items={tabs} />
+  <div id="summary" class="cards" style="margin-bottom:var(--gap)"></div>
+  <div id="app" class="tbl-wrap"></div>
+</Shell>
+<script>
+  import { onData } from '../../lib/api.ts';
+  import { href } from '../../lib/url.ts';
+  import { esc } from '../../lib/html.ts';
+  import { seasonTable, band, RATE_CUTS, yearOf, seasonMatches, type SeasonRow } from '../../lib/stats.ts';
+  import { mountTable, sortRows, type Column, type TableState } from '../../components/table.ts';
+  import type { Data } from '../../lib/types.ts';
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  let data: Data | null = null, year: number | undefined = new Date().getFullYear();
+  const state: TableState = { sortKey: 'attended', sortDir: 'desc' };
+  // 순위(#) 열: mountTable은 헤더 클릭마다 내부에서 다시 정렬·재렌더하므로, DOM을 나중에 훑는 대신
+  // 이 draw()가 돌 때마다 정렬 결과를 pos에 채워 cell()이 매번 조회하게 한다.
+  const pos = new Map<SeasonRow, number>();
+  const cols: Column<SeasonRow>[] = [
+    { key: 'rank', label: '#', get: (r) => r.attended, align: 'r', sortable: false, cell: (r) => String(pos.get(r) ?? '') },
+    { key: 'name', label: '이름', get: (r) => r.player.name, cell: (r) => `<a href="${href(`/squad/${r.player.num}/`)}"><b>${esc(r.player.name)}</b></a> <span class="pos pos-${r.player.pos.toLowerCase()}">${r.player.pos}</span>` },
+    { key: 'attended', label: '출석', get: (r) => r.attended, align: 'r', cell: (r) => `${r.attended} <span class="muted">/ ${r.total}</span>` },
+    { key: 'rate', label: '출석률', get: (r) => r.rate, align: 'r', cell: (r) => (r.total ? `<span class="val val-${band(r.rate, RATE_CUTS)}">${r.rate}%</span>` : '<span class="muted">–</span>') },
+    { key: 'won', label: '승', get: (r) => r.won, align: 'r' },
+    { key: 'winRate', label: '승률', get: (r) => r.winRate, align: 'r', cell: (r) => (r.played ? `${r.winRate}%` : '<span class="muted">–</span>') },
+  ];
+  function draw(rows: SeasonRow[]) {
+    const sorted = sortRows(rows, cols, state);
+    pos.clear();
+    sorted.forEach((r, i) => pos.set(r, i + 1));
+    mountTable($('app'), cols, rows, state, { empty: '아직 참석 기록이 없습니다', rowAttr: () => '' });
+  }
+  function render() {
+    if (!data) return;
+    const years = [...new Set(data.matches.map((m) => yearOf(m.date)))].sort((a, b) => b - a);
+    const sel = $('year') as HTMLSelectElement;
+    if (!years.includes(year as number)) year = years[0];
+    sel.innerHTML = years.map((y) => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}</option>`).join('') + `<option value="" ${year === undefined ? 'selected' : ''}>전체</option>`;
+    sel.onchange = () => { year = sel.value ? Number(sel.value) : undefined; render(); };
+    const ms = seasonMatches(data.matches, year), all = data.matches.filter((m) => year == null || yearOf(m.date) === year);
+    $('summary').innerHTML = `<div class="card"><h2>매치</h2><div class="big">${all.length}</div><p class="muted">참석 기록 있는 ${ms.length} · 2파전 ${all.filter((m) => m.type === '2파전').length} · 3파전 ${all.filter((m) => m.type === '3파전').length}</p></div><div class="card"><h2>평균 참석</h2><div class="big">${ms.length ? Math.round(ms.reduce((s, m) => s + m.attendees.length, 0) / ms.length) : '–'}</div><p class="muted">명 / 매치</p></div>`;
+    const rows = seasonTable(data.players, data.matches, year);
+    draw(rows);
+  }
+  onData((d) => { data = d; render(); });
+</script>

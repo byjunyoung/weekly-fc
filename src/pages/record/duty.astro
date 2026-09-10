@@ -1,0 +1,39 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import Tabs from '../../components/Tabs.astro';
+import { href } from '../../lib/url.ts';
+const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record/fines/'), label: '정산' }, { href: href('/record/duty/'), label: '봉사' }];
+---
+<Shell title="봉사">
+  <div class="page-head"><h1>기록</h1><div class="actions"><select id="year"></select></div></div>
+  <Tabs items={tabs} />
+  <p class="muted" style="margin:0 0 var(--gap)">시트 <code>rot</code> 순번대로 매월 두 명. 이번 달이 강조됩니다. 관리자는 당번을 바꾸거나 완료를 표시할 수 있습니다.</p>
+  <div id="app" class="tbl-wrap"></div>
+</Shell>
+<script>
+  import { onData, isAdmin, write, serializeRotation } from '../../lib/api.ts';
+  import { esc, toast } from '../../lib/html.ts';
+  import { yearRows } from '../../lib/rotation.ts';
+  import type { Data, RotationRow } from '../../lib/types.ts';
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  let data: Data | null = null;
+  const now = new Date(); let year = now.getFullYear();
+  function render() {
+    if (!data) return;
+    const sel = $('year') as HTMLSelectElement;
+    sel.innerHTML = [year - 1, year, year + 1].map((y) => `<option ${y === year ? 'selected' : ''}>${y}</option>`).join('');
+    sel.onchange = () => { year = Number(sel.value); render(); };
+    const rows = yearRows(data.players, data.rotation, year);
+    const names = data.players.map((p) => p.name);
+    const pick = (r: RotationRow, k: 'p1' | 'p2') => `<select data-y="${r.year}" data-m="${r.month}" data-k="${k}">${names.map((n) => `<option ${n === r[k] ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+    $('app').innerHTML = `<table class="tbl"><thead><tr><th>월</th><th>당번 1</th><th>당번 2</th><th class="c">완료</th></tr></thead><tbody>${rows.map((r) => { const cur = r.year === now.getFullYear() && r.month === now.getMonth() + 1; return `<tr class="${cur ? 'row-current' : ''}"><td>${r.month}월${cur ? ' <span class="label">이번 달</span>' : ''}</td><td>${isAdmin() ? pick(r, 'p1') : esc(r.p1)}</td><td>${isAdmin() ? pick(r, 'p2') : esc(r.p2)}</td><td class="c">${isAdmin() ? `<input type="checkbox" data-y="${r.year}" data-m="${r.month}" data-k="done" ${r.done ? 'checked' : ''}>` : r.done ? '✓' : ''}</td></tr>`; }).join('')}</tbody></table>`;
+    $('app').querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-k]').forEach((el) => (el.onchange = async () => {
+      const y = Number(el.dataset.y), m = Number(el.dataset.m);
+      const r = yearRows(data!.players, data!.rotation, y).find((x) => x.month === m)!;
+      const next: RotationRow = { ...r, [el.dataset.k!]: el.dataset.k === 'done' ? (el as HTMLInputElement).checked : el.value } as RotationRow;
+      try { await write('writeRotation', serializeRotation(next)); toast('저장됨'); } catch (e) { toast((e as Error).message); }
+    }));
+  }
+  window.addEventListener('wfc:admin', render);
+  onData((d) => { data = d; render(); });
+</script>
