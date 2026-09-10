@@ -214,11 +214,11 @@ function pitchRatio(): number {
 }
 
 function resize(): void {
-  const headerH = root.querySelector<HTMLElement>('header')!.offsetHeight;
-  const footerH = root.querySelector<HTMLElement>('footer')!.offsetHeight;
-  const pad = 32;
-  const avH = window.innerHeight - headerH - footerH - pad;
-  const avW = window.innerWidth - pad;
+  const host = root.querySelector<HTMLElement>('main')!;
+  const pad = 32;                       // .board main 의 좌우·상하 패딩 16px 씩
+  const avH = host.clientHeight - pad;
+  const avW = host.clientWidth - pad;
+  if (avH <= 0 || avW <= 0) return;
   const ratio = pitchRatio();
   let h = avH, w = h * ratio;
   if (w > avW) { w = avW; h = w / ratio; }
