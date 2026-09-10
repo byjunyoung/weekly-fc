@@ -177,20 +177,24 @@ function handleWriteLineup(l) {
 function handleGetChannelVideos(nocache) {
   var cache = CacheService.getScriptCache();
   if (!nocache) { var cached = cache.get('YT_VIDEOS'); if (cached) return { videos: JSON.parse(cached) }; }
-  var res = UrlFetchApp.fetch('https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
-    { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/atom+xml,application/xml' } });
-  var code = res.getResponseCode();
-  if (code !== 200) return { videos: [], error_detail: 'youtube ' + code };
-  var feed = res.getContentText();
-  var entries = feed.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
-  var videos = entries.map(function(e) {
-    var id = (e.match(/<yt:videoId>([^<]+)/) || [])[1];
-    var title = (e.match(/<title>([^<]+)/) || [])[1];
-    var pub = (e.match(/<published>([^<]+)/) || [])[1];
-    return id && title ? { id: id, title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), published: pub ? pub.slice(0, 10) : '' } : null;
-  }).filter(Boolean);
-  if (videos.length) cache.put('YT_VIDEOS', JSON.stringify(videos), 600);
-  return { videos: videos };
+  try {
+    var res = UrlFetchApp.fetch('https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
+      { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/atom+xml,application/xml' } });
+    var code = res.getResponseCode();
+    if (code !== 200) return { videos: [], error_detail: 'youtube ' + code };
+    var feed = res.getContentText();
+    var entries = feed.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
+    var videos = entries.map(function(e) {
+      var id = (e.match(/<yt:videoId>([^<]+)/) || [])[1];
+      var title = (e.match(/<title>([^<]+)/) || [])[1];
+      var pub = (e.match(/<published>([^<]+)/) || [])[1];
+      return id && title ? { id: id, title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), published: pub ? pub.slice(0, 10) : '' } : null;
+    }).filter(Boolean);
+    if (videos.length) cache.put('YT_VIDEOS', JSON.stringify(videos), 600);
+    return { videos: videos };
+  } catch (e) {
+    return { videos: [], error_detail: 'fetch failed: ' + e.message };
+  }
 }
 
 // ── 능력치 1-5 → 1-99 스케일 일괄 마이그레이션 ──────────
