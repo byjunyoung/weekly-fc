@@ -1,8 +1,38 @@
 ---
-// src/pages/index.astro (Task 11에서 채운다)
 import Shell from '../layouts/Shell.astro';
 ---
 <Shell title="홈">
-  <div class="page-head"><h1>홈</h1></div>
+  <div class="page-head"><h1>홈</h1><span class="muted" id="stamp"></span></div>
   <div id="app" class="stack"></div>
 </Shell>
+<script>
+  import { onData } from '../lib/api';
+  import { getMe } from '../lib/me';
+  import { href } from '../lib/url';
+  import { esc, fmtDate, fmtWon, monthLabel, ytThumb } from '../lib/html';
+  import { rotationFor, nextDuty } from '../lib/rotation';
+  import { fineSummary } from '../lib/stats';
+  import { playerCard } from '../components/player-card';
+  import type { Data } from '../lib/types';
+  const app = document.getElementById('app')!;
+  let data: Data | null = null;
+  function render() {
+    if (!data) return;
+    const now = new Date(), y = now.getFullYear(), mo = now.getMonth() + 1;
+    const last = data.matches[0];
+    const duty = rotationFor(data.players, data.rotation, y, mo);
+    const fs = fineSummary(data.fines);
+    const me = data.players.find((p) => p.num === getMe());
+    const mine = me ? { unpaid: fs.byPlayer.get(me.name)?.unpaid ?? 0, duty: nextDuty(data.players, data.rotation, me.name) } : null;
+    app.innerHTML = `
+      <div class="cards">
+        <a class="card" href="${last ? href(`/match/?d=${encodeURIComponent(last.id)}`) : href('/match/')}"><h2>최근 매치</h2>${last ? `<div class="big">${last.winner ? `${esc(last.winner)} 승` : esc(last.type) || '기록'}</div><p class="muted">${fmtDate(last.date)}${last.location ? ` · ${esc(last.location)}` : ''} · ${last.attendees.length}명</p>${last.youtube ? `<img src="${ytThumb(last.youtube)}" alt="" class="home-thumb">` : ''}` : '<p class="muted">아직 기록이 없습니다</p>'}</a>
+        <a class="card" href="${href('/record/duty/')}"><h2>${monthLabel(y, mo)} 봉사</h2><div class="big" style="font-size:var(--fs-lg)">${esc(duty.p1)} · ${esc(duty.p2)}</div><p class="muted">${duty.done ? '완료' : '대관비·음료 선납, 조끼, 정산'}</p></a>
+        <a class="card" href="${href('/record/fines/')}"><h2>미납 벌금</h2><div class="big ${fs.unpaid ? 'warn' : ''}">${fmtWon(fs.unpaid)}</div><p class="muted">${fs.unpaidCount}건</p></a>
+      </div>
+      ${me ? `<div><div class="label" style="margin-bottom:8px">내 자리</div>${playerCard(me)}<div class="cards" style="margin-top:var(--gap)"><a class="card" href="${href(`/squad/${me.num}/`)}"><h2>내 미납</h2><div class="big ${mine!.unpaid ? 'warn' : ''}">${fmtWon(mine!.unpaid)}</div></a><a class="card" href="${href('/record/duty/')}"><h2>내 봉사 차례</h2><div class="big" style="font-size:var(--fs-lg)">${mine!.duty ? monthLabel(mine!.duty.year, mine!.duty.month) : '–'}</div></a></div></div>` : `<p class="muted">사이드바에서 <b>이름 고르기</b>를 하면 내 미납·봉사 차례가 여기 뜹니다.</p>`}`;
+    document.getElementById('stamp')!.textContent = `${data.players.length}명 · 매치 ${data.matches.length}`;
+  }
+  window.addEventListener('wfc:me', render);
+  onData((d) => { data = d; render(); });
+</script>
