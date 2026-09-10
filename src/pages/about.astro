@@ -1,0 +1,39 @@
+---
+import Shell from '../layouts/Shell.astro';
+import { FINE_TYPES, FINE_AMOUNT, FINE_NOTE, FINE_EXEMPT, MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS, DUTY_PER_MONTH } from '../lib/rules.ts';
+import { href } from '../lib/url.ts';
+const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+const toc = [['intro', '소개'], ['when', '언제 어디서'], ['join', '참여 방법'], ['money', '비용·벌금'], ['duty', '봉사'], ['bank', '모임 통장'], ['manner', '에티켓']];
+---
+<Shell title="소개" index={true} description="WEEKLY FC — 매주 토요일 모이는 풋살 팀. 용병·정회원 상시 모집.">
+  <Fragment slot="head"><link rel="canonical" href="https://byjunyoung.github.io/weekly-fc/about/" /></Fragment>
+  <div class="page-head"><h1>WEEKLY FC</h1><a class="chip" href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡 →</a></div>
+  <nav class="tabs">{toc.map(([id, l]) => <a href={`#${id}`}>{l}</a>)}</nav>
+  <div class="cards" style="margin-bottom:var(--gap-lg)">
+    <div class="card"><h2>정규 매치</h2><p>{MATCH_TIME} · {MATCH_MIN}인 이상</p></div>
+    <div class="card"><h2>벌금</h2><p>{FINE_TYPES.map((t) => `${t} ${won(FINE_AMOUNT[t])}`).join(' · ')}</p></div>
+    <div class="card"><h2>봉사</h2><p>매월 {DUTY_PER_MONTH}명 로테이션</p></div>
+    <div class="card"><h2>모임 통장</h2><p>{BANK.name} {BANK.number}</p></div>
+  </div>
+  <article class="prose stack">
+    <section id="intro"><h2>소개</h2><p>매주 토요일 오전에 모여 풋살을 하는 팀입니다. 용병으로 편하게 참여하다가 원하면 정회원으로 합류할 수 있습니다. 상시 모집 중.</p><p><a href={LINKS.youtube} target="_blank" rel="noopener">유튜브 채널 →</a> · <a href={href('/tactics/')}>전술판 →</a></p></section>
+    <section id="when"><h2>언제 어디서</h2><ul><li>매주 카톡 투표, {MATCH_MIN}인 이상 모이면 진행</li><li>시간: {MATCH_TIME}</li><li>장소: {PLACES.join(' / ')}</li><li>대관 실패 시 일정·장소를 유연하게 조정</li><li>비가 오면 논의 후 진행 여부 결정</li></ul></section>
+    <section id="join"><h2>참여 방법</h2><ol><li>오픈카톡에 자기소개를 남기고 모임 통장 초대 받기</li><li>매주 카톡 투표로 참석 여부 표시</li><li>매치 참석 후 당일 정산(대관비·음료비)</li></ol><p class="label">자기소개 양식 (채팅방에 붙여넣기)</p><pre class="card" style="white-space:pre-wrap;margin:0">이름 :
+연락처 :
+선호 포지션 (축구 기준) :
+주발 :
+나이 (OO년생) :</pre></section>
+    <section id="money"><h2>비용 · 벌금</h2><div class="tbl-wrap"><table class="tbl"><thead><tr><th>유형</th><th>기준</th><th class="r">금액</th></tr></thead><tbody>{FINE_TYPES.map((t) => <tr><td>{t}</td><td>{FINE_NOTE[t]}</td><td class="r">{won(FINE_AMOUNT[t])}</td></tr>)}</tbody></table></div><p class="muted">{FINE_EXEMPT}</p><ul><li>대관비·음료비는 참석자(용병 포함) 정산</li><li>벌금은 당일 구장비·음료비 정산에 우선 사용</li><li>잔액은 모임 통장 공금 → 대관비 선납·공용 물품</li></ul></section>
+    <section id="duty"><h2>봉사</h2><ul><li>대관비·음료비 선납</li><li>음료 구매, 조끼 대여·반납</li><li>매치 종료 후 채팅방에서 정산 진행</li><li>매월 {DUTY_PER_MONTH}명 로테이션 — <a href={href('/record/duty/')}>전체 일정</a></li></ul></section>
+    <section id="bank"><h2>모임 통장</h2><p>{BANK.name} {BANK.number} ({BANK.holder})<br/>모임 시작일 {BANK.since} · 통장 초대 문의: {BANK.contact}</p></section>
+    <section id="manner"><h2>에티켓</h2><ul><li>투표에 꼭 참여하기</li><li>불참 등 특이사항은 사전에 공유</li><li>서로 존중하는 채팅</li></ul></section>
+  </article>
+</Shell>
+<style>
+  .prose section { max-width: var(--modal-xwide); }
+  .prose h2 { font-size: var(--fs-sm); letter-spacing: .06em; text-transform: uppercase; margin: 0 0 var(--m-md); }
+  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: var(--h-accent); background: var(--fg); margin-top: var(--m-sm); }
+  .prose ul, .prose ol { padding-left: 1.2em; margin: 0; }
+  .prose li { margin-bottom: var(--m-xs); }
+  .prose p { margin: 0 0 var(--m-md); }
+</style>

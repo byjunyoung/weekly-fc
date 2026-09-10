@@ -13,6 +13,7 @@ export const PAGES = [
   'record/fines/index.html',
   'record/duty/index.html',
   'tactics/index.html',
+  'about/index.html',
 ];
 export const INDEXABLE = ['tactics/index.html', 'about/index.html'];
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
@@ -36,4 +37,9 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
 test('사이드바에 여섯 갈래가 있다', () => {
   const html = read('index.html');
   for (const l of ['홈', '스쿼드', '매치', '기록', '전술', '소개']) assert.ok(html.includes(`<span class="nav-label">${l}</span>`), l);
+});
+test('sitemap에는 tactics와 about만', () => {
+  const sm = readFileSync('dist/sitemap-0.xml', 'utf8');
+  const locs = [...sm.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]).sort();
+  assert.deepEqual(locs, ['https://byjunyoung.github.io/weekly-fc/about/', 'https://byjunyoung.github.io/weekly-fc/tactics/']);
 });
