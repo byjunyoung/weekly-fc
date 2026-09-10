@@ -37,7 +37,7 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
     if (!data) return;
     const years = [...new Set(data.matches.map((m) => yearOf(m.date)))].sort((a, b) => b - a);
     const sel = $('year') as HTMLSelectElement;
-    if (!years.includes(year as number)) year = years[0];
+    if (year !== undefined && !years.includes(year)) year = years[0];
     sel.innerHTML = years.map((y) => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}</option>`).join('') + `<option value="" ${year === undefined ? 'selected' : ''}>전체</option>`;
     sel.onchange = () => { year = sel.value ? Number(sel.value) : undefined; render(); };
     const ms = seasonMatches(data.matches, year), all = data.matches.filter((m) => year == null || yearOf(m.date) === year);

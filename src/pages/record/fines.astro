@@ -31,7 +31,7 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
     if (isAdmin()) $('add').onclick = openAdd;
     $('summary').innerHTML = `<div class="card"><h2>미납</h2><div class="big ${s.unpaid ? 'warn' : ''}">${fmtWon(s.unpaid)}</div><p class="muted">${s.unpaidCount}건</p></div><div class="card"><h2>누계</h2><div class="big">${fmtWon(s.total)}</div><p class="muted">${data.fines.length}건</p></div>${FINE_TYPES.map((t) => `<div class="card"><h2>${t}</h2><div class="big">${s.byType[t].count}</div><p class="muted">${fmtWon(s.byType[t].total)} · 건당 ${fmtWon(FINE_AMOUNT[t])}</p></div>`).join('')}`;
     const unpaid = [...s.byPlayer].filter(([, v]) => v.unpaid > 0).sort((a, b) => b[1].unpaid - a[1].unpaid);
-    $('unpaid').innerHTML = unpaid.length ? unpaid.map(([name, v]) => { const p = data!.players.find((x) => x.name === name); return `<a class="chip" href="${p ? href(`/squad/${p.num}/`) : '#'}">${esc(name)} <b class="warn">${fmtWon(v.unpaid)}</b></a>`; }).join('') : '<span class="muted">미납 없음</span>';
+    $('unpaid').innerHTML = unpaid.length ? unpaid.map(([name, v]) => { const p = data!.players.find((x) => x.name === name); const body = `${esc(name)} <b class="warn">${fmtWon(v.unpaid)}</b>`; return p ? `<a class="chip" href="${href(`/squad/${p.num}/`)}">${body}</a>` : `<span class="chip">${body}</span>`; }).join('') : '<span class="muted">미납 없음</span>';
     const cols: Column<Fine>[] = [
       { key: 'date', label: '날짜', get: (f) => f.date, cell: (f) => fmtDate(f.date) },
       { key: 'player', label: '이름', get: (f) => f.player },
