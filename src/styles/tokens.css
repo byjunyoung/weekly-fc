@@ -8,7 +8,7 @@
   --warn: #b91c1c; --warn-bg: #fdecec; --ok: #1a7f37;
   --gold: #c9a227; --silver: #8c8c8c; --bronze: #a05a2c;
   --sidebar: 220px; --sidebar-narrow: 56px; --header-h: 48px;
-  --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px;
+  --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px;
   --fs-xs: 11px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 20px; --fs-xl: 32px;
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
@@ -107,6 +107,10 @@ body.wide .main { max-width: none; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid var(--line); font-size: var(--fs-sm); }
 .chip.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .w-search { width: 120px; }
+.w-tname { width: 80px; }
+.w-points { width: 70px; }
+.att-preview { margin-top: 12px; }
+.res-chips { margin-top: 8px; }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--gap); }
 .thumb { border: 1px solid var(--line); }
 .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--tint); }
@@ -135,6 +139,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .modal-bg.show { display: flex; }
 .modal { background: var(--bg); border: 1px solid var(--line); width: 100%; max-width: 420px; max-height: 90vh; overflow: auto; padding: 20px; }
 .modal.modal-wide { max-width: 560px; }
+.modal.modal-xwide { max-width: var(--modal-xwide); }
 .modal h2 { margin-bottom: 12px; }
 .modal .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }

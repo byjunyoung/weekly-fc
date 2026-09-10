@@ -8,6 +8,7 @@ export const PAGES = [
   'squad/index.html',
   'squad/9/index.html',
   'squad/99/index.html',
+  'match/index.html',
 ];
 export const INDEXABLE = ['tactics/index.html', 'about/index.html'];
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
