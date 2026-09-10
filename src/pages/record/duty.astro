@@ -26,7 +26,12 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
     sel.onchange = () => { year = Number(sel.value); render(); };
     const rows = yearRows(data.players, data.rotation, year);
     const names = data.players.map((p) => p.name);
-    const pick = (r: RotationRow, k: 'p1' | 'p2') => `<select data-y="${r.year}" data-m="${r.month}" data-k="${k}">${names.map((n) => `<option ${n === r[k] ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+    const pick = (r: RotationRow, k: 'p1' | 'p2') => {
+      const val = r[k];
+      // 시트 값이 현재 명단에 없으면(퇴단 등) 브라우저가 첫 옵션을 대신 보여줘 관리자·비관리자 화면이 달라진다 — 저장된 값을 옵션으로 앞에 끼워 넣는다.
+      const extra = val && !names.includes(val) ? `<option selected>${esc(val)}</option>` : '';
+      return `<select data-y="${r.year}" data-m="${r.month}" data-k="${k}">${extra}${names.map((n) => `<option ${n === val ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+    };
     $('app').innerHTML = `<table class="tbl"><thead><tr><th>월</th><th>당번 1</th><th>당번 2</th><th class="c">완료</th></tr></thead><tbody>${rows.map((r) => { const cur = r.year === now.getFullYear() && r.month === now.getMonth() + 1; return `<tr class="${cur ? 'row-current' : ''}"><td>${r.month}월${cur ? ' <span class="label">이번 달</span>' : ''}</td><td>${isAdmin() ? pick(r, 'p1') : esc(r.p1)}</td><td>${isAdmin() ? pick(r, 'p2') : esc(r.p2)}</td><td class="c">${isAdmin() ? `<input type="checkbox" data-y="${r.year}" data-m="${r.month}" data-k="done" ${r.done ? 'checked' : ''}>` : r.done ? '✓' : ''}</td></tr>`; }).join('')}</tbody></table>`;
     $('app').querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-k]').forEach((el) => (el.onchange = async () => {
       const y = Number(el.dataset.y), m = Number(el.dataset.m);

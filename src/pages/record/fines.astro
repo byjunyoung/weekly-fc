@@ -15,7 +15,7 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
 <script>
   import { onData, isAdmin, write, serializeFine } from '../../lib/api.ts';
   import { href } from '../../lib/url.ts';
-  import { esc, fmtDate, fmtWon, toast } from '../../lib/html.ts';
+  import { esc, fmtDate, fmtWon, toast, seoulToday } from '../../lib/html.ts';
   import { fineSummary } from '../../lib/stats.ts';
   import { FINE_TYPES, FINE_AMOUNT } from '../../lib/rules.ts';
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
@@ -34,7 +34,8 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
     $('unpaid').innerHTML = unpaid.length ? unpaid.map(([name, v]) => { const p = data!.players.find((x) => x.name === name); const body = `${esc(name)} <b class="warn">${fmtWon(v.unpaid)}</b>`; return p ? `<a class="chip" href="${href(`/squad/${p.num}/`)}">${body}</a>` : `<span class="chip">${body}</span>`; }).join('') : '<span class="muted">미납 없음</span>';
     const cols: Column<Fine>[] = [
       { key: 'date', label: '날짜', get: (f) => f.date, cell: (f) => fmtDate(f.date) },
-      { key: 'player', label: '이름', get: (f) => f.player },
+      { key: 'match', label: '매치', get: (f) => data!.matches.find((m) => m.id === f.match_id)?.date ?? '', cell: (f) => { const m = data!.matches.find((x) => x.id === f.match_id); return m ? `<a href="${href(`/match/?d=${encodeURIComponent(m.id)}`)}">${fmtDate(m.date)}</a>` : '<span class="muted">–</span>'; } },
+      { key: 'player', label: '이름', get: (f) => f.player, cell: (f) => { const p = data!.players.find((x) => x.name === f.player); return p ? `<a href="${href(`/squad/${p.num}/`)}">${esc(f.player)}</a>` : esc(f.player); } },
       { key: 'type', label: '유형', get: (f) => f.type },
       { key: 'amount', label: '금액', get: (f) => f.amount, align: 'r', cell: (f) => fmtWon(f.amount) },
       { key: 'paid', label: '납부', get: (f) => (f.paid ? 1 : 0), cell: (f) => (isAdmin() ? `<button data-paid="${f.id}" class="${f.paid ? '' : 'primary'}">${f.paid ? '완료' : '납부 처리'}</button>` : f.paid ? '완료' : '<span class="warn">미납</span>') },
@@ -45,7 +46,7 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
     $('app').querySelectorAll<HTMLElement>('[data-del]').forEach((b) => (b.onclick = async () => { try { await write('deleteFine', { id: b.dataset.del }); } catch (e) { toast((e as Error).message); } }));
   }
   function openAdd() {
-    ($('fine-form') as HTMLFormElement).innerHTML = `<label>날짜<input name="date" type="date" value="${new Date().toISOString().slice(0, 10)}"></label><label>이름<select name="player">${data!.players.map((p) => `<option>${esc(p.name)}</option>`).join('')}</select></label><label>유형<select name="type" id="fine-type">${FINE_TYPES.map((t) => `<option>${t}</option>`).join('')}</select></label><label>금액<input name="amount" id="fine-amt" type="number" value="${FINE_AMOUNT.지각}"></label><label class="full">매치 (선택)<select name="match_id"><option value="">없음</option>${data!.matches.map((m) => `<option value="${esc(m.id)}">${fmtDate(m.date)}</option>`).join('')}</select></label>`;
+    ($('fine-form') as HTMLFormElement).innerHTML = `<label>날짜<input name="date" type="date" value="${seoulToday()}"></label><label>이름<select name="player">${data!.players.map((p) => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select></label><label>유형<select name="type" id="fine-type">${FINE_TYPES.map((t) => `<option>${t}</option>`).join('')}</select></label><label>금액<input name="amount" id="fine-amt" type="number" value="${FINE_AMOUNT.지각}"></label><label class="full">매치 (선택)<select name="match_id"><option value="">없음</option>${data!.matches.map((m) => `<option value="${esc(m.id)}">${fmtDate(m.date)}</option>`).join('')}</select></label>`;
     ($('fine-type') as HTMLSelectElement).onchange = (e) => { ($('fine-amt') as HTMLInputElement).value = String(FINE_AMOUNT[(e.target as HTMLSelectElement).value as keyof typeof FINE_AMOUNT]); };
     $('fine-ok').onclick = async () => { const fd = new FormData($('fine-form') as HTMLFormElement); const g = (k: string) => String(fd.get(k) ?? ''); try { await write('writeFine', serializeFine({ id: String(Date.now()), date: g('date'), match_id: g('match_id'), player: g('player'), type: g('type') as Fine['type'], amount: Number(g('amount')) || 0, paid: false })); $('fine-modal').classList.remove('show'); toast('저장됨'); } catch (e) { toast((e as Error).message); } };
     $('fine-modal').classList.add('show');

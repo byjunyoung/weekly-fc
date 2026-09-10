@@ -154,6 +154,8 @@ details.year > summary { cursor: pointer; padding: 8px 0; font-weight: 600; list
 details.year > summary::before { content: "▸ "; color: var(--muted); }
 details.year[open] > summary::before { content: "▾ "; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; font-size: var(--fs-sm); z-index: 50; }
+.recap-img { max-width: 540px; }
+.recap-dl { display: inline-block; padding: 6px 12px; }
 
 /* 모달 */
 .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; align-items: center; justify-content: center; padding: var(--gap); }

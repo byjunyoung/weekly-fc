@@ -14,7 +14,7 @@ import Shell from '../../layouts/Shell.astro';
   import { proposeMatches, parseAttendance } from '../../lib/parse.ts';
   import { lineupSvg, type PitchState } from '../../components/lineup-svg.ts';
   import { mountRecap } from '../../components/recap.ts';
-  import { esc, fmtDate, ytThumb, ytEmbed, toast } from '../../lib/html.ts';
+  import { esc, fmtDate, ytThumb, ytEmbed, toast, seoulToday } from '../../lib/html.ts';
   import { href } from '../../lib/url.ts';
   import type { Data, Match, Team } from '../../lib/types.ts';
 
@@ -129,7 +129,7 @@ import Shell from '../../layouts/Shell.astro';
 
   // ── 관리자: 정보 편집 / 직접 추가 ──
   function openMeta(m: Match | null) {
-    const v = m ?? { id: '', date: new Date().toISOString().slice(0, 10), location: '', youtube: '', type: '' as const, attendees: [], teams: [], winner: '' };
+    const v = m ?? { id: '', date: seoulToday(), location: '', youtube: '', type: '' as const, attendees: [], teams: [], winner: '' };
     ($('meta-form') as HTMLFormElement).innerHTML = `<label>날짜<input name="date" type="date" value="${v.date}" required></label><label>유형<select name="type">${['', '2파전', '3파전'].map((t) => `<option ${t === v.type ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label>장소<input name="location" value="${esc(v.location)}"></label><label class="full">유튜브 ID 또는 주소<input name="youtube" value="${esc(v.youtube)}"></label>`;
     $('meta-del').hidden = !m;
     $('meta-ok').onclick = async () => {

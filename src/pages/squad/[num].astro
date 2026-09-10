@@ -68,7 +68,20 @@ const { num } = Astro.params;
     const p: Player = { num: Number(g('num')), name: g('name'), pos: g('pos') as Player['pos'], detail: g('detail'), foot: g('foot'), vest: n('vest'), note: g('note'), rot: n('rot'),
       pace: n('pace') ?? 0, dribble: n('dribble') ?? 0, pass: n('pass') ?? 0, shoot: n('shoot') ?? 0, defend: n('defend') ?? 0, stamina: n('stamina') ?? 0, phone: g('phone') };
     if (!p.num || !p.name) { toast('번호와 이름은 필수'); return; }
-    try { await write('writePlayer', serializePlayer(p)); $('edit-modal').classList.remove('show'); toast('저장됨'); if (p.num !== num) location.href = href(`/squad/${p.num}/`); } catch (e) { toast((e as Error).message); }
+    const numChanged = p.num !== num;
+    if (numChanged) {
+      const clash = data?.players.find((x) => x.num === p.num);
+      if (clash) { toast(`${p.num}번은 이미 ${clash.name}의 번호입니다`); return; }
+    }
+    try {
+      await write('writePlayer', serializePlayer(p));
+      // 번호를 바꾼 경우: 새 번호로 먼저 쓴 뒤에만 옛 번호 행을 지운다 — 실패해도 선수 정보를 잃지 않도록.
+      if (numChanged && data?.players.some((x) => x.num === num)) {
+        try { await write('deletePlayer', { num }); } catch (e) { toast(`저장은 됐지만 이전 번호(${num}) 삭제 실패: ${(e as Error).message}`); }
+      }
+      $('edit-modal').classList.remove('show'); toast('저장됨');
+      if (numChanged) location.href = href(`/squad/${p.num}/`);
+    } catch (e) { toast((e as Error).message); }
   };
   $('del').onclick = async () => { if (!confirm('이 선수를 명단에서 지울까요?')) return; try { await write('deletePlayer', { num }); location.href = href('/squad/'); } catch (e) { toast((e as Error).message); } };
   window.addEventListener('wfc:admin', render);

@@ -141,5 +141,5 @@ export function mountRecap(m: Match, ps: PitchState | null): void {
   const c = document.createElement('canvas');
   drawRecap(c, m, ps);
   const url = c.toDataURL('image/png');
-  slot.innerHTML = `<img src="${url}" alt="리캡 카드" style="max-width:540px;border:1px solid var(--line)"><div class="row"><a class="primary" style="display:inline-block;padding:6px 12px;border:1px solid var(--fg)" href="${url}" download="${esc(`weeklyfc-${m.date}.png`)}">이미지로 저장</a><span class="muted">모바일은 이미지를 길게 눌러 저장</span></div>`;
+  slot.innerHTML = `<img src="${url}" alt="리캡 카드" class="recap-img" style="border:1px solid var(--line)"><div class="row"><a class="primary recap-dl" style="border:1px solid var(--fg)" href="${url}" download="${esc(`weeklyfc-${m.date}.png`)}">이미지로 저장</a><span class="muted">모바일은 이미지를 길게 눌러 저장</span></div>`;
 }
