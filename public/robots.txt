@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://byjunyoung.github.io/weekly-fc/sitemap-index.xml
