@@ -78,10 +78,30 @@ async function call(action: string, params: Record<string, unknown> = {}): Promi
 export function cached(): Data | null { try { const s = localStorage.getItem(CACHE_KEY); return s ? (JSON.parse(s) as Data) : null; } catch { return null; } }
 function saveCache(d: Data): void { try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch {} }
 export async function fetchData(): Promise<Data> { return normalizeData(await call('getAll')); }
+
+let inflight: Promise<Data> | null = null;
+let lastErr: string | null = null;
+/** 마지막 refresh() 실패 메시지. 성공하면 null. Shell.astro가 배너에 쓴다. */
+export function lastError(): string | null { return lastErr; }
+/** 동시에 여러 곳(Shell + 각 페이지)에서 불러도 서버 왕복은 한 번만 나간다. */
 export async function refresh(): Promise<Data> {
-  const d = await fetchData(); saveCache(d);
-  window.dispatchEvent(new CustomEvent<Data>('wfc:data', { detail: d }));
-  return d;
+  if (inflight) return inflight;
+  inflight = (async () => {
+    try {
+      const d = await fetchData();
+      saveCache(d);
+      lastErr = null;
+      window.dispatchEvent(new CustomEvent<Data>('wfc:data', { detail: d }));
+      return d;
+    } catch (e) {
+      lastErr = (e as Error).message || '연결 실패';
+      window.dispatchEvent(new CustomEvent<string>('wfc:error', { detail: lastErr }));
+      throw e;
+    } finally {
+      inflight = null;
+    }
+  })();
+  return inflight;
 }
 /** 캐시가 있으면 즉시 한 번, 서버 응답이 오면 다시 한 번 render. 이후 wfc:data 마다. */
 export function onData(render: (d: Data) => void): void {
@@ -95,14 +115,24 @@ export async function loadVideos(): Promise<Video[]> {
 }
 export function getPin(): string { try { return sessionStorage.getItem(PIN_KEY) ?? ''; } catch { return ''; } }
 export function isAdmin(): boolean { return getPin() !== ''; }
-export async function login(pin: string): Promise<boolean> {
-  try { await call('verifyPin', { pin }); sessionStorage.setItem(PIN_KEY, pin); return true; } catch { return false; }
+export type LoginResult = 'ok' | 'bad-pin' | 'error';
+export async function login(pin: string): Promise<LoginResult> {
+  try {
+    await call('verifyPin', { pin });
+    sessionStorage.setItem(PIN_KEY, pin);
+    return 'ok';
+  } catch (e) {
+    // verifyPin()이 틀린 PIN일 때 던지는 서버 메시지로만 "틀린 PIN"을 구분한다. 그 외(네트워크 실패 등)는 연결 실패.
+    return (e as Error).message?.includes('PIN이 올바르지 않습니다') ? 'bad-pin' : 'error';
+  }
 }
 export function logout(): void { try { sessionStorage.removeItem(PIN_KEY); } catch {} }
 /** 쓰기: PIN 동봉 → 성공하면 refresh()까지. 실패는 throw. */
 export async function write(action: string, payload: unknown): Promise<Raw> {
   const pin = getPin(); if (!pin) throw new Error('관리자 PIN이 필요합니다');
   const r = await call(action, { pin, payload });
+  // 쓰기가 끝나기 전부터 돌고 있던 read는 이 쓰기보다 옛 데이터를 볼 수 있다 — 그게 끝나길 기다렸다가 새로 한 번 더 refresh.
+  if (inflight) await inflight.catch(() => {});
   await refresh();
   return r;
 }

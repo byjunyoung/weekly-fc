@@ -104,6 +104,8 @@ body.wide .main { max-width: none; }
 .pos-gk { background: var(--pos-gk); } .pos-df { background: var(--pos-df); } .pos-mf { background: var(--pos-mf); } .pos-fw { background: var(--pos-fw); }
 .grade-gold { color: var(--gold); } .grade-silver { color: var(--silver); } .grade-bronze { color: var(--bronze); }
 .warn { color: var(--warn); }
+.load-err { display: flex; align-items: center; gap: var(--m-sm); margin-bottom: var(--gap); }
+.load-err button { color: var(--warn); border-color: var(--warn); }
 
 /* 카드·격자·칩 */
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--gap); }

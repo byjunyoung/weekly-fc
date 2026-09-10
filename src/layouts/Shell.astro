@@ -49,12 +49,15 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
     </div>
   </aside>
   <div class="scrim" id="scrim"></div>
-  <main class="main"><slot /></main>
+  <main class="main">
+    <p class="warn load-err" id="load-err" hidden>데이터를 불러오지 못했습니다 · <button id="load-err-retry">다시 시도</button></p>
+    <slot />
+  </main>
 
   <div class="modal-bg" id="pin-modal">
     <div class="modal">
       <h2>관리자 모드</h2>
-      <p class="muted">시트 뒤 네 자리 PIN을 입력하세요.</p>
+      <p class="muted">관리자 PIN을 입력하세요.</p>
       <input id="pin-input" type="password" inputmode="numeric" maxlength="8" autocomplete="off" style="width:100%" />
       <p id="pin-err" class="warn" hidden>PIN이 올바르지 않습니다.</p>
       <div class="foot"><button data-close="pin-modal">취소</button><button class="primary" id="pin-ok">확인</button></div>
@@ -71,7 +74,7 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
   <div class="toast" id="toast" hidden></div>
 
   <script>
-    import { onData, isAdmin, login, logout } from '../lib/api';
+    import { onData, isAdmin, login, logout, refresh } from '../lib/api';
     import { getMe, setMe } from '../lib/me';
     import type { Data } from '../lib/types';
     const $ = (id: string) => document.getElementById(id) as HTMLElement;
@@ -91,9 +94,17 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
     }));
     $('me-clear').onclick = () => { setMe(null); meLabel(); $('me-modal').classList.remove('show'); };
     $('admin-btn').onclick = () => { if (isAdmin()) { logout(); adminLabel(); window.dispatchEvent(new Event('wfc:admin')); } else { $('pin-err').hidden = true; ($('pin-input') as HTMLInputElement).value = ''; $('pin-modal').classList.add('show'); ($('pin-input') as HTMLInputElement).focus(); } };
-    const submitPin = async () => { const ok = await login(($('pin-input') as HTMLInputElement).value.trim()); if (ok) { $('pin-modal').classList.remove('show'); adminLabel(); window.dispatchEvent(new Event('wfc:admin')); } else $('pin-err').hidden = false; };
+    const submitPin = async () => {
+      const result = await login(($('pin-input') as HTMLInputElement).value.trim());
+      if (result === 'ok') { $('pin-modal').classList.remove('show'); adminLabel(); window.dispatchEvent(new Event('wfc:admin')); }
+      else { $('pin-err').textContent = result === 'bad-pin' ? 'PIN이 올바르지 않습니다.' : '연결에 실패했습니다 · 다시 시도'; $('pin-err').hidden = false; }
+    };
     $('pin-ok').onclick = submitPin;
     $('pin-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitPin(); });
+    const loadErr = $('load-err');
+    $('load-err-retry').onclick = () => { refresh().catch(() => {}); };
+    window.addEventListener('wfc:error', () => { loadErr.hidden = false; });
+    window.addEventListener('wfc:data', () => { loadErr.hidden = true; });
     onData((d) => { players = d.players; meLabel(); });
     adminLabel();
     (window as unknown as { wfcToast: (m: string) => void }).wfcToast = (m: string) => { const t = $('toast'); t.textContent = m; t.hidden = false; setTimeout(() => (t.hidden = true), 2200); };
