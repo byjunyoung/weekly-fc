@@ -4,7 +4,22 @@ import Shell from '../layouts/Shell.astro';
 <Shell title="축구 전술판" index={true} wide={true} description="무료 온라인 축구·풋살 전술판. 포메이션, 선수 배치, 화살표·존 드로잉. 설치 없이 브라우저에서.">
   <Fragment slot="head">
     <link rel="canonical" href="https://byjunyoung.github.io/weekly-fc/tactics/" />
-    <script type="application/ld+json" is:inline set:html={JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebApplication', name: '축구 전술판 · Football Tactics Board', url: 'https://byjunyoung.github.io/weekly-fc/tactics/', applicationCategory: 'SportsApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0' }, description: '포메이션 설정, 선수 배치, 화살표·존·펜 드로잉을 지원하는 무료 온라인 축구·풋살 전술판' })} />
+    <meta name="keywords" content="축구 전술판, 온라인 전술판, 무료 전술판, 풋살 전술판, 7인제 전술판, 축구 포메이션, 전술 보드, football tactics board, soccer tactics board, free tactics board, online tactics board, soccer formation" />
+    <meta property="og:title" content="무료 온라인 축구 전술판 | Football Tactics Board" />
+    <meta property="og:description" content="설치 없이 바로 쓰는 무료 축구 전술판. 포메이션 설정, 선수 배치, 화살표·존·펜 드로잉. 축구·풋살·7인제 지원." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://byjunyoung.github.io/weekly-fc/tactics/" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="무료 온라인 축구 전술판" />
+    <meta name="twitter:description" content="설치 없이 바로 쓰는 무료 축구 전술판. 포메이션·화살표·존·펜 드로잉 지원." />
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebApplication', name: '축구 전술판 · Football Tactics Board', alternateName: 'Football Tactics Board', url: 'https://byjunyoung.github.io/weekly-fc/tactics/', applicationCategory: 'SportsApplication', operatingSystem: 'Any', featureList: ['포메이션 설정', '선수 배치 및 이동', '화살표 드로잉', '존 표시', '펜 드로잉', '축구·풋살·7인제 지원', '모바일 지원'], offers: { '@type': 'Offer', price: '0' }, description: '포메이션 설정, 선수 배치, 화살표·존·펜 드로잉을 지원하는 무료 온라인 축구·풋살 전술판' })} />
+    <script type="application/ld+json" is:inline set:html={JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [
+      { '@type': 'Question', name: '무료 온라인 축구 전술판은 어디서 쓸 수 있나요?', acceptedAnswer: { '@type': 'Answer', text: 'byjunyoung.github.io/weekly-fc/tactics 에서 설치 없이 무료로 바로 사용할 수 있습니다. 모바일과 PC 모두 지원합니다.' } },
+      { '@type': 'Question', name: '풋살 전술판도 지원하나요?', acceptedAnswer: { '@type': 'Answer', text: '네, 축구(11인제), 풋살(5인제), 7인제를 모두 지원합니다. 상단 탭에서 모드를 전환할 수 있습니다.' } },
+      { '@type': 'Question', name: '어떤 포메이션을 설정할 수 있나요?', acceptedAnswer: { '@type': 'Answer', text: '4-3-3, 4-4-2, 4-2-3-1, 3-5-2, 5-3-2, 4-5-1, 3-4-3 등 자주 쓰는 포메이션을 제공합니다. 인원수 조절로 다양한 포메이션을 사용할 수 있습니다.' } },
+      { '@type': 'Question', name: '전술판에서 화살표나 선을 그릴 수 있나요?', acceptedAnswer: { '@type': 'Answer', text: '네, 화살표 도구로 움직임을 표시하고, 존 도구로 구역을 표시하고, 펜 도구로 자유롭게 드로잉할 수 있습니다.' } },
+    ] })} />
   </Fragment>
   <div id="board" class="board">
     <div class="page-head"><h1>전술판</h1><div class="actions" id="squad-actions"></div></div>
@@ -90,9 +105,9 @@ import Shell from '../layouts/Shell.astro';
      색은 토큰으로: --bg→--surface, --panel→--bg, --border→--line, --text→--fg, --muted→--muted, --accent→--fg.
      border-radius는 0, box-shadow·transition은 삭제. 캔버스 내부 색(피치 초록·화살표 골드 등)은 pitch.ts에만 남아 있다. */
   .board, .board * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  .board { background: var(--surface); color: var(--fg); height: calc(100dvh - var(--pad) * 2); display: flex; flex-direction: column; overflow: hidden; }
-  /* .board는 Shell의 .main 안에 있다 — .main의 상하 padding(과 699px 이하의 sticky .mhead)만큼 100dvh에서 뺀다. */
-  @media (max-width: 899px) { .board { height: calc(100dvh - var(--gap) * 2); } }
+  .board { background: var(--surface); color: var(--fg); height: calc(100dvh - var(--header-h) - var(--pad) * 2); display: flex; flex-direction: column; overflow: hidden; }
+  /* .board는 Shell의 .main 안에 있다 — .main의 상하 padding과, 이 페이지는 항상 wide라 모든 폭에서 노출되는 sticky .mhead 높이를 100dvh에서 뺀다. */
+  @media (max-width: 899px) { .board { height: calc(100dvh - var(--header-h) - var(--gap) * 2); } }
   @media (max-width: 699px) { .board { height: calc(100dvh - var(--header-h) - var(--gap) * 2); } }
 
   /* ── HEADER ── */
@@ -225,6 +240,7 @@ import Shell from '../layouts/Shell.astro';
   const api = initPitch($('board'));
   const wantMatch = new URLSearchParams(location.search).get('match');
   let data: Data | null = null, picked: number[] = [];
+  let injected = false; // ?match= 라인업은 도착 시 한 번만 주입 — 그 뒤 renderActions가 다시 돌아도 진행 중인 작업을 덮지 않는다.
   const LOCAL = 'wfc_pitch_draft';
   try { const d = localStorage.getItem(LOCAL); if (d && !wantMatch) api.setState(JSON.parse(d) as PitchState); } catch {}
   window.addEventListener('beforeunload', () => { if (wantMatch) return; try { localStorage.setItem(LOCAL, JSON.stringify(api.getState())); } catch {} });
@@ -233,7 +249,7 @@ import Shell from '../layouts/Shell.astro';
     $('squad-actions').innerHTML = `<button id="load-squad">명단 불러오기</button>${isAdmin() ? '<button id="save-lineup">매치에 저장</button>' : ''}`;
     $('load-squad').onclick = () => { picked = []; drawPick(); $('squad-modal').classList.add('show'); };
     if (isAdmin()) $('save-lineup').onclick = () => { ($('save-match') as HTMLSelectElement).innerHTML = data!.matches.map((m) => `<option value="${esc(m.id)}" ${m.id === wantMatch ? 'selected' : ''}>${fmtDate(m.date)}${m.location ? ` · ${esc(m.location)}` : ''}</option>`).join(''); $('save-modal').classList.add('show'); };
-    if (wantMatch) { const l = data.lineups.find((x) => x.match_id === wantMatch); if (l) { try { api.setState(JSON.parse(l.assignments) as PitchState); } catch {} } }
+    if (wantMatch && !injected) { const l = data.lineups.find((x) => x.match_id === wantMatch); if (l) { try { api.setState(JSON.parse(l.assignments) as PitchState); injected = true; } catch {} } }
   }
   function drawPick() {
     $('squad-list').innerHTML = [...data!.players].sort((a, b) => a.num - b.num).map((p) => { const i = picked.indexOf(p.num); return `<button data-n="${p.num}" class="${i >= 0 ? 'primary' : ''}">${i >= 0 ? `${i + 1}. ` : ''}${p.num} ${esc(p.name)}</button>`; }).join('');

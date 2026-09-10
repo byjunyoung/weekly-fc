@@ -33,7 +33,9 @@ h2 { font-size: var(--fs-md); }
 .h2-tight { margin-bottom: 8px; }
 
 /* 셸 */
-.mhead { display: none; }
+.mhead { display: none; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 20; height: var(--header-h); padding: 0 var(--gap); background: var(--bg); border-bottom: 1px solid var(--line); }
+.mhead .mark { flex: 1; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; font-size: var(--fs-sm); }
+.mhead button { padding: 4px 10px; font-size: var(--fs-sm); }
 .side { position: fixed; top: 0; left: 0; bottom: 0; width: var(--sidebar); border-right: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; padding: 20px 0; }
 .side .mark { display: block; padding: 0 20px 20px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; font-size: var(--fs-md); }
 .side nav { display: flex; flex-direction: column; }
@@ -58,9 +60,7 @@ body.wide .main { max-width: none; }
   .main { margin-left: var(--sidebar-narrow); padding: var(--gap); }
 }
 @media (max-width: 699px) {
-  .mhead { display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 20; height: var(--header-h); padding: 0 var(--gap); background: var(--bg); border-bottom: 1px solid var(--line); }
-  .mhead .mark { flex: 1; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; font-size: var(--fs-sm); }
-  .mhead button { padding: 4px 10px; font-size: var(--fs-sm); }
+  .mhead { display: flex; }
   .side { width: var(--sidebar); transform: translateX(-100%); z-index: 30; padding-top: 20px; }
   .side.open { transform: none; }
   .side .mark, .side .nav-label, .side-foot { display: block; }
@@ -69,6 +69,17 @@ body.wide .main { max-width: none; }
   .scrim.show { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 25; }
   .main { margin-left: 0; padding: var(--gap); }
 }
+
+/* wide(전술판): 사이드바를 모바일과 같은 오프캔버스 오버레이로 접어 전체 폭을 쓴다.
+   데스크톱·태블릿(≥700px)에서도 헤더(.mhead)는 계속 노출해 메뉴 버튼으로 사이드바를 다시 열 수 있게 한다. */
+body.wide .mhead { display: flex; }
+body.wide .side { width: var(--sidebar); transform: translateX(-100%); z-index: 30; padding-top: 20px; }
+body.wide .side.open { transform: none; }
+body.wide .side .mark, body.wide .side .nav-label, body.wide .side-foot { display: block; }
+body.wide .side .nav-short { display: none; }
+body.wide .side nav a { justify-content: flex-start; padding: 10px 20px; }
+body.wide .scrim.show { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 25; }
+body.wide .main { margin-left: 0; }
 
 /* 탭 */
 .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: var(--gap); overflow-x: auto; }
