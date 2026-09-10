@@ -255,7 +255,7 @@ function sheetToObjects(ss, name, cols) {
 
 function findRowByField(data, colIdx, value) {
   for (let i = 1; i < data.length; i++) {
-    if (String(data[i][colIdx]) === value) return i;
+    if (String(cell(data[i][colIdx])) === value) return i;
   }
   return -1;
 }
