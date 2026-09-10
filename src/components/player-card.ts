@@ -10,10 +10,10 @@ export function playerCard(p: Player): string {
   return `<div class="card pcard">
     <div class="row" style="justify-content:space-between;align-items:flex-start">
       <div><div class="label">#${p.num}${p.vest ? ` · 조끼 ${p.vest}` : ''}</div><h2 style="font-size:var(--fs-lg)">${esc(p.name)}</h2>
-        <div class="row" style="margin-top:6px"><span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span><span class="muted">${esc(p.detail)}${p.foot ? ` · ${esc(p.foot)}` : ''}</span></div></div>
+        <div class="row pcard-row"><span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span><span class="muted">${esc(p.detail)}${p.foot ? ` · ${esc(p.foot)}` : ''}</span></div></div>
       <div style="text-align:right"><div class="label">OVR</div><div class="big grade-${grade(o)}">${o || '–'}</div></div>
     </div>
-    <div class="bars" style="margin-top:14px">${bars}</div>
-    ${p.note ? `<p class="muted" style="margin:12px 0 0;font-size:var(--fs-sm)">${esc(p.note)}</p>` : ''}
+    <div class="bars pcard-bars">${bars}</div>
+    ${p.note ? `<p class="muted pcard-note">${esc(p.note)}</p>` : ''}
   </div>`;
 }

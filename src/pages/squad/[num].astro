@@ -6,7 +6,7 @@ const { num } = Astro.params;
 <Shell title={`선수 #${num}`}>
   <div class="page-head"><h1 id="title">선수 #{num}</h1><div class="actions" id="actions"></div></div>
   <div id="app" class="stack" data-num={num}></div>
-  <div class="modal-bg" id="edit-modal"><div class="modal" style="max-width:560px"><h2>선수 편집</h2><form class="form" id="edit-form"></form><div class="foot"><button class="danger" id="del">삭제</button><span style="flex:1"></span><button data-close="edit-modal">취소</button><button class="primary" id="save">저장</button></div></div></div>
+  <div class="modal-bg" id="edit-modal"><div class="modal modal-wide"><h2>선수 편집</h2><form class="form" id="edit-form"></form><div class="foot"><button class="danger" id="del">삭제</button><span style="flex:1"></span><button data-close="edit-modal">취소</button><button class="primary" id="save">저장</button></div></div></div>
 </Shell>
 <script>
   import { onData, isAdmin, write, fetchFull, serializePlayer } from '../../lib/api.ts';
@@ -44,13 +44,13 @@ const { num } = Astro.params;
         <div class="card"><h2>봉사</h2><div class="big">${duty ? monthLabel(duty.year, duty.month) : '–'}</div><p class="muted">${p.rot ? `순번 ${p.rot} · 다음 차례` : '로테이션 제외'}</p></div>
       </div>
       <div class="card"><h2>참여 이력</h2>${my.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th><th>장소</th><th>유형</th><th>결과</th></tr></thead><tbody>${my.map((m) => { const won = m.winner && m.teams.find((t) => t.name === m.winner)?.players.includes(p.name); return `<tr><td><a href="${href(`/match/?d=${encodeURIComponent(m.id)}`)}">${fmtDate(m.date)}</a></td><td>${esc(m.location) || '–'}</td><td>${esc(m.type) || '–'}</td><td>${m.winner ? (won ? '<span class="val val-a">승</span>' : '<span class="val val-d">패</span>') : '<span class="muted">–</span>'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted">아직 참석 기록이 없습니다.</p>'}</div>
-      ${fines.length ? `<div class="card"><h2>벌금 내역</h2><div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th><th>유형</th><th class="r">금액</th><th>납부</th></tr></thead><tbody>${fines.map((f) => `<tr><td>${fmtDate(f.date)}</td><td>${f.type}</td><td class="r">${fmtWon(f.amount)}</td><td>${f.paid ? '완료' : '<span class="warn">미납</span>'}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
+      ${fines.length ? `<div class="card"><h2>벌금 내역</h2><div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th><th>유형</th><th class="r">금액</th><th>납부</th></tr></thead><tbody>${fines.map((f) => `<tr><td>${fmtDate(f.date)}</td><td>${esc(f.type)}</td><td class="r">${fmtWon(f.amount)}</td><td>${f.paid ? '완료' : '<span class="warn">미납</span>'}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
   }
 
   const F = (name: string, label: string, value: string | number, type = 'text', extra = '') => `<label>${label}<input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
   async function openEdit(p: Player | undefined) {
     let full = p;
-    if (p) { try { full = (await fetchFull()).players.find((x) => x.num === num) ?? p; } catch { toast('전화번호를 못 불러왔습니다'); } }
+    if (p) { try { full = (await fetchFull()).players.find((x) => x.num === num) ?? p; } catch { toast('전화번호를 못 불러와 편집을 열 수 없습니다. 다시 시도해주세요'); return; } }
     const v = full ?? { num, name: '', pos: '' as const, detail: '', foot: '', vest: null, note: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, phone: '' };
     ($('edit-form') as HTMLFormElement).innerHTML = `
       ${F('num', '번호', v.num, 'number', 'min="1" max="99" required')}${F('name', '이름', v.name, 'text', 'required')}

@@ -106,6 +106,7 @@ body.wide .main { max-width: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid var(--line); font-size: var(--fs-sm); }
 .chip.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.w-search { width: 120px; }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--gap); }
 .thumb { border: 1px solid var(--line); }
 .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--tint); }
@@ -121,6 +122,9 @@ body.wide .main { max-width: none; }
 .bar { display: grid; grid-template-columns: 3.2em 1fr 2.4em; align-items: center; gap: 8px; font-size: var(--fs-sm); }
 .bar i { display: block; height: 6px; background: var(--tint); }
 .bar i b { display: block; height: 100%; background: var(--fg); }
+.pcard-row { margin-top: 6px; }
+.pcard-bars { margin-top: 14px; }
+.pcard-note { margin-top: 12px; font-size: var(--fs-sm); }
 details.year > summary { cursor: pointer; padding: 8px 0; font-weight: 600; list-style: none; }
 details.year > summary::before { content: "▸ "; color: var(--muted); }
 details.year[open] > summary::before { content: "▾ "; }
@@ -130,6 +134,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; align-items: center; justify-content: center; padding: var(--gap); }
 .modal-bg.show { display: flex; }
 .modal { background: var(--bg); border: 1px solid var(--line); width: 100%; max-width: 420px; max-height: 90vh; overflow: auto; padding: 20px; }
+.modal.modal-wide { max-width: 560px; }
 .modal h2 { margin-bottom: 12px; }
 .modal .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
