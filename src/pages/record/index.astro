@@ -15,16 +15,15 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
   import { href } from '../../lib/url.ts';
   import { esc } from '../../lib/html.ts';
   import { seasonTable, band, RATE_CUTS, yearOf, seasonMatches, type SeasonRow } from '../../lib/stats.ts';
-  import { mountTable, sortRows, type Column, type TableState } from '../../components/table.ts';
+  import { mountTable, type Column, type TableState } from '../../components/table.ts';
   import type { Data } from '../../lib/types.ts';
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   let data: Data | null = null, year: number | undefined = new Date().getFullYear();
   const state: TableState = { sortKey: 'attended', sortDir: 'desc' };
-  // 순위(#) 열: mountTable은 헤더 클릭마다 내부에서 다시 정렬·재렌더하므로, DOM을 나중에 훑는 대신
-  // 이 draw()가 돌 때마다 정렬 결과를 pos에 채워 cell()이 매번 조회하게 한다.
-  const pos = new Map<SeasonRow, number>();
+  // 순위(#) 열: JS 상태 없이 CSS 카운터로 렌더된 행 순서를 그대로 번호로 삼는다(tokens.css의 .tbl i.rank 규칙).
+  // 어떤 열로 정렬해 mountTable이 내부에서 다시 그려도 항상 화면 순서와 일치한다.
   const cols: Column<SeasonRow>[] = [
-    { key: 'rank', label: '#', get: (r) => r.attended, align: 'r', sortable: false, cell: (r) => String(pos.get(r) ?? '') },
+    { key: 'rank', label: '#', get: (r) => r.attended, align: 'r', sortable: false, cell: () => '<i class="rank"></i>' },
     { key: 'name', label: '이름', get: (r) => r.player.name, cell: (r) => `<a href="${href(`/squad/${r.player.num}/`)}"><b>${esc(r.player.name)}</b></a> <span class="pos pos-${r.player.pos.toLowerCase()}">${r.player.pos}</span>` },
     { key: 'attended', label: '출석', get: (r) => r.attended, align: 'r', cell: (r) => `${r.attended} <span class="muted">/ ${r.total}</span>` },
     { key: 'rate', label: '출석률', get: (r) => r.rate, align: 'r', cell: (r) => (r.total ? `<span class="val val-${band(r.rate, RATE_CUTS)}">${r.rate}%</span>` : '<span class="muted">–</span>') },
@@ -32,9 +31,6 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
     { key: 'winRate', label: '승률', get: (r) => r.winRate, align: 'r', cell: (r) => (r.played ? `${r.winRate}%` : '<span class="muted">–</span>') },
   ];
   function draw(rows: SeasonRow[]) {
-    const sorted = sortRows(rows, cols, state);
-    pos.clear();
-    sorted.forEach((r, i) => pos.set(r, i + 1));
     mountTable($('app'), cols, rows, state, { empty: '아직 참석 기록이 없습니다', rowAttr: () => '' });
   }
   function render() {

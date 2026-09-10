@@ -88,6 +88,9 @@ body.wide .main { max-width: none; }
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl .empty { color: var(--muted); text-align: center; padding: 32px; }
 .row-current { background: var(--surface); font-weight: 600; }
+.tbl tbody { counter-reset: row; }
+.tbl i.rank { counter-increment: row; font-style: normal; }
+.tbl i.rank::before { content: counter(row); }
 
 /* 값 색코딩 · 포지션 · 등급 */
 .val { display: inline-block; min-width: 2.2em; padding: 1px 6px; text-align: center; font-variant-numeric: tabular-nums; }
