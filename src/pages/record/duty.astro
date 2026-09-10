@@ -2,12 +2,13 @@
 import Shell from '../../layouts/Shell.astro';
 import Tabs from '../../components/Tabs.astro';
 import { href } from '../../lib/url.ts';
+import { DUTY_PER_MONTH } from '../../lib/rules.ts';
 const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record/fines/'), label: '정산' }, { href: href('/record/duty/'), label: '봉사' }];
 ---
 <Shell title="봉사">
   <div class="page-head"><h1>기록</h1><div class="actions"><select id="year"></select></div></div>
   <Tabs items={tabs} />
-  <p class="muted" style="margin:0 0 var(--gap)">시트 <code>rot</code> 순번대로 매월 두 명. 이번 달이 강조됩니다. 관리자는 당번을 바꾸거나 완료를 표시할 수 있습니다.</p>
+  <p class="muted" style="margin:0 0 var(--gap)">시트 <code>rot</code> 순번대로 매월 {DUTY_PER_MONTH}명. 이번 달이 강조됩니다. 관리자는 당번을 바꾸거나 완료를 표시할 수 있습니다.</p>
   <div id="app" class="tbl-wrap"></div>
 </Shell>
 <script>
