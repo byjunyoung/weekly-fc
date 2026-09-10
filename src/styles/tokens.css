@@ -28,6 +28,7 @@ h1 { font-size: var(--fs-lg); }
 h2 { font-size: var(--fs-md); }
 .muted { color: var(--muted); }
 .label { font-size: var(--fs-xs); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.label-gap { margin-bottom: 8px; }
 .h2-tight { margin-bottom: 8px; }
 
 /* 셸 */

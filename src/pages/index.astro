@@ -30,7 +30,7 @@ import Shell from '../layouts/Shell.astro';
         <a class="card" href="${href('/record/duty/')}"><h2>${monthLabel(y, mo)} 봉사</h2><div class="big" style="font-size:var(--fs-lg)">${esc(duty.p1)} · ${esc(duty.p2)}</div><p class="muted">${duty.done ? '완료' : '대관비·음료 선납, 조끼, 정산'}</p></a>
         <a class="card" href="${href('/record/fines/')}"><h2>미납 벌금</h2><div class="big ${fs.unpaid ? 'warn' : ''}">${fmtWon(fs.unpaid)}</div><p class="muted">${fs.unpaidCount}건</p></a>
       </div>
-      ${me ? `<div><div class="label" style="margin-bottom:8px">내 자리</div>${playerCard(me)}<div class="cards" style="margin-top:var(--gap)"><a class="card" href="${href(`/squad/${me.num}/`)}"><h2>내 미납</h2><div class="big ${mine!.unpaid ? 'warn' : ''}">${fmtWon(mine!.unpaid)}</div></a><a class="card" href="${href('/record/duty/')}"><h2>내 봉사 차례</h2><div class="big" style="font-size:var(--fs-lg)">${mine!.duty ? monthLabel(mine!.duty.year, mine!.duty.month) : '–'}</div></a></div></div>` : `<p class="muted">사이드바에서 <b>이름 고르기</b>를 하면 내 미납·봉사 차례가 여기 뜹니다.</p>`}`;
+      ${me ? `<div><div class="label label-gap">내 자리</div>${playerCard(me)}<div class="cards" style="margin-top:var(--gap)"><a class="card" href="${href(`/squad/${me.num}/`)}"><h2>내 미납</h2><div class="big ${mine!.unpaid ? 'warn' : ''}">${fmtWon(mine!.unpaid)}</div></a><a class="card" href="${href('/record/duty/')}"><h2>내 봉사 차례</h2><div class="big" style="font-size:var(--fs-lg)">${mine!.duty ? monthLabel(mine!.duty.year, mine!.duty.month) : '–'}</div></a></div></div>` : `<p class="muted">사이드바에서 <b>이름 고르기</b>를 하면 내 미납·봉사 차례가 여기 뜹니다.</p>`}`;
     document.getElementById('stamp')!.textContent = `${data.players.length}명 · 매치 ${data.matches.length}`;
   }
   window.addEventListener('wfc:me', render);
