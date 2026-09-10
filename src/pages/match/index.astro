@@ -13,6 +13,7 @@ import Shell from '../../layouts/Shell.astro';
   import { onData, isAdmin, write, loadVideos, serializeMatch } from '../../lib/api.ts';
   import { proposeMatches, parseAttendance } from '../../lib/parse.ts';
   import { lineupSvg, type PitchState } from '../../components/lineup-svg.ts';
+  import { mountRecap } from '../../components/recap.ts';
   import { esc, fmtDate, ytThumb, ytEmbed, toast } from '../../lib/html.ts';
   import { href } from '../../lib/url.ts';
   import type { Data, Match, Team } from '../../lib/types.ts';
@@ -145,4 +146,5 @@ import Shell from '../../layouts/Shell.astro';
   const render = () => { if (!data) return; id ? renderDetail(data) : renderList(data); };
   window.addEventListener('wfc:admin', render);
   onData((d) => { data = d; render(); });
+  (window as unknown as { wfcRecap: typeof mountRecap }).wfcRecap = mountRecap;
 </script>
