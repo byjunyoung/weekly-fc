@@ -6,15 +6,13 @@ const SHEET_PLAYERS  = '선수명단';
 const SHEET_MATCHES  = '매치기록';
 const SHEET_ROTATION = '봉사로테이션';
 const SHEET_FINES    = '벌금';
-const SHEET_COMMENTS = '댓글';
 const SHEET_LINEUPS  = '라인업';
 
 const PLAYER_COLS  = ['num','pos','detail','foot','name','phone','vest','note','pace','dribble','pass','shoot','defend','stamina','rot'];
-const MATCH_COLS   = ['id','date','location','youtube','team_a','team_b','score_a','score_b','attendees'];
+const MATCH_COLS   = ['id','date','location','youtube','type','attendees','teams','winner'];
 const ROT_COLS     = ['year','month','p1','p2','done'];
 const FINE_COLS    = ['id','date','match_id','player','type','amount','paid'];
-const COMMENT_COLS = ['id','match_id','author','content','timestamp'];
-const LINEUP_COLS  = ['id','name','formation','assignments'];
+const LINEUP_COLS  = ['id','match_id','name','formation','assignments'];
 
 function doGet(e) {
   try {
@@ -28,11 +26,7 @@ function doGet(e) {
     if (action === 'getAll') {
       result = handleGetAll(false);
     } else if (action === 'getChannelVideos') {
-      result = handleGetChannelVideos();
-    } else if (action === 'getComments') {
-      result = handleGetComments(e.parameter.match_id || '');
-    } else if (action === 'addComment') {
-      result = handleAddComment(payload); // 누구나 댓글 가능
+      result = handleGetChannelVideos(e.parameter.nocache === '1');
     } else if (action === 'verifyPin') {
       verifyPin(pin);
       result = { ok: true };
@@ -48,7 +42,6 @@ function doGet(e) {
         case 'writeRotation':  result = handleWriteRotation(payload);  break;
         case 'writeFine':      result = handleWriteFine(payload);      break;
         case 'deleteFine':     result = handleDeleteFine(payload);     break;
-        case 'deleteComment':  result = handleDeleteComment(payload);  break;
         case 'writeLineup':    result = handleWriteLineup(payload);    break;
         default: result = { error: '알 수 없는 액션: ' + action };
       }
@@ -77,6 +70,8 @@ function verifyPin(pin) {
 // ── 전체 데이터 ──────────────────────────────────
 function handleGetAll(includePhone) {
   const ss = getSpreadsheet();
+  getOrCreateSheet(ss, SHEET_MATCHES, MATCH_COLS);
+  getOrCreateSheet(ss, SHEET_LINEUPS, LINEUP_COLS);
   let players = sheetToObjects(ss, SHEET_PLAYERS, PLAYER_COLS);
   if (!includePhone) players = players.map(function(p) { var q = Object.assign({}, p); delete q.phone; return q; });
   return {
@@ -133,15 +128,11 @@ function handleDeleteMatch(m) {
 
 // ── 봉사 ─────────────────────────────────────────
 function handleWriteRotation(r) {
-  const ss    = getSpreadsheet();
-  const sheet = getOrCreateSheet(ss, SHEET_ROTATION, ROT_COLS);
-  const data  = sheet.getDataRange().getValues();
-  let rowIdx  = -1;
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(r.year) && String(data[i][1]) === String(r.month)) { rowIdx = i; break; }
-  }
+  const ss = getSpreadsheet(); const sheet = getOrCreateSheet(ss, SHEET_ROTATION, ROT_COLS);
+  const data = sheet.getDataRange().getValues();
+  let rowIdx = -1; for (let i = 1; i < data.length; i++) if (String(data[i][0]) === String(r.year) && String(data[i][1]) === String(r.month)) { rowIdx = i; break; }
   const row = ROT_COLS.map(k => r[k] !== undefined ? r[k] : '');
-  if (rowIdx > 0) sheet.getRange(rowIdx+1, 1, 1, row.length).setValues([row]);
+  if (rowIdx > 0) sheet.getRange(rowIdx + 1, 1, 1, row.length).setValues([row]);
   else sheet.appendRow(row);
   return { ok: true };
 }
@@ -168,42 +159,6 @@ function handleDeleteFine(f) {
   return { ok: true };
 }
 
-// ── 댓글 ─────────────────────────────────────────
-function handleGetComments(matchId) {
-  const ss    = getSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_COMMENTS);
-  if (!sheet) return { comments: [] };
-  const data = sheet.getDataRange().getValues();
-  if (data.length < 2) return { comments: [] };
-  const comments = data.slice(1)
-    .filter(row => String(row[1]) === String(matchId))
-    .map(row => {
-      const obj = {};
-      COMMENT_COLS.forEach((k, i) => { obj[k] = row[i] !== undefined ? row[i] : ''; });
-      return obj;
-    });
-  return { comments };
-}
-
-function handleAddComment(c) {
-  const ss    = getSpreadsheet();
-  const sheet = getOrCreateSheet(ss, SHEET_COMMENTS, COMMENT_COLS);
-  if (!c.id) c.id = String(Date.now());
-  if (!c.timestamp) c.timestamp = new Date().toISOString();
-  const row = COMMENT_COLS.map(k => c[k] !== undefined ? c[k] : '');
-  sheet.appendRow(row);
-  return { ok: true, id: c.id };
-}
-
-function handleDeleteComment(c) {
-  const ss    = getSpreadsheet();
-  const sheet = getOrCreateSheet(ss, SHEET_COMMENTS, COMMENT_COLS);
-  const data  = sheet.getDataRange().getValues();
-  const rowIdx = findRowByField(data, 0, String(c.id));
-  if (rowIdx > 0) sheet.deleteRow(rowIdx+1);
-  return { ok: true };
-}
-
 // ── 라인업 ───────────────────────────────────────
 function handleWriteLineup(l) {
   const ss    = getSpreadsheet();
@@ -219,32 +174,23 @@ function handleWriteLineup(l) {
 }
 
 // ── 유튜브 채널 영상 ──────────────────────────────
-function handleGetChannelVideos() {
+function handleGetChannelVideos(nocache) {
   var cache = CacheService.getScriptCache();
-  var cached = cache.get('YT_VIDEOS');
-  if (cached) return { videos: JSON.parse(cached) };
-  try {
-    var feed = UrlFetchApp.fetch(
-      'https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
-      { muteHttpExceptions: true }
-    ).getContentText();
-    var entries = feed.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
-    var videos = [];
-    entries.forEach(function(e) {
-      var id    = (e.match(/<yt:videoId>([^<]+)/) || [])[1];
-      var title = (e.match(/<title>([^<]+)/)       || [])[1];
-      var pub   = (e.match(/<published>([^<]+)/)   || [])[1];
-      if (id && title) videos.push({
-        id: id,
-        title: title.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'"),
-        published: pub ? pub.slice(0,10) : ''
-      });
-    });
-    cache.put('YT_VIDEOS', JSON.stringify(videos), 600);
-    return { videos: videos };
-  } catch(e) {
-    return { videos: [] };
-  }
+  if (!nocache) { var cached = cache.get('YT_VIDEOS'); if (cached) return { videos: JSON.parse(cached) }; }
+  var res = UrlFetchApp.fetch('https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
+    { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/atom+xml,application/xml' } });
+  var code = res.getResponseCode();
+  if (code !== 200) return { videos: [], error_detail: 'youtube ' + code };
+  var feed = res.getContentText();
+  var entries = feed.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
+  var videos = entries.map(function(e) {
+    var id = (e.match(/<yt:videoId>([^<]+)/) || [])[1];
+    var title = (e.match(/<title>([^<]+)/) || [])[1];
+    var pub = (e.match(/<published>([^<]+)/) || [])[1];
+    return id && title ? { id: id, title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), published: pub ? pub.slice(0, 10) : '' } : null;
+  }).filter(Boolean);
+  if (videos.length) cache.put('YT_VIDEOS', JSON.stringify(videos), 600);
+  return { videos: videos };
 }
 
 // ── 능력치 1-5 → 1-99 스케일 일괄 마이그레이션 ──────────
@@ -278,8 +224,17 @@ function migrateStats() {
 // ── 유틸 ─────────────────────────────────────────
 function getOrCreateSheet(ss, name, cols) {
   let sheet = ss.getSheetByName(name);
-  if (!sheet) { sheet = ss.insertSheet(name); sheet.appendRow(cols); }
+  if (!sheet) { sheet = ss.insertSheet(name); sheet.appendRow(cols); return sheet; }
+  if (sheet.getLastRow() <= 1) {
+    const head = sheet.getLastRow() === 1 ? sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0] : [];
+    if (head.join('|') !== cols.join('|')) { sheet.clear(); sheet.appendRow(cols); }
+  }
   return sheet;
+}
+
+function cell(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd');
+  return v === undefined ? '' : v;
 }
 
 function sheetToObjects(ss, name, cols) {
@@ -289,7 +244,7 @@ function sheetToObjects(ss, name, cols) {
   if (data.length < 2) return [];
   return data.slice(1).map(row => {
     const obj = {};
-    cols.forEach((k, i) => { obj[k] = row[i] !== undefined ? row[i] : ''; });
+    cols.forEach((k, i) => { obj[k] = cell(row[i]); });
     return obj;
   });
 }
