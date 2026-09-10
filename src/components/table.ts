@@ -36,7 +36,7 @@ export function mountTable<T>(el: HTMLElement, cols: Column<T>[], rows: T[], sta
         const col = cols.find((c) => c.key === key);
         if (!col || col.sortable === false) return;
         if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
-        else { state.sortKey = key; state.sortDir = typeof col.get(rows[0] ?? ({} as T)) === 'number' ? 'desc' : 'asc'; }
+        else { state.sortKey = key; state.sortDir = rows.length > 0 && typeof col.get(rows[0]) === 'number' ? 'desc' : 'asc'; }
         draw();
       };
     });

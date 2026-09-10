@@ -8,7 +8,7 @@
   --warn: #b91c1c; --warn-bg: #fdecec; --ok: #1a7f37;
   --gold: #c9a227; --silver: #8c8c8c; --bronze: #a05a2c;
   --sidebar: 220px; --sidebar-narrow: 56px; --header-h: 48px;
-  --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px;
+  --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px;
   --fs-xs: 11px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 20px; --fs-xl: 32px;
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
@@ -71,6 +71,9 @@ body.wide .main { max-width: none; }
 .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: var(--gap); overflow-x: auto; }
 .tabs a, .tabs button { padding: 8px 14px; color: var(--muted); border: 0; border-bottom: 2px solid transparent; white-space: nowrap; margin-bottom: -1px; }
 .tabs a.active, .tabs button.active { color: var(--fg); border-bottom-color: var(--fg); }
+
+/* 피치·라인업 */
+.pitch-svg { width: 100%; max-width: var(--pitch-max); background: var(--surface); border: 1px solid var(--line); }
 
 /* 표 */
 .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); }

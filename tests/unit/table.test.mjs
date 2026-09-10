@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sortRows, renderTable } from '../../src/components/table.ts';
+import { sortRows, renderTable, mountTable } from '../../src/components/table.ts';
 
 const cols = [{ key: 'n', label: '#', get: (r) => r.n, align: 'r' }, { key: 'name', label: '이름', get: (r) => r.name }];
 const rows = [{ n: 9, name: '나' }, { n: 3, name: '가' }, { n: 5, name: '다' }];
@@ -20,3 +20,21 @@ test('renderTable은 정렬된 th에 sorted 클래스와 방향 표시', () => {
 });
 test('renderTable 빈 표', () => assert.ok(renderTable(cols, [], { sortKey: 'n', sortDir: 'asc' }, { empty: '없음' }).includes('class="empty"')));
 test('renderTable은 값을 이스케이프한다', () => assert.ok(renderTable(cols, [{ n: 1, name: '<b>' }], { sortKey: 'n', sortDir: 'asc' }).includes('&lt;b&gt;')));
+test('mountTable 빈 표에서 th를 클릭해도 nested get이 throw되지 않는다', () => {
+  const nestedCols = [{ key: 'name', label: '이름', get: (r) => r.player.name }, { key: 'team', label: '팀', get: (r) => r.team }];
+  const state = { sortKey: 'team', sortDir: 'asc' };
+  const el = { innerHTML: '', querySelectorAll: () => [] };
+  mountTable(el, nestedCols, [], state);
+  const html = el.innerHTML;
+  const thMatch = html.match(/<th[^>]*data-key="name"[^>]*>/);
+  assert.ok(thMatch, 'name 열 th를 찾아야 함');
+  const th = { dataset: { key: 'name' }, onclick: null };
+  const parsed = html.match(/<th[^>]*data-key="name"[^>]*>/);
+  assert.ok(parsed);
+  const fakeEl = { innerHTML: '', querySelectorAll: () => [th] };
+  assert.doesNotThrow(() => {
+    mountTable(fakeEl, nestedCols, [], state);
+    th.onclick?.();
+  });
+  assert.equal(state.sortDir, 'asc', 'sortDir는 기본값 asc를 유지해야 함');
+});
