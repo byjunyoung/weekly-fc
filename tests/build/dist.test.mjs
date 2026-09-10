@@ -5,6 +5,9 @@ import { existsSync, readFileSync } from 'node:fs';
 // 태스크가 페이지를 추가할 때마다 여기에 줄을 더한다.
 export const PAGES = [
   'index.html',
+  'squad/index.html',
+  'squad/9/index.html',
+  'squad/99/index.html',
 ];
 export const INDEXABLE = ['tactics/index.html', 'about/index.html'];
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');

@@ -1,0 +1,52 @@
+---
+import Shell from '../../layouts/Shell.astro';
+---
+<Shell title="스쿼드">
+  <div class="page-head">
+    <h1>스쿼드 <span class="muted" id="count"></span></h1>
+    <div class="actions">
+      <div class="chips" id="pos-filter"><button class="chip on" data-pos="ALL">전체</button><button class="chip" data-pos="GK">GK</button><button class="chip" data-pos="DF">DF</button><button class="chip" data-pos="MF">MF</button><button class="chip" data-pos="FW">FW</button></div>
+      <input id="q" type="search" placeholder="이름" style="width:120px" />
+      <button id="add" hidden>선수 추가</button>
+    </div>
+  </div>
+  <div id="app" class="tbl-wrap"></div>
+</Shell>
+<script>
+  import { onData, isAdmin } from '../../lib/api.ts';
+  import { href } from '../../lib/url.ts';
+  import { esc } from '../../lib/html.ts';
+  import { ovr, band, STAT_CUTS, RATE_CUTS, attendance } from '../../lib/stats.ts';
+  import { mountTable, type Column, type TableState } from '../../components/table.ts';
+  import { STAT_LABEL } from '../../components/player-card.ts';
+  import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
+
+  let data: Data | null = null, pos = 'ALL', q = '';
+  const state: TableState = { sortKey: 'num', sortDir: 'asc' };
+  const app = document.getElementById('app')!;
+
+  function cols(d: Data): Column<Player>[] {
+    const matches = d.matches;
+    return [
+      { key: 'num', label: '#', get: (p) => p.num, align: 'r' },
+      { key: 'name', label: '이름', get: (p) => p.name, cell: (p) => `<a href="${href(`/squad/${p.num}/`)}"><b>${esc(p.name)}</b></a>` },
+      { key: 'pos', label: '포지션', get: (p) => p.pos, cell: (p) => `<span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span> <span class="muted">${esc(p.detail)}</span>` },
+      { key: 'foot', label: '주발', get: (p) => p.foot },
+      ...STAT_KEYS.map((k): Column<Player> => ({ key: k, label: STAT_LABEL[k], get: (p) => p[k], align: 'r', cell: (p) => `<span class="val val-${band(p[k], STAT_CUTS)}">${p[k] || '–'}</span>` })),
+      { key: 'ovr', label: 'OVR', get: (p) => ovr(p), align: 'r', cell: (p) => `<b class="val val-${band(ovr(p), STAT_CUTS)}">${ovr(p) || '–'}</b>` },
+      { key: 'att', label: '출석', get: (p) => attendance(p.name, matches).rate, align: 'r', cell: (p) => { const a = attendance(p.name, matches); return a.total ? `<span class="val val-${band(a.rate, RATE_CUTS)}">${a.rate}%</span>` : '<span class="muted">–</span>'; } },
+    ];
+  }
+  function render() {
+    if (!data) return;
+    const rows = data.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
+    document.getElementById('count')!.textContent = `${rows.length}명`;
+    document.getElementById('add')!.hidden = !isAdmin();
+    mountTable(app, cols(data), rows, state, { empty: '명단이 비어 있습니다' });
+  }
+  document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => x.classList.toggle('on', x === b)); render(); }));
+  (document.getElementById('q') as HTMLInputElement).oninput = (e) => { q = (e.target as HTMLInputElement).value.trim(); render(); };
+  document.getElementById('add')!.onclick = () => { const used = new Set(data!.players.map((p) => p.num)); let n = 1; while (used.has(n)) n++; location.href = href(`/squad/${n}/?new=1`); };
+  window.addEventListener('wfc:admin', render);
+  onData((d) => { data = d; render(); });
+</script>
