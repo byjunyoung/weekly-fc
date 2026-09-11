@@ -8,8 +8,12 @@
      4) 형광 그린 단일 액센트 + 발광(hover/active) */
 :root {
   color-scheme: dark;
-  /* 바탕은 회색이 아니라 거의 검정 — 금속 카드가 떠 보여야 한다. */
-  --bg: #05070a; --bg-2: #0a0e14; --surface: #121821; --tint: #1d2632;
+  /* 바탕·레이어 — 순검정을 안 쓴다. Material 다크 테마는 #121212 를, Carbon 은 G100 #161616 을
+     권하고 이유가 같다: 검정 위에서는 그림자가 안 보여 깊이가 사라지고 눈이 더 피로하다.
+     실제로 앞 단계의 #05070a 위에서는 카드의 --lift 그림자가 전혀 안 보였다.
+     Carbon 레이어 규칙(올라갈수록 밝게, 배경보다 어두운 컴포넌트 금지)에 맞춰 셋을 계단으로 둔다.
+     m2.material.io/design/color/dark-theme · carbondesignsystem.com/elements/color/overview */
+  --bg: #0c1016; --bg-2: #11161e; --surface: #161d27; --tint: #222b38;
   --fg: #f2f5f8; --muted: #8b95a5; --line: #2b3646; --line-hi: #596e89;
   /* --line 은 장식용 구분선(WCAG 1.4.11 비적용), --line-hi 는 컨트롤 경계다.
      컨트롤 경계는 3:1 이 필요해 실측으로 값을 올렸다: #3d4b5e 는 surface 대비 2.01 로 미달,
@@ -38,12 +42,18 @@
   /* 금속 위 글자 — 순검정은 탁하게 보여 아주 짙은 갈색/청색 먹으로 둔다. */
   --ink: #17130a; --ink-soft: rgba(23, 19, 10, .9); --ink-line: rgba(23, 19, 10, .28);
   --header-h: 56px; --header-h-m: 90px;
-  --max: 1180px; --pad: 28px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 640px; --pcard-w: 268px;
+  --max: 1180px; --pad: 28px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 600px; --pcard-w: 268px;
   --m-xs: 4px; --m-sm: 8px; --m-md: 12px; --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
-  --cut: 14px; --cut-sm: 8px;
+  --cut: 14px; --cut-sm: 8px; --row-h: 40px;
   --fs-xs: 11px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 20px; --fs-xl: 32px; --fs-xxl: 44px;
   --fs-hero: 40px; --fs-ovr: 60px;
-  --dur-fast: 180ms; --dur-slow: 550ms;
+  /* 모션 — Carbon 모션 토큰. micro 110ms(페이드·색 전환), fast 150ms(작은 이동·확장),
+     slow 400ms(큰 확장). easing 도 productive 곡선을 그대로 쓴다.
+     carbondesignsystem.com/elements/motion/overview */
+  --dur-micro: 110ms; --dur-fast: 150ms; --dur-slow: 400ms; --dur-sheen: 700ms;
+  --ease-std: cubic-bezier(0.2, 0, 0.38, 0.9);
+  --ease-in: cubic-bezier(0, 0, 0.38, 0.9);
+  --ease-out: cubic-bezier(0.2, 0, 1, 0.9);
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   /* 디스플레이 서체 — 숫자·대문자 라벨 전용. 한글은 자동으로 Pretendard로 떨어진다
      (Archivo에 한글 글리프가 없다). FC의 Cruyff Sans가 콘덴스드 그로테스크라 폭 축을 좁게 쓴다. */
@@ -54,7 +64,7 @@
 * { box-sizing: border-box; }
 html { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: var(--fs-md); line-height: 1.55; -webkit-font-smoothing: antialiased; word-break: keep-all; }
 /* 바탕 — 완전 평면이면 다시 대시보드가 된다. 아주 옅은 방사 그라디언트 두 겹으로 깊이만 준다. */
-body { margin: 0; min-height: 100vh; background: radial-gradient(1200px 600px at 15% -10%, #101a24 0%, transparent 60%), radial-gradient(900px 500px at 100% 0%, #0c1620 0%, transparent 55%); }
+body { margin: 0; min-height: 100vh; background: radial-gradient(1200px 600px at 15% -10%, #16202c 0%, transparent 60%), radial-gradient(900px 500px at 100% 0%, #121d28 0%, transparent 55%); }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
 img, video, canvas { display: block; max-width: 100%; height: auto; }
@@ -79,7 +89,7 @@ button, .btn {
   padding: 7px 14px; cursor: pointer; border-radius: 0; font-size: var(--fs-sm); font-weight: 600;
   letter-spacing: .1em; text-transform: uppercase;
   clip-path: polygon(var(--cut-sm) 0, 100% 0, 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, 0 100%, 0 var(--cut-sm));
-  transition: background var(--dur-fast) ease, color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+  transition: background var(--dur-micro) var(--ease-std), color var(--dur-micro) var(--ease-std), box-shadow var(--dur-micro) var(--ease-std);
 }
 button:hover { border-color: var(--accent); color: var(--accent); }
 button.primary { background: linear-gradient(180deg, #2bffb0, var(--accent)); color: var(--accent-ink); border-color: var(--accent); }
@@ -91,6 +101,7 @@ input, select, textarea { border: 1px solid var(--line-hi); background: #010306;
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow); }
 /* 포커스 표시 — 키보드로만 드러나게 :focus-visible 을 쓴다. 액센트는 surface 대비 10.2:1 로
    비텍스트 3:1 기준을 크게 넘고, clip-path 로 깎인 면은 outline 이 잘리므로 box-shadow 로 두른다. */
+:where(a, button, [tabindex]) { scroll-margin-top: calc(var(--header-h) + 12px); }
 :where(a, button, [tabindex]):focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
 .pcard-wall a:focus-visible, .pcard-wall-sm a:focus-visible { box-shadow: none; }
 .pcard-wall a:focus-visible .pcard, .pcard-wall-sm a:focus-visible .pcard { outline: 3px solid var(--accent); outline-offset: 3px; }
@@ -99,7 +110,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .topbar {
   position: sticky; top: 0; z-index: 20; display: flex; align-items: stretch; gap: var(--gap);
   height: var(--header-h); padding: 0 var(--pad);
-  background: linear-gradient(180deg, rgba(5, 7, 10, .96), rgba(5, 7, 10, .82));
+  background: linear-gradient(180deg, rgba(12, 16, 22, .96), rgba(12, 16, 22, .82));
   backdrop-filter: blur(8px); border-bottom: 1px solid var(--line);
 }
 .topbar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, var(--accent), transparent 55%); opacity: .55; }
@@ -110,7 +121,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .topnav a {
   position: relative; display: flex; align-items: center; padding: 0 18px; color: var(--muted);
   font-size: var(--fs-sm); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
-  transition: color var(--dur-fast) ease;
+  transition: color var(--dur-micro) var(--ease-std);
 }
 .topnav a:hover { color: var(--fg); }
 .topnav a.active { color: var(--fg); }
@@ -163,14 +174,16 @@ body.wide .page-head h1 { font-size: var(--fs-lg); }
 /* 표 — FM의 밀도. 격자 대신 행 구분선만, 머리는 액센트 밑줄. */
 .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); background: linear-gradient(180deg, var(--surface), var(--bg-2)); clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
 .tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
-.tbl th, .tbl td { padding: 7px var(--m-md); border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: middle; }
-.tbl th { position: sticky; top: 0; background: #0b1119; font-weight: 700; font-size: var(--fs-xs); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); cursor: pointer; user-select: none; border-bottom: 2px solid var(--line-hi); }
+/* 행 높이·셀 여백은 Carbon 데이터 테이블 규격을 따른다 — md 40px, 셀 padding 16px,
+   헤더 행은 본문 행과 같은 높이. carbondesignsystem.com/components/data-table/style */
+.tbl th, .tbl td { height: var(--row-h); padding: 0 var(--gap); border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: middle; }
+.tbl th { position: sticky; top: 0; background: var(--bg-2); font-weight: 700; font-size: var(--fs-xs); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); cursor: pointer; user-select: none; border-bottom: 2px solid var(--line-hi); }
 .tbl th:hover { color: var(--fg); }
 .tbl th.sorted { color: var(--accent); border-bottom-color: var(--accent); }
 .tbl th.r, .tbl td.r { text-align: right; }
 .tbl th.c, .tbl td.c { text-align: center; }
 .tbl td.r, .tbl td.c { font-variant-numeric: tabular-nums; }
-.tbl tbody tr { transition: background var(--dur-fast) ease; }
+.tbl tbody tr { transition: background var(--dur-micro) var(--ease-std); }
 .tbl tbody tr:hover { background: rgba(0, 224, 140, .07); box-shadow: inset 2px 0 0 var(--accent); }
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl .empty { color: var(--muted); text-align: center; padding: 40px; }
@@ -201,11 +214,10 @@ body.wide .page-head h1 { font-size: var(--fs-lg); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--gap); }
 .card {
   position: relative; border: 1px solid var(--line); padding: 16px 18px;
-  background: linear-gradient(165deg, var(--surface) 0%, var(--bg-2) 60%, #070b11 100%);
+  background: linear-gradient(165deg, var(--surface) 0%, var(--bg-2) 100%);
   clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
-  transition: border-color var(--dur-fast) ease, transform var(--dur-fast) ease;
+  transition: border-color var(--dur-fast) var(--ease-std), transform var(--dur-fast) var(--ease-std);
 }
-.card::before { content: ""; position: absolute; left: var(--cut); top: 0; width: 46px; height: 2px; background: var(--accent); opacity: .8; }
 a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .card h2 { margin-bottom: 10px; }
 .card .big { font-size: var(--fs-xl); font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
@@ -226,17 +238,17 @@ a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .home-thumb { margin-top: 10px; aspect-ratio: 16 / 9; max-height: 210px; object-fit: cover; width: 100%; }
 .thumb .body { padding: 8px 10px; font-size: var(--fs-sm); }
 .home-grid .span2 { grid-column: span 2; }
-.home-me { position: relative; padding: var(--gap-lg) var(--pad); margin-bottom: var(--gap-lg); border: 1px solid var(--line); background: linear-gradient(120deg, #0f1b18 0%, var(--bg-2) 45%, #070b11 100%); clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+.home-me { position: relative; padding: var(--gap-lg) var(--pad); margin-bottom: var(--gap-lg); border: 1px solid var(--line); background: linear-gradient(120deg, #10241e 0%, var(--surface) 55%, var(--bg-2) 100%); clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
 .home-me::before { content: ""; position: absolute; left: var(--cut); top: 0; width: 90px; height: 2px; background: var(--accent); }
 .home-me-body { display: flex; flex-wrap: wrap; gap: var(--gap-lg); align-items: flex-start; }
 .home-me-body > .pcard { flex: 0 0 var(--pcard-w); }
 .home-me-stats { flex: 1 1 240px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--gap); align-content: start; }
-.home-me-cta { display: block; width: 100%; text-align: left; text-transform: none; letter-spacing: 0; font-weight: 500; background: linear-gradient(120deg, #0f1b18, var(--bg-2)); border: 1px solid var(--line); padding: 18px 20px; margin-bottom: var(--gap-lg); font-size: var(--fs-md); cursor: pointer; }
+.home-me-cta { display: block; width: 100%; text-align: left; text-transform: none; letter-spacing: 0; font-weight: 500; background: linear-gradient(120deg, #10241e, var(--surface)); border: 1px solid var(--line); padding: 18px 20px; margin-bottom: var(--gap-lg); font-size: var(--fs-md); cursor: pointer; }
 .thumbs-sm { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--m-sm); }
 .rank-list { display: flex; flex-direction: column; }
 .rank-row { display: grid; grid-template-columns: 1.6em 1fr auto auto auto; align-items: center; gap: var(--m-sm); padding: 5px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
 .rank-row:last-child { border-bottom: 0; }
-.rank-row .rank-n { color: var(--accent); text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-d); font-weight: 800; }
+.rank-row .rank-n { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-d); font-weight: 800; }
 .roster-mini { display: flex; flex-wrap: wrap; gap: var(--m-sm); align-items: center; }
 .embed { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--line); background: var(--tint); }
 .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
@@ -254,7 +266,7 @@ a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
   border: 0; color: var(--ink); perspective: 1200px;
   clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
   box-shadow: var(--lift), inset 0 0 0 1px rgba(255, 255, 255, .38);
-  transition: transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+  transition: transform var(--dur-fast) var(--ease-std), box-shadow var(--dur-fast) var(--ease-std);
 }
 .pcard-gold { background: var(--metal-gold); }
 .pcard-silver { background: var(--metal-silver); }
@@ -264,7 +276,7 @@ a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .pcard::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(104deg, transparent 30%, rgba(255, 255, 255, .38) 44%, transparent 58%);
-  transform: translateX(-130%); transition: transform 900ms ease;
+  transform: translateX(-130%); transition: transform var(--dur-sheen) var(--ease-in);
 }
 .pcard:hover::after { transform: translateX(130%); }
 .pcard-body { display: flex; flex-direction: column; width: 100%; padding: 16px 18px 18px; }
@@ -293,10 +305,10 @@ a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .pcard-note { margin: 10px 0 0; font-size: var(--fs-xs); color: var(--ink-soft); text-align: center; }
 .pcard .muted { color: var(--ink-soft); }
 /* 뒷면 — 금속이 아니라 짙은 "전적 카드". 앞뒤 대비가 뒤집기를 읽히게 한다. */
-.pcard-flip { position: relative; width: 100%; transform-style: preserve-3d; transition: transform var(--dur-slow) ease; }
+.pcard-flip { position: relative; width: 100%; transform-style: preserve-3d; transition: transform var(--dur-slow) var(--ease-std); }
 .pcard-flip.flipped { transform: rotateY(180deg); }
 .pcard-face { width: 100%; backface-visibility: hidden; }
-.pcard-face-back { position: absolute; inset: 0; transform: rotateY(180deg); text-align: left; background: linear-gradient(165deg, var(--surface), #070b11); color: var(--fg); padding: 16px 18px; }
+.pcard-face-back { position: absolute; inset: 0; transform: rotateY(180deg); text-align: left; background: linear-gradient(165deg, var(--tint), var(--surface)); color: var(--fg); padding: 16px 18px; }
 .pcard-face-back .label { color: var(--muted); }
 .pcard-flip-btn { display: block; width: 100%; margin-top: 0; font-size: var(--fs-xs); text-align: center; background: rgba(0, 0, 0, .18); border: 0; border-top: 1px solid var(--ink-line); color: var(--ink); clip-path: none; }
 .pcard-flip-btn:hover { background: rgba(0, 0, 0, .3); color: var(--ink); border-color: var(--ink-line); }
@@ -328,7 +340,7 @@ a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .attr-row:last-child { border-bottom: 0; }
 .attr-row > .attr-key { color: var(--muted); font-family: var(--font-d); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .12em; }
 .attr-bar { display: block; height: 7px; background: var(--tint); overflow: hidden; }
-.attr-bar b { display: block; height: 100%; width: var(--fill, 0%); animation: attr-fill var(--dur-slow) ease-out; }
+.attr-bar b { display: block; height: 100%; width: var(--fill, 0%); animation: attr-fill var(--dur-slow) var(--ease-in); }
 .attr-bar b.val-a { background: var(--val-a); } .attr-bar b.val-b { background: var(--val-b); }
 .attr-bar b.val-c { background: var(--val-c); } .attr-bar b.val-d { background: var(--val-d); }
 @keyframes attr-fill { from { width: 0; } to { width: var(--fill, 0%); } }
@@ -368,7 +380,7 @@ details.year[open] > summary::before { content: "▾ "; }
 /* 모달 */
 .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, .62); backdrop-filter: blur(3px); z-index: 40; align-items: center; justify-content: center; padding: var(--gap); }
 .modal-bg.show { display: flex; }
-.modal { position: relative; background: linear-gradient(165deg, var(--surface), #070b11); border: 1px solid var(--line-hi); width: 100%; max-width: 440px; max-height: 90vh; overflow: auto; padding: 22px; clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+.modal { position: relative; background: linear-gradient(165deg, var(--tint), var(--surface)); border: 1px solid var(--line-hi); width: 100%; max-width: 440px; max-height: 90vh; overflow: auto; padding: 22px; clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
 .modal::before { content: ""; position: absolute; left: var(--cut); top: 0; width: 60px; height: 2px; background: var(--accent); }
 .modal.modal-wide { max-width: 560px; }
 .modal.modal-xwide { max-width: var(--modal-xwide); }

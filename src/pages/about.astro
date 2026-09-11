@@ -39,9 +39,12 @@ const toc = [['intro', '소개'], ['when', '언제 어디서'], ['join', '참여
   </article>
 </Shell>
 <style>
+  /* 한글 본문 — 한 줄 길이는 WCAG 1.4.8 의 CJK 40자 상한(--prose-max 600px ÷ 15px),
+     행간은 klreq 7.4.1 의 비례 줄간격 예시 160%. w3.org/TR/WCAG22 · w3.org/TR/klreq */
   .prose section { max-width: var(--prose-max); }
+  .prose p, .prose li { line-height: 1.6; }
   .prose h2 { font-size: var(--fs-sm); letter-spacing: .06em; text-transform: uppercase; margin: 0 0 var(--m-md); }
-  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: var(--h-accent); background: var(--fg); margin-top: var(--m-sm); }
+  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: var(--h-accent); background: var(--accent); margin-top: var(--m-sm); }
   .prose ul, .prose ol { padding-left: 1.2em; margin: 0; }
   .prose li { margin-bottom: var(--m-xs); }
   .prose p { margin: 0 0 var(--m-md); }
