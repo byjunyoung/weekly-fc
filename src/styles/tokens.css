@@ -24,6 +24,7 @@ button.danger { color: var(--warn); border-color: var(--warn); }
 button:disabled { opacity: .4; cursor: default; }
 input, select, textarea { border: 1px solid var(--line); background: var(--bg); padding: 6px 8px; border-radius: 0; }
 img, video, canvas { display: block; max-width: 100%; height: auto; }
+[hidden] { display: none !important; }
 h1, h2, h3 { margin: 0; font-weight: 600; }
 h1 { font-size: var(--fs-lg); }
 h2 { font-size: var(--fs-md); }
