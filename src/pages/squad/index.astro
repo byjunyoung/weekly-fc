@@ -8,7 +8,8 @@ import Shell from '../../layouts/Shell.astro';
       <div class="chips" id="pos-filter"><button class="chip on" data-pos="ALL">전체</button><button class="chip" data-pos="GK">GK</button><button class="chip" data-pos="DF">DF</button><button class="chip" data-pos="MF">MF</button><button class="chip" data-pos="FW">FW</button></div>
       <input id="q" type="search" placeholder="이름" class="w-search" />
       <select id="sort" class="w-sort"><option value="ovr">OVR 순</option><option value="num">번호 순</option><option value="name">이름 순</option><option value="att">출석 순</option></select>
-      <div class="chips" id="view-toggle"><button class="chip on" data-view="card">카드</button><button class="chip" data-view="table">표</button></div>
+      <select id="formation" class="w-sort"></select>
+      <div class="chips" id="view-toggle"><button class="chip on" data-view="pitch">피치</button><button class="chip" data-view="card">카드</button><button class="chip" data-view="table">표</button></div>
       <button id="add" hidden>선수 추가</button>
     </div>
   </div>
@@ -24,12 +25,17 @@ import Shell from '../../layouts/Shell.astro';
   import { avatarSvg } from '../../components/avatar.ts';
   import { avatarSpecFor } from '../../lib/avatar.ts';
   import { conditionBadge } from '../../components/condition.ts';
+  import { FORMATIONS, FORMATION_NAMES, bestEleven } from '../../lib/formation.ts';
+  import { grade } from '../../lib/stats.ts';
   import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
 
   // 기본은 카드 벽 — 아이템을 늘어놓은 화면이 FC의 첫인상이다. 표(FM식 밀도)는 토글로 남긴다.
   const VIEW_KEY = 'wfc.squad.view';
   let data: Data | null = null, pos = 'ALL', q = '';
-  let view: 'card' | 'table' = (localStorage.getItem(VIEW_KEY) as 'card' | 'table') || 'card';
+  type View = 'pitch' | 'card' | 'table';
+  let view: View = (localStorage.getItem(VIEW_KEY) as View) || 'pitch';
+  const FORM_KEY = 'wfc.squad.formation';
+  let formation = localStorage.getItem(FORM_KEY) || FORMATION_NAMES[0];
   let sortKey = 'ovr';
   const state: TableState = { sortKey: 'num', sortDir: 'asc' };
   const app = document.getElementById('app')!;
@@ -58,6 +64,47 @@ import Shell from '../../layouts/Shell.astro';
     return [...rows].sort((a, b) => { const x = f(a), y = f(b); return typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'ko'); });
   }
 
+  // 피치 선 — viewBox 가 컨테이너 비율(68x105)과 같아 원이 찌그러지지 않는다.
+  const PITCH_LINES = `<svg class="sq-lines" viewBox="0 0 68 105" fill="none" stroke="rgba(255,255,255,.16)" stroke-width=".4">
+    <rect x="2" y="2" width="64" height="101"/><line x1="2" y1="52.5" x2="66" y2="52.5"/><circle cx="34" cy="52.5" r="9.15"/>
+    <rect x="13.2" y="2" width="41.6" height="16.5"/><rect x="24.8" y="2" width="18.4" height="5.5"/>
+    <rect x="13.2" y="86.5" width="41.6" height="16.5"/><rect x="24.8" y="97.5" width="18.4" height="5.5"/>
+    <circle cx="34" cy="52.5" r=".6" fill="rgba(255,255,255,.16)"/></svg>`;
+
+  function pitchView(rows: Player[], d: Data): string {
+    const slots = FORMATIONS[formation] ?? FORMATIONS[FORMATION_NAMES[0]];
+    const { lineup, bench } = bestEleven(rows, slots);
+    const cards = lineup.map(({ slot, player, outOfPosition }) => {
+      const at = `left:${(slot.x * 100).toFixed(1)}%;top:${(slot.y * 100).toFixed(1)}%`;
+      if (!player) return `<div class="sq-slot" style="${at}"><div class="sq-empty">${esc(slot.label)}</div></div>`;
+      const o = ovr(player);
+      const title = outOfPosition ? ` title="${esc(player.pos) || '미정'} 인데 ${esc(slot.label)} 자리에 섰습니다"` : '';
+      return `<div class="sq-slot" style="${at}">
+        <a class="sq-card pcard-${grade(o)}${outOfPosition ? ' oop' : ''}" href="${href(`/squad/${player.num}/`)}"${title}>
+          <b class="sq-ovr">${o || '–'}</b>
+          <span class="sq-name">${esc(player.name)}</span>
+          <span class="sq-slotlabel">${esc(slot.label)}</span>
+        </a></div>`;
+    }).join('');
+    const oop = lineup.filter((a) => a.outOfPosition).length;
+    const picked = lineup.map((a) => a.player).filter((p): p is Player => !!p);
+    const avg = picked.length ? Math.round(picked.reduce((t, p) => t + ovr(p), 0) / picked.length) : 0;
+    const lineCount = (['GK', 'DF', 'MF', 'FW'] as const)
+      .map((k) => `${k} ${picked.filter((p) => p.pos === k).length}`).join(' · ');
+    const benchRows = bench.length
+      ? bench.map((p) => `<a class="sq-bench-row" href="${href(`/squad/${p.num}/`)}"><span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span><b>${esc(p.name)}</b><span class="sq-bench-ovr grade-${grade(ovr(p))}">${ovr(p) || '–'}</span></a>`).join('')
+      : '<p class="muted">벤치가 비었습니다.</p>';
+    return `<div class="sq">
+      <div class="sq-pitch">${PITCH_LINES}${cards}</div>
+      <div class="sq-side">
+        <div class="card"><h2>선발 ${esc(formation)}</h2>
+          <div class="big">${avg || '–'}<span class="muted sq-avg-unit"> 평균 OVR</span></div>
+          <p class="muted">OVR 순 자동 배치 · ${lineCount}${oop ? ` · <span class="cond cond-mid">${oop}명</span>이 자리 밖` : ''}</p></div>
+        <div class="card"><h2>벤치 ${bench.length}명</h2><div class="sq-bench">${benchRows}</div></div>
+      </div>
+    </div>`;
+  }
+
   function render() {
     if (!data) return;
     const d = data;
@@ -65,6 +112,8 @@ import Shell from '../../layouts/Shell.astro';
     document.getElementById('count')!.textContent = `${rows.length}명`;
     document.getElementById('add')!.hidden = !isAdmin();
     document.getElementById('sort')!.hidden = view !== 'card';
+    document.getElementById('formation')!.hidden = view !== 'pitch';
+    if (view === 'pitch') { app.className = ''; app.innerHTML = rows.length ? pitchView(rows, d) : '<p class="pcard-empty">명단이 비어 있습니다</p>'; return; }
     if (view === 'table') { app.className = 'tbl-wrap'; mountTable(app, cols(d), rows, state, { empty: '명단이 비어 있습니다' }); return; }
     app.className = 'pcard-wall';
     app.innerHTML = rows.length
@@ -73,7 +122,10 @@ import Shell from '../../layouts/Shell.astro';
   }
 
   document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => x.classList.toggle('on', x === b)); render(); }));
-  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as 'card' | 'table'; localStorage.setItem(VIEW_KEY, view); document.querySelectorAll('#view-toggle .chip').forEach((x) => x.classList.toggle('on', x === b)); render(); }));
+  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as View; localStorage.setItem(VIEW_KEY, view); document.querySelectorAll('#view-toggle .chip').forEach((x) => x.classList.toggle('on', x === b)); render(); }));
+  const formSel = document.getElementById('formation') as HTMLSelectElement;
+  formSel.innerHTML = FORMATION_NAMES.map((n) => `<option value="${n}"${n === formation ? ' selected' : ''}>${n}</option>`).join('');
+  formSel.onchange = (e) => { formation = (e.target as HTMLSelectElement).value; localStorage.setItem(FORM_KEY, formation); render(); };
   document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((x) => x.classList.toggle('on', x.dataset.view === view));
   (document.getElementById('sort') as HTMLSelectElement).onchange = (e) => { sortKey = (e.target as HTMLSelectElement).value; render(); };
   (document.getElementById('q') as HTMLInputElement).oninput = (e) => { q = (e.target as HTMLInputElement).value.trim(); render(); };

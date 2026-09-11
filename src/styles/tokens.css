@@ -475,3 +475,36 @@ details.year[open] > summary::before { content: "▾ "; }
 @media (max-width: 639px) { .tile-wide { grid-column: span 2; } }
 .tile-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: var(--m-sm); }
 .tile-thumbs img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+
+/* ── 스쿼드 = 피치 배치(FIFA 스쿼드 화면) ─────────────────────────────────────
+   표가 아니라 피치 위에 카드를 놓는 게 이 화면의 본체다. 표·카드벽은 탭으로 남긴다. */
+.sq { display: flex; flex-wrap: wrap; gap: var(--gap-lg); align-items: flex-start; }
+/* 피치는 화면의 주인공이라 폭을 먼저 준다 — 높이로 묶으면 4:6 으로 쪼그라든다. */
+/* 폭 상한은 세로 피치(68:105)가 한 화면에 들어오는 크기로 잡았다 — 440px 면 높이 679px. */
+.sq-pitch { position: relative; flex: none; width: min(40vw, 440px); aspect-ratio: 68 / 105; background: linear-gradient(180deg, #14241d 0%, #0e1a15 55%, #0b1511 100%);
+  border: 1px solid var(--line-hi);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+.sq-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sq-slot { position: absolute; transform: translate(-50%, -50%); }
+.sq-card { display: flex; flex-direction: column; align-items: center; width: 78px; padding: 6px 4px 7px;
+  color: var(--ink); text-align: center; box-shadow: 0 6px 14px rgba(0, 0, 0, .55);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  transition: transform var(--dur-fast) var(--ease-std), box-shadow var(--dur-fast) var(--ease-std); }
+.sq-card:hover, .sq-card:focus-visible { transform: translateY(-4px) scale(1.06); box-shadow: 0 12px 22px rgba(0, 0, 0, .6); }
+.sq-ovr { font-family: var(--font-d); font-size: 23px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.sq-name { margin-top: 2px; font-size: var(--fs-xs); font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.sq-slotlabel { font-family: var(--font-d); font-size: 9px; font-weight: 800; letter-spacing: .1em; color: var(--ink-soft); }
+/* 자리 밖에 선 사람 — 명단이 치우쳐 있으면(GK 1명 등) 반드시 생긴다. 숨기지 않고 표시한다. */
+.sq-card.oop { outline: 2px solid var(--cond-mid); outline-offset: 1px; }
+.sq-empty { display: flex; align-items: center; justify-content: center; width: 78px; height: 62px;
+  border: 1px dashed var(--line-hi); color: var(--muted); font-size: var(--fs-xs); }
+.sq-side { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: var(--gap); }
+/* 벤치가 19줄이면 오른쪽이 화면을 잡아먹는다 — 카드 안에서 스크롤시킨다. */
+.sq-bench { display: flex; flex-direction: column; max-height: 42vh; overflow-y: auto; }
+.sq-bench-row { display: grid; grid-template-columns: 2.6em 1fr auto; align-items: center; gap: var(--m-sm);
+  padding: 6px var(--m-sm); border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
+.sq-bench-row:last-child { border-bottom: 0; }
+.sq-bench-row:hover { background: rgba(0, 224, 140, .07); }
+.sq-bench-ovr { font-family: var(--font-d); font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 899px) { .sq-pitch { width: 100%; max-width: 420px; margin: 0 auto; } .sq-bench { max-height: none; } }
+.sq-avg-unit { font-family: var(--font); font-size: var(--fs-sm); font-weight: 500; letter-spacing: 0; }
