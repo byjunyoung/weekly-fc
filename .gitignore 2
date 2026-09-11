@@ -1,6 +1,0 @@
-# .gitignore
-dist/
-node_modules
-node_modules.nosync/
-.astro/
-.DS_Store
