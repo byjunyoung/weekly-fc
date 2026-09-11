@@ -12,11 +12,16 @@
   /* 컨디션(eFootball 문법) 전용 3색 — val-* 4구간(능력치 등급)과는 다른 축이라 새로 둔다.
      down은 warn/val-d와 같은 빨강을 그대로 쓴다: 색 자체는 스펙이 지정한 신호고, "벌점처럼 안 읽히게"는 문구 쪽 책임이다. */
   --cond-up: #3ecfc7; --cond-mid: #e0c23c; --cond-down: #e97267;
-  --gold: #ddc05f; --silver: #b3bdc6; --bronze: #b97646;
+  /* gold는 원래 #ddc05f였다 — --val-c(#e79940, 능력치 c구간 주황)와 색상각 14°·명도
+     4%p 차이뿐이라 이전 검토에서 근접 지적을 받았다(당시는 텍스트라 면적이 작아 안 바꿈).
+     이제 카드 테두리로 면적이 커지며 실제로 겹쳐 보이는지 확인(2026-09-11, 카드 프레임 옆에
+     val-c 배지를 나란히 렌더링해 대조) → 명도를 62%→73%로 크게 띄워 채도 대비가 아니라
+     밝기 대비로 구별되게 했다(색각 이상에도 안전). 상세는 player-card-report.md. */
+  --gold: #eeda88; --silver: #b3bdc6; --bronze: #b97646;
   --sidebar: 220px; --sidebar-narrow: 56px; --header-h: 48px;
-  --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 640px;
+  --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 640px; --pcard-w: 260px;
   --m-xs: 4px; --m-sm: 8px; --m-md: 12px; --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
-  --fs-xs: 11px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 20px; --fs-xl: 32px;
+  --fs-xs: 11px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 20px; --fs-xl: 32px; --fs-xxl: 44px;
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 * { box-sizing: border-box; }
@@ -154,7 +159,7 @@ body.wide .main { margin-left: 0; }
 .home-grid .span2 { grid-column: span 2; }
 .home-me { background: var(--surface); border: 1px solid var(--line); padding: var(--gap); margin-bottom: var(--gap); }
 .home-me-body { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: flex-start; }
-.home-me-body > .pcard { flex: 1 1 320px; max-width: 420px; background: var(--bg); }
+.home-me-body > .pcard { flex: 0 1 var(--pcard-w); background: var(--bg); }
 .home-me-stats { flex: 1 1 240px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--gap); align-content: start; }
 .home-me-cta { display: block; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); padding: 14px 16px; margin-bottom: var(--gap); font-size: var(--fs-md); cursor: pointer; }
 .home-me-cta:hover { background: var(--tint); }
@@ -171,13 +176,30 @@ body.wide .main { margin-left: 0; }
 .form .full { grid-column: 1 / -1; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .stack { display: flex; flex-direction: column; gap: var(--gap); }
-.bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
-.bar { display: grid; grid-template-columns: 3.2em 1fr 2.4em; align-items: center; gap: 8px; font-size: var(--fs-sm); }
-.bar i { display: block; height: 6px; background: var(--tint); }
-.bar i b { display: block; height: 100%; background: var(--fg); }
-.pcard-row { margin-top: 6px; }
-.pcard-bars { margin-top: 14px; }
-.pcard-note { margin-top: 12px; font-size: var(--fs-sm); }
+/* 선수 카드(FC 문법, 게임 인터페이스 재설계 5절) — 큰 OVR이 위계를 지배한다.
+   등급(gold/silver/bronze)은 배경을 덮지 않고 테두리 색 + OVR 숫자 색으로만
+   표현한다: 카드 전체를 금색으로 덮는 FC 원안은 짙은 바탕의 절제(3절)와 충돌해
+   여기서만 의도적으로 안 따른다. 프레임 색은 아래 .pcard-gold 등 3규칙뿐이고
+   .grade-gold 등(OVR 숫자 색)은 tokens.css 위쪽 "값 색코딩" 구역에 이미 있다. */
+.pcard { width: 100%; max-width: var(--pcard-w); margin: 0 auto; border-width: 2px; perspective: 1200px; }
+.pcard-gold { border-color: var(--gold); }
+.pcard-silver { border-color: var(--silver); }
+.pcard-bronze { border-color: var(--bronze); }
+.pcard-body { display: flex; flex-direction: column; align-items: center; width: 100%; text-align: center; }
+.pcard-head { display: flex; align-items: flex-start; justify-content: space-between; width: 100%; }
+.pcard-ovr-block { display: flex; flex-direction: column; align-items: flex-start; gap: var(--m-xs); }
+.pcard-ovr { display: block; font-size: var(--fs-xxl); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.pcard-portrait { margin: var(--m-sm) 0; }
+.avatar-btn { display: block; padding: 0; margin: 0; border: 0; background: none; cursor: pointer; }
+.pcard-name { font-size: var(--fs-lg); font-weight: 600; margin-top: var(--m-xs); }
+.pcard-detail { font-size: var(--fs-sm); }
+.pcard-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--m-md) var(--m-sm); width: 100%; margin-top: var(--gap); }
+.pcard-stat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pcard-stat-label { font-size: var(--fs-xs); letter-spacing: .06em; color: var(--muted); }
+.pcard-stat-val { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.pcard-stat-bar { display: block; width: 100%; height: 4px; background: var(--tint); overflow: hidden; margin-top: 2px; }
+.pcard-stat-bar b { display: block; height: 100%; width: var(--fill, 0%); background: var(--fg); }
+.pcard-note { margin-top: var(--m-md); font-size: var(--fs-sm); }
 details.year > summary { cursor: pointer; padding: 8px 0; font-weight: 600; list-style: none; }
 details.year > summary::before { content: "▸ "; color: var(--muted); }
 details.year[open] > summary::before { content: "▾ "; }

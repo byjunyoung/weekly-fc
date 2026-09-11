@@ -45,7 +45,7 @@ const { num } = Astro.params;
     const fines = data.fines.filter((f) => f.player === p.name);
     const unpaid = fines.filter((f) => !f.paid).reduce((s, f) => s + f.amount, 0);
     const duty = nextDuty(data.players, data.rotation, p.name);
-    const avatarHtml = `<button type="button" id="avatar-edit-btn" class="avatar-btn" style="border:0;padding:0;background:none;display:block;flex:none;cursor:pointer" title="아바타 편집">${avatarSvg(avatarSpecFor(p.num, p.avatar), 120, p.num)}</button>`;
+    const avatarHtml = `<button type="button" id="avatar-edit-btn" class="avatar-btn" title="아바타 편집">${avatarSvg(avatarSpecFor(p.num, p.avatar), 120, p.num)}</button>`;
     app.innerHTML = `${playerCard(p, avatarHtml)}
       <div class="cards">
         <div class="card"><h2>출석</h2><div class="big">${a.total ? `<span class="val val-${band(a.rate, RATE_CUTS)}">${a.rate}%</span>` : '–'}</div><p class="muted">${a.attended} / ${a.total} 매치</p></div>
