@@ -798,9 +798,9 @@ function setTeamColor(team: 'home' | 'away', color: string): void {
 
 function setTool(t: 'arrow' | 'zone' | 'pen'): void {
   activeTool=t;
-  root.querySelector<HTMLElement>('#tool-arrow')!.classList.toggle('active',t==='arrow');
-  root.querySelector<HTMLElement>('#tool-zone')!.classList.toggle('active',t==='zone');
-  root.querySelector<HTMLElement>('#tool-pen')!.classList.toggle('active',t==='pen');
+  root.querySelector<HTMLElement>('#tool-arrow')!.classList.toggle('on',t==='arrow');
+  root.querySelector<HTMLElement>('#tool-zone')!.classList.toggle('on',t==='zone');
+  root.querySelector<HTMLElement>('#tool-pen')!.classList.toggle('on',t==='pen');
   const hints: Record<string,string>={
     arrow:'선수 드래그: 이동 · 빈 공간 드래그: 화살표 · 우클릭 드래그: 존 · 선수 우클릭: 수정',
     zone: '선수 드래그: 이동 · 빈 공간 드래그: 존 생성 · 우클릭 드래그: 존 · 선수 우클릭: 수정',
@@ -811,8 +811,8 @@ function setTool(t: 'arrow' | 'zone' | 'pen'): void {
 
 function setMode(m: 'soccer' | 'futsal'): void {
   mode=m;
-  root.querySelector<HTMLElement>('#m-soccer')!.classList.toggle('active',m==='soccer');
-  root.querySelector<HTMLElement>('#m-futsal')!.classList.toggle('active',m==='futsal');
+  root.querySelector<HTMLElement>('#m-soccer')!.classList.toggle('on',m==='soccer');
+  root.querySelector<HTMLElement>('#m-futsal')!.classList.toggle('on',m==='futsal');
   playerCount=m==='futsal'?5:11;
   root.querySelector<HTMLElement>('#count-val')!.textContent=String(playerCount);
   buildFormSelects();
