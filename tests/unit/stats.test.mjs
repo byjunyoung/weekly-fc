@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ovr, grade, band, STAT_CUTS, RATE_CUTS, attendance, wins, seasonTable, fineSummary } from '../../src/lib/stats.ts';
+import { ovr, grade, band, STAT_CUTS, RATE_CUTS, attendance, wins, seasonTable, fineSummary, condition } from '../../src/lib/stats.ts';
 
 const P = (num, name, s = 70) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null });
 const M = (date, attendees, teams = [], winner = '') => ({ id: date, date, location: '', youtube: '', type: '2파전', attendees, teams, winner });
@@ -29,6 +29,23 @@ test('seasonTable은 출석 많은 순, 같으면 번호순', () => {
   const ps = [P(9, 'a'), P(3, 'b'), P(5, 'c')];
   const ms = [M('2026-09-05', ['a', 'b']), M('2026-08-22', ['b'])];
   assert.deepEqual(seasonTable(ps, ms).map((r) => r.player.name), ['b', 'a', 'c']);
+});
+test('condition은 최근 4경기(출석 기록 있는 것만) 중 출석 수로 3단계', () => {
+  const up = [M('2026-09-05', ['a']), M('2026-08-29', ['a']), M('2026-08-22', ['a']), M('2026-08-15', [])];
+  // 08-15는 attendees가 비어 있어 세는 매치가 아니다 → 실제 최근 3경기 중 a는 3회 출석
+  assert.deepEqual(condition('a', up), { level: 'up', attended: 3, of: 3 });
+  const mid = [M('2026-09-05', ['a']), M('2026-08-29', ['b']), M('2026-08-22', ['a']), M('2026-08-15', ['b'])];
+  assert.deepEqual(condition('a', mid), { level: 'mid', attended: 2, of: 4 });
+  const down = [M('2026-09-05', ['b']), M('2026-08-29', ['b']), M('2026-08-22', ['b']), M('2026-08-15', ['a'])];
+  assert.deepEqual(condition('a', down), { level: 'down', attended: 1, of: 4 });
+});
+test('condition은 출석 기록이 있는 매치 자체가 없으면 판단 보류', () => {
+  assert.deepEqual(condition('a', []), { level: 'none', attended: 0, of: 0 });
+  assert.deepEqual(condition('a', [M('2026-08-15', [])]), { level: 'none', attended: 0, of: 0 });
+});
+test('condition은 최근 4경기 밖(5번째 이전)은 무시한다', () => {
+  const withOldMiss = [M('2026-09-05', ['a']), M('2026-08-29', ['a']), M('2026-08-22', ['a']), M('2026-08-15', ['a']), M('2026-08-08', ['b'])];
+  assert.deepEqual(condition('a', withOldMiss), { level: 'up', attended: 4, of: 4 });
 });
 test('fineSummary', () => {
   const fs = [{ id: '1', date: '', match_id: '', player: 'a', type: '지각', amount: 30000, paid: false }, { id: '2', date: '', match_id: '', player: 'a', type: '노쇼', amount: 50000, paid: true }];

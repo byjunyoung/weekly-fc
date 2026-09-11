@@ -9,6 +9,9 @@
   --val-a: #59cf84; --val-b: #a0cf59; --val-c: #e79940; --val-d: #e97267;
   --val-a-bg: #183924; --val-b-bg: #2c3918; --val-c-bg: #3b2a16; --val-d-bg: #391b18;
   --warn: #e97267; --warn-bg: #391b18; --ok: #59cf84;
+  /* 컨디션(eFootball 문법) 전용 3색 — val-* 4구간(능력치 등급)과는 다른 축이라 새로 둔다.
+     down은 warn/val-d와 같은 빨강을 그대로 쓴다: 색 자체는 스펙이 지정한 신호고, "벌점처럼 안 읽히게"는 문구 쪽 책임이다. */
+  --cond-up: #3ecfc7; --cond-mid: #e0c23c; --cond-down: #e97267;
   --gold: #ddc05f; --silver: #b3bdc6; --bronze: #b97646;
   --sidebar: 220px; --sidebar-narrow: 56px; --header-h: 48px;
   --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 640px;
@@ -115,6 +118,12 @@ body.wide .main { margin-left: 0; }
 .val-b { color: var(--val-b); background: var(--val-b-bg); }
 .val-c { color: var(--val-c); background: var(--val-c-bg); }
 .val-d { color: var(--val-d); background: var(--val-d-bg); }
+/* 컨디션 — 값 배지(.val, 정적 등급)와 달리 채움 없는 화살표 글자 하나. 표에서 면적을 안 먹는다. */
+.cond { display: inline-block; font-weight: 700; }
+.cond-up { color: var(--cond-up); }
+.cond-mid { color: var(--cond-mid); }
+.cond-down { color: var(--cond-down); }
+.cond-none { color: var(--muted); font-weight: 400; }
 .pos { display: inline-block; min-width: 2.4em; padding: 1px 6px; text-align: center; color: #fff; font-size: var(--fs-xs); font-weight: 600; }
 .pos-gk { background: var(--pos-gk); } .pos-df { background: var(--pos-df); } .pos-mf { background: var(--pos-mf); } .pos-fw { background: var(--pos-fw); }
 .grade-gold { color: var(--gold); } .grade-silver { color: var(--silver); } .grade-bronze { color: var(--bronze); }
