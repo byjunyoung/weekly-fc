@@ -19,6 +19,19 @@ type DragBall = { type: 'ball'; startX: number; startY: number; moved: boolean; 
 type DragDraw = { type: 'arrow' | 'zone' | 'pen'; startX: number; startY: number; moved: boolean };
 type DragState = DragMove | DragBall | DragDraw;
 
+// 캔버스는 var()를 못 읽는다 — recap.ts의 tok()과 같은 방식으로 그리는 시점에 토큰 값을 읽어온다.
+const tok = (name: string): string => {
+  const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const fallbacks: Record<string, string> = { '--surface': '#f7f7f5', '--muted': '#6b6b6b', '--fg': '#161616' };
+  return val || fallbacks[name] || '#000000';
+};
+const hexToRgba = (hex: string, alpha: number): string => {
+  const h = hex.replace('#', '');
+  const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const r = parseInt(n.slice(0, 2), 16), g = parseInt(n.slice(2, 4), 16), b = parseInt(n.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 export function initPitch(root: HTMLElement): PitchApi {
 // ── FORMATION DATA ────────────────────────────────────────────────────
 // Curated list: common formations per player count
@@ -208,6 +221,13 @@ const canvas = root.querySelector<HTMLCanvasElement>('#pitch')!;
 const ctx = canvas.getContext('2d')!;
 const container = root.querySelector<HTMLElement>('#pitch-container')!;
 
+// 피치 팔레트: 짙은 초록 대신 포털 뉴트럴로. --line은 --surface 위에서 명도차가 거의 없어(대비비 ≈1.4:1)
+// 마킹 색으로는 대신 --muted(대비비 ≈5:1)를 쓴다. 유니폼 색(homeColor/awayColor)은 사용자 지정이라 그대로 둔다.
+const PITCH_BG = tok('--surface');
+const PITCH_LINE = tok('--muted');
+const PITCH_LABEL = tok('--muted');
+const PITCH_FG = tok('--fg');
+
 function pitchRatio(): number {
   if (mode === 'futsal') return orientation === 'landscape' ? 40/20 : 20/40;
   return orientation === 'landscape' ? 105/68 : 68/105;
@@ -315,8 +335,8 @@ function playerAt(x: number, y: number): Hit | null {
 // ── PITCH DRAWING (simplified) ────────────────────────────────────────
 function drawSoccerPitch(): void {
   const W=canvas.width, H=canvas.height;
-  const lc='rgba(255,255,255,.32)';
-  ctx.fillStyle='#2A4D35'; ctx.fillRect(0,0,W,H);
+  const lc=PITCH_LINE;
+  ctx.fillStyle=PITCH_BG; ctx.fillRect(0,0,W,H);
   ctx.strokeStyle=lc; ctx.lineWidth=1.5;
 
   const px=W*.06, py=H*.04;
@@ -343,7 +363,7 @@ function drawSoccerPitch(): void {
 
   // Goals
   const glw=W*.13, glh=H*.022;
-  ctx.strokeStyle='rgba(255,255,255,.5)';
+  ctx.strokeStyle=PITCH_LINE;
   ctx.strokeRect((W-glw)/2, py-glh, glw, glh);
   ctx.strokeRect((W-glw)/2, H-py, glw, glh);
 
@@ -360,8 +380,8 @@ function drawSoccerPitch(): void {
 
 function drawFutsalPitch(): void {
   const W=canvas.width, H=canvas.height;
-  const lc='rgba(255,255,255,.32)';
-  ctx.fillStyle='#1F4030'; ctx.fillRect(0,0,W,H);
+  const lc=PITCH_LINE;
+  ctx.fillStyle=PITCH_BG; ctx.fillRect(0,0,W,H);
   ctx.strokeStyle=lc; ctx.lineWidth=1.5;
 
   const px=W*.07, py=H*.04;
@@ -377,7 +397,7 @@ function drawFutsalPitch(): void {
 
   // Goals
   const gw=W*.22, gh=H*.03;
-  ctx.strokeStyle='rgba(255,255,255,.5)';
+  ctx.strokeStyle=PITCH_LINE;
   ctx.strokeRect((W-gw)/2, py-gh, gw, gh);
   ctx.strokeRect((W-gw)/2, H-py, gw, gh);
 
@@ -389,8 +409,8 @@ function drawFutsalPitch(): void {
 
 function drawSoccerPitchLandscape(): void {
   const W=canvas.width, H=canvas.height;
-  const lc='rgba(255,255,255,.32)';
-  ctx.fillStyle='#2A4D35'; ctx.fillRect(0,0,W,H);
+  const lc=PITCH_LINE;
+  ctx.fillStyle=PITCH_BG; ctx.fillRect(0,0,W,H);
   ctx.strokeStyle=lc; ctx.lineWidth=1.5;
   const px=W*.04, py=H*.06;
   // Field outline
@@ -411,7 +431,7 @@ function drawSoccerPitchLandscape(): void {
   ctx.strokeRect(W-px-gaD, (H-gaW)/2, gaD, gaW);
   // Goals
   const goD=W*.022, goW=H*.13;
-  ctx.strokeStyle='rgba(255,255,255,.5)';
+  ctx.strokeStyle=PITCH_LINE;
   ctx.strokeRect(px-goD, (H-goW)/2, goD, goW);
   ctx.strokeRect(W-px, (H-goW)/2, goD, goW);
   // Penalty spots
@@ -426,8 +446,8 @@ function drawSoccerPitchLandscape(): void {
 
 function drawFutsalPitchLandscape(): void {
   const W=canvas.width, H=canvas.height;
-  const lc='rgba(255,255,255,.32)';
-  ctx.fillStyle='#1F4030'; ctx.fillRect(0,0,W,H);
+  const lc=PITCH_LINE;
+  ctx.fillStyle=PITCH_BG; ctx.fillRect(0,0,W,H);
   ctx.strokeStyle=lc; ctx.lineWidth=1.5;
   const px=W*.04, py=H*.07;
   ctx.strokeRect(px, py, W-px*2, H-py*2);
@@ -441,7 +461,7 @@ function drawFutsalPitchLandscape(): void {
   ctx.beginPath(); ctx.arc(W-px, H/2, r, Math.PI/2, Math.PI*1.5); ctx.stroke();
   // Goals
   const goD=W*.03, goW=H*.22;
-  ctx.strokeStyle='rgba(255,255,255,.5)';
+  ctx.strokeStyle=PITCH_LINE;
   ctx.strokeRect(px-goD, (H-goW)/2, goD, goW);
   ctx.strokeRect(W-px, (H-goW)/2, goD, goW);
   // Spots
@@ -474,10 +494,10 @@ function drawPlayer(p: P, isHome: boolean): void {
   ctx.font=`bold ${Math.round(r*.85)}px Helvetica Neue,sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(String(p.n), p.x, p.y);
-  if (p.name) { ctx.font = `${Math.max(9, r * 0.8)}px ${getComputedStyle(root).fontFamily}`; ctx.fillStyle = 'rgba(0,0,0,.75)'; ctx.textAlign = 'center'; ctx.fillText(p.name, p.x, p.y + r + 11); }
+  if (p.name) { ctx.font = `${Math.max(9, r * 0.8)}px ${getComputedStyle(root).fontFamily}`; ctx.fillStyle = PITCH_LABEL; ctx.textAlign = 'center'; ctx.fillText(p.name, p.x, p.y + r + 11); }
   if (p.pos) {
     ctx.font=`${Math.round(r*.62)}px Helvetica Neue,sans-serif`;
-    ctx.fillStyle='rgba(255,255,255,.7)';
+    ctx.fillStyle=PITCH_LABEL;
     ctx.fillText(p.pos, p.x, p.y+r+r*.65);
   }
   ctx.restore();
@@ -496,7 +516,7 @@ function drawBall(b: Ball): void {
   ofctx.textBaseline = 'middle';
   ofctx.fillText('⚽', ofc.width/2, ofc.height/2);
   ctx.save();
-  ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=7; ctx.shadowOffsetY=2;
+  ctx.shadowColor=hexToRgba(PITCH_FG,.35); ctx.shadowBlur=5; ctx.shadowOffsetY=1;
   ctx.drawImage(ofc, b.x - ofc.width/2, b.y - ofc.height/2);
   ctx.restore();
 }
@@ -511,7 +531,7 @@ function drawArrow(x1: number, y1: number, x2: number, y2: number, dashed = fals
   if (len<8) return;
   const ux=dx/len, uy=dy/len;
   const hl=Math.min(14,len*.32);
-  ctx.strokeStyle='#E8C84A'; ctx.fillStyle='#E8C84A'; ctx.lineWidth=2;
+  ctx.strokeStyle=PITCH_FG; ctx.fillStyle=PITCH_FG; ctx.lineWidth=2;
   if (dashed) ctx.setLineDash([5,4]);
   ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2-ux*hl*.5, y2-uy*hl*.5); ctx.stroke();
   ctx.setLineDash([]);
@@ -525,7 +545,7 @@ function drawArrow(x1: number, y1: number, x2: number, y2: number, dashed = fals
 function drawPath(pts: { x: number; y: number }[], preview = false): void {
   if (pts.length < 2) return;
   ctx.save();
-  ctx.strokeStyle = '#E8C84A';
+  ctx.strokeStyle = PITCH_FG;
   ctx.lineWidth = preview ? 1.5 : 2;
   ctx.globalAlpha = preview ? 0.7 : 1;
   ctx.lineCap = 'round';
@@ -543,8 +563,8 @@ function drawPath(pts: { x: number; y: number }[], preview = false): void {
 }
 
 function drawZone(x: number, y: number, w: number, h: number, preview = false): void {
-  ctx.fillStyle='rgba(232,200,74,.12)';
-  ctx.strokeStyle=preview?'rgba(232,200,74,.7)':'rgba(232,200,74,.5)';
+  ctx.fillStyle=hexToRgba(PITCH_FG,.08);
+  ctx.strokeStyle=preview?hexToRgba(PITCH_FG,.75):hexToRgba(PITCH_FG,.5);
   ctx.lineWidth=1.5;
   if (preview) ctx.setLineDash([5,4]);
   ctx.fillRect(x,y,w,h); ctx.strokeRect(x,y,w,h);
