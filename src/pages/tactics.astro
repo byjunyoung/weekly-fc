@@ -84,8 +84,8 @@ import Shell from '../layouts/Shell.astro';
       <button class="danger" id="clear-btn" title="화살표와 존을 모두 지웁니다">지우기</button>
     </footer>
   </div>
-  <div class="modal-bg" id="squad-modal"><div class="modal"><h2>명단 불러오기</h2><p class="muted">고른 순서대로 홈 팀 자리에 들어갑니다. 인원 수만큼만.</p><div class="pick-list" id="squad-list"></div><div class="foot"><button data-close="squad-modal">취소</button><button class="primary" id="squad-ok">배치</button></div></div></div>
-  <div class="modal-bg" id="save-modal"><div class="modal"><h2>라인업 저장</h2><label>매치<select id="save-match" style="width:100%"></select></label><div class="foot"><button data-close="save-modal">취소</button><button class="primary" id="save-ok">저장</button></div></div></div>
+  <wa-dialog id="squad-modal" label="명단 불러오기" with-footer><p class="muted">고른 순서대로 홈 팀 자리에 들어갑니다. 인원 수만큼만.</p><div class="pick-list" id="squad-list"></div><div slot="footer" class="foot"><button data-close="squad-modal">취소</button><button class="primary" id="squad-ok">배치</button></div></wa-dialog>
+  <wa-dialog id="save-modal" label="라인업 저장" with-footer><label>매치<select id="save-match" style="width:100%"></select></label><div slot="footer" class="foot"><button data-close="save-modal">취소</button><button class="primary" id="save-ok">저장</button></div></wa-dialog>
 </Shell>
 <style is:global>
   /* 원본 tactics-board(bloglish/tactics-board) 이식판을 포털 어휘로 수렴: 모드·도구는 button(선택 시 .primary),
@@ -143,7 +143,9 @@ import Shell from '../layouts/Shell.astro';
   import type { Data } from '../lib/types';
   import type { PitchState } from '../components/lineup-svg';
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
-  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => $(b.dataset.close!).classList.remove('show')));
+  // wa-dialog 는 open 속성으로 여닫는다. $ 는 다른 곳에서 구체 타입으로 캐스팅하므로 따로 둔다.
+  const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
+  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => dlg(b.dataset.close!).open = false));
   const api = initPitch($('board'));
   const wantMatch = new URLSearchParams(location.search).get('match');
   let data: Data | null = null, picked: number[] = [];
@@ -154,19 +156,19 @@ import Shell from '../layouts/Shell.astro';
   function renderActions() {
     if (!data) return;
     $('squad-actions').innerHTML = `<button id="load-squad">명단 불러오기</button>${isAdmin() ? '<button id="save-lineup">매치에 저장</button>' : ''}`;
-    $('load-squad').onclick = () => { picked = []; drawPick(); $('squad-modal').classList.add('show'); };
-    if (isAdmin()) $('save-lineup').onclick = () => { ($('save-match') as HTMLSelectElement).innerHTML = data!.matches.map((m) => `<option value="${esc(m.id)}" ${m.id === wantMatch ? 'selected' : ''}>${fmtDate(m.date)}${m.location ? ` · ${esc(m.location)}` : ''}</option>`).join(''); $('save-modal').classList.add('show'); };
+    $('load-squad').onclick = () => { picked = []; drawPick(); dlg('squad-modal').open = true; };
+    if (isAdmin()) $('save-lineup').onclick = () => { ($('save-match') as HTMLSelectElement).innerHTML = data!.matches.map((m) => `<option value="${esc(m.id)}" ${m.id === wantMatch ? 'selected' : ''}>${fmtDate(m.date)}${m.location ? ` · ${esc(m.location)}` : ''}</option>`).join(''); dlg('save-modal').open = true; };
     if (wantMatch && !injected) { const l = data.lineups.find((x) => x.match_id === wantMatch); if (l) { try { api.setState(JSON.parse(l.assignments) as PitchState); injected = true; } catch {} } }
   }
   function drawPick() {
     $('squad-list').innerHTML = [...data!.players].sort((a, b) => a.num - b.num).map((p) => { const i = picked.indexOf(p.num); return `<button data-n="${p.num}" class="${i >= 0 ? 'primary' : ''}">${i >= 0 ? `${i + 1}. ` : ''}${p.num} ${esc(p.name)}</button>`; }).join('');
     $('squad-list').querySelectorAll<HTMLElement>('[data-n]').forEach((b) => (b.onclick = () => { const n = Number(b.dataset.n); picked = picked.includes(n) ? picked.filter((x) => x !== n) : [...picked, n]; drawPick(); }));
   }
-  $('squad-ok').onclick = () => { const ps = picked.map((n) => data!.players.find((p) => p.num === n)!).map((p) => ({ n: p.num, name: p.name, pos: p.pos })); api.loadSquad('home', ps); $('squad-modal').classList.remove('show'); };
+  $('squad-ok').onclick = () => { const ps = picked.map((n) => data!.players.find((p) => p.num === n)!).map((p) => ({ n: p.num, name: p.name, pos: p.pos })); api.loadSquad('home', ps); dlg('squad-modal').open = false; };
   $('save-ok').onclick = async () => {
     const match_id = ($('save-match') as HTMLSelectElement).value; if (!match_id) return;
     const existing = data!.lineups.find((l) => l.match_id === match_id);
-    try { await write('writeLineup', serializeLineup({ id: existing?.id ?? String(Date.now()), match_id, name: '', formation: api.getState().formation.home, assignments: JSON.stringify(api.getState()) })); $('save-modal').classList.remove('show'); toast('저장됨'); } catch (e) { toast((e as Error).message); }
+    try { await write('writeLineup', serializeLineup({ id: existing?.id ?? String(Date.now()), match_id, name: '', formation: api.getState().formation.home, assignments: JSON.stringify(api.getState()) })); dlg('save-modal').open = false; toast('저장됨'); } catch (e) { toast((e as Error).message); }
   };
   window.addEventListener('wfc:admin', renderActions);
   onData((d) => { data = d; renderActions(); });

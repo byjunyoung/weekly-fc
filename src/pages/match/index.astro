@@ -4,10 +4,10 @@ import Shell from '../../layouts/Shell.astro';
 <Shell title="매치">
   <div class="page-head"><h1 id="title">매치</h1><div class="actions" id="actions"></div></div>
   <div id="app" class="stack"></div>
-  <div class="modal-bg" id="import-modal"><div class="modal modal-wide"><h2>영상에서 가져오기</h2><p class="muted">채널 영상 제목에서 날짜·유형·장소를 읽어 아직 없는 매치를 만듭니다.</p><div id="import-list" class="stack"></div><div class="foot"><button data-close="import-modal">닫기</button><button class="primary" id="import-ok">추가</button></div></div></div>
-  <div class="modal-bg" id="att-modal"><div class="modal modal-wide"><h2>참석 채우기</h2><p class="muted">카톡 투표 결과를 복사해 붙여넣으세요. 명단과 대조합니다.</p><textarea id="att-text" rows="6" style="width:100%"></textarea><div id="att-preview" class="stack att-preview"></div><div class="foot"><button data-close="att-modal">취소</button><button class="primary" id="att-ok">저장</button></div></div></div>
-  <div class="modal-bg" id="res-modal"><div class="modal modal-xwide"><h2>결과 적기</h2><div id="res-form" class="stack"></div><div class="foot"><button data-close="res-modal">취소</button><button class="primary" id="res-ok">저장</button></div></div></div>
-  <div class="modal-bg" id="meta-modal"><div class="modal"><h2>매치 정보</h2><form class="form" id="meta-form"></form><div class="foot"><button class="danger" id="meta-del">삭제</button><span style="flex:1"></span><button data-close="meta-modal">취소</button><button class="primary" id="meta-ok">저장</button></div></div></div>
+  <wa-dialog id="import-modal" label="영상에서 가져오기" with-footer class="modal-wide"><p class="muted">채널 영상 제목에서 날짜·유형·장소를 읽어 아직 없는 매치를 만듭니다.</p><div id="import-list" class="stack"></div><div slot="footer" class="foot"><button data-close="import-modal">닫기</button><button class="primary" id="import-ok">추가</button></div></wa-dialog>
+  <wa-dialog id="att-modal" label="참석 채우기" with-footer class="modal-wide"><p class="muted">카톡 투표 결과를 복사해 붙여넣으세요. 명단과 대조합니다.</p><textarea id="att-text" rows="6" style="width:100%"></textarea><div id="att-preview" class="stack att-preview"></div><div slot="footer" class="foot"><button data-close="att-modal">취소</button><button class="primary" id="att-ok">저장</button></div></wa-dialog>
+  <wa-dialog id="res-modal" label="결과 적기" with-footer class="modal-xwide"><div id="res-form" class="stack"></div><div slot="footer" class="foot"><button data-close="res-modal">취소</button><button class="primary" id="res-ok">저장</button></div></wa-dialog>
+  <wa-dialog id="meta-modal" label="매치 정보" with-footer><form class="form" id="meta-form"></form><div slot="footer" class="foot"><button class="danger" id="meta-del">삭제</button><span style="flex:1"></span><button data-close="meta-modal">취소</button><button class="primary" id="meta-ok">저장</button></div></wa-dialog>
 </Shell>
 <script>
   import { onData, isAdmin, write, loadVideos, serializeMatch } from '../../lib/api.ts';
@@ -20,12 +20,14 @@ import Shell from '../../layouts/Shell.astro';
   import type { Data, Match, Team } from '../../lib/types.ts';
 
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  // wa-dialog 는 open 속성으로 여닫는다. $ 는 다른 곳에서 구체 타입으로 캐스팅하므로 따로 둔다.
+  const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
   const app = $('app');
   const id = new URLSearchParams(location.search).get('d');
   let data: Data | null = null;
   let view: 'list' | 'thumbs' = (localStorage.getItem('wfc_match_view') as 'list' | 'thumbs') || 'list';
   let tab: 'info' | 'lineup' | 'recap' = 'info';
-  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => $(b.dataset.close!).classList.remove('show')));
+  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => dlg(b.dataset.close!).open = false));
   const link = (m: Match) => href(`/match/?d=${encodeURIComponent(m.id)}`);
   const result = (m: Match) => (m.winner ? `${esc(m.winner)} 승` : m.teams.length ? '결과 없음' : '');
   const freeId = (date: string): string => {
@@ -77,7 +79,7 @@ import Shell from '../../layouts/Shell.astro';
 
   // ── 관리자: 영상에서 가져오기 ──
   async function openImport() {
-    $('import-list').innerHTML = '<p class="muted">채널을 읽는 중…</p>'; $('import-modal').classList.add('show');
+    $('import-list').innerHTML = '<p class="muted">채널을 읽는 중…</p>'; dlg('import-modal').open = true;
     try {
       const vids = await loadVideos();
       const props = proposeMatches(vids, data!.matches);
@@ -86,7 +88,7 @@ import Shell from '../../layouts/Shell.astro';
         const picked = [...document.querySelectorAll<HTMLInputElement>('#import-list input:checked')].map((c) => props[Number(c.dataset.i)]);
         if (!picked.length) return;
         ($('import-ok') as HTMLButtonElement).disabled = true;
-        try { for (const m of picked) await write('writeMatch', serializeMatch(m)); toast(`${picked.length}개 추가됨`); $('import-modal').classList.remove('show'); }
+        try { for (const m of picked) await write('writeMatch', serializeMatch(m)); toast(`${picked.length}개 추가됨`); dlg('import-modal').open = false; }
         catch (e) { toast((e as Error).message); } finally { ($('import-ok') as HTMLButtonElement).disabled = false; }
       };
     } catch (e) { $('import-list').innerHTML = `<p class="warn">${esc((e as Error).message)}</p>`; }
@@ -111,8 +113,8 @@ import Shell from '../../layouts/Shell.astro';
     };
     ta.oninput = () => { const r = parseAttendance(ta.value, data!.players); parsed = r.matched; unmatched = r.unmatched; draw(); };
     draw();
-    $('att-ok').onclick = async () => { try { await write('writeMatch', serializeMatch({ ...m, attendees: compute() })); $('att-modal').classList.remove('show'); toast('저장됨'); } catch (e) { toast((e as Error).message); } };
-    $('att-modal').classList.add('show');
+    $('att-ok').onclick = async () => { try { await write('writeMatch', serializeMatch({ ...m, attendees: compute() })); dlg('att-modal').open = false; toast('저장됨'); } catch (e) { toast((e as Error).message); } };
+    dlg('att-modal').open = true;
   }
 
   // ── 관리자: 결과 적기 ──
@@ -125,8 +127,8 @@ import Shell from '../../layouts/Shell.astro';
       document.querySelectorAll<HTMLElement>('[data-p]').forEach((b) => (b.onclick = () => { const ti = Number(b.dataset.t), p = b.dataset.p!; teams.forEach((t, i) => { t.players = t.players.filter((x) => x !== p); if (i === ti && !b.classList.contains('on')) t.players.push(p); }); draw(); }));
     };
     draw();
-    $('res-ok').onclick = async () => { const winner = ($('res-winner') as HTMLSelectElement).value; try { await write('writeMatch', serializeMatch({ ...m, teams, winner })); $('res-modal').classList.remove('show'); toast('저장됨'); } catch (e) { toast((e as Error).message); } };
-    $('res-modal').classList.add('show');
+    $('res-ok').onclick = async () => { const winner = ($('res-winner') as HTMLSelectElement).value; try { await write('writeMatch', serializeMatch({ ...m, teams, winner })); dlg('res-modal').open = false; toast('저장됨'); } catch (e) { toast((e as Error).message); } };
+    dlg('res-modal').open = true;
   }
 
   // ── 관리자: 정보 편집 / 직접 추가 ──
@@ -139,10 +141,10 @@ import Shell from '../../layouts/Shell.astro';
       const yt = g('youtube').match(/(?:v=|youtu\.be\/|\/embed\/)([\w-]{11})/)?.[1] ?? g('youtube');
       const date = g('date'); if (!date) return;
       const idNew = m ? m.id : freeId(date);
-      try { await write('writeMatch', serializeMatch({ ...v, id: idNew, date, type: g('type') as Match['type'], location: g('location'), youtube: yt })); $('meta-modal').classList.remove('show'); if (!m) location.href = href(`/match/?d=${encodeURIComponent(idNew)}`); } catch (e) { toast((e as Error).message); }
+      try { await write('writeMatch', serializeMatch({ ...v, id: idNew, date, type: g('type') as Match['type'], location: g('location'), youtube: yt })); dlg('meta-modal').open = false; if (!m) location.href = href(`/match/?d=${encodeURIComponent(idNew)}`); } catch (e) { toast((e as Error).message); }
     };
     $('meta-del').onclick = async () => { if (!m || !confirm('이 매치를 지울까요?')) return; try { await write('deleteMatch', { id: m.id }); location.href = href('/match/'); } catch (e) { toast((e as Error).message); } };
-    $('meta-modal').classList.add('show');
+    dlg('meta-modal').open = true;
   }
 
   const render = () => { if (!data) return; id ? renderDetail(data) : renderList(data); };

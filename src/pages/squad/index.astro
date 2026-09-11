@@ -5,11 +5,11 @@ import Shell from '../../layouts/Shell.astro';
   <div class="page-head">
     <h1>스쿼드 <span class="muted" id="count"></span></h1>
     <div class="actions">
-      <div class="chips" id="pos-filter"><button class="chip on" data-pos="ALL">전체</button><button class="chip" data-pos="GK">GK</button><button class="chip" data-pos="DF">DF</button><button class="chip" data-pos="MF">MF</button><button class="chip" data-pos="FW">FW</button></div>
+      <div class="chips" id="pos-filter" role="group" aria-label="포지션 거르기"><button class="chip on" data-pos="ALL" aria-pressed="true">전체</button><button class="chip" data-pos="GK" aria-pressed="false">GK</button><button class="chip" data-pos="DF" aria-pressed="false">DF</button><button class="chip" data-pos="MF" aria-pressed="false">MF</button><button class="chip" data-pos="FW" aria-pressed="false">FW</button></div>
       <input id="q" type="search" placeholder="이름" class="w-search" />
       <select id="sort" class="w-sort"><option value="ovr">OVR 순</option><option value="num">번호 순</option><option value="name">이름 순</option><option value="att">출석 순</option></select>
       <select id="formation" class="w-sort"></select>
-      <div class="chips" id="view-toggle"><button class="chip on" data-view="pitch">피치</button><button class="chip" data-view="card">카드</button><button class="chip" data-view="table">표</button></div>
+      <div class="chips" id="view-toggle" role="group" aria-label="보기 방식"><button class="chip on" data-view="pitch" aria-pressed="true">피치</button><button class="chip" data-view="card" aria-pressed="false">카드</button><button class="chip" data-view="table" aria-pressed="false">표</button></div>
       <button id="add" hidden>선수 추가</button>
     </div>
   </div>
@@ -39,6 +39,8 @@ import Shell from '../../layouts/Shell.astro';
   let sortKey = 'ovr';
   const state: TableState = { sortKey: 'num', sortDir: 'asc' };
   const app = document.getElementById('app')!;
+  /** 눌린 칩을 색만이 아니라 aria-pressed 로도 알린다. */
+  const setChip = (el: HTMLElement, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); };
 
   function cols(d: Data): Column<Player>[] {
     const matches = d.matches;
@@ -121,12 +123,12 @@ import Shell from '../../layouts/Shell.astro';
       : '<p class="pcard-empty">명단이 비어 있습니다</p>';
   }
 
-  document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => x.classList.toggle('on', x === b)); render(); }));
-  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as View; localStorage.setItem(VIEW_KEY, view); document.querySelectorAll('#view-toggle .chip').forEach((x) => x.classList.toggle('on', x === b)); render(); }));
+  document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => setChip(x as HTMLElement, x === b)); render(); }));
+  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as View; localStorage.setItem(VIEW_KEY, view); document.querySelectorAll('#view-toggle .chip').forEach((x) => setChip(x as HTMLElement, x === b)); render(); }));
   const formSel = document.getElementById('formation') as HTMLSelectElement;
   formSel.innerHTML = FORMATION_NAMES.map((n) => `<option value="${n}"${n === formation ? ' selected' : ''}>${n}</option>`).join('');
   formSel.onchange = (e) => { formation = (e.target as HTMLSelectElement).value; localStorage.setItem(FORM_KEY, formation); render(); };
-  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((x) => x.classList.toggle('on', x.dataset.view === view));
+  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((x) => setChip(x, x.dataset.view === view));
   (document.getElementById('sort') as HTMLSelectElement).onchange = (e) => { sortKey = (e.target as HTMLSelectElement).value; render(); };
   (document.getElementById('q') as HTMLInputElement).oninput = (e) => { q = (e.target as HTMLInputElement).value.trim(); render(); };
   document.getElementById('add')!.onclick = () => { const used = new Set(data!.players.map((p) => p.num)); let n = 1; while (used.has(n)) n++; location.href = href(`/squad/${n}/?new=1`); };

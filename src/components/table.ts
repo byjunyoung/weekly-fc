@@ -26,7 +26,9 @@ export function renderTable<T>(cols: Column<T>[], rows: T[], state: TableState, 
   const th = cols.map((c) => {
     const on = c.key === state.sortKey;
     const cls = [c.align ?? 'l', on ? 'sorted' : ''].filter(Boolean).join(' ');
-    return `<th class="${cls}" data-key="${esc(c.key)}">${esc(c.label)}${on ? (state.sortDir === 'asc' ? ' ▴' : ' ▾') : ''}</th>`;
+    // aria-sort 는 정렬 가능한 열에만 둔다 — 정렬 안 되는 열에 none 을 붙이면 오히려 잘못 알린다.
+    const sortAttr = c.sortable === false ? '' : ` aria-sort="${on ? (state.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}"`;
+    return `<th class="${cls}" data-key="${esc(c.key)}" scope="col"${sortAttr}>${esc(c.label)}${on ? (state.sortDir === 'asc' ? ' ▴' : ' ▾') : ''}</th>`;
   }).join('');
   const keyOf = opts.rowKey ?? ((r: T) => fingerprint(cols, r));
   const body = sorted.length

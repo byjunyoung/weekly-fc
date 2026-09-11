@@ -6,14 +6,14 @@ const { num } = Astro.params;
 <Shell title={`선수 #${num}`}>
   <div class="page-head"><h1 id="title">선수 #{num}</h1><div class="actions" id="actions"></div></div>
   <div id="app" class="stack" data-num={num}></div>
-  <div class="modal-bg" id="edit-modal"><div class="modal modal-wide"><h2>선수 편집</h2><form class="form" id="edit-form"></form><div class="foot"><button class="danger" id="del">삭제</button><span style="flex:1"></span><button data-close="edit-modal">취소</button><button class="primary" id="save">저장</button></div></div></div>
+  <wa-dialog id="edit-modal" label="선수 편집" with-footer class="modal-wide"><form class="form" id="edit-form"></form><div slot="footer" class="foot"><button class="danger" id="del">삭제</button><span style="flex:1"></span><button data-close="edit-modal">취소</button><button class="primary" id="save">저장</button></div></wa-dialog>
   <!-- 아바타 에디터 — 위 edit-modal(관리자 전용)과 별개다. 잠금 없음(사용자 결정 2026-09-11):
        가입·PIN 없이 누구나 열어 저장할 수 있다. -->
-  <div class="modal-bg" id="avatar-modal"><div class="modal"><h2>아바타 편집</h2>
-    <div class="row" id="avatar-preview" style="justify-content:center;margin-bottom:var(--gap)"></div>
+  <wa-dialog id="avatar-modal" label="아바타 편집" with-footer>
+    <div class="row" id="avatar-preview" style="justify-content:center;margin-bottom:var(--s-md)"></div>
     <div class="stack" id="avatar-picker"></div>
-    <div class="foot"><button data-close="avatar-modal">취소</button><button class="primary" id="avatar-save">저장</button></div>
-  </div></div>
+    <div slot="footer" class="foot"><button data-close="avatar-modal">취소</button><button class="primary" id="avatar-save">저장</button></div>
+  </wa-dialog>
 </Shell>
 <script>
   import { onData, isAdmin, write, writeAvatar, fetchFull, serializePlayer } from '../../lib/api.ts';
@@ -32,7 +32,9 @@ const { num } = Astro.params;
   const isNew = new URLSearchParams(location.search).get('new') === '1';
   let data: Data | null = null;
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
-  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => $(b.dataset.close!).classList.remove('show')));
+  // wa-dialog 는 open 속성으로 여닫는다. $ 는 다른 곳에서 구체 타입으로 캐스팅하므로 따로 둔다.
+  const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
+  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => dlg(b.dataset.close!).open = false));
 
   function render() {
     if (!data) return;
@@ -102,12 +104,12 @@ const { num } = Astro.params;
     editSpec = avatarSpecFor(p.num, p.avatar);
     renderAvatarPicker();
     renderAvatarPreview();
-    $('avatar-modal').classList.add('show');
+    dlg('avatar-modal').open = true;
   }
   $('avatar-save').onclick = async () => {
     try {
       await writeAvatar(editNum, serializeAvatar(editSpec));
-      $('avatar-modal').classList.remove('show');
+      dlg('avatar-modal').open = false;
       toast('아바타 저장됨');
     } catch (e) { toast((e as Error).message); }
   };
@@ -124,7 +126,7 @@ const { num } = Astro.params;
       ${STAT_KEYS.map((k) => F(k, STAT_KO[k], v[k], 'number', 'min="1" max="99"')).join('')}
       <label class="full">메모<input name="note" value="${esc(v.note)}"></label>`;
     $('del').hidden = !p;
-    $('edit-modal').classList.add('show');
+    dlg('edit-modal').open = true;
   }
   $('save').onclick = async () => {
     const fd = new FormData($('edit-form') as HTMLFormElement);
@@ -147,7 +149,7 @@ const { num } = Astro.params;
       if (numChanged && data?.players.some((x) => x.num === num)) {
         try { await write('deletePlayer', { num }); } catch (e) { toast(`저장은 됐지만 이전 번호(${num}) 삭제 실패: ${(e as Error).message}`); }
       }
-      $('edit-modal').classList.remove('show'); toast('저장됨');
+      dlg('edit-modal').open = false; toast('저장됨');
       if (numChanged) location.href = href(`/squad/${p.num}/`);
     } catch (e) { toast((e as Error).message); }
   };

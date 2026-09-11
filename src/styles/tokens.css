@@ -410,19 +410,48 @@ details.year[open] > summary::before { content: "▾ "; }
 .recap-img { max-width: 540px; border-radius: var(--r-md); }
 .recap-dl { display: inline-block; }
 
-/* ══ 모달 ══════════════════════════════════════════════════ */
-.modal-bg { display: none; position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .7);
-  align-items: center; justify-content: center; padding: var(--s-md); }
-.modal-bg.show { display: flex; }
-.modal { width: 100%; max-width: 460px; max-height: 90vh; overflow: auto; padding: var(--s-lg);
-  background: var(--card); border-radius: var(--r-lg); }
-.modal.modal-wide { max-width: 580px; }
-.modal.modal-xwide { max-width: var(--modal-xwide); }
-.modal h2 { margin-bottom: var(--s-sm); font-size: var(--fs-h-lg); font-weight: var(--fw-display); color: var(--fg); }
-.modal .foot { display: flex; justify-content: flex-end; gap: var(--s-xs); margin-top: var(--s-lg); }
-.pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s-xs); }
-.pick-list button { min-height: 36px; padding: var(--s-xs) var(--s-xxs); font-size: var(--fs-sm); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ══ Web Awesome 토큰 매핑 ═══════════════════════════════════
+   라이브러리 컴포넌트가 우리 정본(DESIGN.md)을 따르게 만드는 다리다.
+   여기서 이름만 이어주고, 값은 전부 위에서 이미 정의한 것을 쓴다. */
+:root, .wa-dark {
+  --wa-color-surface-default: var(--card);
+  --wa-color-surface-raised: var(--charcoal);
+  --wa-color-surface-lowered: var(--elevated);
+  --wa-color-surface-border: var(--hairline);
+  --wa-color-text-normal: var(--fg);
+  --wa-color-text-quiet: var(--muted);
+  --wa-color-text-link: var(--link);
+  --wa-color-brand-fill-loud: var(--primary);
+  --wa-color-brand-fill-normal: var(--primary);
+  --wa-color-brand-border-loud: var(--primary);
+  --wa-color-brand-on-loud: var(--on-primary);
+  --wa-color-neutral-fill-quiet: var(--elevated);
+  --wa-color-neutral-border-normal: var(--hairline-strong);
+  --wa-color-neutral-on-normal: var(--fg);
+  --wa-font-family-body: var(--font);
+  --wa-font-family-heading: var(--font);
+  --wa-font-weight-body: var(--fw-body);
+  --wa-font-weight-action: var(--fw-strong);
+  --wa-border-radius-s: var(--r-sm);
+  --wa-border-radius-m: var(--r-md);
+  --wa-border-radius-l: var(--r-lg);
+  --wa-border-radius-pill: var(--r-full);
+  --wa-transition-fast: var(--dur-fast);
+  --wa-transition-normal: var(--dur-slow);
+}
+/* 모달 — 정본의 카드 면·반경을 그대로 쓰게 한다. */
+wa-dialog { --width: 460px; }
+wa-dialog::part(dialog) { background: var(--card); border-radius: var(--r-lg); }
+wa-dialog::part(header) { padding-bottom: 0; }
+wa-dialog::part(title) { font-size: var(--fs-h-lg); font-weight: var(--fw-display); }
+wa-dialog::part(body) { padding-top: var(--s-sm); }
+wa-dialog .foot { display: flex; justify-content: flex-end; gap: var(--s-xs); }
+wa-select::part(combobox) { background: var(--elevated); border-color: var(--hairline-strong); border-radius: var(--r-sm); }
+/* 이름 고르기 격자 — wa-dialog 안에 든다. */
+.pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s-xs); }
+.pick-list button { min-height: 36px; padding: var(--s-xs) var(--s-xxs); font-size: var(--fs-sm); }

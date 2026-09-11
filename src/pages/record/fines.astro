@@ -10,7 +10,7 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
   <div id="summary" class="cards" style="margin-bottom:var(--gap)"></div>
   <h2 class="h2-tight">미납자</h2><div id="unpaid" class="chips" style="margin-bottom:var(--gap)"></div>
   <h2 class="h2-tight">내역</h2><div id="app" class="tbl-wrap"></div>
-  <div class="modal-bg" id="fine-modal"><div class="modal"><h2>벌금 기록</h2><form class="form" id="fine-form"></form><div class="foot"><button data-close="fine-modal">취소</button><button class="primary" id="fine-ok">저장</button></div></div></div>
+  <wa-dialog id="fine-modal" label="벌금 기록" with-footer><form class="form" id="fine-form"></form><div slot="footer" class="foot"><button data-close="fine-modal">취소</button><button class="primary" id="fine-ok">저장</button></div></wa-dialog>
 </Shell>
 <script>
   import { onData, isAdmin, write, serializeFine } from '../../lib/api.ts';
@@ -21,9 +21,10 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
   import type { Data, Fine } from '../../lib/types.ts';
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
   let data: Data | null = null;
   const state: TableState = { sortKey: 'date', sortDir: 'desc' };
-  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => $(b.dataset.close!).classList.remove('show')));
+  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => dlg(b.dataset.close!).open = false));
   function render() {
     if (!data) return;
     const s = fineSummary(data.fines);
@@ -48,8 +49,8 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
   function openAdd() {
     ($('fine-form') as HTMLFormElement).innerHTML = `<label>날짜<input name="date" type="date" value="${seoulToday()}"></label><label>이름<select name="player">${data!.players.map((p) => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select></label><label>유형<select name="type" id="fine-type">${FINE_TYPES.map((t) => `<option>${t}</option>`).join('')}</select></label><label>금액<input name="amount" id="fine-amt" type="number" value="${FINE_AMOUNT.지각}"></label><label class="full">매치 (선택)<select name="match_id"><option value="">없음</option>${data!.matches.map((m) => `<option value="${esc(m.id)}">${fmtDate(m.date)}</option>`).join('')}</select></label>`;
     ($('fine-type') as HTMLSelectElement).onchange = (e) => { ($('fine-amt') as HTMLInputElement).value = String(FINE_AMOUNT[(e.target as HTMLSelectElement).value as keyof typeof FINE_AMOUNT]); };
-    $('fine-ok').onclick = async () => { const fd = new FormData($('fine-form') as HTMLFormElement); const g = (k: string) => String(fd.get(k) ?? ''); try { await write('writeFine', serializeFine({ id: String(Date.now()), date: g('date'), match_id: g('match_id'), player: g('player'), type: g('type') as Fine['type'], amount: Number(g('amount')) || 0, paid: false })); $('fine-modal').classList.remove('show'); toast('저장됨'); } catch (e) { toast((e as Error).message); } };
-    $('fine-modal').classList.add('show');
+    $('fine-ok').onclick = async () => { const fd = new FormData($('fine-form') as HTMLFormElement); const g = (k: string) => String(fd.get(k) ?? ''); try { await write('writeFine', serializeFine({ id: String(Date.now()), date: g('date'), match_id: g('match_id'), player: g('player'), type: g('type') as Fine['type'], amount: Number(g('amount')) || 0, paid: false })); dlg('fine-modal').open = false; toast('저장됨'); } catch (e) { toast((e as Error).message); } };
+    dlg('fine-modal').open = true;
   }
   window.addEventListener('wfc:admin', render);
   onData((d) => { data = d; render(); });
