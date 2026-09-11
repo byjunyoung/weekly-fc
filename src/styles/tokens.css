@@ -41,7 +41,7 @@
   --metal-bronze: linear-gradient(158deg, #ffe6cc 0%, #e3ab72 20%, #c8823f 46%, #cd793a 70%, #eabb8a 100%);
   /* 금속 위 글자 — 순검정은 탁하게 보여 아주 짙은 갈색/청색 먹으로 둔다. */
   --ink: #17130a; --ink-soft: rgba(23, 19, 10, .9); --ink-line: rgba(23, 19, 10, .28);
-  --header-h: 56px; --header-h-m: 90px;
+  --header-h: 56px; --header-h-m: 90px; --hint-h: 44px;
   --max: 1180px; --pad: 28px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 600px; --pcard-w: 268px;
   --m-xs: 4px; --m-sm: 8px; --m-md: 12px; --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
   --cut: 14px; --cut-sm: 8px; --row-h: 40px;
@@ -207,7 +207,11 @@ body.wide .page-head h1 { font-size: var(--fs-lg); }
 .pos-gk { background: var(--pos-gk); color: var(--ink); } .pos-df { background: var(--pos-df); } .pos-mf { background: var(--pos-mf); } .pos-fw { background: var(--pos-fw); }
 .grade-gold { color: var(--gold); } .grade-silver { color: var(--silver); } .grade-bronze { color: var(--bronze); }
 .warn { color: var(--warn); }
-.load-err { display: flex; align-items: center; gap: var(--m-sm); margin-bottom: var(--gap); }
+/* 로드 실패 알림 — 문서 흐름에 넣으면 화면 전체를 아래로 밀어 한 화면 구성(.menu)이 깨진다.
+   하단 힌트 바 위에 띄워 레이아웃에 영향을 주지 않게 한다. */
+.load-err { position: fixed; left: 50%; bottom: calc(var(--hint-h) + 14px); transform: translateX(-50%); z-index: 16;
+  display: flex; align-items: center; gap: var(--m-sm); margin: 0; padding: 8px 14px;
+  background: var(--warn-bg); border: 1px solid var(--warn); font-size: var(--fs-sm); }
 .load-err button { color: var(--warn); border-color: var(--warn); }
 
 /* 패널 — 1px 사각형 대신 깎인 면 + 상단 액센트 헤어라인. */
@@ -388,3 +392,86 @@ details.year[open] > summary::before { content: "▾ "; }
 .modal .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
 .pick-list button { padding: 7px 4px; font-size: var(--fs-sm); letter-spacing: 0; text-transform: none; }
+
+/* ══ 콘솔 게임 UI (FIFA/EA FC PlayStation 메뉴 문법) ═══════════════════════════
+   웹 페이지가 아니라 게임 화면처럼 읽히게 하는 네 가지를 구조로 넣는다:
+     1) 화면을 꽉 채우는 레이아웃 — 스크롤로 비는 아래쪽을 만들지 않는다
+     2) L1/R1 숄더 탭 — 콘솔 메뉴의 가장 알아보기 쉬운 표식
+     3) 하단 버튼 힌트 바(✕ ○ △ □) — 게임 화면엔 항상 있다
+     4) 실제 경기 사진을 흐린 배경으로 — 팀 화면이라는 감각 */
+
+/* 배경 — 최근 매치 썸네일을 흐리게 깔고 어둡게 덮는다. 사진이 없으면 빈 채로 둔다. */
+.backdrop { position: fixed; inset: 0; z-index: -2; background: var(--bg); overflow: hidden; }
+.backdrop img { width: 100%; height: 100%; object-fit: cover; filter: blur(26px) saturate(.75); transform: scale(1.12); opacity: .42; }
+.backdrop::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(12,16,22,.86) 0%, rgba(12,16,22,.94) 42%, var(--bg) 100%); }
+
+/* 숄더 탭 */
+.shoulder { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 20px; padding: 0 6px;
+  border: 1px solid var(--line-hi); border-radius: 10px; font-family: var(--font-d); font-size: 10px; font-weight: 800;
+  letter-spacing: .06em; color: var(--muted); flex: none; }
+.topnav { align-items: center; gap: 2px; }
+.topnav .shoulder { margin: 0 6px; }
+
+/* 하단 버튼 힌트 바 */
+.hintbar { position: sticky; bottom: 0; z-index: 15; display: flex; align-items: center; gap: var(--gap-lg);
+  height: var(--hint-h); padding: 0 var(--pad); border-top: 1px solid var(--line);
+  background: linear-gradient(0deg, rgba(12,16,22,.96), rgba(12,16,22,.78)); backdrop-filter: blur(8px); }
+/* 힌트는 버튼이어도 버튼처럼 안 보여야 한다 — 전역 button 크롬(깎인 모서리·테두리)을 끈다. */
+.hintbar button { background: none; border: 0; padding: 0; clip-path: none; text-transform: none; cursor: pointer; }
+.hintbar button:hover { color: var(--fg); border: 0; }
+.hint { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--muted);
+  font-weight: 600; letter-spacing: .08em; white-space: nowrap; }
+.hint b { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%;
+  font-size: 10px; font-weight: 700; color: #fff; }
+.hint-x b { background: #3f7fe0; } .hint-o b { background: #dc3c42; }
+.hint-t b { background: #21a179; } .hint-s b { background: #c3419b; }
+@media (max-width: 699px) { .hintbar { gap: var(--gap); padding: 0 var(--gap); overflow-x: auto; } }
+
+/* ── 메인 메뉴(홈) ───────────────────────────────────────────────────────────
+   좌측 큰 아트 패널 + 우측 타일 레일. 타일은 높이가 전부 같아 격자가 들쭉날쭉하지 않는다. */
+/* 화면을 채운다 — 아래쪽에 빈 검은 공간을 남기지 않는 게 콘솔 메뉴의 기본 전제다.
+   header 56 + hintbar 44 + main 상하 padding + page-head 를 뺀 나머지를 메뉴가 다 쓴다. */
+.menu { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); gap: var(--gap-lg);
+  align-items: stretch; min-height: calc(100dvh - var(--header-h) - var(--hint-h) - 180px); }
+@media (max-width: 899px) { .menu { grid-template-columns: minmax(0, 1fr); } }
+
+/* 아트 패널 — 최근 매치를 키 아트처럼 크게. */
+/* isolation 으로 자체 쌓임 맥락을 만든다 — 안 그러면 사진(img)과 그늘(::before)이 같은
+   z-index 에서 트리 순서로 겹쳐 사진이 그늘을 덮고, 사진 위 글자가 그대로 묻힌다. */
+.art { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 340px; max-height: 560px; padding: var(--pad); overflow: hidden; border: 1px solid var(--line-hi);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+.art > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+/* 글자가 얹히는 아래 절반은 확실히 덮는다 — 사진이 밝으면 킥커·보조줄이 그대로 묻힌다. */
+.art::before { content: ""; position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, rgba(12,16,22,.05) 0%, rgba(12,16,22,.35) 40%, rgba(12,16,22,.86) 68%, rgba(12,16,22,.98) 100%); }
+.art > :not(img) { position: relative; z-index: 2; }
+.art-kicker { font-family: var(--font-d); font-size: var(--fs-xs); font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+.art-title { font-family: var(--font-d); font-size: 46px; font-weight: 900; line-height: 1; letter-spacing: .01em;
+  font-variation-settings: "wdth" 84; margin: 8px 0 6px; text-transform: uppercase; }
+.art-sub { color: var(--muted); font-size: var(--fs-sm); }
+.art-foot { margin-top: var(--gap); display: flex; flex-wrap: wrap; gap: var(--m-sm); }
+
+/* 타일 레일 */
+.rail { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(132px, 1fr); gap: var(--gap); }
+@media (max-width: 639px) { .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* button 으로 나가는 타일도 있어 전역 button 크롬을 끈다. */
+.tile { position: relative; text-align: left; letter-spacing: normal; text-transform: none; font-weight: 400; color: inherit; display: flex; flex-direction: column; min-height: 132px;
+  padding: 14px 16px; border: 1px solid var(--line); background: linear-gradient(165deg, var(--surface), var(--bg-2));
+  clip-path: polygon(var(--cut-sm) 0, 100% 0, 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, 0 100%, 0 var(--cut-sm));
+  transition: transform var(--dur-fast) var(--ease-std), border-color var(--dur-fast) var(--ease-std), background var(--dur-fast) var(--ease-std); }
+/* 선택 표시 — 콘솔 메뉴는 커서가 얹힌 타일만 밝아지고 살짝 커진다. */
+.tile::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: transparent;
+  transition: background var(--dur-micro) var(--ease-std); }
+.tile:hover, .tile:focus-visible { transform: translateY(-3px) scale(1.02); border-color: var(--line-hi);
+  background: linear-gradient(165deg, var(--tint), var(--surface)); }
+.tile:hover::before, .tile:focus-visible::before { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.tile-label { font-family: var(--font-d); font-size: var(--fs-xs); font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.tile-big { margin-top: auto; font-family: var(--font-d); font-size: 34px; font-weight: 900; line-height: 1; letter-spacing: -.01em;
+  font-variation-settings: "wdth" 84; font-variant-numeric: tabular-nums; }
+.tile-sub { margin-top: 4px; font-size: var(--fs-xs); color: var(--muted); }
+.tile-wide { grid-column: span 2; }
+@media (max-width: 639px) { .tile-wide { grid-column: span 2; } }
+.tile-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: var(--m-sm); }
+.tile-thumbs img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }

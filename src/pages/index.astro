@@ -3,21 +3,17 @@ import Shell from '../layouts/Shell.astro';
 ---
 <Shell title="홈">
   <div class="page-head"><h1>홈</h1><div class="actions"><span class="muted" id="stamp"></span></div></div>
-  <div id="app" class="stack"></div>
+  <div id="app"></div>
 </Shell>
 <script>
   import { onData, loadVideos } from '../lib/api';
   import { getMe } from '../lib/me';
   import { href } from '../lib/url';
-  import { esc, fmtDate, fmtWon, monthLabel, ytThumb, ytWatch } from '../lib/html';
+  import { esc, fmtDate, fmtWon, monthLabel, ytThumb, ytThumbBig } from '../lib/html';
   import { rotationFor, nextDuty } from '../lib/rotation';
   import { parseVideoTitle } from '../lib/parse';
-  import { fineSummary, ovr, seasonMatches, seasonTable } from '../lib/stats';
-  import { playerCard } from '../components/player-card';
-  import { avatarSvg } from '../components/avatar';
-  import { avatarSpecFor } from '../lib/avatar';
-  import { conditionBadge } from '../components/condition';
-  import { LINKS, MATCH_TIME, MATCH_MIN, PLACES } from '../lib/rules';
+  import { fineSummary, ovr } from '../lib/stats';
+  import { LINKS } from '../lib/rules';
   import type { Data, Video } from '../lib/types';
 
   const app = document.getElementById('app')!;
@@ -26,89 +22,35 @@ import Shell from '../layouts/Shell.astro';
 
   const nextMonthOf = (y: number, mo: number): { y: number; mo: number } => (mo >= 12 ? { y: y + 1, mo: 1 } : { y, mo: mo + 1 });
 
-  // 내 자리 — 데이터가 있을 때만 뜨는 큰 카드 대신, 항상 화면 맨 위에 자리를 잡아 더 눈에 띄게 한다.
-  function meSection(d: Data): string {
-    const me = d.players.find((p) => p.num === getMe());
-    if (!me) return `<button class="home-me-cta" id="pick-me" type="button">오른쪽 위 <b>이름</b>에서 본인을 고르면 내 카드·미납·봉사 차례가 여기 뜹니다 →</button>`;
-    const fs = fineSummary(d.fines);
-    const duty = nextDuty(d.players, d.rotation, me.name);
-    const unpaid = fs.byPlayer.get(me.name)?.unpaid ?? 0;
-    return `<div class="home-me">
-      <div class="label label-gap">내 자리</div>
-      <div class="home-me-body">
-        ${playerCard(me)}
-        <div class="home-me-stats">
-          <a class="card" href="${href(`/squad/${me.num}/`)}"><h2>내 미납</h2><div class="big ${unpaid ? 'warn' : ''}">${fmtWon(unpaid)}</div></a>
-          <a class="card" href="${href('/record/duty/')}"><h2>내 봉사 차례</h2><div class="big" style="font-size:var(--fs-lg)">${duty ? monthLabel(duty.year, duty.month) : '–'}</div></a>
-        </div>
+  /** 타일 하나 — 라벨·큰 값·보조 세 줄 고정. 높이가 전부 같아야 격자가 계단이 되지 않는다. */
+  function tile(label: string, big: string, sub: string, to: string, extra = '', wide = false): string {
+    const cls = `tile${wide ? ' tile-wide' : ''}`;
+    const body = `<span class="tile-label">${esc(label)}</span><b class="tile-big">${big}</b>${extra}<span class="tile-sub">${sub}</span>`;
+    return to.startsWith('http')
+      ? `<a class="${cls}" href="${to}" target="_blank" rel="noopener">${body}</a>`
+      : `<a class="${cls}" href="${to}">${body}</a>`;
+  }
+
+  /** 좌측 키 아트 — 최근 매치. 시트가 비어 있으면 영상 제목에서 날짜·유형을 읽어 쓴다. */
+  function art(d: Data): string {
+    const m = d.matches[0];
+    const fromVideo = (videos ?? []).map(parseVideoTitle).filter((p): p is NonNullable<typeof p> => !!p)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    const id = m?.youtube || fromVideo?.id || '';
+    const title = m ? (m.winner ? `${esc(m.winner)} 승` : esc(m.type) || '매치') : esc(fromVideo?.type ?? '') || '매치';
+    const date = m?.date ?? fromVideo?.date ?? '';
+    const where = m?.location || fromVideo?.location || '';
+    const who = m ? `${m.attendees.length}명 참석` : '참석 기록은 아직 없습니다';
+    return `<section class="art">
+      ${id ? `<img src="${ytThumbBig(id)}" alt="" onerror="this.onerror=null;this.src='${ytThumb(id)}'">` : ''}
+      <span class="art-kicker">최근 매치</span>
+      <h2 class="art-title">${title}</h2>
+      <p class="art-sub">${date ? fmtDate(date) : '날짜 미정'}${where ? ` · ${esc(where)}` : ''} · ${who}</p>
+      <div class="art-foot">
+        <a class="chip" href="${href('/match/')}">매치 전체 →</a>
+        ${id ? `<a class="chip" href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener">영상 보기 →</a>` : ''}
       </div>
-    </div>`;
-  }
-
-  // 스쿼드 톱 — 매치·정산 데이터가 0건이어도 항상 채워지는 자리다(명단은 늘 있다).
-  // 홈 첫 화면에 아이템 카드를 깔아 게임 로비처럼 읽히게 하는 역할도 겸한다.
-  function topRated(d: Data): string {
-    const top = [...d.players].sort((a, b) => ovr(b) - ovr(a)).slice(0, 5);
-    if (!top.length) return '';
-    const cards = top.map((p) => `<a href="${href(`/squad/${p.num}/`)}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 104, p.num, true))}</a>`).join('');
-    return `<section><div class="label label-gap">스쿼드 톱 5 · OVR</div><div class="pcard-wall pcard-wall-sm">${cards}</div></section>`;
-  }
-
-  // 시트에 매치가 없어도 채널 영상 제목(YYMMDD | … N파전 …)으로 마지막 매치 날짜는 안다.
-  // "아직 기록이 없습니다"를 띄우는 대신 아는 만큼 보여주고, 시트를 채우라고 안내한다.
-  function lastFromVideo(): string {
-    const parsed = (videos ?? []).map(parseVideoTitle).filter((p): p is NonNullable<typeof p> => !!p)
-      .sort((a, b) => b.date.localeCompare(a.date));
-    const p = parsed[0];
-    if (!p) return `<a class="card" href="${href('/match/')}"><h2>최근 매치</h2><p class="muted">아직 기록이 없습니다. 매치가 열리면 결과·참석·영상이 여기 뜹니다.</p></a>`;
-    return `<a class="card span2" href="${href('/match/')}">
-      <h2>최근 매치</h2>
-      <div class="big">${esc(p.type) || '매치'}</div>
-      <p class="muted">${fmtDate(p.date)}${p.location ? ` · ${esc(p.location)}` : ''} · 영상 기준</p>
-      <img src="${ytThumb(p.id)}" alt="" class="home-thumb">
-      <p class="muted">참석·결과는 아직 시트에 없습니다 — 매치 화면의 <b>영상에서 가져오기</b>로 채웁니다.</p>
-    </a>`;
-  }
-
-  // 매치 기록이 없을 때는 썸네일 없이 좁게 — 크고 빈 칸을 만들지 않는다.
-  function matchTile(d: Data): string {
-    const last = d.matches[0];
-    if (!last) return lastFromVideo();
-    return `<a class="card span2" href="${href(`/match/?d=${encodeURIComponent(last.id)}`)}">
-      <h2>최근 매치</h2>
-      <div class="big">${last.winner ? `${esc(last.winner)} 승` : esc(last.type) || '기록'}</div>
-      <p class="muted">${fmtDate(last.date)}${last.location ? ` · ${esc(last.location)}` : ''} · ${last.attendees.length}명</p>
-      ${last.youtube ? `<img src="${ytThumb(last.youtube)}" alt="" class="home-thumb">` : ''}
-    </a>`;
-  }
-
-  // 채널 영상은 매치 기록과 무관하게 항상 있다 — 매치가 0건이어도 화면을 채워주는 자리.
-  function videoTile(): string {
-    const list = (videos ?? []).slice().sort((a, b) => b.published.localeCompare(a.published)).slice(0, 4);
-    const body = videos == null
-      ? `<p class="muted">불러오는 중…</p>`
-      : list.length
-        ? `<div class="thumbs-sm">${list.map((v) => `<a class="thumb" href="${ytWatch(v.id)}" target="_blank" rel="noopener" title="${esc(v.title)}"><img src="${ytThumb(v.id)}" alt="" loading="lazy"></a>`).join('')}</div>`
-        : `<p class="muted">채널에 영상이 없습니다.</p>`;
-    return `<div class="card"><h2>최신 영상</h2>${body}<p class="muted"><a href="${LINKS.youtube}" target="_blank" rel="noopener">채널에서 더 보기 →</a></p></div>`;
-  }
-
-  // 출석 기록이 아직 없으면 순위 대신 명단 구성으로 채운다 — "기록 없음" 빈 칸보다 지금 있는 30명을 보여주는 쪽.
-  function rankTile(d: Data): string {
-    const counted = seasonMatches(d.matches);
-    if (!counted.length) {
-      const POS = ['GK', 'DF', 'MF', 'FW'] as const;
-      const counts = POS.map((k) => `<span class="pos pos-${k.toLowerCase()}">${k}</span> ${d.players.filter((p) => p.pos === k).length}`).join(' ');
-      return `<div class="card span2"><h2>출석 상위</h2><p class="muted">아직 출석 기록이 없습니다. 명단 ${d.players.length}명:</p><div class="roster-mini">${counts}</div><p class="muted"><a href="${href('/squad/')}">스쿼드 보기 →</a></p></div>`;
-    }
-    const top = seasonTable(d.players, d.matches).slice(0, 5);
-    const rows = top.map((r, i) => `<a class="rank-row" href="${href(`/squad/${r.player.num}/`)}"><i class="rank-n">${i + 1}</i><b>${esc(r.player.name)}</b><span class="pos pos-${r.player.pos.toLowerCase()}">${r.player.pos || '–'}</span><span class="muted">${r.attended}/${r.total}</span>${conditionBadge(r.player.name, d.matches)}</a>`).join('');
-    return `<div class="card span2"><h2>출석 상위</h2><div class="rank-list">${rows}</div></div>`;
-  }
-
-  // 매치·정산 데이터와 무관하게 항상 참인 사실 — 데이터가 비어도 화면이 뜨는 자리 하나는 확보된다.
-  function scheduleTile(): string {
-    return `<div class="card"><h2>정규 매치</h2><p class="muted">${MATCH_TIME} · ${MATCH_MIN}인 이상</p><p class="muted">${PLACES.join(' · ')}</p><a class="chip" href="${LINKS.kakao}" target="_blank" rel="noopener">오픈카톡 →</a></div>`;
+    </section>`;
   }
 
   function render() {
@@ -119,20 +61,30 @@ import Shell from '../layouts/Shell.astro';
     const nm = nextMonthOf(y, mo);
     const dutyNext = rotationFor(d.players, d.rotation, nm.y, nm.mo);
     const fs = fineSummary(d.fines);
+    const me = d.players.find((p) => p.num === getMe());
+    const pos = (['GK', 'DF', 'MF', 'FW'] as const).map((k) => `${k} ${d.players.filter((p) => p.pos === k).length}`).join(' · ');
+    const matchCount = d.matches.length || (videos ?? []).filter((v) => parseVideoTitle(v)).length;
+    const thumbs = (videos ?? []).slice(0, 4).map((v) => `<img src="${ytThumb(v.id)}" alt="" loading="lazy">`).join('');
 
-    app.innerHTML = `
-      ${meSection(d)}
-      ${topRated(d)}
-      <div class="cards home-grid">
-        ${matchTile(d)}
-        ${videoTile()}
-        <a class="card" href="${href('/record/duty/')}"><h2>${monthLabel(y, mo)} 봉사</h2><div class="big" style="font-size:var(--fs-lg)">${esc(duty.p1)} · ${esc(duty.p2)}</div><p class="muted">${duty.done ? '완료' : '대관비·음료 선납, 조끼, 정산'}</p></a>
-        <a class="card" href="${href('/record/duty/')}"><h2>다음 봉사 차례</h2><div class="big" style="font-size:var(--fs-lg)">${esc(dutyNext.p1)} · ${esc(dutyNext.p2)}</div><p class="muted">${monthLabel(nm.y, nm.mo)}</p></a>
-        <a class="card" href="${href('/record/fines/')}"><h2>미납 벌금</h2><div class="big ${fs.unpaid ? 'warn' : ''}">${fmtWon(fs.unpaid)}</div><p class="muted">${fs.unpaidCount}건</p></a>
-        ${scheduleTile()}
-        ${rankTile(d)}
-      </div>`;
-    document.getElementById('stamp')!.textContent = `${d.players.length}명 · 매치 ${d.matches.length}`;
+    // 내 자리 — 이름을 고르면 내 OVR 이, 아니면 고르라는 안내가 같은 자리에 든다(빈 타일을 만들지 않는다).
+    const meTile = me
+      ? tile('내 선수', String(ovr(me) || '–'), `${esc(me.name)} · ${esc(me.pos) || '–'}`, href(`/squad/${me.num}/`))
+      : `<button class="tile" id="pick-me" type="button"><span class="tile-label">내 선수</span><b class="tile-big">?</b><span class="tile-sub">이름을 고르면 내 카드가 뜹니다</span></button>`;
+
+    app.innerHTML = `<div class="menu">
+      ${art(d)}
+      <div class="rail">
+        ${meTile}
+        ${tile('스쿼드', String(d.players.length), pos, href('/squad/'))}
+        ${tile('매치', String(matchCount), d.matches.length ? '시트 기록' : '영상 기준', href('/match/'))}
+        ${tile('전술판', '11 v 11', '포메이션 · 드로잉', href('/tactics/'))}
+        ${tile(`${monthLabel(y, mo)} 봉사`, esc(duty.p1), `${esc(duty.p2)} · ${duty.done ? '완료' : '대관비·조끼·정산'}`, href('/record/duty/'))}
+        ${tile('다음 봉사', esc(dutyNext.p1), `${esc(dutyNext.p2)} · ${monthLabel(nm.y, nm.mo)}`, href('/record/duty/'))}
+        ${tile('미납 벌금', fmtWon(fs.unpaid), `${fs.unpaidCount}건 · 기록 보기`, href('/record/fines/'))}
+        ${tile('최신 영상', String((videos ?? []).length), '채널에서 보기 · 매주 토요일 기록', LINKS.youtube, `<div class="tile-thumbs">${thumbs}</div>`, true)}
+      </div>
+    </div>`;
+    document.getElementById('stamp')!.textContent = `${d.players.length}명 · 영상 ${(videos ?? []).length}`;
     document.getElementById('pick-me')?.addEventListener('click', () => (document.getElementById('me-btn') as HTMLElement | null)?.click());
   }
   window.addEventListener('wfc:me', render);
