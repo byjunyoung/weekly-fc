@@ -22,6 +22,8 @@
   --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 640px; --pcard-w: 260px;
   --m-xs: 4px; --m-sm: 8px; --m-md: 12px; --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
   --fs-xs: 11px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 20px; --fs-xl: 32px; --fs-xxl: 44px;
+  /* 모션(8절) 지속시간 — 표 행 이동은 짧게, 막대 차오름·카드 뒤집기는 좀 더 느리게. */
+  --dur-fast: 180ms; --dur-slow: 550ms;
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 * { box-sizing: border-box; }
@@ -198,7 +200,12 @@ body.wide .main { margin-left: 0; }
 .pcard-stat-label { font-size: var(--fs-xs); letter-spacing: .06em; color: var(--muted); }
 .pcard-stat-val { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 .pcard-stat-bar { display: block; width: 100%; height: 4px; background: var(--tint); overflow: hidden; margin-top: 2px; }
-.pcard-stat-bar b { display: block; height: 100%; width: var(--fill, 0%); background: var(--fg); }
+/* 카드 진입 시 차오름(8절) — 폭은 JS가 --fill로 넘기고 애니메이션은 CSS keyframes만으로(JS 프레임 루프 불필요). */
+.pcard-stat-bar b { display: block; height: 100%; width: var(--fill, 0%); background: var(--fg); animation: pcard-fill var(--dur-slow) ease-out; }
+@keyframes pcard-fill { from { width: 0; } to { width: var(--fill, 0%); } }
+@media (prefers-reduced-motion: reduce) {
+  .pcard-stat-bar b { animation: none; }
+}
 .pcard-note { margin-top: var(--m-md); font-size: var(--fs-sm); }
 details.year > summary { cursor: pointer; padding: 8px 0; font-weight: 600; list-style: none; }
 details.year > summary::before { content: "▸ "; color: var(--muted); }
