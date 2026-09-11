@@ -222,27 +222,42 @@ function handleWriteAvatar(p) {
 function handleGetChannelVideos(nocache) {
   var cache = CacheService.getScriptCache();
   if (!nocache) { var cached = cache.get('YT_VIDEOS'); if (cached) return { videos: JSON.parse(cached) }; }
-  // 유튜브 RSS 가 구글 서버 쪽 요청을 간헐적으로 막는다(500/404 를 섞어 준다) — 재시도하고,
-  // 성공하면 6시간(CacheService 최대) 보관해 한 번의 성공이 오래 버티게 한다.
+
+  // 1순위: YouTube Data API 의 업로드 재생목록.
+  // RSS(아래 폴백)는 구글 서버 egress 에 404/500 을 일관되게 돌려주기 시작했다 —
+  // 내 맥에서는 200 이 오므로 유튜브가 데이터센터 IP 를 막는 것으로 보인다.
+  // 업로드 재생목록은 채널 id 의 UC → UU 로 바꾼 것이고, 호출당 1 unit 이라 search(100) 보다 싸다.
+  try {
+    var res = YouTube.PlaylistItems.list('snippet', { playlistId: 'UUfL5rqpEVpMPe-FNG2UvobA', maxResults: 50 });
+    var videos = (res.items || []).map(function(it) {
+      var sn = it.snippet || {};
+      return { id: (sn.resourceId || {}).videoId, title: sn.title || '', published: (sn.publishedAt || '').slice(0, 10) };
+    }).filter(function(v) { return v.id && v.title; });
+    videos.sort(function(a, b) { return b.published < a.published ? -1 : 1; });
+    if (videos.length) { cache.put('YT_VIDEOS', JSON.stringify(videos), 21600); return { videos: videos }; }
+  } catch (e) {
+    // 고급 서비스가 아직 안 켜졌거나 할당량 초과 — 폴백으로 내려간다
+  }
+
+  // 2순위: RSS. 될 때도 있으므로 남겨둔다.
   var lastCode = 0;
-  for (var attempt = 0; attempt < 3; attempt++) {
+  for (var attempt = 0; attempt < 2; attempt++) {
     try {
-      var res = UrlFetchApp.fetch('https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
+      var r = UrlFetchApp.fetch('https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
         { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/atom+xml,application/xml' } });
-      lastCode = res.getResponseCode();
+      lastCode = r.getResponseCode();
       if (lastCode === 200) {
-        var entries = res.getContentText().match(/<entry>([\s\S]*?)<\/entry>/g) || [];
-        var videos = entries.map(function(e) {
+        var entries = r.getContentText().match(/<entry>([\s\S]*?)<\/entry>/g) || [];
+        var vs = entries.map(function(e) {
           var id = (e.match(/<yt:videoId>([^<]+)/) || [])[1];
-          var title = (e.match(/<title>([^<]+)/) || [])[1];
+          var t = (e.match(/<title>([^<]+)/) || [])[1];
           var pub = (e.match(/<published>([^<]+)/) || [])[1];
-          return id && title ? { id: id, title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), published: pub ? pub.slice(0, 10) : '' } : null;
+          return id && t ? { id: id, title: t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'").replace(/&quot;/g,'"'), published: pub ? pub.slice(0,10) : '' } : null;
         }).filter(Boolean);
-        if (videos.length) cache.put('YT_VIDEOS', JSON.stringify(videos), 21600);
-        return { videos: videos };
+        if (vs.length) { cache.put('YT_VIDEOS', JSON.stringify(vs), 21600); return { videos: vs }; }
       }
-    } catch (e) { lastCode = 'fetch failed: ' + e.message; }
-    if (attempt < 2) Utilities.sleep(800 * (attempt + 1));
+    } catch (e2) { lastCode = 'fetch failed: ' + e2.message; }
+    if (attempt === 0) Utilities.sleep(800);
   }
   var stale = cache.get('YT_VIDEOS');
   if (stale) return { videos: JSON.parse(stale), error_detail: 'youtube ' + lastCode + ' (캐시 사용)' };
