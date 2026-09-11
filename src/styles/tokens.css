@@ -207,6 +207,18 @@ body.wide .main { margin-left: 0; }
   .pcard-stat-bar b { animation: none; }
 }
 .pcard-note { margin-top: var(--m-md); font-size: var(--fs-sm); }
+/* 카드 뒤집기(8절) — 앞면(능력치) ↔ 뒷면(참여 이력 요약). back 인자를 준 카드에만 붙는다. */
+.pcard-flip { position: relative; width: 100%; transform-style: preserve-3d; transition: transform var(--dur-slow) ease; }
+.pcard-flip.flipped { transform: rotateY(180deg); }
+.pcard-face { width: 100%; backface-visibility: hidden; }
+.pcard-face-back { position: absolute; inset: 0; transform: rotateY(180deg); text-align: left; }
+.pcard-flip-btn { display: block; width: 100%; margin-top: var(--gap); font-size: var(--fs-sm); text-align: center; }
+.pcard-back-stats { display: flex; justify-content: space-between; gap: var(--m-sm); margin: var(--m-sm) 0; }
+.pcard-back-stats > div { display: flex; flex-direction: column; gap: 2px; }
+.pcard-recent { list-style: none; margin: var(--m-sm) 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .pcard-flip { transition: none; }
+}
 details.year > summary { cursor: pointer; padding: 8px 0; font-weight: 600; list-style: none; }
 details.year > summary::before { content: "▸ "; color: var(--muted); }
 details.year[open] > summary::before { content: "▾ "; }
