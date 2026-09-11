@@ -1,12 +1,15 @@
 /* src/styles/tokens.css — 색·치수·글자의 유일한 출처 */
+/* 게임 인터페이스 재설계 1단계(2026-09-11): 짙은 바탕으로 뒤집음. 값 산출 근거는
+   .superpowers/sdd/2026-09-10-weekly-fc-portal/dark-palette-report.md 참고. */
 :root {
-  --bg: #ffffff; --surface: #f7f7f5; --tint: #efefec;
-  --fg: #161616; --muted: #6b6b6b; --line: #d6d6d2;
-  --pos-gk: #f59e0b; --pos-df: #3b82f6; --pos-mf: #10b981; --pos-fw: #ef4444;
-  --val-a: #1a7f37; --val-b: #4d7c0f; --val-c: #b45309; --val-d: #b91c1c;
-  --val-a-bg: #e6f4ea; --val-b-bg: #eef6df; --val-c-bg: #fdf1e0; --val-d-bg: #fdecec;
-  --warn: #b91c1c; --warn-bg: #fdecec; --ok: #1a7f37;
-  --gold: #c9a227; --silver: #8c8c8c; --bronze: #a05a2c;
+  color-scheme: dark;
+  --bg: #0d0f12; --surface: #1e232a; --tint: #333a45;
+  --fg: #edf0f3; --muted: #9da4af; --line: #565f6f;
+  --pos-gk: #aa49ca; --pos-df: #1c79e3; --pos-mf: #259384; --pos-fw: #d4357f;
+  --val-a: #59cf84; --val-b: #a0cf59; --val-c: #e79940; --val-d: #e97267;
+  --val-a-bg: #183924; --val-b-bg: #2c3918; --val-c-bg: #3b2a16; --val-d-bg: #391b18;
+  --warn: #e97267; --warn-bg: #391b18; --ok: #59cf84;
+  --gold: #ddc05f; --silver: #b3bdc6; --bronze: #b97646;
   --sidebar: 220px; --sidebar-narrow: 56px; --header-h: 48px;
   --max: 1120px; --pad: 24px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 640px;
   --m-xs: 4px; --m-sm: 8px; --m-md: 12px; --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
