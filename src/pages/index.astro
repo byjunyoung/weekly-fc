@@ -6,33 +6,107 @@ import Shell from '../layouts/Shell.astro';
   <div id="app" class="stack"></div>
 </Shell>
 <script>
-  import { onData } from '../lib/api';
+  import { onData, loadVideos } from '../lib/api';
   import { getMe } from '../lib/me';
   import { href } from '../lib/url';
-  import { esc, fmtDate, fmtWon, monthLabel, ytThumb } from '../lib/html';
+  import { esc, fmtDate, fmtWon, monthLabel, ytThumb, ytWatch } from '../lib/html';
   import { rotationFor, nextDuty } from '../lib/rotation';
-  import { fineSummary } from '../lib/stats';
+  import { fineSummary, seasonMatches, seasonTable } from '../lib/stats';
   import { playerCard } from '../components/player-card';
-  import type { Data } from '../lib/types';
+  import { conditionBadge } from '../components/condition';
+  import { LINKS, MATCH_TIME, MATCH_MIN, PLACES } from '../lib/rules';
+  import type { Data, Video } from '../lib/types';
+
   const app = document.getElementById('app')!;
   let data: Data | null = null;
+  let videos: Video[] | null = null;
+
+  const nextMonthOf = (y: number, mo: number): { y: number; mo: number } => (mo >= 12 ? { y: y + 1, mo: 1 } : { y, mo: mo + 1 });
+
+  // 내 자리 — 데이터가 있을 때만 뜨는 큰 카드 대신, 항상 화면 맨 위에 자리를 잡아 더 눈에 띄게 한다.
+  function meSection(d: Data): string {
+    const me = d.players.find((p) => p.num === getMe());
+    if (!me) return `<button class="home-me-cta" id="pick-me" type="button">사이드바에서 <b>이름 고르기</b>를 하면 내 미납·봉사 차례가 여기 뜹니다 →</button>`;
+    const fs = fineSummary(d.fines);
+    const duty = nextDuty(d.players, d.rotation, me.name);
+    const unpaid = fs.byPlayer.get(me.name)?.unpaid ?? 0;
+    return `<div class="home-me">
+      <div class="label label-gap">내 자리</div>
+      <div class="home-me-body">
+        ${playerCard(me)}
+        <div class="home-me-stats">
+          <a class="card" href="${href(`/squad/${me.num}/`)}"><h2>내 미납</h2><div class="big ${unpaid ? 'warn' : ''}">${fmtWon(unpaid)}</div></a>
+          <a class="card" href="${href('/record/duty/')}"><h2>내 봉사 차례</h2><div class="big" style="font-size:var(--fs-lg)">${duty ? monthLabel(duty.year, duty.month) : '–'}</div></a>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // 매치 기록이 없을 때는 썸네일 없이 좁게 — 크고 빈 칸을 만들지 않는다.
+  function matchTile(d: Data): string {
+    const last = d.matches[0];
+    if (!last) return `<a class="card" href="${href('/match/')}"><h2>최근 매치</h2><p class="muted">아직 기록이 없습니다. 매치가 열리면 결과·참석·영상이 여기 뜹니다.</p></a>`;
+    return `<a class="card span2" href="${href(`/match/?d=${encodeURIComponent(last.id)}`)}">
+      <h2>최근 매치</h2>
+      <div class="big">${last.winner ? `${esc(last.winner)} 승` : esc(last.type) || '기록'}</div>
+      <p class="muted">${fmtDate(last.date)}${last.location ? ` · ${esc(last.location)}` : ''} · ${last.attendees.length}명</p>
+      ${last.youtube ? `<img src="${ytThumb(last.youtube)}" alt="" class="home-thumb">` : ''}
+    </a>`;
+  }
+
+  // 채널 영상은 매치 기록과 무관하게 항상 있다 — 매치가 0건이어도 화면을 채워주는 자리.
+  function videoTile(): string {
+    const list = (videos ?? []).slice().sort((a, b) => b.published.localeCompare(a.published)).slice(0, 4);
+    const body = videos == null
+      ? `<p class="muted">불러오는 중…</p>`
+      : list.length
+        ? `<div class="thumbs-sm">${list.map((v) => `<a class="thumb" href="${ytWatch(v.id)}" target="_blank" rel="noopener" title="${esc(v.title)}"><img src="${ytThumb(v.id)}" alt="" loading="lazy"></a>`).join('')}</div>`
+        : `<p class="muted">채널에 영상이 없습니다.</p>`;
+    return `<div class="card"><h2>최신 영상</h2>${body}<p class="muted"><a href="${LINKS.youtube}" target="_blank" rel="noopener">채널에서 더 보기 →</a></p></div>`;
+  }
+
+  // 출석 기록이 아직 없으면 순위 대신 명단 구성으로 채운다 — "기록 없음" 빈 칸보다 지금 있는 30명을 보여주는 쪽.
+  function rankTile(d: Data): string {
+    const counted = seasonMatches(d.matches);
+    if (!counted.length) {
+      const POS = ['GK', 'DF', 'MF', 'FW'] as const;
+      const counts = POS.map((k) => `<span class="pos pos-${k.toLowerCase()}">${k}</span> ${d.players.filter((p) => p.pos === k).length}`).join(' ');
+      return `<div class="card span2"><h2>출석 상위</h2><p class="muted">아직 출석 기록이 없습니다. 명단 ${d.players.length}명:</p><div class="roster-mini">${counts}</div><p class="muted"><a href="${href('/squad/')}">스쿼드 보기 →</a></p></div>`;
+    }
+    const top = seasonTable(d.players, d.matches).slice(0, 5);
+    const rows = top.map((r, i) => `<a class="rank-row" href="${href(`/squad/${r.player.num}/`)}"><i class="rank-n">${i + 1}</i><b>${esc(r.player.name)}</b><span class="pos pos-${r.player.pos.toLowerCase()}">${r.player.pos || '–'}</span><span class="muted">${r.attended}/${r.total}</span>${conditionBadge(r.player.name, d.matches)}</a>`).join('');
+    return `<div class="card span2"><h2>출석 상위</h2><div class="rank-list">${rows}</div></div>`;
+  }
+
+  // 매치·정산 데이터와 무관하게 항상 참인 사실 — 데이터가 비어도 화면이 뜨는 자리 하나는 확보된다.
+  function scheduleTile(): string {
+    return `<div class="card"><h2>정규 매치</h2><p class="muted">${MATCH_TIME} · ${MATCH_MIN}인 이상</p><p class="muted">${PLACES.join(' · ')}</p><a class="chip" href="${LINKS.kakao}" target="_blank" rel="noopener">오픈카톡 →</a></div>`;
+  }
+
   function render() {
     if (!data) return;
+    const d = data;
     const now = new Date(), y = now.getFullYear(), mo = now.getMonth() + 1;
-    const last = data.matches[0];
-    const duty = rotationFor(data.players, data.rotation, y, mo);
-    const fs = fineSummary(data.fines);
-    const me = data.players.find((p) => p.num === getMe());
-    const mine = me ? { unpaid: fs.byPlayer.get(me.name)?.unpaid ?? 0, duty: nextDuty(data.players, data.rotation, me.name) } : null;
+    const duty = rotationFor(d.players, d.rotation, y, mo);
+    const nm = nextMonthOf(y, mo);
+    const dutyNext = rotationFor(d.players, d.rotation, nm.y, nm.mo);
+    const fs = fineSummary(d.fines);
+
     app.innerHTML = `
-      <div class="cards">
-        <a class="card" href="${last ? href(`/match/?d=${encodeURIComponent(last.id)}`) : href('/match/')}"><h2>최근 매치</h2>${last ? `<div class="big">${last.winner ? `${esc(last.winner)} 승` : esc(last.type) || '기록'}</div><p class="muted">${fmtDate(last.date)}${last.location ? ` · ${esc(last.location)}` : ''} · ${last.attendees.length}명</p>${last.youtube ? `<img src="${ytThumb(last.youtube)}" alt="" class="home-thumb">` : ''}` : '<p class="muted">아직 기록이 없습니다</p>'}</a>
+      ${meSection(d)}
+      <div class="cards home-grid">
+        ${matchTile(d)}
+        ${videoTile()}
         <a class="card" href="${href('/record/duty/')}"><h2>${monthLabel(y, mo)} 봉사</h2><div class="big" style="font-size:var(--fs-lg)">${esc(duty.p1)} · ${esc(duty.p2)}</div><p class="muted">${duty.done ? '완료' : '대관비·음료 선납, 조끼, 정산'}</p></a>
+        <a class="card" href="${href('/record/duty/')}"><h2>다음 봉사 차례</h2><div class="big" style="font-size:var(--fs-lg)">${esc(dutyNext.p1)} · ${esc(dutyNext.p2)}</div><p class="muted">${monthLabel(nm.y, nm.mo)}</p></a>
         <a class="card" href="${href('/record/fines/')}"><h2>미납 벌금</h2><div class="big ${fs.unpaid ? 'warn' : ''}">${fmtWon(fs.unpaid)}</div><p class="muted">${fs.unpaidCount}건</p></a>
-      </div>
-      ${me ? `<div><div class="label label-gap">내 자리</div>${playerCard(me)}<div class="cards" style="margin-top:var(--gap)"><a class="card" href="${href(`/squad/${me.num}/`)}"><h2>내 미납</h2><div class="big ${mine!.unpaid ? 'warn' : ''}">${fmtWon(mine!.unpaid)}</div></a><a class="card" href="${href('/record/duty/')}"><h2>내 봉사 차례</h2><div class="big" style="font-size:var(--fs-lg)">${mine!.duty ? monthLabel(mine!.duty.year, mine!.duty.month) : '–'}</div></a></div></div>` : `<p class="muted">사이드바에서 <b>이름 고르기</b>를 하면 내 미납·봉사 차례가 여기 뜹니다.</p>`}`;
-    document.getElementById('stamp')!.textContent = `${data.players.length}명 · 매치 ${data.matches.length}`;
+        ${scheduleTile()}
+        ${rankTile(d)}
+      </div>`;
+    document.getElementById('stamp')!.textContent = `${d.players.length}명 · 매치 ${d.matches.length}`;
+    document.getElementById('pick-me')?.addEventListener('click', () => (document.getElementById('me-btn') as HTMLElement | null)?.click());
   }
   window.addEventListener('wfc:me', render);
   onData((d) => { data = d; render(); });
+  loadVideos().then((v) => { videos = v; render(); }).catch(() => { videos = []; render(); });
 </script>

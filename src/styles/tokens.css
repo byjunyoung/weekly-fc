@@ -150,6 +150,20 @@ body.wide .main { margin-left: 0; }
 .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--tint); }
 .home-thumb { margin-top: 10px; aspect-ratio: 16 / 9; object-fit: cover; width: 100%; }
 .thumb .body { padding: 8px 10px; font-size: var(--fs-sm); }
+/* 홈 — FM처럼 화면을 채우는 밀도 높은 타일 격자. .cards 그리드에 얹어 쓴다. */
+.home-grid .span2 { grid-column: span 2; }
+.home-me { background: var(--surface); border: 1px solid var(--line); padding: var(--gap); margin-bottom: var(--gap); }
+.home-me-body { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: flex-start; }
+.home-me-body > .pcard { flex: 1 1 320px; max-width: 420px; background: var(--bg); }
+.home-me-stats { flex: 1 1 240px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--gap); align-content: start; }
+.home-me-cta { display: block; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); padding: 14px 16px; margin-bottom: var(--gap); font-size: var(--fs-md); cursor: pointer; }
+.home-me-cta:hover { background: var(--tint); }
+.thumbs-sm { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--m-sm); }
+.rank-list { display: flex; flex-direction: column; }
+.rank-row { display: grid; grid-template-columns: 1.6em 1fr auto auto auto; align-items: center; gap: var(--m-sm); padding: var(--m-xs) 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
+.rank-row:last-child { border-bottom: 0; }
+.rank-row .rank-n { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.roster-mini { display: flex; flex-wrap: wrap; gap: var(--m-sm); align-items: center; }
 .embed { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--line); background: var(--tint); }
 .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .form { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
