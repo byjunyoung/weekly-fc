@@ -7,7 +7,7 @@ const toc = [['intro', '소개'], ['when', '언제 어디서'], ['join', '참여
 ---
 <Shell title="소개" index={true} description="WEEKLY FC — 매주 토요일 모이는 풋살 팀. 용병·정회원 상시 모집.">
   <Fragment slot="head"><link rel="canonical" href="https://byjunyoung.github.io/weekly-fc/about/" /></Fragment>
-  <div class="page-head"><h1>WEEKLY FC</h1><a class="chip" href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡 →</a></div>
+  <div class="page-head"><h1>WEEKLY FC</h1><div class="actions"><a class="chip" href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡 →</a></div></div>
   <nav class="tabs">{toc.map(([id, l]) => <a href={`#${id}`}>{l}</a>)}</nav>
   <div class="cards" style="margin-bottom:var(--gap-lg)">
     <div class="card"><h2>정규 매치</h2><p>{MATCH_TIME} · {MATCH_MIN}인 이상</p></div>

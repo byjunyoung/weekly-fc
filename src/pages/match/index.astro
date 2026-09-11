@@ -54,7 +54,8 @@ import Shell from '../../layouts/Shell.astro';
     const m = d.matches.find((x) => x.id === id);
     if (!m) { $('title').textContent = '매치'; app.innerHTML = `<p class="muted">그 날짜의 매치가 없습니다.</p><p><a href="${href('/match/')}">← 목록</a></p>`; return; }
     $('title').textContent = fmtDate(m.date);
-    $('actions').innerHTML = `<a href="${href('/match/')}">← 목록</a>${isAdmin() ? '<button id="att">참석 채우기</button><button id="res">결과 적기</button><button id="meta">정보</button>' : ''}`;
+    $('actions').innerHTML = `<button id="back">← 목록</button>${isAdmin() ? '<button id="att">참석 채우기</button><button id="res">결과 적기</button><button id="meta">정보</button>' : ''}`;
+    $('back').onclick = () => { location.href = href('/match/'); };
     if (isAdmin()) { $('att').onclick = () => openAtt(m); $('res').onclick = () => openRes(m); $('meta').onclick = () => openMeta(m); }
     const lineup = d.lineups.find((l) => l.match_id === m.id);
     let ps: PitchState | null = null; try { ps = lineup ? (JSON.parse(lineup.assignments) as PitchState) : null; } catch { ps = null; }

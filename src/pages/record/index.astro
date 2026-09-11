@@ -5,7 +5,7 @@ import { href } from '../../lib/url.ts';
 const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record/fines/'), label: '정산' }, { href: href('/record/duty/'), label: '봉사' }];
 ---
 <Shell title="기록">
-  <div class="page-head"><h1>기록</h1><div class="actions"><select id="year"></select></div></div>
+  <div class="page-head"><h1>기록</h1><div class="actions"><div class="chips" id="year"></div></div></div>
   <Tabs items={tabs} />
   <div id="summary" class="cards" style="margin-bottom:var(--gap)"></div>
   <div id="app" class="tbl-wrap"></div>
@@ -36,10 +36,9 @@ const tabs = [{ href: href('/record/'), label: '시즌' }, { href: href('/record
   function render() {
     if (!data) return;
     const years = [...new Set(data.matches.map((m) => yearOf(m.date)))].sort((a, b) => b - a);
-    const sel = $('year') as HTMLSelectElement;
     if (year !== undefined && !years.includes(year)) year = years[0];
-    sel.innerHTML = years.map((y) => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}</option>`).join('') + `<option value="" ${year === undefined ? 'selected' : ''}>전체</option>`;
-    sel.onchange = () => { year = sel.value ? Number(sel.value) : undefined; render(); };
+    $('year').innerHTML = years.map((y) => `<button class="chip ${y === year ? 'on' : ''}" data-y="${y}">${y}</button>`).join('') + `<button class="chip ${year === undefined ? 'on' : ''}" data-y="">전체</button>`;
+    $('year').querySelectorAll<HTMLElement>('[data-y]').forEach((b) => (b.onclick = () => { year = b.dataset.y ? Number(b.dataset.y) : undefined; render(); }));
     const ms = seasonMatches(data.matches, year), all = data.matches.filter((m) => year == null || yearOf(m.date) === year);
     $('summary').innerHTML = `<div class="card"><h2>매치</h2><div class="big">${all.length}</div><p class="muted">참석 기록 있는 ${ms.length} · 2파전 ${all.filter((m) => m.type === '2파전').length} · 3파전 ${all.filter((m) => m.type === '3파전').length}</p></div><div class="card"><h2>평균 참석</h2><div class="big">${ms.length ? Math.round(ms.reduce((s, m) => s + m.attendees.length, 0) / ms.length) : '–'}</div><p class="muted">명 / 매치</p></div>`;
     const rows = seasonTable(data.players, data.matches, year);
