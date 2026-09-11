@@ -114,7 +114,12 @@ export function drawRecap(c: HTMLCanvasElement, m: Match, ps: PitchState | null)
       ctx.fill();
       ctx.strokeStyle = fg;
       ctx.stroke();
-      ctx.fillStyle = fg;
+      // 등번호 색은 유니폼 밝기로 결정 — pitch.ts/lineup-svg.ts와 같은 이유. fg 고정이면
+      // 흰 유니폼 기본값(#ffffff)에서 번호가 유니폼에 묻힌다(짙은 바탕 이전엔 fg가 어두워 반대로 맞았음).
+      const h = fill.replace('#', '');
+      const n = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+      const bright = 0.299 * (parseInt(n.slice(0, 2), 16) || 0) + 0.587 * (parseInt(n.slice(2, 4), 16) || 0) + 0.114 * (parseInt(n.slice(4, 6), 16) || 0);
+      ctx.fillStyle = bright > 140 ? '#111' : '#fff';
       ctx.font = `600 14px ${font}`;
       ctx.textAlign = 'center';
       ctx.fillText(label, x, yy + 5);
