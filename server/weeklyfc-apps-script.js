@@ -8,7 +8,7 @@ const SHEET_ROTATION = '봉사로테이션';
 const SHEET_FINES    = '벌금';
 const SHEET_LINEUPS  = '라인업';
 
-const PLAYER_COLS  = ['num','pos','detail','foot','name','phone','vest','note','pace','dribble','pass','shoot','defend','stamina','rot'];
+const PLAYER_COLS  = ['num','pos','detail','foot','name','phone','vest','note','pace','dribble','pass','shoot','defend','stamina','rot','avatar'];
 const MATCH_COLS   = ['id','date','location','youtube','type','attendees','teams','winner'];
 const ROT_COLS     = ['year','month','p1','p2','done'];
 const FINE_COLS    = ['id','date','match_id','player','type','amount','paid'];
@@ -27,6 +27,9 @@ function doGet(e) {
       result = handleGetAll(false);
     } else if (action === 'getChannelVideos') {
       result = handleGetChannelVideos(e.parameter.nocache === '1');
+    } else if (action === 'writeAvatar') {
+      // PIN 없이 동작하는 유일한 쓰기. 아바타 칸 하나만 건드린다 — 아래 핸들러 주석 참고.
+      result = handleWriteAvatar(payload);
     } else if (action === 'verifyPin') {
       verifyPin(pin);
       result = { ok: true };
@@ -81,6 +84,7 @@ function dropLegacyLineupRow(ss) {
 
 function handleGetAll(includePhone) {
   const ss = getSpreadsheet();
+  getOrCreateSheet(ss, SHEET_PLAYERS, PLAYER_COLS);
   getOrCreateSheet(ss, SHEET_MATCHES, MATCH_COLS);
   dropLegacyLineupRow(ss);
   getOrCreateSheet(ss, SHEET_LINEUPS, LINEUP_COLS);
@@ -185,6 +189,35 @@ function handleWriteLineup(l) {
   return { ok: true };
 }
 
+// ── 아바타 ───────────────────────────────────────
+// 팀원 누구나 잠금 없이 쓸 수 있는 유일한 액션(사용자 결정 2026-09-11).
+// 그래서 writePlayer 를 재사용하지 않는다 — 잠금 없는 경로가 능력치·이름·전화를
+// 건드릴 수 있으면 안 되므로, 이 함수는 avatar 열 한 칸만 setValue 한다.
+function isValidAvatarCode(code) {
+  if (typeof code !== 'string') return false;
+  if (code.length > 80) return false;
+  if (code === '') return true;                       // 빈 값 = 기본 아바타로 되돌리기
+  // f2:h5:s3:e1:k#1a1a1a  — 부품은 영문자+숫자, 색은 3/6자리 hex
+  return /^([a-z]\d{1,2}:){1,8}k#[0-9a-fA-F]{3,6}$/.test(code);
+}
+
+function handleWriteAvatar(p) {
+  const num = String(p && p.num || '');
+  const code = String(p && p.avatar || '');
+  if (!num) return { error: '번호가 없습니다' };
+  if (!isValidAvatarCode(code)) return { error: '아바타 코드 형식이 올바르지 않습니다' };
+
+  const ss = getSpreadsheet();
+  const sheet = getOrCreateSheet(ss, SHEET_PLAYERS, PLAYER_COLS);
+  const data = sheet.getDataRange().getValues();
+  const rowIdx = findRowByField(data, 0, num);
+  if (rowIdx < 1) return { error: '그 번호의 선수가 없습니다' };
+
+  const col = PLAYER_COLS.indexOf('avatar') + 1;
+  sheet.getRange(rowIdx + 1, col).setValue(code);     // 이 한 칸만
+  return { ok: true };
+}
+
 // ── 유튜브 채널 영상 ──────────────────────────────
 function handleGetChannelVideos(nocache) {
   var cache = CacheService.getScriptCache();
@@ -245,9 +278,26 @@ function migrateStats() {
 }
 
 // ── 유틸 ─────────────────────────────────────────
+// 시트의 열 수가 cols 보다 적으면 넓히고 헤더를 채운다.
+// 데이터가 있는 시트는 헤더 재작성이 막혀 있어(아래 분기) 열만 늘어난 스키마 변경을
+// 따라가지 못한다 — avatar 열 추가가 그 경우였다.
+function ensureColumns(sheet, cols) {
+  const have = sheet.getMaxColumns();
+  if (have < cols.length) sheet.insertColumnsAfter(have, cols.length - have);
+  if (sheet.getLastRow() >= 1) {
+    const head = sheet.getRange(1, 1, 1, cols.length).getValues()[0];
+    let changed = false;
+    for (let i = 0; i < cols.length; i++) {
+      if (String(head[i] || '') !== cols[i]) { head[i] = cols[i]; changed = true; }
+    }
+    if (changed) sheet.getRange(1, 1, 1, cols.length).setValues([head]);
+  }
+}
+
 function getOrCreateSheet(ss, name, cols) {
   let sheet = ss.getSheetByName(name);
   if (!sheet) { sheet = ss.insertSheet(name); sheet.appendRow(cols); return sheet; }
+  ensureColumns(sheet, cols);
   if (sheet.getLastRow() <= 1) {
     const head = sheet.getLastRow() === 1 ? sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0] : [];
     if (head.join('|') !== cols.join('|')) { sheet.clear(); sheet.appendRow(cols); }
