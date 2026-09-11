@@ -8,11 +8,11 @@ const tok = (name: string): string => {
   const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   // Fallbacks for tokens if CSS hasn't loaded yet
   const fallbacks: Record<string, string> = {
-    '--bg': '#ffffff',
-    '--fg': '#000000',
-    '--muted': '#808080',
-    '--line': '#e0e0e0',
-    '--surface': '#fafafa',
+    '--bg': '#0d0f12',
+    '--fg': '#edf0f3',
+    '--muted': '#9da4af',
+    '--line': '#565f6f',
+    '--surface': '#1e232a',
     '--font': 'sans-serif',
   };
   return val || fallbacks[name] || '#000000';

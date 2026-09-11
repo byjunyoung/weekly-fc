@@ -22,7 +22,7 @@ type DragState = DragMove | DragBall | DragDraw;
 // 캔버스는 var()를 못 읽는다 — recap.ts의 tok()과 같은 방식으로 그리는 시점에 토큰 값을 읽어온다.
 const tok = (name: string): string => {
   const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const fallbacks: Record<string, string> = { '--tint': '#efefec', '--muted': '#6b6b6b', '--fg': '#161616' };
+  const fallbacks: Record<string, string> = { '--tint': '#333a45', '--muted': '#9da4af', '--fg': '#edf0f3' };
   return val || fallbacks[name] || '#000000';
 };
 const hexToRgba = (hex: string, alpha: number): string => {
@@ -221,8 +221,9 @@ const canvas = root.querySelector<HTMLCanvasElement>('#pitch')!;
 const ctx = canvas.getContext('2d')!;
 const container = root.querySelector<HTMLElement>('#pitch-container')!;
 
-// 피치 팔레트: 짙은 초록 대신 포털 뉴트럴로, 단 페이지 배경(--bg)과 구분되도록 더 어두운 --tint를 쓴다.
-// 마킹 색은 --line — --tint 위에서도 명도차가 거의 없어(대비비 ≈1.27:1) 대신 --muted(대비비 ≈4.6:1)를 쓴다.
+// 피치 팔레트: 짙은 초록 대신 포털 뉴트럴로, 단 페이지 배경(--bg)과 구분되도록 --tint를 쓴다.
+// 마킹 색은 --line — --tint 위에서 여전히 명도차가 작아(대비비 ≈1.78:1, 2026-09-11 짙은 바탕 기준)
+// 대신 --muted(대비비 ≈4.57:1)를 쓴다.
 // 유니폼 색(homeColor/awayColor)은 사용자 지정이라 그대로 둔다.
 const PITCH_BG = tok('--tint');
 const PITCH_LINE = tok('--muted');
