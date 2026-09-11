@@ -1,7 +1,7 @@
 // src/lib/types.ts
 export type Pos = 'GK' | 'DF' | 'MF' | 'FW';
 export type Player = { num: number; name: string; pos: Pos | ''; detail: string; foot: string; vest: number | null; note: string;
-  pace: number; dribble: number; pass: number; shoot: number; defend: number; stamina: number; rot: number | null; phone?: string };
+  pace: number; dribble: number; pass: number; shoot: number; defend: number; stamina: number; rot: number | null; avatar: string; phone?: string };
 export type Team = { name: string; players: string[]; points: number | null };
 export type MatchType = '2파전' | '3파전' | '';
 export type Match = { id: string; date: string; location: string; youtube: string; type: MatchType; attendees: string[]; teams: Team[]; winner: string };

@@ -20,7 +20,7 @@ export function normalizePlayer(r: Raw): Player {
     num: num(r.num), name: String(r.name ?? '').trim(), pos: POS.find((x) => x === pos) ?? '',
     detail: String(r.detail ?? ''), foot: String(r.foot ?? ''), vest: numOrNull(r.vest), note: String(r.note ?? ''),
     pace: num(r.pace), dribble: num(r.dribble), pass: num(r.pass), shoot: num(r.shoot), defend: num(r.defend), stamina: num(r.stamina),
-    rot: numOrNull(r.rot),
+    rot: numOrNull(r.rot), avatar: String(r.avatar ?? ''),
   };
   if (r.phone !== undefined) p.phone = String(r.phone);
   return p;
@@ -55,7 +55,7 @@ export function normalizeData(d: Raw): Data {
     rotation: arr(d.rotation).map(normalizeRotation), fines: arr(d.fines).map(normalizeFine).filter((f) => f.id), lineups: arr(d.lineups).map(normalizeLineup) };
 }
 
-export const serializePlayer = (p: Player): Raw => ({ ...p, vest: p.vest ?? '', rot: p.rot ?? '' });
+export const serializePlayer = (p: Player): Raw => ({ ...p, vest: p.vest ?? '', rot: p.rot ?? '', avatar: p.avatar ?? '' });
 export const serializeMatch = (m: Match): Record<string, string> => ({ id: m.id, date: m.date, location: m.location, youtube: m.youtube, type: m.type,
   attendees: m.attendees.join(', '), teams: m.teams.length ? JSON.stringify(m.teams) : '', winner: m.winner });
 export const serializeFine = (f: Fine): Record<string, string | number> => ({ id: f.id, date: f.date, match_id: f.match_id, player: f.player, type: f.type, amount: f.amount, paid: f.paid ? 'TRUE' : 'FALSE' });
@@ -137,3 +137,16 @@ export async function write(action: string, payload: unknown): Promise<Raw> {
   return r;
 }
 export async function fetchFull(): Promise<Data> { return normalizeData(await call('getAllFull', { pin: getPin() })); }
+
+/** 아바타 전용 잠금 없는 쓰기. write()와 분리한 이유: write()는 PIN을 요구하고
+ * 어떤 액션에든 재사용되므로, PIN 없는 경로를 write()에 얹으면 다른 실수(예: 다른
+ * 액션에 pin 없이 접근)가 새 필드 하나로 새어나갈 여지가 생긴다. writeAvatar는
+ * 서버의 writeAvatar 액션(아바타 칸 하나만 setValue)에만 좁게 대응한다.
+ * 서버가 형식 위반·없는 번호를 {error}로 돌려주면 call()이 그대로 throw한다 —
+ * 호출부가 toast()로 실패를 보여줘야 한다(성공을 가장하지 않는다). */
+export async function writeAvatar(num: number, avatar: string): Promise<Raw> {
+  const r = await call('writeAvatar', { payload: { num, avatar } });
+  if (inflight) await inflight.catch(() => {});
+  await refresh();
+  return r;
+}
