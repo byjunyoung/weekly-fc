@@ -38,11 +38,9 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
   <header class="topbar">
     <a class="mark" href={href('/')}>WEEKLY<b>FC</b></a>
     <nav class="topnav">
-      <span class="shoulder" aria-hidden="true">L1</span>
       {nav.map((n) => (
         <a href={n.href} class:list={[{ active: isActive(n.href) }]}><span>{n.label}</span></a>
       ))}
-      <span class="shoulder" aria-hidden="true">R1</span>
     </nav>
     <div class="topbar-act">
       <button id="me-btn" data-me-btn>이름</button>
@@ -72,13 +70,6 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
     </div>
   </div>
   <div class="toast" id="toast" hidden></div>
-  <!-- 하단 버튼 힌트 바 — 콘솔 게임 화면엔 항상 있다. 장식이 아니라 실제로 동작하는 것만 넣는다. -->
-  <nav class="hintbar" aria-label="화면 조작">
-    <span class="hint hint-x"><b aria-hidden="true">✕</b>선택</span>
-    <button class="hint hint-o" id="hint-back" type="button"><b aria-hidden="true">○</b>뒤로</button>
-    <button class="hint hint-t" id="hint-name" type="button"><b aria-hidden="true">△</b>이름</button>
-    <button class="hint hint-s" id="hint-admin" type="button"><b aria-hidden="true">□</b>관리자</button>
-  </nav>
 
   <script>
     import { onData, isAdmin, login, logout, refresh } from '../lib/api';
@@ -96,9 +87,6 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
       $('me-modal').classList.add('show');
     }));
     $('me-clear').onclick = () => { setMe(null); meLabel(); $('me-modal').classList.remove('show'); };
-    $('hint-back').onclick = () => history.back();
-    $('hint-admin').onclick = () => $('admin-btn').click();
-    $('hint-name').onclick = () => $('me-btn').click();
     const onAdmin = () => { if (isAdmin()) { logout(); adminLabel(); window.dispatchEvent(new Event('wfc:admin')); } else { $('pin-err').hidden = true; ($('pin-input') as HTMLInputElement).value = ''; $('pin-modal').classList.add('show'); ($('pin-input') as HTMLInputElement).focus(); } };
     const submitPin = async () => {
       const result = await login(($('pin-input') as HTMLInputElement).value.trim());

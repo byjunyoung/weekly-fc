@@ -41,7 +41,7 @@
   --metal-bronze: linear-gradient(158deg, #ffe6cc 0%, #e3ab72 20%, #c8823f 46%, #cd793a 70%, #eabb8a 100%);
   /* 금속 위 글자 — 순검정은 탁하게 보여 아주 짙은 갈색/청색 먹으로 둔다. */
   --ink: #17130a; --ink-soft: rgba(23, 19, 10, .9); --ink-line: rgba(23, 19, 10, .28);
-  --header-h: 56px; --header-h-m: 90px; --hint-h: 44px;
+  --header-h: 56px; --header-h-m: 90px; --hint-h: 0px;
   --max: 1180px; --pad: 28px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 600px; --pcard-w: 268px;
   --m-xs: 4px; --m-sm: 8px; --m-md: 12px; --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
   --cut: 14px; --cut-sm: 8px; --row-h: 40px;
@@ -406,27 +406,8 @@ details.year[open] > summary::before { content: "▾ "; }
 .backdrop::after { content: ""; position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(12,16,22,.86) 0%, rgba(12,16,22,.94) 42%, var(--bg) 100%); }
 
-/* 숄더 탭 */
-.shoulder { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 20px; padding: 0 6px;
-  border: 1px solid var(--line-hi); border-radius: 10px; font-family: var(--font-d); font-size: 10px; font-weight: 800;
-  letter-spacing: .06em; color: var(--muted); flex: none; }
-.topnav { align-items: center; gap: 2px; }
-.topnav .shoulder { margin: 0 6px; }
 
 /* 하단 버튼 힌트 바 */
-.hintbar { position: sticky; bottom: 0; z-index: 15; display: flex; align-items: center; gap: var(--gap-lg);
-  height: var(--hint-h); padding: 0 var(--pad); border-top: 1px solid var(--line);
-  background: linear-gradient(0deg, rgba(12,16,22,.96), rgba(12,16,22,.78)); backdrop-filter: blur(8px); }
-/* 힌트는 버튼이어도 버튼처럼 안 보여야 한다 — 전역 button 크롬(깎인 모서리·테두리)을 끈다. */
-.hintbar button { background: none; border: 0; padding: 0; clip-path: none; text-transform: none; cursor: pointer; }
-.hintbar button:hover { color: var(--fg); border: 0; }
-.hint { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--muted);
-  font-weight: 600; letter-spacing: .08em; white-space: nowrap; }
-.hint b { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; border-radius: 50%;
-  font-size: 10px; font-weight: 700; color: #fff; }
-.hint-x b { background: #3f7fe0; } .hint-o b { background: #dc3c42; }
-.hint-t b { background: #21a179; } .hint-s b { background: #c3419b; }
-@media (max-width: 699px) { .hintbar { gap: var(--gap); padding: 0 var(--gap); overflow-x: auto; } }
 
 /* ── 메인 메뉴(홈) ───────────────────────────────────────────────────────────
    좌측 큰 아트 패널 + 우측 타일 레일. 타일은 높이가 전부 같아 격자가 들쭉날쭉하지 않는다. */
