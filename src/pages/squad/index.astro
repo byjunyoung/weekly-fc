@@ -16,11 +16,12 @@ import Shell from '../../layouts/Shell.astro';
   import { onData, isAdmin } from '../../lib/api.ts';
   import { href } from '../../lib/url.ts';
   import { esc } from '../../lib/html.ts';
-  import { ovr, band, STAT_CUTS, RATE_CUTS, attendance } from '../../lib/stats.ts';
+  import { ovr, band, STAT_CUTS, RATE_CUTS, attendance, condition } from '../../lib/stats.ts';
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
   import { STAT_LABEL } from '../../components/player-card.ts';
   import { avatarSvg } from '../../components/avatar.ts';
   import { avatarSpecFor } from '../../lib/avatar.ts';
+  import { conditionBadge } from '../../components/condition.ts';
   import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
 
   let data: Data | null = null, pos = 'ALL', q = '';
@@ -34,7 +35,7 @@ import Shell from '../../layouts/Shell.astro';
       { key: 'num', label: '#', get: (p) => p.num, align: 'r' },
       { key: 'name', label: '이름', get: (p) => p.name, cell: (p) => `<a href="${href(`/squad/${p.num}/`)}"><b>${esc(p.name)}</b></a>` },
       { key: 'pos', label: '포지션', get: (p) => p.pos, cell: (p) => `<span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span> <span class="muted">${esc(p.detail)}</span>` },
-      { key: 'foot', label: '주발', get: (p) => p.foot },
+      { key: 'cond', label: '컨디션', get: (p) => condition(p.name, matches).attended, align: 'c', cell: (p) => conditionBadge(p.name, matches) },
       ...STAT_KEYS.map((k): Column<Player> => ({ key: k, label: STAT_LABEL[k], get: (p) => p[k], align: 'r', cell: (p) => `<span class="val val-${band(p[k], STAT_CUTS)}">${p[k] || '–'}</span>` })),
       { key: 'ovr', label: 'OVR', get: (p) => ovr(p), align: 'r', cell: (p) => `<b class="val val-${band(ovr(p), STAT_CUTS)}">${ovr(p) || '–'}</b>` },
       { key: 'att', label: '출석', get: (p) => attendance(p.name, matches).rate, align: 'r', cell: (p) => { const a = attendance(p.name, matches); return a.total ? `<span class="val val-${band(a.rate, RATE_CUTS)}">${a.rate}%</span>` : '<span class="muted">–</span>'; } },

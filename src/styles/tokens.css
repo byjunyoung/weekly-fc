@@ -99,11 +99,12 @@ body.wide .main { margin-left: 0; }
 /* 표 */
 .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); }
 .tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
-.tbl th, .tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: middle; }
+.tbl th, .tbl td { padding: var(--m-xs) var(--m-sm); border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: middle; }
 .tbl th { position: sticky; top: 0; background: var(--surface); font-weight: 500; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); cursor: pointer; user-select: none; }
 .tbl th.sorted { color: var(--fg); }
 .tbl th.r, .tbl td.r { text-align: right; }
 .tbl th.c, .tbl td.c { text-align: center; }
+.tbl td.r, .tbl td.c { font-variant-numeric: tabular-nums; }
 .tbl tbody tr:hover { background: var(--surface); }
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl .empty { color: var(--muted); text-align: center; padding: 32px; }

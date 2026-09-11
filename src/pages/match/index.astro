@@ -14,6 +14,7 @@ import Shell from '../../layouts/Shell.astro';
   import { proposeMatches, parseAttendance } from '../../lib/parse.ts';
   import { lineupSvg, type PitchState } from '../../components/lineup-svg.ts';
   import { mountRecap } from '../../components/recap.ts';
+  import { conditionBadge } from '../../components/condition.ts';
   import { esc, fmtDate, ytThumb, ytEmbed, toast, seoulToday } from '../../lib/html.ts';
   import { href } from '../../lib/url.ts';
   import type { Data, Match, Team } from '../../lib/types.ts';
@@ -63,7 +64,7 @@ import Shell from '../../layouts/Shell.astro';
     let body = '';
     if (tab === 'info') {
       const teams = m.teams.length ? `<div class="card"><h2>팀 편성${m.winner ? ` · <span class="val val-a">${esc(m.winner)} 승</span>` : ''}</h2><div class="cards">${m.teams.map((t) => `<div class="card"><h2>${esc(t.name)}${t.points != null ? ` <span class="muted">${t.points}점</span>` : ''}</h2><div class="chips">${t.players.map((p) => `<span class="chip">${esc(p)}</span>`).join('')}</div></div>`).join('')}</div></div>` : '';
-      body = `<div class="cards"><div class="card"><h2>정보</h2><p>${esc(m.type) || '–'} · ${esc(m.location) || '장소 없음'}</p></div><div class="card"><h2>참석 ${m.attendees.length}명</h2><div class="chips">${m.attendees.map((p) => { const pl = d.players.find((x) => x.name === p); return pl ? `<a class="chip" href="${href(`/squad/${pl.num}/`)}">${esc(p)}</a>` : `<span class="chip">${esc(p)}</span>`; }).join('') || '<span class="muted">아직 없음</span>'}</div></div></div>${teams}${m.youtube ? `<div class="embed"><iframe src="${ytEmbed(m.youtube)}" title="매치 영상" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}`;
+      body = `<div class="cards"><div class="card"><h2>정보</h2><p>${esc(m.type) || '–'} · ${esc(m.location) || '장소 없음'}</p></div><div class="card"><h2>참석 ${m.attendees.length}명</h2><div class="chips">${m.attendees.map((p) => { const pl = d.players.find((x) => x.name === p); const badge = conditionBadge(p, d.matches); return pl ? `<a class="chip" href="${href(`/squad/${pl.num}/`)}">${esc(p)} ${badge}</a>` : `<span class="chip">${esc(p)} ${badge}</span>`; }).join('') || '<span class="muted">아직 없음</span>'}</div></div></div>${teams}${m.youtube ? `<div class="embed"><iframe src="${ytEmbed(m.youtube)}" title="매치 영상" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}`;
     } else if (tab === 'lineup') {
       body = ps ? lineupSvg(ps) : `<p class="muted">저장된 라인업이 없습니다. <a href="${href(`/tactics/?match=${encodeURIComponent(m.id)}`)}">전술보드에서 만들기 →</a></p>`;
     } else {
