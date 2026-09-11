@@ -19,6 +19,8 @@ import Shell from '../../layouts/Shell.astro';
   import { ovr, band, STAT_CUTS, RATE_CUTS, attendance } from '../../lib/stats.ts';
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
   import { STAT_LABEL } from '../../components/player-card.ts';
+  import { avatarSvg } from '../../components/avatar.ts';
+  import { avatarSpecFor } from '../../lib/avatar.ts';
   import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
 
   let data: Data | null = null, pos = 'ALL', q = '';
@@ -28,6 +30,7 @@ import Shell from '../../layouts/Shell.astro';
   function cols(d: Data): Column<Player>[] {
     const matches = d.matches;
     return [
+      { key: 'avatar', label: '', sortable: false, get: () => '', cell: (p) => avatarSvg(avatarSpecFor(p.num, p.avatar), 28, p.num), align: 'c' },
       { key: 'num', label: '#', get: (p) => p.num, align: 'r' },
       { key: 'name', label: '이름', get: (p) => p.name, cell: (p) => `<a href="${href(`/squad/${p.num}/`)}"><b>${esc(p.name)}</b></a>` },
       { key: 'pos', label: '포지션', get: (p) => p.pos, cell: (p) => `<span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span> <span class="muted">${esc(p.detail)}</span>` },
