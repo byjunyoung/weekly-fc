@@ -2,7 +2,12 @@
 import Shell from '../layouts/Shell.astro';
 import { FINE_TYPES, FINE_AMOUNT, FINE_NOTE, FINE_EXEMPT, MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS, DUTY_PER_MONTH } from '../lib/rules.ts';
 import { href } from '../lib/url.ts';
+import { VIDEOS } from '../data/videos.ts';
 const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+// 소개 문장의 숫자는 영상 아카이브에서 끌어온다 — 손으로 적어두면 금방 사실과 어긋난다.
+const dated = VIDEOS.map((v) => v.published).filter(Boolean).sort();
+const firstRec = dated[0] ?? '';
+const recYear = firstRec.slice(0, 4), recMonth = String(Number(firstRec.slice(5, 7)));
 const toc = [['intro', '소개'], ['when', '언제 어디서'], ['join', '참여 방법'], ['money', '비용·벌금'], ['duty', '봉사'], ['bank', '모임 통장'], ['manner', '에티켓']];
 ---
 <Shell title="소개" index={true} description="WEEKLY FC — 매주 토요일 모이는 풋살 팀. 용병·정회원 상시 모집.">
@@ -16,7 +21,11 @@ const toc = [['intro', '소개'], ['when', '언제 어디서'], ['join', '참여
     <div class="card"><h2>모임 통장</h2><p>{BANK.name} {BANK.number}</p></div>
   </div>
   <article class="prose stack">
-    <section id="intro"><h2>소개</h2><p>매주 토요일 오전에 모여 풋살을 하는 팀입니다. 용병으로 편하게 참여하다가 원하면 정회원으로 합류할 수 있습니다. 상시 모집 중.</p><p><a href={LINKS.youtube} target="_blank" rel="noopener">유튜브 채널 →</a> · <a href={href('/tactics/')}>전술판 →</a></p></section>
+    <section id="intro"><h2>소개</h2>
+      <p>매주 토요일 오전에 모여 풋살을 합니다. 카톡 투표로 {MATCH_MIN}명 이상이 모이면 진행하고, 보통 2파전, 인원이 많으면 3파전으로 나눕니다. 장소는 {PLACES.join(' · ')}를 돌아가며 씁니다.</p>
+      <p>{BANK.since.split('.')[0]}년 {String(Number(BANK.since.split('.')[1]))}월 모임 통장을 만들며 시작했습니다. {recYear}년 {recMonth}월부터는 매치를 영상으로 남기고 있고, 채널에 최근 {VIDEOS.length}편이 올라와 있습니다.</p>
+      <p>용병으로 편하게 한 번 와 보고, 맞으면 정회원으로 합류하면 됩니다. 상시 모집 중입니다.</p>
+      <p><a href={LINKS.youtube} target="_blank" rel="noopener">유튜브 채널 →</a> · <a href={href('/tactics/')}>전술판 →</a></p></section>
     <section id="when"><h2>언제 어디서</h2><ul><li>매주 카톡 투표, {MATCH_MIN}인 이상 모이면 진행</li><li>시간: {MATCH_TIME}</li><li>장소: {PLACES.join(' / ')}</li><li>대관 실패 시 일정·장소를 유연하게 조정</li><li>비가 오면 논의 후 진행 여부 결정</li></ul></section>
     <section id="join"><h2>참여 방법</h2><ol><li>오픈카톡에 자기소개를 남기고 모임 통장 초대 받기</li><li>매주 카톡 투표로 참석 여부 표시</li><li>매치 참석 후 당일 정산(대관비·음료비)</li></ol><p class="label">자기소개 양식 (채팅방에 붙여넣기)</p><pre class="card" style="white-space:pre-wrap;margin:0">이름 :
 연락처 :

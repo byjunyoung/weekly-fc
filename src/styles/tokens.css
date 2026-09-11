@@ -10,10 +10,16 @@
   color-scheme: dark;
   /* 바탕은 회색이 아니라 거의 검정 — 금속 카드가 떠 보여야 한다. */
   --bg: #05070a; --bg-2: #0a0e14; --surface: #121821; --tint: #1d2632;
-  --fg: #f2f5f8; --muted: #8b95a5; --line: #253040; --line-hi: #3d4b5e;
+  --fg: #f2f5f8; --muted: #8b95a5; --line: #2b3646; --line-hi: #596e89;
+  /* --line 은 장식용 구분선(WCAG 1.4.11 비적용), --line-hi 는 컨트롤 경계다.
+     컨트롤 경계는 3:1 이 필요해 실측으로 값을 올렸다: #3d4b5e 는 surface 대비 2.01 로 미달,
+     #596e89 는 3.41(bg 대비 3.86)로 통과. 측정 스크립트는 커밋 메시지 참고. */
   /* 액센트 — FC HUD의 형광 그린. 화면 전체에서 이 한 색만 "살아 있는" 색이다. */
   --accent: #00e08c; --accent-dim: #0b3d2b; --accent-ink: #03150d;
-  --pos-gk: #d58b0b; --pos-df: #1c79e3; --pos-mf: #259384; --pos-fw: #e74640;
+  /* 포지션 배지 — 흰 글자 기준 4.5:1 을 실측해 맞춘 값이다(전: DF 4.29 / MF 3.76 / FW 3.93 미달).
+     GK 앰버만은 색을 어둡게 깎는 대신 글자를 먹색으로 뒤집었다(6.64) — 네 색 중 유일하게
+     밝은 색이라 어둡히면 팀이 알아보던 주황이 탁해진다. */
+  --pos-gk: #d58b0b; --pos-df: #1b74da; --pos-mf: #208174; --pos-fw: #e3251e;
   --val-a: #59cf84; --val-b: #a0cf59; --val-c: #e79940; --val-d: #e97267;
   --val-a-bg: #183924; --val-b-bg: #2c3918; --val-c-bg: #3b2a16; --val-d-bg: #391b18;
   --warn: #e97267; --warn-bg: #391b18; --ok: #59cf84;
@@ -23,11 +29,14 @@
      FC 원안은 카드 전체를 금속으로 덮는다. 앞 단계에선 "절제"를 이유로 테두리만 칠했는데
      그게 바로 게임으로 안 읽힌 원인이라 이번엔 원안대로 면을 덮는다. */
   --gold: #eeda88; --silver: #b3bdc6; --bronze: #b97646;
-  --metal-gold: linear-gradient(158deg, #fff7d6 0%, #f4d97c 20%, #d9ae3a 46%, #a97d18 70%, #f6e5a4 100%);
-  --metal-silver: linear-gradient(158deg, #ffffff 0%, #e2e9f1 20%, #adb8c6 46%, #77828f 70%, #e8eef5 100%);
-  --metal-bronze: linear-gradient(158deg, #ffe6cc 0%, #e3ab72 20%, #b8763f 46%, #7d4820 70%, #eabb8a 100%);
+  /* 금속 그라디언트 — 어두운 끝을 먹글자(--ink) 대비 5.6:1 이 되게 올렸다. 전 값(#a97d18 /
+     #77828f / #7d4820)에서는 브론즈가 2.49 로 크게 미달했고, α.62 이던 보조 글자는 세 금속
+     모두 미달이었다. 이제 --ink 5.7 안팎, --ink-soft(α.9) 5.0 안팎으로 전부 통과한다. */
+  --metal-gold: linear-gradient(158deg, #fff7d6 0%, #f4d97c 20%, #dcb441 46%, #b6861a 70%, #f6e5a4 100%);
+  --metal-silver: linear-gradient(158deg, #ffffff 0%, #e2e9f1 20%, #b6c0cc 46%, #868f9b 70%, #e8eef5 100%);
+  --metal-bronze: linear-gradient(158deg, #ffe6cc 0%, #e3ab72 20%, #c8823f 46%, #cd793a 70%, #eabb8a 100%);
   /* 금속 위 글자 — 순검정은 탁하게 보여 아주 짙은 갈색/청색 먹으로 둔다. */
-  --ink: #17130a; --ink-soft: rgba(23, 19, 10, .62); --ink-line: rgba(23, 19, 10, .28);
+  --ink: #17130a; --ink-soft: rgba(23, 19, 10, .9); --ink-line: rgba(23, 19, 10, .28);
   --header-h: 56px; --header-h-m: 90px;
   --max: 1180px; --pad: 28px; --gap: 16px; --gap-lg: 32px; --pitch-max: 400px; --modal-xwide: 640px; --prose-max: 640px; --pcard-w: 268px;
   --m-xs: 4px; --m-sm: 8px; --m-md: 12px; --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
@@ -80,6 +89,11 @@ button.danger:hover { color: var(--warn); border-color: var(--warn); }
 button:disabled { opacity: .35; cursor: default; }
 input, select, textarea { border: 1px solid var(--line-hi); background: #010306; padding: 7px 10px; border-radius: 0; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow); }
+/* 포커스 표시 — 키보드로만 드러나게 :focus-visible 을 쓴다. 액센트는 surface 대비 10.2:1 로
+   비텍스트 3:1 기준을 크게 넘고, clip-path 로 깎인 면은 outline 이 잘리므로 box-shadow 로 두른다. */
+:where(a, button, [tabindex]):focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+.pcard-wall a:focus-visible, .pcard-wall-sm a:focus-visible { box-shadow: none; }
+.pcard-wall a:focus-visible .pcard, .pcard-wall-sm a:focus-visible .pcard { outline: 3px solid var(--accent); outline-offset: 3px; }
 
 /* 셸 — 상단 탭 스트립. 사이드바(관리도구 문법)를 걷어냈다. */
 .topbar {
@@ -177,7 +191,7 @@ body.wide .page-head h1 { font-size: var(--fs-lg); }
 .cond-down { color: var(--cond-down); }
 .cond-none { color: var(--muted); font-weight: 400; }
 .pos { display: inline-block; min-width: 2.6em; padding: 2px 7px; text-align: center; color: #fff; font-size: var(--fs-xs); font-weight: 800; letter-spacing: .08em; clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%); }
-.pos-gk { background: var(--pos-gk); } .pos-df { background: var(--pos-df); } .pos-mf { background: var(--pos-mf); } .pos-fw { background: var(--pos-fw); }
+.pos-gk { background: var(--pos-gk); color: var(--ink); } .pos-df { background: var(--pos-df); } .pos-mf { background: var(--pos-mf); } .pos-fw { background: var(--pos-fw); }
 .grade-gold { color: var(--gold); } .grade-silver { color: var(--silver); } .grade-bronze { color: var(--bronze); }
 .warn { color: var(--warn); }
 .load-err { display: flex; align-items: center; gap: var(--m-sm); margin-bottom: var(--gap); }

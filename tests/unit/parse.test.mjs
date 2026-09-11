@@ -36,6 +36,19 @@ test('붙여넣기: 부분 일치가 둘 이상이면 unmatched', () => {
   const ps = [P(1, '이진욱'), P(2, '이진수')];
   assert.deepEqual(parseAttendance('이진', ps), { matched: [], unmatched: ['이진'] });
 });
+test('붙여넣기: 불참 구획의 이름은 참석으로 안 들어간다', () => {
+  const ps = [P(1, '김철수'), P(2, '이영희'), P(3, '박민수'), P(4, '최동현')];
+  const text = ['[투표] 9/13 토요일 풋살', '참여 4명', '', '○ 참석 (2)', '김철수', '이영희', '', '○ 불참 (1)', '박민수', '', '○ 미정 (1)', '최동현'].join('\n');
+  assert.deepEqual(parseAttendance(text, ps), { matched: ['김철수', '이영희'], unmatched: [] });
+});
+test('붙여넣기: 한 줄에 머리말과 이름이 같이 있어도 구획을 지킨다', () => {
+  const ps = [P(1, '김철수'), P(2, '이영희'), P(3, '박민수')];
+  assert.deepEqual(parseAttendance('참석: 김철수, 이영희\n불참: 박민수', ps), { matched: ['김철수', '이영희'], unmatched: [] });
+});
+test('붙여넣기: 구획 머리가 전혀 없으면 글 전체를 참석으로 본다', () => {
+  const ps = [P(1, '김철수'), P(2, '이영희')];
+  assert.deepEqual(parseAttendance('김철수\n이영희', ps), { matched: ['김철수', '이영희'], unmatched: [] });
+});
 test('붙여넣기: 중복은 한 번만', () => {
   assert.deepEqual(parseAttendance('김철수 김철수', [P(1, '김철수')]).matched, ['김철수']);
 });

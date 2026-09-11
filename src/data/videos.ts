@@ -1,0 +1,36 @@
+// src/data/videos.ts — 생성 파일. 직접 고치지 말 것.
+// scripts/fetch-videos.mjs 가 채널 페이지에서 긁어 덮어쓴다(빌드 전 prebuild 로 자동 실행).
+import type { Video } from '../lib/types';
+
+export const VIDEOS: Video[] = [
+  { id: "TGT62WU6oPw", title: "260905 | 위클리FC 풋살 3파전", published: "2026-09-05" },
+  { id: "ldGYCbH0iAY", title: "260822 | 위클리FC 풋살 2파전", published: "2026-08-22" },
+  { id: "5s7YWHKLfTw", title: "260808 | 위클리FC 풋살 2파전", published: "2026-08-08" },
+  { id: "304Mtaevt9A", title: "260801 | 위클리FC 풋살 2파전", published: "2026-08-01" },
+  { id: "2jI13Zuv6GQ", title: "260725 | 위클리FC 풋살 2파전", published: "2026-07-25" },
+  { id: "Bq0knYbk1ZE", title: "260718 | 위클리FC 풋살 2파전", published: "2026-07-18" },
+  { id: "MQeKIPmHN9I", title: "260711 | 위클리FC 풋살 2파전", published: "2026-07-11" },
+  { id: "6vllcyIsvvw", title: "260705 | 위클리FC 풋살 3파전", published: "2026-07-05" },
+  { id: "b7f-4Agvffg", title: "260614 | 위클리FC 풋살 2파전 | 쿠키있음 | 모란공원 풋살장", published: "2026-06-14" },
+  { id: "aAOG2a--m5Y", title: "260606 | 위클리FC 풋살 2파전 | 모란공원 풋살장", published: "2026-06-06" },
+  { id: "It4we31YQ1c", title: "260530 | 위클리FC 3파전 | 모란공원", published: "2026-05-30" },
+  { id: "wJLyDs7ulQc", title: "260523 | 위클리FC 3파전 | 모란공원", published: "2026-05-23" },
+  { id: "TlHwvEeDWM8", title: "260509 | 위클리FC 풋살 2파전 | 모란공원", published: "2026-05-09" },
+  { id: "1xhyHlWBOfo", title: "260425 | 위클리FC 2파전 | 위례공원", published: "2026-04-25" },
+  { id: "0r7GGFB7oY0", title: "260418 | 위클리FC 풋살 2파전 | 쿠키있음", published: "2026-04-18" },
+  { id: "xGgwZnbr9a8", title: "260411 | 위클리FC vs 용병팀", published: "2026-04-11" },
+  { id: "8-TSh82hQC8", title: "260404 | 위클리FC 3파전", published: "2026-04-04" },
+  { id: "2OM9sEodriU", title: "260328 | 위클리FC vs 민준성현용병팀", published: "2026-03-28" },
+  { id: "FQZTykM2oao", title: "260321 | 위클리FC vs 민준동훈용병팀", published: "2026-03-21" },
+  { id: "ByRnNMOad6g", title: "260228 | 위클리FC vs 동훈가원용병팀", published: "2026-02-28" },
+  { id: "uG1bgn_5p98", title: "260221 | 위클리FC 2파전 | 위례공원 풋살장", published: "2026-02-21" },
+  { id: "f1M9XIo7fbw", title: "260215 | 위클리FC vs 대현 용병팀 | 위례공원 풋살장", published: "2026-02-15" },
+  { id: "IwrmOnmkLOQ", title: "260131 | 위클리FC vs 동훈용병팀 | 모란공원 풋살장", published: "2026-01-31" },
+  { id: "kzgkNb60iDI", title: "260117 | 위클리FC vs 준영용병팀 | 모란 풋살장", published: "2026-01-17" },
+  { id: "yyxSVJrEXMk", title: "260110 | 위클리FC vs 철후가원용병팀 | 모란공원 풋살장", published: "2026-01-10" },
+  { id: "anrcyxbzRPY", title: "260103 | 다이나믹 윤가원 | 위클리FC vs 태호형팀 | 다이나믹 풋살장", published: "2026-01-03" },
+  { id: "zrg_u5SxVkM", title: "251213 | 위클리FC vs 동훈 용병팀 | 풋살 | 모란공원", published: "2025-12-13" },
+  { id: "brlD3qnEv3E", title: "251129 | 위클리FC 자체 2파전 | 모란공원 풋살장", published: "2025-11-29" },
+  { id: "F0Dte3sEXgk", title: "251123 | 위클리FC 자체 2파전 | 황새울공원 풋살장B", published: "2025-11-23" },
+  { id: "qC5zLuGQXp0", title: "251101 | 위클리FC (2팀) VS 무빙FC | 풋살 매치 | 모란공원", published: "2025-11-01" },
+];

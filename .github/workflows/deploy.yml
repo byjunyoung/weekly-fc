@@ -2,6 +2,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # 영상 목록은 빌드 때 채널에서 긁어온다(scripts/fetch-videos.mjs) — 새 영상이
+  # 올라오면 푸시 없이도 반영되도록 매일 05:00 KST 에 다시 빌드한다.
+  schedule:
+    - cron: '0 20 * * *'
   workflow_dispatch:
 permissions:
   contents: read

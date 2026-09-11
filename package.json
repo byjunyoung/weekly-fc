@@ -5,6 +5,7 @@
   "engines": { "node": ">=22.18.0" },
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "node scripts/fetch-videos.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
