@@ -22,7 +22,7 @@ type DragState = DragMove | DragBall | DragDraw;
 // 캔버스는 var()를 못 읽는다 — recap.ts의 tok()과 같은 방식으로 그리는 시점에 토큰 값을 읽어온다.
 const tok = (name: string): string => {
   const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const fallbacks: Record<string, string> = { '--surface': '#f7f7f5', '--muted': '#6b6b6b', '--fg': '#161616' };
+  const fallbacks: Record<string, string> = { '--tint': '#efefec', '--muted': '#6b6b6b', '--fg': '#161616' };
   return val || fallbacks[name] || '#000000';
 };
 const hexToRgba = (hex: string, alpha: number): string => {
@@ -221,9 +221,10 @@ const canvas = root.querySelector<HTMLCanvasElement>('#pitch')!;
 const ctx = canvas.getContext('2d')!;
 const container = root.querySelector<HTMLElement>('#pitch-container')!;
 
-// 피치 팔레트: 짙은 초록 대신 포털 뉴트럴로. --line은 --surface 위에서 명도차가 거의 없어(대비비 ≈1.4:1)
-// 마킹 색으로는 대신 --muted(대비비 ≈5:1)를 쓴다. 유니폼 색(homeColor/awayColor)은 사용자 지정이라 그대로 둔다.
-const PITCH_BG = tok('--surface');
+// 피치 팔레트: 짙은 초록 대신 포털 뉴트럴로, 단 페이지 배경(--bg)과 구분되도록 더 어두운 --tint를 쓴다.
+// 마킹 색은 --line — --tint 위에서도 명도차가 거의 없어(대비비 ≈1.27:1) 대신 --muted(대비비 ≈4.6:1)를 쓴다.
+// 유니폼 색(homeColor/awayColor)은 사용자 지정이라 그대로 둔다.
+const PITCH_BG = tok('--tint');
 const PITCH_LINE = tok('--muted');
 const PITCH_LABEL = tok('--muted');
 const PITCH_FG = tok('--fg');
@@ -481,13 +482,14 @@ function drawPlayer(p: P, isHome: boolean): void {
   const fill = isHome ? homeColor : awayColor;
   const bright = colorLuminance(fill);
   const numColor = bright > 140 ? '#111' : '#fff';
-  const strokeColor = bright > 140 ? 'rgba(0,0,0,.25)' : 'rgba(255,255,255,.2)';
 
   ctx.save();
   ctx.fillStyle=fill;
   ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
   ctx.shadowColor='transparent';
-  ctx.strokeStyle=strokeColor; ctx.lineWidth=1.5;
+  // 유니폼 색이 밝든 어둡든(흰 셔츠 vs 짙은 셔츠) 뉴트럴 피치 위에서 항상 원이 도드라지도록
+  // 대비색 대신 --fg 단일 색을 굵게(2px) 두른다 — 밝은 셔츠는 얇은 헤어라인만으론 안 보였다.
+  ctx.strokeStyle=PITCH_FG; ctx.lineWidth=2;
   ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.stroke();
 
   ctx.fillStyle=numColor;
@@ -818,9 +820,9 @@ function setTeamColor(team: 'home' | 'away', color: string): void {
 
 function setTool(t: 'arrow' | 'zone' | 'pen'): void {
   activeTool=t;
-  root.querySelector<HTMLElement>('#tool-arrow')!.classList.toggle('on',t==='arrow');
-  root.querySelector<HTMLElement>('#tool-zone')!.classList.toggle('on',t==='zone');
-  root.querySelector<HTMLElement>('#tool-pen')!.classList.toggle('on',t==='pen');
+  root.querySelector<HTMLElement>('#tool-arrow')!.classList.toggle('primary',t==='arrow');
+  root.querySelector<HTMLElement>('#tool-zone')!.classList.toggle('primary',t==='zone');
+  root.querySelector<HTMLElement>('#tool-pen')!.classList.toggle('primary',t==='pen');
   const hints: Record<string,string>={
     arrow:'선수 드래그: 이동 · 빈 공간 드래그: 화살표 · 우클릭 드래그: 존 · 선수 우클릭: 수정',
     zone: '선수 드래그: 이동 · 빈 공간 드래그: 존 생성 · 우클릭 드래그: 존 · 선수 우클릭: 수정',
@@ -831,8 +833,8 @@ function setTool(t: 'arrow' | 'zone' | 'pen'): void {
 
 function setMode(m: 'soccer' | 'futsal'): void {
   mode=m;
-  root.querySelector<HTMLElement>('#m-soccer')!.classList.toggle('on',m==='soccer');
-  root.querySelector<HTMLElement>('#m-futsal')!.classList.toggle('on',m==='futsal');
+  root.querySelector<HTMLElement>('#m-soccer')!.classList.toggle('primary',m==='soccer');
+  root.querySelector<HTMLElement>('#m-futsal')!.classList.toggle('primary',m==='futsal');
   playerCount=m==='futsal'?5:11;
   root.querySelector<HTMLElement>('#count-val')!.textContent=String(playerCount);
   buildFormSelects();
