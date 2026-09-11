@@ -7,10 +7,12 @@ import Shell from '../../layouts/Shell.astro';
     <div class="actions">
       <div class="chips" id="pos-filter"><button class="chip on" data-pos="ALL">전체</button><button class="chip" data-pos="GK">GK</button><button class="chip" data-pos="DF">DF</button><button class="chip" data-pos="MF">MF</button><button class="chip" data-pos="FW">FW</button></div>
       <input id="q" type="search" placeholder="이름" class="w-search" />
+      <select id="sort" class="w-sort"><option value="ovr">OVR 순</option><option value="num">번호 순</option><option value="name">이름 순</option><option value="att">출석 순</option></select>
+      <div class="chips" id="view-toggle"><button class="chip on" data-view="card">카드</button><button class="chip" data-view="table">표</button></div>
       <button id="add" hidden>선수 추가</button>
     </div>
   </div>
-  <div id="app" class="tbl-wrap"></div>
+  <div id="app"></div>
 </Shell>
 <script>
   import { onData, isAdmin } from '../../lib/api.ts';
@@ -18,13 +20,17 @@ import Shell from '../../layouts/Shell.astro';
   import { esc } from '../../lib/html.ts';
   import { ovr, band, STAT_CUTS, RATE_CUTS, attendance, condition } from '../../lib/stats.ts';
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
-  import { STAT_LABEL } from '../../components/player-card.ts';
+  import { playerCard, STAT_LABEL } from '../../components/player-card.ts';
   import { avatarSvg } from '../../components/avatar.ts';
   import { avatarSpecFor } from '../../lib/avatar.ts';
   import { conditionBadge } from '../../components/condition.ts';
   import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
 
+  // 기본은 카드 벽 — 아이템을 늘어놓은 화면이 FC의 첫인상이다. 표(FM식 밀도)는 토글로 남긴다.
+  const VIEW_KEY = 'wfc.squad.view';
   let data: Data | null = null, pos = 'ALL', q = '';
+  let view: 'card' | 'table' = (localStorage.getItem(VIEW_KEY) as 'card' | 'table') || 'card';
+  let sortKey = 'ovr';
   const state: TableState = { sortKey: 'num', sortDir: 'asc' };
   const app = document.getElementById('app')!;
 
@@ -41,14 +47,35 @@ import Shell from '../../layouts/Shell.astro';
       { key: 'att', label: '출석', get: (p) => attendance(p.name, matches).rate, align: 'r', cell: (p) => { const a = attendance(p.name, matches); return a.total ? `<span class="val val-${band(a.rate, RATE_CUTS)}">${a.rate}%</span>` : '<span class="muted">–</span>'; } },
     ];
   }
+
+  // 카드 벽의 정렬 — 표는 머리글 클릭으로 정렬하므로 이쪽은 select 하나로 따로 둔다.
+  function sortCards(rows: Player[], d: Data): Player[] {
+    const by: Record<string, (p: Player) => number | string> = {
+      ovr: (p) => -ovr(p), num: (p) => p.num, name: (p) => p.name,
+      att: (p) => -attendance(p.name, d.matches).rate,
+    };
+    const f = by[sortKey] ?? by.ovr;
+    return [...rows].sort((a, b) => { const x = f(a), y = f(b); return typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'ko'); });
+  }
+
   function render() {
     if (!data) return;
-    const rows = data.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
+    const d = data;
+    const rows = d.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
     document.getElementById('count')!.textContent = `${rows.length}명`;
     document.getElementById('add')!.hidden = !isAdmin();
-    mountTable(app, cols(data), rows, state, { empty: '명단이 비어 있습니다' });
+    document.getElementById('sort')!.hidden = view !== 'card';
+    if (view === 'table') { app.className = 'tbl-wrap'; mountTable(app, cols(d), rows, state, { empty: '명단이 비어 있습니다' }); return; }
+    app.className = 'pcard-wall';
+    app.innerHTML = rows.length
+      ? sortCards(rows, d).map((p) => `<a href="${href(`/squad/${p.num}/`)}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 116, p.num, true))}</a>`).join('')
+      : '<p class="pcard-empty">명단이 비어 있습니다</p>';
   }
+
   document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => x.classList.toggle('on', x === b)); render(); }));
+  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as 'card' | 'table'; localStorage.setItem(VIEW_KEY, view); document.querySelectorAll('#view-toggle .chip').forEach((x) => x.classList.toggle('on', x === b)); render(); }));
+  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((x) => x.classList.toggle('on', x.dataset.view === view));
+  (document.getElementById('sort') as HTMLSelectElement).onchange = (e) => { sortKey = (e.target as HTMLSelectElement).value; render(); };
   (document.getElementById('q') as HTMLInputElement).oninput = (e) => { q = (e.target as HTMLInputElement).value.trim(); render(); };
   document.getElementById('add')!.onclick = () => { const used = new Set(data!.players.map((p) => p.num)); let n = 1; while (used.has(n)) n++; location.href = href(`/squad/${n}/?new=1`); };
   window.addEventListener('wfc:admin', render);

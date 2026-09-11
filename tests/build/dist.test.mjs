@@ -34,9 +34,9 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('사이드바에 여섯 갈래가 있다', () => {
+test('상단 탭에 여섯 갈래가 있다', () => {
   const html = read('index.html');
-  for (const l of ['홈', '스쿼드', '매치', '기록', '전술', '소개']) assert.ok(html.includes(`<span class="nav-label">${l}</span>`), l);
+  for (const l of ['홈', '스쿼드', '매치', '기록', '전술', '소개']) assert.ok(html.includes(`<span>${l}</span>`), l);
 });
 test('sitemap에는 tactics와 about만', () => {
   const sm = readFileSync('dist/sitemap-0.xml', 'utf8');
