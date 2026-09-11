@@ -68,9 +68,21 @@ function verifyPin(pin) {
 }
 
 // ── 전체 데이터 ──────────────────────────────────
+// 옛 4열 형식(id,name,formation,assignments)으로 남아 있던 'default' 행을 지운다.
+// 새 5열 형식에서는 열이 한 칸씩 밀려 읽혀 쓰레기 행이 되므로 제거. 멱등 — 없으면 아무 일도 안 한다.
+function dropLegacyLineupRow(ss) {
+  const sheet = ss.getSheetByName(SHEET_LINEUPS);
+  if (!sheet || sheet.getLastRow() < 2) return;
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === 'default' && String(data[i][4] || '') === '') { sheet.deleteRow(i + 1); }
+  }
+}
+
 function handleGetAll(includePhone) {
   const ss = getSpreadsheet();
   getOrCreateSheet(ss, SHEET_MATCHES, MATCH_COLS);
+  dropLegacyLineupRow(ss);
   getOrCreateSheet(ss, SHEET_LINEUPS, LINEUP_COLS);
   let players = sheetToObjects(ss, SHEET_PLAYERS, PLAYER_COLS);
   if (!includePhone) players = players.map(function(p) { var q = Object.assign({}, p); delete q.phone; return q; });
@@ -177,24 +189,31 @@ function handleWriteLineup(l) {
 function handleGetChannelVideos(nocache) {
   var cache = CacheService.getScriptCache();
   if (!nocache) { var cached = cache.get('YT_VIDEOS'); if (cached) return { videos: JSON.parse(cached) }; }
-  try {
-    var res = UrlFetchApp.fetch('https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
-      { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/atom+xml,application/xml' } });
-    var code = res.getResponseCode();
-    if (code !== 200) return { videos: [], error_detail: 'youtube ' + code };
-    var feed = res.getContentText();
-    var entries = feed.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
-    var videos = entries.map(function(e) {
-      var id = (e.match(/<yt:videoId>([^<]+)/) || [])[1];
-      var title = (e.match(/<title>([^<]+)/) || [])[1];
-      var pub = (e.match(/<published>([^<]+)/) || [])[1];
-      return id && title ? { id: id, title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), published: pub ? pub.slice(0, 10) : '' } : null;
-    }).filter(Boolean);
-    if (videos.length) cache.put('YT_VIDEOS', JSON.stringify(videos), 600);
-    return { videos: videos };
-  } catch (e) {
-    return { videos: [], error_detail: 'fetch failed: ' + e.message };
+  // 유튜브 RSS 가 구글 서버 쪽 요청을 간헐적으로 막는다(500/404 를 섞어 준다) — 재시도하고,
+  // 성공하면 6시간(CacheService 최대) 보관해 한 번의 성공이 오래 버티게 한다.
+  var lastCode = 0;
+  for (var attempt = 0; attempt < 3; attempt++) {
+    try {
+      var res = UrlFetchApp.fetch('https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
+        { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/atom+xml,application/xml' } });
+      lastCode = res.getResponseCode();
+      if (lastCode === 200) {
+        var entries = res.getContentText().match(/<entry>([\s\S]*?)<\/entry>/g) || [];
+        var videos = entries.map(function(e) {
+          var id = (e.match(/<yt:videoId>([^<]+)/) || [])[1];
+          var title = (e.match(/<title>([^<]+)/) || [])[1];
+          var pub = (e.match(/<published>([^<]+)/) || [])[1];
+          return id && title ? { id: id, title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;/g, "'").replace(/&quot;/g, '"'), published: pub ? pub.slice(0, 10) : '' } : null;
+        }).filter(Boolean);
+        if (videos.length) cache.put('YT_VIDEOS', JSON.stringify(videos), 21600);
+        return { videos: videos };
+      }
+    } catch (e) { lastCode = 'fetch failed: ' + e.message; }
+    if (attempt < 2) Utilities.sleep(800 * (attempt + 1));
   }
+  var stale = cache.get('YT_VIDEOS');
+  if (stale) return { videos: JSON.parse(stale), error_detail: 'youtube ' + lastCode + ' (캐시 사용)' };
+  return { videos: [], error_detail: 'youtube ' + lastCode };
 }
 
 // ── 능력치 1-5 → 1-99 스케일 일괄 마이그레이션 ──────────
