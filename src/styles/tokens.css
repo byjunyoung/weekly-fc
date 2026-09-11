@@ -221,7 +221,9 @@ a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--gap); }
 .thumb { border: 1px solid var(--line); background: var(--surface); }
 .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--tint); }
-.home-thumb { margin-top: 10px; aspect-ratio: 16 / 9; object-fit: cover; width: 100%; }
+/* 2열을 차지하는 최근 매치 타일에서 16:9 를 그대로 두면 높이가 320px 을 넘어 같은 줄 카드가
+   모두 늘어난다. 폭은 채우되 높이만 잘라 줄 높이를 잡아둔다. */
+.home-thumb { margin-top: 10px; aspect-ratio: 16 / 9; max-height: 210px; object-fit: cover; width: 100%; }
 .thumb .body { padding: 8px 10px; font-size: var(--fs-sm); }
 .home-grid .span2 { grid-column: span 2; }
 .home-me { position: relative; padding: var(--gap-lg) var(--pad); margin-bottom: var(--gap-lg); border: 1px solid var(--line); background: linear-gradient(120deg, #0f1b18 0%, var(--bg-2) 45%, #070b11 100%); clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }

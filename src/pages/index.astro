@@ -11,6 +11,7 @@ import Shell from '../layouts/Shell.astro';
   import { href } from '../lib/url';
   import { esc, fmtDate, fmtWon, monthLabel, ytThumb, ytWatch } from '../lib/html';
   import { rotationFor, nextDuty } from '../lib/rotation';
+  import { parseVideoTitle } from '../lib/parse';
   import { fineSummary, ovr, seasonMatches, seasonTable } from '../lib/stats';
   import { playerCard } from '../components/player-card';
   import { avatarSvg } from '../components/avatar';
@@ -53,10 +54,26 @@ import Shell from '../layouts/Shell.astro';
     return `<section><div class="label label-gap">스쿼드 톱 5 · OVR</div><div class="pcard-wall pcard-wall-sm">${cards}</div></section>`;
   }
 
+  // 시트에 매치가 없어도 채널 영상 제목(YYMMDD | … N파전 …)으로 마지막 매치 날짜는 안다.
+  // "아직 기록이 없습니다"를 띄우는 대신 아는 만큼 보여주고, 시트를 채우라고 안내한다.
+  function lastFromVideo(): string {
+    const parsed = (videos ?? []).map(parseVideoTitle).filter((p): p is NonNullable<typeof p> => !!p)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    const p = parsed[0];
+    if (!p) return `<a class="card" href="${href('/match/')}"><h2>최근 매치</h2><p class="muted">아직 기록이 없습니다. 매치가 열리면 결과·참석·영상이 여기 뜹니다.</p></a>`;
+    return `<a class="card span2" href="${href('/match/')}">
+      <h2>최근 매치</h2>
+      <div class="big">${esc(p.type) || '매치'}</div>
+      <p class="muted">${fmtDate(p.date)}${p.location ? ` · ${esc(p.location)}` : ''} · 영상 기준</p>
+      <img src="${ytThumb(p.id)}" alt="" class="home-thumb">
+      <p class="muted">참석·결과는 아직 시트에 없습니다 — 매치 화면의 <b>영상에서 가져오기</b>로 채웁니다.</p>
+    </a>`;
+  }
+
   // 매치 기록이 없을 때는 썸네일 없이 좁게 — 크고 빈 칸을 만들지 않는다.
   function matchTile(d: Data): string {
     const last = d.matches[0];
-    if (!last) return `<a class="card" href="${href('/match/')}"><h2>최근 매치</h2><p class="muted">아직 기록이 없습니다. 매치가 열리면 결과·참석·영상이 여기 뜹니다.</p></a>`;
+    if (!last) return lastFromVideo();
     return `<a class="card span2" href="${href(`/match/?d=${encodeURIComponent(last.id)}`)}">
       <h2>최근 매치</h2>
       <div class="big">${last.winner ? `${esc(last.winner)} 승` : esc(last.type) || '기록'}</div>
