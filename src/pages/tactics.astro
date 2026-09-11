@@ -92,10 +92,11 @@ import Shell from '../layouts/Shell.astro';
      라벨은 .label을 그대로 쓰고, 여기 남는 건 .board 전용 레이아웃 크롬(높이 calc, 헤더·푸터 바, 캔버스, 팝업 위치)뿐이다.
      캔버스 내부 색은 pitch.ts에서 토큰을 읽어 그린다. */
   .board, .board * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  .board { background: var(--surface); color: var(--fg); height: calc(100dvh - var(--header-h) - var(--pad) * 2); display: flex; flex-direction: column; overflow: hidden; }
-  /* .board는 Shell의 .main 안에 있다 — .main의 상하 padding과, 이 페이지는 항상 wide라 모든 폭에서 노출되는 sticky .mhead 높이를 100dvh에서 뺀다. */
-  @media (max-width: 899px) { .board { height: calc(100dvh - var(--header-h) - var(--gap) * 2); } }
-  @media (max-width: 699px) { .board { height: calc(100dvh - var(--header-h) - var(--gap) * 2); } }
+  /* .board는 Shell의 .main 안에 있다 — 이 페이지는 항상 wide라 .main 패딩이 --gap이고,
+     그 상하 패딩과 sticky .topbar 높이를 100dvh에서 뺀다. 좁은 폭에서는 탭 스트립이
+     둘째 줄로 내려가 헤더가 두 단(--header-h-m)이 된다. */
+  .board { background: var(--surface); color: var(--fg); height: calc(100dvh - var(--header-h) - var(--gap) * 2); display: flex; flex-direction: column; overflow: hidden; }
+  @media (max-width: 699px) { .board { height: calc(100dvh - var(--header-h-m) - var(--gap) * 2); } }
 
   /* ── HEADER / FOOTER: 가로 배치는 .row가 맡고, 여기엔 이 페이지만의 바(bar) 크롬만 남는다 ── */
   .board header { border-bottom: 1px solid var(--line); background: var(--bg); padding: 8px 16px; flex-shrink: 0; }

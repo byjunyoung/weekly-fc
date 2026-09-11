@@ -45,18 +45,18 @@ function eyesShape(shape: (typeof PARTS.eyes)[number]['shape'], fill: string): s
   }
 }
 
-const chip = (uid: string, size: number, inner: string): string =>
+const chip = (uid: string, size: number, inner: string, bare = false): string =>
   `<svg viewBox="0 0 100 100" width="${size}" height="${size}" class="avatar-svg" xmlns="http://www.w3.org/2000/svg">` +
   `<clipPath id="${uid}c"><rect x="2" y="2" width="96" height="96" rx="16"/></clipPath>` +
   `<g clip-path="url(#${uid}c)">${inner}</g>` +
-  `<rect x="2" y="2" width="96" height="96" rx="16" fill="none" stroke="${LINE}" stroke-width="2"/>` +
+  (bare ? '' : `<rect x="2" y="2" width="96" height="96" rx="16" fill="none" stroke="${LINE}" stroke-width="2"/>`) +
   `</svg>`;
 
 /** 파싱 실패·미설정 스펙일 때의 폴백: 번호만 든 원(스펙 4절 "번호만 든 원").
  * avatarSvg가 스펙 없이도 항상 뭔가 그릴 수 있게 하는 최소 표시다. */
-function fallbackCircle(size: number, label: string | number | undefined): string {
+function fallbackCircle(size: number, label: string | number | undefined, bare = false): string {
   const text = label != null && label !== '' ? esc(String(label)) : '?';
-  return chip(nextUid(), size, `<rect x="2" y="2" width="96" height="96" rx="16" fill="${TINT}"/><text x="50" y="61" text-anchor="middle" font-size="34" font-weight="600" fill="${MUTED}">${text}</text>`);
+  return chip(nextUid(), size, `${bare ? '' : `<rect x="2" y="2" width="96" height="96" rx="16" fill="${TINT}"/>`}<text x="50" y="61" text-anchor="middle" font-size="34" font-weight="600" fill="${MUTED}">${text}</text>`, bare);
 }
 
 /**
@@ -64,8 +64,8 @@ function fallbackCircle(size: number, label: string | number | undefined): strin
  * 양쪽에서 다 읽혀야 함). fallbackLabel은 spec이 미설정일 때만 쓰는 번호(선택) —
  * randomAvatar로 시드를 채우는 정상 경로에서는 이 분기를 타지 않는다.
  */
-export function avatarSvg(spec: AvatarSpec, size: number, fallbackLabel?: string | number): string {
-  if (isUnsetAvatar(spec)) return fallbackCircle(size, fallbackLabel);
+export function avatarSvg(spec: AvatarSpec, size: number, fallbackLabel?: string | number, bare = false): string {
+  if (isUnsetAvatar(spec)) return fallbackCircle(size, fallbackLabel, bare);
   const face = PARTS.face[spec.face] ?? PARTS.face[0];
   const hair = PARTS.hair[spec.hair] ?? PARTS.hair[0];
   const skin = PARTS.skin[spec.skin] ?? PARTS.skin[0];
@@ -74,7 +74,7 @@ export function avatarSvg(spec: AvatarSpec, size: number, fallbackLabel?: string
   const hairSvg = hairShape(hair.shape, hair.color || skin.color);
   const behind = HAIR_BEHIND.has(hair.shape);
   const inner = [
-    `<rect x="2" y="2" width="96" height="96" rx="16" fill="${TINT}"/>`,
+    bare ? '' : `<rect x="2" y="2" width="96" height="96" rx="16" fill="${TINT}"/>`,
     `<path d="M10 100 L28 62 Q50 50 72 62 L90 100 Z" fill="${kit}"/>`,
     behind ? hairSvg : '',
     faceShape(face.shape, skin.color),
@@ -82,5 +82,5 @@ export function avatarSvg(spec: AvatarSpec, size: number, fallbackLabel?: string
     eyesShape(eyes.shape, eyes.color),
     `<rect x="40" y="60" width="20" height="3" rx="1.5" fill="${MUTED}"/>`,
   ].join('');
-  return chip(nextUid(), size, inner);
+  return chip(nextUid(), size, inner, bare);
 }

@@ -24,31 +24,25 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
   {!index && <meta name="robots" content="noindex" />}
   <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..900&display=swap" />
   <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <slot name="head" />
 </head>
 <body class:list={[{ wide }]}>
-  <header class="mhead">
-    <button id="menu-btn" aria-label="메뉴 열기">메뉴</button>
-    <a class="mark" href={href('/')}>WEEKLY FC</a>
-    <button id="me-btn-m" data-me-btn>이름</button>
-  </header>
-  <aside class="side" id="side">
-    <a class="mark" href={href('/')}>WEEKLY FC</a>
-    <nav>
+  <header class="topbar">
+    <a class="mark" href={href('/')}>WEEKLY<b>FC</b></a>
+    <nav class="topnav">
       {nav.map((n) => (
-        <a href={n.href} class:list={[{ active: isActive(n.href) }]}>
-          <span class="nav-short">{n.label[0]}</span>
-          <span class="nav-label">{n.label}</span>
-        </a>
+        <a href={n.href} class:list={[{ active: isActive(n.href) }]}><span>{n.label}</span></a>
       ))}
     </nav>
-    <div class="side-foot">
-      <button id="me-btn" data-me-btn>이름 고르기</button>
+    <div class="topbar-act">
+      <button id="me-btn" data-me-btn>이름</button>
       <button id="admin-btn">관리자</button>
     </div>
-  </aside>
-  <div class="scrim" id="scrim"></div>
+  </header>
   <main class="main">
     <p class="warn load-err" id="load-err" hidden>데이터를 불러오지 못했습니다 · <button id="load-err-retry">다시 시도</button></p>
     <slot />
@@ -78,14 +72,10 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
     import { getMe, setMe } from '../lib/me';
     import type { Data } from '../lib/types';
     const $ = (id: string) => document.getElementById(id) as HTMLElement;
-    const side = $('side'), scrim = $('scrim');
-    const openSide = (on: boolean) => { side.classList.toggle('open', on); scrim.classList.toggle('show', on); };
-    $('menu-btn').onclick = () => openSide(true);
-    scrim.onclick = () => openSide(false);
     document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => $(b.dataset.close!).classList.remove('show')));
 
     let players: Data['players'] = [];
-    const meLabel = () => { const me = getMe(); const p = players.find((x) => x.num === me); const t = p ? p.name : '이름 고르기'; document.querySelectorAll<HTMLElement>('[data-me-btn]').forEach((b) => (b.textContent = b.id === 'me-btn-m' && !p ? '이름' : t)); };
+    const meLabel = () => { const p = players.find((x) => x.num === getMe()); document.querySelectorAll<HTMLElement>('[data-me-btn]').forEach((b) => (b.textContent = p ? p.name : '이름')); };
     const adminLabel = () => { const b = $('admin-btn'); b.textContent = isAdmin() ? '관리자 모드 끄기' : '관리자'; b.classList.toggle('admin-on', isAdmin()); };
     document.querySelectorAll<HTMLElement>('[data-me-btn]').forEach((b) => (b.onclick = () => {
       const list = $('me-list'); list.innerHTML = '';

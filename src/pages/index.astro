@@ -11,8 +11,10 @@ import Shell from '../layouts/Shell.astro';
   import { href } from '../lib/url';
   import { esc, fmtDate, fmtWon, monthLabel, ytThumb, ytWatch } from '../lib/html';
   import { rotationFor, nextDuty } from '../lib/rotation';
-  import { fineSummary, seasonMatches, seasonTable } from '../lib/stats';
+  import { fineSummary, ovr, seasonMatches, seasonTable } from '../lib/stats';
   import { playerCard } from '../components/player-card';
+  import { avatarSvg } from '../components/avatar';
+  import { avatarSpecFor } from '../lib/avatar';
   import { conditionBadge } from '../components/condition';
   import { LINKS, MATCH_TIME, MATCH_MIN, PLACES } from '../lib/rules';
   import type { Data, Video } from '../lib/types';
@@ -26,7 +28,7 @@ import Shell from '../layouts/Shell.astro';
   // 내 자리 — 데이터가 있을 때만 뜨는 큰 카드 대신, 항상 화면 맨 위에 자리를 잡아 더 눈에 띄게 한다.
   function meSection(d: Data): string {
     const me = d.players.find((p) => p.num === getMe());
-    if (!me) return `<button class="home-me-cta" id="pick-me" type="button">사이드바에서 <b>이름 고르기</b>를 하면 내 미납·봉사 차례가 여기 뜹니다 →</button>`;
+    if (!me) return `<button class="home-me-cta" id="pick-me" type="button">오른쪽 위 <b>이름</b>에서 본인을 고르면 내 카드·미납·봉사 차례가 여기 뜹니다 →</button>`;
     const fs = fineSummary(d.fines);
     const duty = nextDuty(d.players, d.rotation, me.name);
     const unpaid = fs.byPlayer.get(me.name)?.unpaid ?? 0;
@@ -40,6 +42,15 @@ import Shell from '../layouts/Shell.astro';
         </div>
       </div>
     </div>`;
+  }
+
+  // 스쿼드 톱 — 매치·정산 데이터가 0건이어도 항상 채워지는 자리다(명단은 늘 있다).
+  // 홈 첫 화면에 아이템 카드를 깔아 게임 로비처럼 읽히게 하는 역할도 겸한다.
+  function topRated(d: Data): string {
+    const top = [...d.players].sort((a, b) => ovr(b) - ovr(a)).slice(0, 5);
+    if (!top.length) return '';
+    const cards = top.map((p) => `<a href="${href(`/squad/${p.num}/`)}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 104, p.num, true))}</a>`).join('');
+    return `<section><div class="label label-gap">스쿼드 톱 5 · OVR</div><div class="pcard-wall pcard-wall-sm">${cards}</div></section>`;
   }
 
   // 매치 기록이 없을 때는 썸네일 없이 좁게 — 크고 빈 칸을 만들지 않는다.
@@ -94,6 +105,7 @@ import Shell from '../layouts/Shell.astro';
 
     app.innerHTML = `
       ${meSection(d)}
+      ${topRated(d)}
       <div class="cards home-grid">
         ${matchTile(d)}
         ${videoTile()}
