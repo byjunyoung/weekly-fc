@@ -74,7 +74,12 @@
   --fs-display-xl: 54px; --fs-display-lg: 44px; --fs-display-md: 35px;
   --fs-h-xl: 28px; --fs-h-lg: 22px; --fs-h-md: 18px;
   --fs-body: 16px; --fs-sm: 14px; --fs-xs: 12px;
-  --fw-display: 300; --fw-body: 400; --fw-strong: 500; --fw-heavy: 600;
+  /* 굵기 — 정본은 디스플레이를 300 으로 쓰지만 그건 라틴(PlayStation SST) 기준이다.
+     한글은 같은 크기에서 획 밀도가 높아 Light 가 눈에 띄게 얇아 보이고, 한두 글자짜리
+     화면 제목("홈"·"기록")에서 특히 힘이 빠진다. 그래서 디스플레이를 400 으로 올리고,
+     정본의 "airy" 는 굵기가 아니라 크기·행간·여백으로 낸다.
+     데이터 숫자(OVR·타일 값)는 읽히는 게 목적이라 500~600 을 쓴다. */
+  --fw-display: 400; --fw-body: 400; --fw-strong: 500; --fw-heavy: 600; --fw-num: 600;
   /* 옛 이름 매핑 */
   --fs-md: var(--fs-body); --fs-lg: var(--fs-h-lg); --fs-xl: var(--fs-h-xl);
   --fs-xxl: var(--fs-display-md); --fs-hero: var(--fs-display-md); --fs-ovr: 56px;
@@ -104,6 +109,7 @@ img, video, canvas { display: block; max-width: 100%; height: auto; }
 [hidden] { display: none !important; }
 h1, h2, h3 { margin: 0; }
 h1 { font-size: var(--fs-h-xl); font-weight: var(--fw-display); line-height: 1.25; }
+.modal h2, .sq-ovr, .pcard-stat-val { font-variant-numeric: tabular-nums; }
 h2 { font-size: var(--fs-h-md); font-weight: var(--fw-heavy); line-height: 1.2; }
 .muted { color: var(--muted); }
 .label { display: block; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); letter-spacing: .02em; }
@@ -135,7 +141,7 @@ a.inline:hover { text-decoration: underline; }
 /* ══ 셸 ════════════════════════════════════════════════════ */
 .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--s-lg);
   height: var(--header-h); padding: 0 var(--s-xl); background: var(--canvas); border-bottom: 1px solid var(--hairline); }
-.mark { font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); letter-spacing: -.01em; white-space: nowrap; }
+.mark { font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); letter-spacing: .01em; white-space: nowrap; }
 .mark b { font-weight: var(--fw-heavy); color: var(--muted); }
 .topnav { display: flex; align-items: center; gap: var(--s-xs); flex: 1; overflow-x: auto; scrollbar-width: none; }
 .topnav::-webkit-scrollbar { display: none; }
@@ -153,8 +159,9 @@ body.wide .main { max-width: none; padding: var(--s-md); }
 /* 화면 머리 — 큰 가벼운 제목. 액센트 슬래브·기울임은 쓰지 않는다. */
 .page-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
   gap: var(--s-md); margin-bottom: var(--s-xl); }
-.page-head h1 { font-size: var(--fs-display-md); font-weight: var(--fw-display); line-height: 1.25; letter-spacing: -.01em; }
-.page-head h1 .muted { font-size: var(--fs-h-lg); font-weight: var(--fw-display); }
+.page-head .actions > .muted { font-size: var(--fs-sm); }
+.page-head h1 { font-size: var(--fs-display-lg); font-weight: var(--fw-display); line-height: 1.2; letter-spacing: 0; }
+.page-head h1 .muted { font-size: var(--fs-h-md); font-weight: var(--fw-body); }
 .page-head .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
 body.wide .page-head { margin-bottom: var(--s-md); }
 body.wide .page-head h1 { font-size: var(--fs-h-lg); }
@@ -222,7 +229,7 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s-md); }
 .card { padding: var(--s-lg); background: var(--card); border-radius: var(--r-md); }
 .card h2 { margin-bottom: var(--s-sm); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
-.card .big { font-size: var(--fs-h-xl); font-weight: var(--fw-display); line-height: 1.15; font-variant-numeric: tabular-nums; }
+.card .big { font-size: var(--fs-h-xl); font-weight: var(--fw-num); line-height: 1.15; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 a.card { transition: background var(--dur-micro) var(--ease-std); }
 a.card:hover { background: var(--charcoal); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--s-xs); }
@@ -269,7 +276,7 @@ a.card:hover { background: var(--charcoal); }
   background: linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.3) 42%, rgba(0,0,0,.82) 74%, rgba(0,0,0,.94) 100%); }
 .art > :not(img) { position: relative; z-index: 2; }
 .art-kicker { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: rgba(255, 255, 255, .8); }
-.art-title { margin: var(--s-xs) 0 var(--s-xxs); font-size: var(--fs-display-lg); font-weight: var(--fw-display); line-height: 1.1; letter-spacing: -.01em; }
+.art-title { margin: var(--s-xs) 0 var(--s-xxs); font-size: var(--fs-display-lg); font-weight: var(--fw-display); line-height: 1.1; letter-spacing: 0; }
 .art-sub { color: rgba(255, 255, 255, .78); font-size: var(--fs-sm); }
 .art-foot { margin-top: var(--s-md); display: flex; flex-wrap: wrap; gap: var(--s-xs); }
 .rail { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(128px, 1fr); gap: var(--s-sm); }
@@ -280,7 +287,7 @@ a.card:hover { background: var(--charcoal); }
   transition: background var(--dur-micro) var(--ease-std); }
 .tile:hover { background: var(--charcoal); }
 .tile-label { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
-.tile-big { margin-top: auto; font-size: var(--fs-h-xl); font-weight: var(--fw-display); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile-big { margin-top: auto; font-size: var(--fs-h-xl); font-weight: var(--fw-num); line-height: 1.1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .tile-sub { margin-top: var(--s-xxs); font-size: var(--fs-xs); color: var(--muted); }
 .tile-wide { grid-column: span 2; }
 .tile-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-xxs); margin-top: var(--s-xs); }
@@ -305,7 +312,7 @@ a.card:hover { background: var(--charcoal); }
 .pcard-body { display: flex; flex-direction: column; width: 100%; padding: var(--s-md) var(--s-md) var(--s-lg); }
 .pcard-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-xs); width: 100%; min-height: 104px; }
 .pcard-ovr-block { display: flex; flex-direction: column; align-items: flex-start; align-self: flex-start; }
-.pcard-ovr { display: block; font-size: var(--fs-ovr); font-weight: var(--fw-display); line-height: .9; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.pcard-ovr { display: block; font-size: var(--fs-ovr); font-weight: var(--fw-num); line-height: .9; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .pcard-pos { display: block; font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); line-height: 1.1; }
 .pcard-num { display: block; margin-top: var(--s-xxs); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
 .pcard-portrait { align-self: flex-end; margin: 0 -4px -6px 0; }
