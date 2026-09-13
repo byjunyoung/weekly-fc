@@ -4,45 +4,77 @@ import Shell from '../../layouts/Shell.astro';
 <Shell title="스쿼드">
   <div class="page-head">
     <h1>스쿼드 <span class="muted" id="count"></span></h1>
-    <div class="actions">
-      <div class="chips" id="pos-filter" role="group" aria-label="포지션 거르기"><button class="chip on" data-pos="ALL" aria-pressed="true">전체</button><button class="chip" data-pos="GK" aria-pressed="false">GK</button><button class="chip" data-pos="DF" aria-pressed="false">DF</button><button class="chip" data-pos="MF" aria-pressed="false">MF</button><button class="chip" data-pos="FW" aria-pressed="false">FW</button></div>
-      <input id="q" type="search" placeholder="이름" class="w-search" />
-      <select id="sort" class="w-sort"><option value="ovr">OVR 순</option><option value="num">번호 순</option><option value="name">이름 순</option></select>
-      <select id="formation" class="w-sort"></select>
-      <div class="chips" id="view-toggle" role="group" aria-label="보기 방식"><button class="chip on" data-view="pitch" aria-pressed="true">피치</button><button class="chip" data-view="card" aria-pressed="false">카드</button><button class="chip" data-view="table" aria-pressed="false">표</button></div>
-      <button id="add" hidden>선수 추가</button>
-    </div>
+    <div class="actions"><button id="add" hidden>선수 추가</button></div>
   </div>
-  <div id="app"></div>
+  <div class="bd-controls" role="group" aria-label="라인업 설정">
+    <div class="bd-stepper"><span class="label">인원</span><button type="button" id="cnt-dec" aria-label="인원 줄이기">−</button><b id="cnt" aria-live="polite"></b><button type="button" id="cnt-inc" aria-label="인원 늘리기">+</button></div>
+    <label class="bd-field"><span class="label">포메이션</span><select id="shape"></select></label>
+    <div class="chips" id="pitch-kind" role="group" aria-label="경기장"><button class="chip" data-kind="futsal" aria-pressed="false">풋살</button><button class="chip" data-kind="soccer" aria-pressed="false">축구</button></div>
+    <button type="button" id="auto">자동 배치</button>
+  </div>
+  <div class="bd">
+    <section class="bd-list" id="list" aria-label="명단">
+      <button type="button" class="bd-sheet-handle" id="sheet-handle" aria-expanded="false"><span id="sheet-summary"></span></button>
+      <div class="bd-list-head">
+        <div class="chips" id="pos-filter" role="group" aria-label="포지션 거르기"><button class="chip on" data-pos="ALL" aria-pressed="true">전체</button><button class="chip" data-pos="GK" aria-pressed="false">GK</button><button class="chip" data-pos="DF" aria-pressed="false">DF</button><button class="chip" data-pos="MF" aria-pressed="false">MF</button><button class="chip" data-pos="FW" aria-pressed="false">FW</button></div>
+        <input id="q" type="search" placeholder="이름" class="w-search" />
+        <div class="chips" id="view-toggle" role="group" aria-label="명단 보기"><button class="chip" data-view="list" aria-pressed="false">목록</button><button class="chip" data-view="card" aria-pressed="false">카드</button><button class="chip" data-view="table" aria-pressed="false">표</button></div>
+      </div>
+      <div id="list-body"></div>
+    </section>
+    <section class="bd-stage" aria-label="피치">
+      <div id="pitch-slot"></div>
+      <div class="bd-tools" id="tools" role="toolbar" aria-label="도구"></div>
+      <p class="muted bd-hint" id="hint"></p>
+    </section>
+  </div>
 </Shell>
 <script>
   import { onData, isAdmin } from '../../lib/api.ts';
   import { href } from '../../lib/url.ts';
-  import { esc } from '../../lib/html.ts';
-  import { ovr, band, STAT_CUTS } from '../../lib/stats.ts';
+  import { esc, toast } from '../../lib/html.ts';
+  import { ovr, band, grade, STAT_CUTS } from '../../lib/stats.ts';
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
   import { playerCard, STAT_LABEL } from '../../components/player-card.ts';
   import { avatarSvg } from '../../components/avatar.ts';
   import { avatarSpecFor } from '../../lib/avatar.ts';
-  import { FORMATIONS, FORMATION_NAMES, bestEleven } from '../../lib/formation.ts';
-  import { grade } from '../../lib/stats.ts';
+  import { pitchHtml } from '../../components/pitch-view.ts';
+  import { SHAPES, MIN_COUNT, MAX_COUNT, type PitchKind } from '../../lib/formation.ts';
+  import * as L from '../../lib/lineup.ts';
   import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
 
-  // 기본은 카드 벽 — 아이템을 늘어놓은 화면이 FC의 첫인상이다. 표(FM식 밀도)는 토글로 남긴다.
+  type View = 'list' | 'card' | 'table';
   const VIEW_KEY = 'wfc.squad.view';
-  let data: Data | null = null, pos = 'ALL', q = '';
-  type View = 'pitch' | 'card' | 'table';
-  let view: View = (localStorage.getItem(VIEW_KEY) as View) || 'pitch';
-  const FORM_KEY = 'wfc.squad.formation';
-  let formation = localStorage.getItem(FORM_KEY) || FORMATION_NAMES[0];
-  let sortKey = 'ovr';
-  const state: TableState = { sortKey: 'num', sortDir: 'asc' };
-  const app = document.getElementById('app')!;
-  /** 눌린 칩을 색만이 아니라 aria-pressed 로도 알린다. */
-  const setChip = (el: HTMLElement, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); };
+  const load = (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } };
+  const save = (k: string, v: string): void => { try { localStorage.setItem(k, v); } catch { /* 저장 못 해도 화면은 돈다 */ } };
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const setChip = (el: Element, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); };
+
+  let data: Data | null = null;
+  let st: L.LineupState = L.initial();
+  /** 사용자가 한 번이라도 바꿨는지. 그 전에는 새 데이터가 올 때마다 초안을 다시 복원한다 —
+   *  캐시 명단에 없던 선수가 새 명단에 있을 수 있어서다. */
+  let touched = false;
+  let selected: number | null = null;
+  let pos = 'ALL', q = '';
+  const savedView = load(VIEW_KEY);
+  let view: View = savedView === 'card' || savedView === 'table' ? savedView : 'list';
+  const tableState: TableState = { sortKey: 'ovr', sortDir: 'desc' };
+
+  function commit(next: L.LineupState): void {
+    st = next;
+    touched = true;
+    save(L.DRAFT_KEY, L.serialize(st));
+    render();
+  }
+
+  // ── 명단 ──────────────────────────────────────────────
+  const byOvr = (rows: Player[]) => [...rows].sort((a, b) => ovr(b) - ovr(a) || a.num - b.num);
 
   function cols(): Column<Player>[] {
     return [
+      { key: 'pick', label: '선발', sortable: false, align: 'c', get: (p) => (L.isStarter(st, p.num) ? 1 : 0),
+        cell: (p) => `<button type="button" class="${L.isStarter(st, p.num) ? 'primary' : ''}" data-pick="${p.num}" aria-pressed="${L.isStarter(st, p.num)}">${L.isStarter(st, p.num) ? '선발' : '넣기'}</button>` },
       { key: 'avatar', label: '', sortable: false, get: () => '', cell: (p) => avatarSvg(avatarSpecFor(p.num, p.avatar), 28, p.num), align: 'c' },
       { key: 'num', label: '#', get: (p) => p.num, align: 'r' },
       { key: 'name', label: '이름', get: (p) => p.name, cell: (p) => `<a href="${href(`/squad/${p.num}/`)}"><b>${esc(p.name)}</b></a>` },
@@ -52,81 +84,152 @@ import Shell from '../../layouts/Shell.astro';
     ];
   }
 
-  // 카드 벽의 정렬 — 표는 머리글 클릭으로 정렬하므로 이쪽은 select 하나로 따로 둔다.
-  function sortCards(rows: Player[]): Player[] {
-    const by: Record<string, (p: Player) => number | string> = {
-      ovr: (p) => -ovr(p), num: (p) => p.num, name: (p) => p.name,
+  function renderList(rows: Player[]): void {
+    const body = $('list-body');
+    const empty = '<p class="pcard-empty">명단이 비어 있습니다</p>';
+    if (view === 'table') {
+      body.className = 'tbl-wrap';
+      mountTable(body, cols(), rows, tableState, { empty: '명단이 비어 있습니다', rowKey: (p) => String(p.num) });
+      return;
+    }
+    if (view === 'card') {
+      body.className = 'pcard-wall';
+      body.innerHTML = rows.length ? byOvr(rows).map((p) => { const on = L.isStarter(st, p.num);
+        return `<div class="bd-cardcell"><div class="bd-cardpick${on ? ' is-on' : ''}" role="button" tabindex="0" data-pick="${p.num}" aria-pressed="${on}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 116, p.num, true))}</div><a class="bd-card-link" href="${href(`/squad/${p.num}/`)}">선수 페이지 ›</a></div>`; }).join('') : empty;
+      return;
+    }
+    body.className = '';
+    body.innerHTML = rows.length ? `<div class="bd-rows">${byOvr(rows).map((p) => { const on = L.isStarter(st, p.num);
+      return `<div class="bd-row${on ? ' is-on' : ''}"><button type="button" class="bd-pick" data-pick="${p.num}" aria-pressed="${on}"><span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span><b>${esc(p.name)}</b><span class="bd-row-ovr grade-${grade(ovr(p))}">${ovr(p) || '–'}</span>${on ? '<span class="bd-on">선발</span>' : '<span></span>'}</button><a class="bd-row-link" href="${href(`/squad/${p.num}/`)}" aria-label="${esc(p.name)} 선수 페이지">›</a></div>`; }).join('')}</div>` : empty;
+  }
+
+  function onPick(num: number): void {
+    const r = L.tapPlayer(st, num, selected);
+    if (r.result === 'full') { toast('자리가 다 찼습니다 · 자리를 먼저 고르세요'); return; }
+    selected = null;
+    commit(r.state);
+  }
+
+  // ── 피치 ──────────────────────────────────────────────
+  const DRAG_PX = 6;
+
+  function tapSlot(idx: number): void {
+    if (selected === null) { selected = idx; render(); openSheet(); return; }
+    if (selected === idx) { selected = null; render(); return; }
+    const a = selected;
+    selected = null;
+    commit(L.swap(st, a, idx));
+  }
+
+  /** 카드 끌기 — 다른 카드 위에 놓으면 교환, 빈 곳이면 그 슬롯 위치만 옮긴다. 6px 안쪽이면 탭으로 본다. */
+  function startDrag(e: PointerEvent, el: HTMLElement, pitch: HTMLElement): void {
+    if (e.button !== 0) return;
+    const idx = Number(el.dataset.slot);
+    const x0 = e.clientX, y0 = e.clientY;
+    let dragging = false;
+    el.setPointerCapture(e.pointerId);
+    const off = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); };
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!dragging && Math.hypot(dx, dy) < DRAG_PX) return;
+      dragging = true;
+      el.classList.add('is-dragging');
+      el.style.translate = `${dx}px ${dy}px`;
     };
-    const f = by[sortKey] ?? by.ovr;
-    return [...rows].sort((a, b) => { const x = f(a), y = f(b); return typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'ko'); });
+    const cancel = () => { off(); render(); };
+    const up = (ev: PointerEvent) => {
+      off();
+      if (!dragging) { tapSlot(idx); return; }
+      el.style.visibility = 'hidden';
+      const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>('[data-slot]');
+      el.style.visibility = '';
+      if (under && under !== el) { selected = null; commit(L.swap(st, idx, Number(under.dataset.slot))); return; }
+      const r = pitch.getBoundingClientRect();
+      const inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      if (inside) commit(L.moveSlot(st, idx, [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height]));
+      else render();
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', cancel);
   }
 
-  // 피치 선 — viewBox 가 컨테이너 비율(68x105)과 같아 원이 찌그러지지 않는다.
-  const PITCH_LINES = `<svg class="sq-lines" viewBox="0 0 68 105" fill="none" stroke="rgba(255,255,255,.16)" stroke-width=".4">
-    <rect x="2" y="2" width="64" height="101"/><line x1="2" y1="52.5" x2="66" y2="52.5"/><circle cx="34" cy="52.5" r="9.15"/>
-    <rect x="13.2" y="2" width="41.6" height="16.5"/><rect x="24.8" y="2" width="18.4" height="5.5"/>
-    <rect x="13.2" y="86.5" width="41.6" height="16.5"/><rect x="24.8" y="97.5" width="18.4" height="5.5"/>
-    <circle cx="34" cy="52.5" r=".6" fill="rgba(255,255,255,.16)"/></svg>`;
-
-  function pitchView(rows: Player[], d: Data): string {
-    const slots = FORMATIONS[formation] ?? FORMATIONS[FORMATION_NAMES[0]];
-    const { lineup, bench } = bestEleven(rows, slots);
-    const cards = lineup.map(({ slot, player, outOfPosition }) => {
-      const at = `left:${(slot.x * 100).toFixed(1)}%;top:${(slot.y * 100).toFixed(1)}%`;
-      if (!player) return `<div class="sq-slot" style="${at}"><div class="sq-empty">${esc(slot.label)}</div></div>`;
-      const o = ovr(player);
-      const title = outOfPosition ? ` title="${esc(player.pos) || '미정'} 인데 ${esc(slot.label)} 자리에 섰습니다"` : '';
-      return `<div class="sq-slot" style="${at}">
-        <a class="sq-card pcard-${grade(o)}${outOfPosition ? ' oop' : ''}" href="${href(`/squad/${player.num}/`)}"${title}>
-          <b class="sq-ovr">${o || '–'}</b>
-          <span class="sq-name">${esc(player.name)}</span>
-          <span class="sq-slotlabel">${esc(slot.label)}</span>
-        </a></div>`;
-    }).join('');
-    const oop = lineup.filter((a) => a.outOfPosition).length;
-    const picked = lineup.map((a) => a.player).filter((p): p is Player => !!p);
-    const avg = picked.length ? Math.round(picked.reduce((t, p) => t + ovr(p), 0) / picked.length) : 0;
-    const lineCount = (['GK', 'DF', 'MF', 'FW'] as const)
-      .map((k) => `${k} ${picked.filter((p) => p.pos === k).length}`).join(' · ');
-    const benchRows = bench.length
-      ? bench.map((p) => `<a class="sq-bench-row" href="${href(`/squad/${p.num}/`)}"><span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span><b>${esc(p.name)}</b><span class="sq-bench-ovr grade-${grade(ovr(p))}">${ovr(p) || '–'}</span></a>`).join('')
-      : '<p class="muted">벤치가 비었습니다.</p>';
-    return `<div class="sq">
-      <div class="sq-pitch">${PITCH_LINES}${cards}</div>
-      <div class="sq-side">
-        <div class="card"><h2>선발 ${esc(formation)}</h2>
-          <div class="big">${avg || '–'}<span class="muted sq-avg-unit"> 평균 OVR</span></div>
-          <p class="muted">OVR 순 자동 배치 · ${lineCount}${oop ? ` · <b>${oop}명</b>이 자리 밖` : ''}</p></div>
-        <div class="card"><h2>벤치 ${bench.length}명</h2><div class="sq-bench">${benchRows}</div></div>
-      </div>
-    </div>`;
+  function bindPitch(): void {
+    const pitch = document.querySelector<HTMLElement>('[data-pitch]');
+    if (!pitch) return;
+    pitch.querySelectorAll<HTMLElement>('[data-slot]').forEach((el) => {
+      el.onpointerdown = (e) => startDrag(e, el, pitch);
+      // 키보드(Enter·Space)는 pointer 이벤트가 없다 — detail 0 인 click 으로만 들어온다.
+      el.onclick = (e) => { if (e.detail === 0) tapSlot(Number(el.dataset.slot)); };
+    });
+    pitch.addEventListener('click', (e) => {
+      if (!(e.target as Element).closest('[data-slot]') && selected !== null) { selected = null; render(); }
+    });
   }
 
-  function render() {
+  // ── 모바일 명단 시트 ─────────────────────────────────────
+  const narrow = () => matchMedia('(max-width: 899px)').matches;
+  function toggleSheet(open?: boolean): void {
+    const list = $('list');
+    const on = open ?? !list.classList.contains('is-open');
+    list.classList.toggle('is-open', on);
+    $('sheet-handle').setAttribute('aria-expanded', String(on));
+  }
+  const openSheet = () => { if (narrow()) toggleSheet(true); };
+
+  // ── 그리기 ────────────────────────────────────────────
+  function renderControls(): void {
+    $('cnt').textContent = String(st.count);
+    ($('cnt-dec') as HTMLButtonElement).disabled = st.count <= MIN_COUNT;
+    ($('cnt-inc') as HTMLButtonElement).disabled = st.count >= MAX_COUNT;
+    ($('shape') as HTMLSelectElement).innerHTML = SHAPES[st.count].map((k) => `<option value="${k}"${k === st.shape ? ' selected' : ''}>${k}</option>`).join('');
+    document.querySelectorAll('#pitch-kind [data-kind]').forEach((b) => setChip(b, (b as HTMLElement).dataset.kind === st.pitch));
+    document.querySelectorAll('#view-toggle [data-view]').forEach((b) => setChip(b, (b as HTMLElement).dataset.view === view));
+  }
+
+  function render(): void {
     if (!data) return;
     const d = data;
+    if (!touched) st = L.restore(load(L.DRAFT_KEY), d.players);
     const rows = d.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
-    document.getElementById('count')!.textContent = `${rows.length}명`;
-    document.getElementById('add')!.hidden = !isAdmin();
-    document.getElementById('sort')!.hidden = view !== 'card';
-    document.getElementById('formation')!.hidden = view !== 'pitch';
-    if (view === 'pitch') { app.className = ''; app.innerHTML = rows.length ? pitchView(rows, d) : '<p class="pcard-empty">명단이 비어 있습니다</p>'; return; }
-    if (view === 'table') { app.className = 'tbl-wrap'; mountTable(app, cols(), rows, state, { empty: '명단이 비어 있습니다' }); return; }
-    app.className = 'pcard-wall';
-    app.innerHTML = rows.length
-      ? sortCards(rows).map((p) => `<a href="${href(`/squad/${p.num}/`)}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 116, p.num, true))}</a>`).join('')
-      : '<p class="pcard-empty">명단이 비어 있습니다</p>';
+    const filled = st.slots.filter((x) => x != null).length;
+    $('count').textContent = `${d.players.length}명`;
+    $('add').hidden = !isAdmin();
+    $('sheet-summary').textContent = `명단 ${d.players.length}명 · 선발 ${filled}/${st.count}`;
+    renderControls();
+    $('pitch-slot').innerHTML = pitchHtml(st, d.players, selected);
+    bindPitch();
+    renderList(rows);
+    $('hint').textContent = selected !== null
+      ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
+      : '자리를 누르고 선수를 고르세요 · 카드를 끌면 옮기거나 맞바꿉니다';
   }
 
-  document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => setChip(x as HTMLElement, x === b)); render(); }));
-  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as View; localStorage.setItem(VIEW_KEY, view); document.querySelectorAll('#view-toggle .chip').forEach((x) => setChip(x as HTMLElement, x === b)); render(); }));
-  const formSel = document.getElementById('formation') as HTMLSelectElement;
-  formSel.innerHTML = FORMATION_NAMES.map((n) => `<option value="${n}"${n === formation ? ' selected' : ''}>${n}</option>`).join('');
-  formSel.onchange = (e) => { formation = (e.target as HTMLSelectElement).value; localStorage.setItem(FORM_KEY, formation); render(); };
-  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((x) => setChip(x, x.dataset.view === view));
-  (document.getElementById('sort') as HTMLSelectElement).onchange = (e) => { sortKey = (e.target as HTMLSelectElement).value; render(); };
-  (document.getElementById('q') as HTMLInputElement).oninput = (e) => { q = (e.target as HTMLInputElement).value.trim(); render(); };
-  document.getElementById('add')!.onclick = () => { const used = new Set(data!.players.map((p) => p.num)); let n = 1; while (used.has(n)) n++; location.href = href(`/squad/${n}/?new=1`); };
+  // ── 배선 ──────────────────────────────────────────────
+  $('cnt-dec').onclick = () => { selected = null; commit(L.setCount(st, st.count - 1)); };
+  $('cnt-inc').onclick = () => { selected = null; commit(L.setCount(st, st.count + 1)); };
+  ($('shape') as HTMLSelectElement).onchange = (e) => { selected = null; commit(L.setShape(st, (e.target as HTMLSelectElement).value)); };
+  document.querySelectorAll<HTMLElement>('#pitch-kind [data-kind]').forEach((b) => (b.onclick = () => commit(L.setPitch(st, b.dataset.kind as PitchKind))));
+  $('auto').onclick = () => { if (!data) return; selected = null; commit(L.autoFill(st, data.players)); };
+  $('sheet-handle').onclick = () => toggleSheet();
+
+  // 명단은 다시 그릴 때마다 innerHTML 이 바뀌고, 표는 머리글 정렬 때 mountTable 이 스스로 다시 그린다 —
+  // 그래서 행마다 붙이지 않고 바깥 한 곳에서 위임으로 받는다.
+  const listBody = $('list-body');
+  listBody.addEventListener('click', (e) => {
+    const el = (e.target as Element).closest<HTMLElement>('[data-pick]');
+    if (el) onPick(Number(el.dataset.pick));
+  });
+  listBody.addEventListener('keydown', (e) => {
+    const el = (e.target as Element).closest<HTMLElement>('[role="button"][data-pick]');
+    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(Number(el.dataset.pick)); }
+  });
+
+  document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => setChip(x, x === b)); render(); }));
+  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as View; save(VIEW_KEY, view); render(); }));
+  ($('q') as HTMLInputElement).oninput = (e) => { q = (e.target as HTMLInputElement).value.trim(); render(); };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selected !== null) { selected = null; render(); } });
+  $('add').onclick = () => { const used = new Set(data!.players.map((p) => p.num)); let n = 1; while (used.has(n)) n++; location.href = href(`/squad/${n}/?new=1`); };
   window.addEventListener('wfc:admin', render);
   onData((d) => { data = d; render(); });
 </script>
