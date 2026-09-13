@@ -1811,7 +1811,7 @@ Claude-Session: https://claude.ai/code/session_01DaDPzugZyKUdGnpyTH5KY4"
 - Test: `tests/unit/share.test.mjs`
 
 **Interfaces:**
-- Consumes: `slotsOf`, `positionOf`, `benchOf`, `setTitle`, `defaultTitle`, `type LineupState` (Task 5), `PITCH_DIM` (Task 6), `ARROW_HEAD` (Task 8), `seoulToday` (`src/lib/html.ts`)
+- Consumes: `slotsOf`, `positionOf`, `setTitle`, `defaultTitle`, `type LineupState` (Task 5), `PITCH_DIM` (Task 6), `ARROW_HEAD` (Task 8), `seoulToday` (`src/lib/html.ts`)
 - Produces:
   - `type ShareEnv = { canShareFiles: boolean; ua: string; touchPoints: number }`
   - `type ShareMethod = 'share' | 'longpress' | 'download'`
@@ -1892,7 +1892,7 @@ Create `src/components/share-image.ts`:
 // src/components/share-image.ts — 라인업을 1080×1350(4:5, 카톡·인스타 피드 비율) PNG 로.
 // 화면 캡처가 아니라 공유용으로 따로 그린다. 캔버스는 CSS 변수를 못 읽어 그리는 시점에 토큰을 읽는다.
 // OVR 은 그리지 않는다 — 단톡방에 능력치 숫자가 도는 건 민감할 수 있다(2026-09-13 스펙 §5.1).
-import { slotsOf, positionOf, benchOf, type LineupState } from '../lib/lineup.ts';
+import { slotsOf, positionOf, type LineupState } from '../lib/lineup.ts';
 import type { PitchKind } from '../lib/formation.ts';
 import type { Player } from '../lib/types.ts';
 import { PITCH_DIM } from './pitch-view.ts';
@@ -1916,15 +1916,6 @@ function fit(ctx: CanvasRenderingContext2D, text: string, maxW: number): string 
 function box(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
   ctx.beginPath();
   if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
-}
-
-/** 벤치 한 줄 — 넘치면 뒤를 "외 N명"으로 접는다. */
-function benchLine(ctx: CanvasRenderingContext2D, names: string[], maxW: number): string {
-  for (let k = names.length; k > 0; k--) {
-    const t = names.slice(0, k).join(' · ') + (k < names.length ? ` 외 ${names.length - k}명` : '');
-    if (ctx.measureText(t).width <= maxW) return t;
-  }
-  return `${names.length}명`;
 }
 
 /** 피치 선 — pitch-view.ts 의 SVG 와 같은 도형을 같은 단위(m)로 그린다. */
@@ -2011,13 +2002,8 @@ export function drawLineupImage(c: HTMLCanvasElement, s: LineupState, players: P
   });
   ctx.restore();
 
-  // 벤치 한 줄, 주소
-  const names = benchOf(s, players).map((p) => p.name);
+  // 주소. 벤치 줄은 넣지 않는다 — 참석 기록이 없어 선발이 아닌 전체 명단이 찍힌다(2026-09-13 사용자 결정).
   ctx.textAlign = 'left';
-  if (names.length) {
-    ctx.fillStyle = muted; ctx.font = `600 24px ${font}`; ctx.fillText('벤치', M, 1256);
-    ctx.fillStyle = fg; ctx.font = `400 24px ${font}`; ctx.fillText(benchLine(ctx, names, IMG_W - M * 2 - 80), M + 80, 1256);
-  }
   ctx.fillStyle = muted; ctx.font = `400 20px ${font}`; ctx.fillText('byjunyoung.github.io/weekly-fc', M, 1310);
 }
 ```
@@ -2117,7 +2103,7 @@ Expected: PASS 전부.
 
 `npm run dev` 상태에서 `/weekly-fc/squad/`를 Claude in Chrome으로:
 1. 6인 · 풋살 · 자동 배치 · 화살표 하나 그린 뒤 「이미지 공유」 → 대화상자에 4:5 미리보기, 제목 기본값이 다가오는 토요일.
-2. 미리보기에서 확인: 이름·자리 라벨·화살표·벤치 줄·주소가 있고 **OVR 숫자가 없음**, 글꼴이 Pretendard.
+2. 미리보기에서 확인: 이름·자리 라벨·화살표·주소가 있고 **OVR 숫자와 벤치 줄이 없음**, 글꼴이 Pretendard.
 3. 제목을 「플랩 매치」로 바꾸고 칸 밖을 누름 → 미리보기 제목이 바뀜 → 새로고침 뒤 다시 열어도 「플랩 매치」.
 4. 11인 · 축구 · 자동 배치로 바꾸고 다시 열기 → 3-5-2 등 줄 인원 5명 모양에서 이름이 읽힐 만큼만 겹침.
 5. 데스크톱 크롬에서 보이는 버튼이 「공유하기」 또는 「내려받기」 중 하나이고, 누르면 동작(내려받기면 PNG 파일, 공유면 시스템 공유 창).
