@@ -85,7 +85,7 @@
   --fs-xxl: var(--fs-display-md); --fs-hero: var(--fs-display-md); --fs-ovr: 56px;
 
   /* ── 옛 이름 별칭 ─────────────────────────────────────────
-     pitch.ts·avatar.ts·recap.ts·tactics.astro 는 토큰을 getComputedStyle 로 읽어 캔버스에
+     avatar.ts 는 토큰을 getComputedStyle 로 읽어 SVG 에
      그리므로, 이름만 바꾸면 조용히 색이 빠진다. var() 참조 대신 같은 값을 그대로 둔다. */
   --bg: #000000; --bg-2: #121314; --surface: #181818; --tint: #1f2024;
   --line: rgba(229, 229, 229, .2); --line-hi: rgba(229, 229, 229, .38);
@@ -109,7 +109,7 @@ img, video, canvas { display: block; max-width: 100%; height: auto; }
 [hidden] { display: none !important; }
 h1, h2, h3 { margin: 0; }
 h1 { font-size: var(--fs-h-xl); font-weight: var(--fw-display); line-height: 1.25; }
-.modal h2, .sq-ovr, .pcard-stat-val { font-variant-numeric: tabular-nums; }
+.modal h2, .pcard-stat-val { font-variant-numeric: tabular-nums; }
 h2 { font-size: var(--fs-h-md); font-weight: var(--fw-heavy); line-height: 1.2; }
 .muted { color: var(--muted); }
 .label { display: block; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); letter-spacing: .02em; }
@@ -211,9 +211,6 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
 .val-b { color: var(--val-b); background: var(--val-b-bg); }
 .val-c { color: var(--val-c); background: var(--val-c-bg); }
 .val-d { color: var(--val-d); background: var(--val-d-bg); }
-.cond { display: inline-block; font-weight: var(--fw-heavy); }
-.cond-up { color: var(--cond-up); } .cond-mid { color: var(--cond-mid); } .cond-down { color: var(--cond-down); }
-.cond-none { color: var(--muted); font-weight: var(--fw-body); }
 .pos { display: inline-block; min-width: 2.6em; padding: 2px var(--s-xs); border-radius: var(--r-full);
   text-align: center; color: #fff; font-size: var(--fs-xs); font-weight: var(--fw-heavy); }
 .pos-gk { background: var(--pos-gk); color: var(--ink); }
@@ -446,7 +443,6 @@ a.card:hover { background: var(--charcoal); }
 }
 
 /* ══ 기타 ══════════════════════════════════════════════════ */
-.pitch-svg { width: 100%; max-width: var(--pitch-max); background: var(--card); border-radius: var(--r-md); }
 details.year > summary { cursor: pointer; padding: var(--s-sm) 0; font-weight: var(--fw-strong); list-style: none; }
 details.year > summary::before { content: "▸ "; color: var(--muted); }
 details.year[open] > summary::before { content: "▾ "; }

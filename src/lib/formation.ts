@@ -1,6 +1,6 @@
 // src/lib/formation.ts — 인원별 포메이션 슬롯과 자동 배치.
 // 좌표는 0~1, 세로 피치 기준이고 y=0 이 상대 골대, y=1 이 우리 골대다.
-// 전에는 이 파일(11인 4종)과 pitch.ts(CURATED 5·7·11인)에 목록이 흩어져 있었다 — 여기 하나로 합친다.
+// 전에는 이 파일(11인 4종)과 옛 캔버스 전술판(CURATED 5·7·11인)에 목록이 흩어져 있었다 — 여기 하나로 합친다.
 import { ovr } from './stats.ts';
 import type { Player, Pos } from './types.ts';
 

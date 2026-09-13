@@ -51,6 +51,7 @@ test('옛 주소는 새 주소로 넘긴다', () => {
     'record/index.html': '/weekly-fc/rules/#fees',
     'record/fines/index.html': '/weekly-fc/rules/#fees',
     'record/duty/index.html': '/weekly-fc/rules/#duty',
+    'tactics/index.html': '/weekly-fc/squad/',
   };
   for (const [p, to] of Object.entries(cases)) assert.ok(read(p).includes(`url=${to}"`), `${p} → ${to}`);
 });
