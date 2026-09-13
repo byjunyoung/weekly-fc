@@ -427,6 +427,9 @@ a.card:hover { background: var(--charcoal); }
   .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); padding-bottom: 72px; }
   .bd-slot { width: 62px; min-height: 50px; }
   .bd-ovr { font-size: var(--fs-body); }
+  .bd-tools { flex-wrap: nowrap; gap: var(--s-xxs); }
+  .bd-tools .chips { flex-wrap: nowrap; gap: var(--s-xxs); }
+  .bd-tools .chip, .bd-tools > button { min-height: 36px; padding: var(--s-xxs) var(--s-sm); font-size: var(--fs-xs); white-space: nowrap; }
   /* 명단은 아래에서 끌어올리는 시트 — 접힌 높이는 손잡이 한 줄. */
   .bd-list { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; max-height: 64px; padding: 0 var(--s-md) var(--s-md);
     background: var(--elevated); border-top: 1px solid var(--hairline); border-radius: var(--r-lg) var(--r-lg) 0 0;
