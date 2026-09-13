@@ -29,14 +29,23 @@ import Shell from '../../layouts/Shell.astro';
         <button type="button" id="undo">되돌리기</button>
         <button type="button" id="clear">지우기</button>
       </div>
+      <div class="bd-share-row"><button type="button" class="primary" id="share">이미지 공유</button></div>
       <p class="muted bd-hint" id="hint"></p>
     </section>
   </div>
+  <wa-dialog id="share-modal" label="이미지 공유" with-footer class="bd-share">
+    <label class="bd-share-title"><span class="label">제목</span><input id="share-title" maxlength="40" /></label>
+    <img id="share-img" class="bd-share-img" alt="라인업 이미지 미리보기" />
+    <p class="muted" id="share-note"></p>
+    <div slot="footer" class="foot"><button data-close="share-modal">닫기</button><a class="btn" id="share-dl" hidden>내려받기</a><button class="primary" id="share-go" hidden>공유하기</button></div>
+  </wa-dialog>
 </Shell>
 <script>
   import { onData, isAdmin } from '../../lib/api.ts';
   import { href } from '../../lib/url.ts';
-  import { esc, toast } from '../../lib/html.ts';
+  import { esc, toast, seoulToday } from '../../lib/html.ts';
+  import { drawLineupImage } from '../../components/share-image.ts';
+  import { pickShareMethod, fallbackMethod, shareFileName, type ShareEnv, type ShareMethod } from '../../lib/share.ts';
   import { ovr, band, grade, STAT_CUTS } from '../../lib/stats.ts';
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
   import { playerCard, STAT_LABEL } from '../../components/player-card.ts';
@@ -247,5 +256,58 @@ import Shell from '../../layouts/Shell.astro';
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selected !== null) { selected = null; render(); } });
   $('add').onclick = () => { const used = new Set(data!.players.map((p) => p.num)); let n = 1; while (used.has(n)) n++; location.href = href(`/squad/${n}/?new=1`); };
   window.addEventListener('wfc:admin', render);
+
+  // ── 이미지 공유 ────────────────────────────────────────
+  const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
+  const shareCanvas = document.createElement('canvas');
+  let shareFile: File | null = null;
+  const titleNow = () => st.title || L.defaultTitle(seoulToday());
+
+  function shareEnv(file: File | null): ShareEnv {
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    let canShareFiles = false;
+    try { canShareFiles = !!file && typeof nav.share === 'function' && !!nav.canShare?.({ files: [file] }); } catch { canShareFiles = false; }
+    return { canShareFiles, ua: navigator.userAgent, touchPoints: navigator.maxTouchPoints || 0 };
+  }
+
+  async function drawShare(): Promise<File> {
+    if (!data) throw new Error('명단을 아직 못 불러왔습니다');
+    await document.fonts.ready; // Pretendard 가 늦게 오면 캔버스가 대체 글꼴로 굳는다
+    drawLineupImage(shareCanvas, st, data.players, titleNow());
+    const url = shareCanvas.toDataURL('image/png');
+    ($('share-img') as HTMLImageElement).src = url;
+    const dl = $('share-dl') as HTMLAnchorElement;
+    dl.href = url;
+    dl.download = shareFileName(seoulToday());
+    const blob = await new Promise<Blob | null>((res) => shareCanvas.toBlob(res, 'image/png'));
+    return new File([blob ?? new Blob()], shareFileName(seoulToday()), { type: 'image/png' });
+  }
+
+  function showMethod(m: ShareMethod): void {
+    $('share-go').hidden = m !== 'share';
+    $('share-dl').hidden = m !== 'download';
+    $('share-note').textContent = m === 'longpress' ? '이미지를 길게 눌러 사진에 저장한 뒤 카톡으로 보내세요'
+      : m === 'download' ? '내려받은 이미지를 카톡으로 보내세요'
+      : '공유하기를 누르면 카톡 등으로 바로 보낼 수 있습니다';
+  }
+
+  $('share').onclick = async () => {
+    selected = null;
+    ($('share-title') as HTMLInputElement).value = titleNow();
+    dlg('share-modal').open = true;
+    try { shareFile = await drawShare(); showMethod(pickShareMethod(shareEnv(shareFile))); } catch (e) { toast((e as Error).message); }
+  };
+  ($('share-title') as HTMLInputElement).onchange = async (e) => {
+    const v = (e.target as HTMLInputElement).value.trim();
+    // 기본 제목을 그대로 두면 저장하지 않는다 — 다음 주에 열면 그 주 토요일로 다시 계산돼야 한다.
+    commit(L.setTitle(st, v === L.defaultTitle(seoulToday()) ? '' : v));
+    try { shareFile = await drawShare(); } catch (err) { toast((err as Error).message); }
+  };
+  $('share-go').onclick = async () => {
+    if (!shareFile) return;
+    try { await navigator.share({ files: [shareFile], title: titleNow() }); }
+    catch (e) { if ((e as DOMException).name !== 'AbortError') showMethod(fallbackMethod(shareEnv(null))); }
+  };
+
   onData((d) => { data = d; render(); });
 </script>

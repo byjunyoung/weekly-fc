@@ -423,6 +423,12 @@ a.card:hover { background: var(--charcoal); }
 .bd-pitch.is-drawing { cursor: crosshair; }
 .bd-pitch.is-drawing .bd-slot { pointer-events: none; }
 .bd-ink, .bd-ink * { fill: none; stroke: var(--fg); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.bd-share-row { display: flex; justify-content: center; }
+@media (max-width: 899px) { .bd-share-row { width: 100%; } .bd-share-row button { width: 100%; } }
+.bd-share { --width: 560px; }
+.bd-share-title { display: flex; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
+.bd-share-title input { flex: 1; }
+.bd-share-img { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r-md); background: var(--charcoal); }
 @media (max-width: 899px) {
   .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); padding-bottom: 72px; }
   .bd-slot { width: 62px; min-height: 50px; }
