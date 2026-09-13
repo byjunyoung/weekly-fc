@@ -6,5 +6,5 @@ export default defineConfig({
   site: 'https://byjunyoung.github.io',
   base: '/weekly-fc',
   trailingSlash: 'always',
-  integrations: [sitemap({ filter: (page) => /\/weekly-fc\/(tactics|about)\/$/.test(page) })],
+  integrations: [sitemap({ filter: (page) => /\/weekly-fc\/rules\/$/.test(page) })],
 });

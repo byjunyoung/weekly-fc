@@ -1,0 +1,125 @@
+---
+import Shell from '../layouts/Shell.astro';
+import { FINE_TYPES, FINE_AMOUNT, FINE_NOTE, FINE_EXEMPT, MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS, DUTY_PER_MONTH } from '../lib/rules.ts';
+const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
+const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '비용·벌금'], ['duty', '봉사'], ['bank', '모임 통장'], ['manner', '에티켓']];
+---
+<Shell title="운영 규칙" index={true} description="WEEKLY FC 운영 규칙 — 매주 토요일 풋살. 참여 방법·비용·벌금·봉사·모임 통장.">
+  <Fragment slot="head"><link rel="canonical" href="https://byjunyoung.github.io/weekly-fc/rules/" /></Fragment>
+  <div class="page-head"><h1>운영 규칙</h1><div class="actions"><a class="chip" href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡 →</a></div></div>
+  <nav class="tabs">{toc.map(([id, l]) => <a href={`#${id}`}>{l}</a>)}</nav>
+  <article class="prose stack">
+    <section id="when"><h2>언제 어디서</h2><ul><li>매주 카톡 투표, {MATCH_MIN}인 이상 모이면 진행</li><li>시간: {MATCH_TIME}</li><li>장소: {PLACES.join(' / ')}</li><li>대관 실패 시 일정·장소를 유연하게 조정</li><li>비가 오면 논의 후 진행 여부 결정</li></ul></section>
+    <section id="join"><h2>참여 방법</h2><ol><li>오픈카톡에 자기소개를 남기고 모임 통장 초대 받기</li><li>매주 카톡 투표로 참석 여부 표시</li><li>매치 참석 후 당일 정산(대관비·음료비)</li></ol><p class="label">자기소개 양식 (채팅방에 붙여넣기)</p><pre class="card rules-pre">이름 :
+연락처 :
+선호 포지션 (축구 기준) :
+주발 :
+나이 (OO년생) :</pre></section>
+    <section id="fees"><h2>비용 · 벌금</h2>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>유형</th><th>기준</th><th class="r">금액</th></tr></thead><tbody>{FINE_TYPES.map((t) => <tr><td>{t}</td><td>{FINE_NOTE[t]}</td><td class="r">{won(FINE_AMOUNT[t])}</td></tr>)}</tbody></table></div>
+      <p class="muted">{FINE_EXEMPT}</p>
+      <ul><li>대관비·음료비는 참석자(용병 포함) 정산</li><li>벌금은 당일 구장비·음료비 정산에 우선 사용</li><li>잔액은 모임 통장 공금 → 대관비 선납·공용 물품</li></ul>
+      <div class="rules-live">
+        <div class="row rules-live-head"><span class="label">미납 현황 <span id="fees-total"></span></span><span id="fees-actions"></span></div>
+        <div id="fees-unpaid" class="chips"></div>
+        <span class="label">내역</span>
+        <div id="fees-app" class="tbl-wrap"></div>
+      </div>
+    </section>
+    <section id="duty"><h2>봉사</h2>
+      <ul><li>대관비·음료비 선납</li><li>음료 구매, 조끼 대여·반납</li><li>매치 종료 후 채팅방에서 정산 진행</li><li>매월 {DUTY_PER_MONTH}명 로테이션</li></ul>
+      <div class="rules-live">
+        <div class="row rules-live-head"><span class="label">봉사표</span><div class="chips" id="duty-year"></div></div>
+        <div id="duty-app" class="tbl-wrap"></div>
+      </div>
+    </section>
+    <section id="bank"><h2>모임 통장</h2><p>{BANK.name} {BANK.number} ({BANK.holder})<br/>모임 시작일 {BANK.since} · 통장 초대 문의: {BANK.contact}</p></section>
+    <section id="manner"><h2>에티켓</h2><ul><li>투표에 꼭 참여하기</li><li>불참 등 특이사항은 사전에 공유</li><li>서로 존중하는 채팅</li></ul></section>
+  </article>
+  <wa-dialog id="fine-modal" label="벌금 기록" with-footer><form class="form" id="fine-form"></form><div slot="footer" class="foot"><button data-close="fine-modal">취소</button><button class="primary" id="fine-ok">저장</button></div></wa-dialog>
+</Shell>
+<script>
+  import { onData, isAdmin, write, serializeFine, serializeRotation } from '../lib/api.ts';
+  import { href } from '../lib/url.ts';
+  import { esc, fmtDate, fmtWon, toast, seoulToday } from '../lib/html.ts';
+  import { fineSummary } from '../lib/stats.ts';
+  import { FINE_TYPES, FINE_AMOUNT } from '../lib/rules.ts';
+  import { yearRows } from '../lib/rotation.ts';
+  import { mountTable, type Column, type TableState } from '../components/table.ts';
+  import type { Data, Fine, RotationRow } from '../lib/types.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
+  let data: Data | null = null;
+  const fineState: TableState = { sortKey: 'date', sortDir: 'desc' };
+  const now = new Date();
+  let year = now.getFullYear();
+  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => (dlg(b.dataset.close!).open = false)));
+
+  // ── 벌금 — record/fines.astro 에서 옮겨 왔다. 요약 카드 대신 미납 합계 한 줄. ──
+  function renderFees(d: Data) {
+    const s = fineSummary(d.fines);
+    $('fees-total').textContent = `· ${fmtWon(s.unpaid)} (${s.unpaidCount}건)`;
+    $('fees-actions').innerHTML = isAdmin() ? '<button id="fees-add">벌금 추가</button>' : '';
+    if (isAdmin()) $('fees-add').onclick = openAdd;
+    const unpaid = [...s.byPlayer].filter(([, v]) => v.unpaid > 0).sort((a, b) => b[1].unpaid - a[1].unpaid);
+    $('fees-unpaid').innerHTML = unpaid.length
+      ? unpaid.map(([name, v]) => { const p = d.players.find((x) => x.name === name); const body = `${esc(name)} <b class="warn">${fmtWon(v.unpaid)}</b>`; return p ? `<a class="chip" href="${href(`/squad/${p.num}/`)}">${body}</a>` : `<span class="chip">${body}</span>`; }).join('')
+      : '<span class="muted">미납 없음</span>';
+    const cols: Column<Fine>[] = [
+      { key: 'date', label: '날짜', get: (f) => f.date, cell: (f) => fmtDate(f.date) },
+      { key: 'player', label: '이름', get: (f) => f.player, cell: (f) => { const p = d.players.find((x) => x.name === f.player); return p ? `<a href="${href(`/squad/${p.num}/`)}">${esc(f.player)}</a>` : esc(f.player); } },
+      { key: 'type', label: '유형', get: (f) => f.type },
+      { key: 'amount', label: '금액', get: (f) => f.amount, align: 'r', cell: (f) => fmtWon(f.amount) },
+      { key: 'paid', label: '납부', get: (f) => (f.paid ? 1 : 0), cell: (f) => (isAdmin() ? `<button data-paid="${f.id}" class="${f.paid ? '' : 'primary'}">${f.paid ? '완료' : '납부 처리'}</button>` : f.paid ? '완료' : '<span class="warn">미납</span>') },
+      ...(isAdmin() ? [{ key: 'del', label: '', get: () => '', sortable: false, cell: (f: Fine) => `<button data-del="${f.id}" class="danger">삭제</button>` } as Column<Fine>] : []),
+    ];
+    mountTable($('fees-app'), cols, d.fines, fineState, { empty: '벌금 기록이 없습니다' });
+    $('fees-app').querySelectorAll<HTMLElement>('[data-paid]').forEach((b) => (b.onclick = async () => { const f = d.fines.find((x) => x.id === b.dataset.paid)!; try { await write('writeFine', serializeFine({ ...f, paid: !f.paid })); } catch (e) { toast((e as Error).message); } }));
+    $('fees-app').querySelectorAll<HTMLElement>('[data-del]').forEach((b) => (b.onclick = async () => { try { await write('deleteFine', { id: b.dataset.del }); } catch (e) { toast((e as Error).message); } }));
+  }
+  function openAdd() {
+    ($('fine-form') as HTMLFormElement).innerHTML = `<label>날짜<input name="date" type="date" value="${seoulToday()}"></label><label>이름<select name="player">${data!.players.map((p) => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select></label><label>유형<select name="type" id="fine-type">${FINE_TYPES.map((t) => `<option>${t}</option>`).join('')}</select></label><label>금액<input name="amount" id="fine-amt" type="number" value="${FINE_AMOUNT.지각}"></label>`;
+    ($('fine-type') as HTMLSelectElement).onchange = (e) => { ($('fine-amt') as HTMLInputElement).value = String(FINE_AMOUNT[(e.target as HTMLSelectElement).value as keyof typeof FINE_AMOUNT]); };
+    $('fine-ok').onclick = async () => { const fd = new FormData($('fine-form') as HTMLFormElement); const g = (k: string) => String(fd.get(k) ?? ''); try { await write('writeFine', serializeFine({ id: String(Date.now()), date: g('date'), match_id: '', player: g('player'), type: g('type') as Fine['type'], amount: Number(g('amount')) || 0, paid: false })); dlg('fine-modal').open = false; toast('저장됨'); } catch (e) { toast((e as Error).message); } };
+    dlg('fine-modal').open = true;
+  }
+
+  // ── 봉사 — record/duty.astro 에서 옮겨 왔다. 두 명은 대등하므로 한 칸에 나란히 둔다. ──
+  function renderDuty(d: Data) {
+    $('duty-year').innerHTML = [year - 1, year, year + 1].map((y) => `<button class="chip ${y === year ? 'on' : ''}" data-y="${y}" aria-pressed="${y === year}">${y}</button>`).join('');
+    $('duty-year').querySelectorAll<HTMLElement>('[data-y]').forEach((b) => (b.onclick = () => { year = Number(b.dataset.y); renderDuty(d); }));
+    const rows = yearRows(d.players, d.rotation, year);
+    const names = d.players.map((p) => p.name);
+    const pick = (r: RotationRow, k: 'p1' | 'p2') => {
+      const val = r[k];
+      // 시트 값이 현재 명단에 없으면(퇴단 등) 브라우저가 첫 옵션을 대신 보여준다 — 저장된 값을 앞에 끼워 넣는다.
+      const extra = val && !names.includes(val) ? `<option selected>${esc(val)}</option>` : '';
+      return `<select data-y="${r.year}" data-m="${r.month}" data-k="${k}">${extra}${names.map((n) => `<option ${n === val ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+    };
+    const pair = (r: RotationRow) => isAdmin() ? `<span class="duty-pair">${pick(r, 'p1')}${pick(r, 'p2')}</span>` : `<span class="duty-pair"><b>${esc(r.p1)}</b><b>${esc(r.p2)}</b></span>`;
+    $('duty-app').innerHTML = `<table class="tbl"><thead><tr><th>월</th><th>당번</th><th class="c">완료</th></tr></thead><tbody>${rows.map((r) => { const cur = r.year === now.getFullYear() && r.month === now.getMonth() + 1; return `<tr class="${cur ? 'row-current' : ''}"><td>${r.month}월${cur ? ' <span class="label">이번 달</span>' : ''}</td><td>${pair(r)}</td><td class="c">${isAdmin() ? `<input type="checkbox" data-y="${r.year}" data-m="${r.month}" data-k="done" ${r.done ? 'checked' : ''}>` : r.done ? '✓' : ''}</td></tr>`; }).join('')}</tbody></table>`;
+    $('duty-app').querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-k]').forEach((el) => (el.onchange = async () => {
+      const y = Number(el.dataset.y), m = Number(el.dataset.m);
+      const r = yearRows(d.players, d.rotation, y).find((x) => x.month === m)!;
+      const next: RotationRow = { ...r, [el.dataset.k!]: el.dataset.k === 'done' ? (el as HTMLInputElement).checked : el.value } as RotationRow;
+      try { await write('writeRotation', serializeRotation(next)); toast('저장됨'); } catch (e) { toast((e as Error).message); }
+    }));
+  }
+
+  const render = () => { if (!data) return; renderFees(data); renderDuty(data); };
+  window.addEventListener('wfc:admin', render);
+  onData((d) => { data = d; render(); });
+</script>
+<style>
+  /* 한글 본문 — 한 줄 길이는 WCAG 1.4.8 의 CJK 40자 상한(--prose-max 600px ÷ 15px),
+     행간은 klreq 7.4.1 의 비례 줄간격 예시 160%. w3.org/TR/WCAG22 · w3.org/TR/klreq */
+  .prose section { max-width: var(--prose-max); }
+  .prose p, .prose li { line-height: 1.6; }
+  .prose h2 { font-size: var(--fs-sm); letter-spacing: .06em; text-transform: uppercase; margin: 0 0 var(--m-md); }
+  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: var(--h-accent); background: var(--accent); margin-top: var(--m-sm); }
+  .prose ul, .prose ol { padding-left: 1.2em; margin: 0; }
+  .prose li { margin-bottom: var(--m-xs); }
+  .prose p { margin: 0 0 var(--m-md); }
+  .rules-pre { white-space: pre-wrap; margin: 0; }
+</style>

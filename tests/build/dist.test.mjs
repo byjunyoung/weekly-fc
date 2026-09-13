@@ -9,19 +9,20 @@ export const PAGES = [
   'squad/9/index.html',
   'squad/99/index.html',
   'match/index.html',
+  'rules/index.html',
   'record/index.html',
   'record/fines/index.html',
   'record/duty/index.html',
   'tactics/index.html',
   'about/index.html',
 ];
-export const INDEXABLE = ['tactics/index.html', 'about/index.html'];
+export const INDEXABLE = ['rules/index.html'];
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
 
 test('모든 페이지가 dist에 있다', () => {
   for (const p of PAGES) assert.ok(existsSync(`dist/${p}`), p);
 });
-test('팀 페이지는 noindex, 전술·소개만 index', () => {
+test('팀 페이지는 noindex, 운영 규칙만 index', () => {
   for (const p of PAGES) {
     const html = read(p);
     const should = !INDEXABLE.includes(p);
@@ -34,12 +35,22 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭에 여섯 갈래가 있다', () => {
+test('상단 탭은 홈·스쿼드·매치·운영 네 갈래', () => {
   const html = read('index.html');
-  for (const l of ['홈', '스쿼드', '매치', '기록', '전술', '소개']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['홈', '스쿼드', '매치', '운영']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['기록', '전술', '소개']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
-test('sitemap에는 tactics와 about만', () => {
+test('sitemap에는 rules만', () => {
   const sm = readFileSync('dist/sitemap-0.xml', 'utf8');
   const locs = [...sm.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]).sort();
-  assert.deepEqual(locs, ['https://byjunyoung.github.io/weekly-fc/about/', 'https://byjunyoung.github.io/weekly-fc/tactics/']);
+  assert.deepEqual(locs, ['https://byjunyoung.github.io/weekly-fc/rules/']);
+});
+test('옛 주소는 새 주소로 넘긴다', () => {
+  const cases = {
+    'about/index.html': '/weekly-fc/rules/',
+    'record/index.html': '/weekly-fc/rules/#fees',
+    'record/fines/index.html': '/weekly-fc/rules/#fees',
+    'record/duty/index.html': '/weekly-fc/rules/#duty',
+  };
+  for (const [p, to] of Object.entries(cases)) assert.ok(read(p).includes(`url=${to}"`), `${p} → ${to}`);
 });

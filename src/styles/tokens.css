@@ -342,6 +342,12 @@ a.card:hover { background: var(--charcoal); }
 }
 .pcard-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: var(--s-xxl); background: var(--card); border-radius: var(--r-md); }
 
+/* ══ 운영 규칙 ══════════════════════════════════════════════ */
+.rules-live { display: flex; flex-direction: column; gap: var(--s-sm); margin-top: var(--s-lg); }
+.rules-live-head { justify-content: space-between; }
+.duty-pair { display: inline-flex; flex-wrap: wrap; gap: var(--s-xs) var(--s-md); }
+.duty-pair b { min-width: 4em; font-weight: var(--fw-strong); }
+
 /* ══ 능력치 막대(선수 페이지) ═══════════════════════════════ */
 .player-hero { display: grid; grid-template-columns: var(--pcard-w) minmax(0, 1fr); gap: var(--s-xl); align-items: start; }
 .player-hero > .pcard { margin: 0; }
