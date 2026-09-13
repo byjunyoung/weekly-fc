@@ -2010,9 +2010,9 @@ export function drawLineupImage(c: HTMLCanvasElement, s: LineupState, players: P
 
 - [ ] **Step 6: 페이지에 공유 버튼과 대화상자를 붙인다**
 
-`src/pages/squad/index.astro` 마크업 — `#tools` 안 `<button type="button" id="clear">지우기</button>` 다음 줄에 추가:
+`src/pages/squad/index.astro` 마크업 — 「이미지 공유」는 도구 줄과 따로 둔다(모바일에서 도구 5개만 한 줄에 들어간다, 2026-09-14 결정). `#tools` 의 닫는 `</div>` 바로 다음 줄에 추가:
 ```astro
-        <button type="button" class="primary" id="share">이미지 공유</button>
+      <div class="bd-share-row"><button type="button" class="primary" id="share">이미지 공유</button></div>
 ```
 `</Shell>` 바로 앞에 추가:
 ```astro
@@ -2090,6 +2090,8 @@ export function drawLineupImage(c: HTMLCanvasElement, s: LineupState, players: P
 
 `src/styles/tokens.css` 스쿼드 절의 `.bd-ink` 줄 다음에 추가:
 ```css
+.bd-share-row { display: flex; justify-content: center; }
+@media (max-width: 899px) { .bd-share-row { width: 100%; } .bd-share-row button { width: 100%; } }
 .bd-share { --width: 560px; }
 .bd-share-title { display: flex; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
 .bd-share-title input { flex: 1; }
@@ -2213,6 +2215,210 @@ Claude-Session: https://claude.ai/code/session_01DaDPzugZyKUdGnpyTH5KY4"
 - [ ] **Step 10: 멈추고 push 승인을 받는다**
 
 push 하지 않는다. 사용자에게 전/후 캡처와 커밋 목록(`git log --oneline main..squad-ops-restructure`)을 보여주고 승인을 받는다. 승인 뒤 절차(이 계획 밖): `gh auth switch --user byjunyoung` → `main`에 병합 → `git push origin main` → 계정 복귀 → 배포 뒤 iOS·Android 폰에서 카톡 링크로 열어 공유 버튼 확인(스펙 §8).
+
+---
+
+### Task 11: 매치 탭 = 채널 영상 목록
+
+> 2026-09-14 사용자 요청으로 추가. **Task 9 다음, Task 10 전에 실행한다**(Task 10 최종 확인이 새 매치 탭까지 보도록). 스펙 §3.4.
+
+**Files:**
+- Create: `src/lib/match-videos.ts`
+- Rewrite: `src/pages/match/index.astro`
+- Modify: `src/pages/index.astro` (최근 매치 그림·매치 타일)
+- Test: `tests/unit/match-videos.test.mjs`
+
+**Interfaces:**
+- Consumes: `parseVideoTitle(v: Video): ParsedVideo | null` (`src/lib/parse.ts`, `ParsedVideo = { id, date, type, location, title }`), `loadVideos(): Promise<Video[]>` (`src/lib/api.ts`), `esc`·`fmtDate`·`ytThumb`·`ytThumbBig`·`ytEmbed`·`ytWatch` (`src/lib/html.ts`), `href` (`src/lib/url.ts`)
+- Produces:
+  - `type MatchVideo = { id: string; date: string; type: MatchType; location: string; title: string }`
+  - `matchVideos(videos: Video[]): MatchVideo[]` — id 없는 것 버림, 같은 id 는 하나만, 날짜 내림차순(같으면 id 오름차순). 제목을 못 읽으면 `date = published`, `type = ''`, `location = ''`.
+
+- [ ] **Step 1: 실패하는 테스트를 쓴다**
+
+Create `tests/unit/match-videos.test.mjs`:
+```js
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { matchVideos } from '../../src/lib/match-videos.ts';
+
+const V = (id, title, published = '') => ({ id, title, published });
+
+test('제목에서 날짜·유형·장소를 읽고 최신순으로 늘어놓는다', () => {
+  const out = matchVideos([V('a', '260822 | 위클리FC 2파전 | 위례공원', '2026-08-23'), V('b', '260905 | 위클리FC 풋살 3파전', '2026-09-06')]);
+  assert.deepEqual(out.map((m) => m.id), ['b', 'a']);
+  assert.deepEqual(out[1], { id: 'a', date: '2026-08-22', type: '2파전', location: '위례공원', title: '260822 | 위클리FC 2파전 | 위례공원' });
+});
+
+test('제목 형식이 아니면 게시일과 제목을 그대로 쓴다', () => {
+  const [m] = matchVideos([V('c', '아크로바틱 너프좀요', '2026-07-01')]);
+  assert.deepEqual(m, { id: 'c', date: '2026-07-01', type: '', location: '', title: '아크로바틱 너프좀요' });
+});
+
+test('id 없는 영상은 버리고 같은 id 는 한 번만', () => {
+  const out = matchVideos([V('', '260912 | 2파전'), V('d', '260912 | 2파전'), V('d', '260912 | 2파전')]);
+  assert.deepEqual(out.map((m) => m.id), ['d']);
+});
+
+test('날짜가 같으면 id 순으로 고정', () => {
+  const out = matchVideos([V('z', '260912 | 2파전'), V('y', '260912 | 3파전')]);
+  assert.deepEqual(out.map((m) => m.id), ['y', 'z']);
+});
+
+test('빈 목록', () => {
+  assert.deepEqual(matchVideos([]), []);
+});
+```
+
+- [ ] **Step 2: 실패 확인**
+
+Run: `node --test tests/unit/match-videos.test.mjs`
+Expected: FAIL — `Cannot find module '.../src/lib/match-videos.ts'`
+
+- [ ] **Step 3: 구현**
+
+Create `src/lib/match-videos.ts`:
+```ts
+// src/lib/match-videos.ts — 매치 탭은 채널 영상 목록이다(2026-09-14 사용자 결정, 스펙 §3.4).
+// 시트 매치 기록 대신 빌드 때 긁어 온 영상에서 날짜·유형·장소를 읽는다.
+import { parseVideoTitle } from './parse.ts';
+import type { MatchType, Video } from './types.ts';
+
+export type MatchVideo = { id: string; date: string; type: MatchType; location: string; title: string };
+
+export function matchVideos(videos: Video[]): MatchVideo[] {
+  const seen = new Set<string>();
+  const out: MatchVideo[] = [];
+  for (const v of videos) {
+    if (!v.id || seen.has(v.id)) continue;
+    seen.add(v.id);
+    const p = parseVideoTitle(v);
+    out.push(p
+      ? { id: v.id, date: p.date, type: p.type, location: p.location, title: v.title }
+      : { id: v.id, date: v.published, type: '', location: '', title: v.title });
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
+}
+```
+
+- [ ] **Step 4: 통과 확인**
+
+Run: `npm run test:unit`
+Expected: PASS 전부.
+
+- [ ] **Step 5: 매치 페이지를 다시 쓴다**
+
+Replace `src/pages/match/index.astro` 전체:
+```astro
+---
+import Shell from '../../layouts/Shell.astro';
+---
+<Shell title="매치">
+  <div class="page-head"><h1 id="title">매치 <span class="muted" id="count"></span></h1><div class="actions" id="actions"></div></div>
+  <div id="app" class="stack"></div>
+</Shell>
+<script>
+  // 매치 탭 = 채널 영상 목록. 시트 매치 기록·관리자 가져오기는 쓰지 않는다(스펙 §3.4).
+  import { loadVideos } from '../../lib/api.ts';
+  import { matchVideos, type MatchVideo } from '../../lib/match-videos.ts';
+  import { esc, fmtDate, ytThumb, ytEmbed, ytWatch } from '../../lib/html.ts';
+  import { href } from '../../lib/url.ts';
+
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const app = $('app');
+  const vid = new URLSearchParams(location.search).get('v') ?? '';
+  const meta = (m: MatchVideo) => [m.type, m.location].filter(Boolean).map(esc).join(' · ');
+
+  function renderList(list: MatchVideo[]): void {
+    $('count').textContent = `${list.length}편`;
+    app.innerHTML = list.length
+      ? `<div class="thumbs">${list.map((m) => `<a class="thumb" href="${href(`/match/?v=${encodeURIComponent(m.id)}`)}"><img src="${ytThumb(m.id)}" alt="" loading="lazy"><div class="body"><b>${m.date ? fmtDate(m.date) : esc(m.title)}</b><div class="muted">${meta(m) || esc(m.title)}</div></div></a>`).join('')}</div>`
+      : '<p class="muted">채널 영상을 불러오지 못했습니다.</p>';
+  }
+
+  function renderDetail(list: MatchVideo[]): void {
+    const m = list.find((x) => x.id === vid);
+    const id = m?.id ?? (/^[\w-]{11}$/.test(vid) ? vid : '');
+    $('title').textContent = m?.date ? fmtDate(m.date) : '매치';
+    $('actions').innerHTML = `<a class="chip" href="${href('/match/')}">← 목록</a>${id ? `<a class="chip" href="${ytWatch(id)}" target="_blank" rel="noopener">유튜브에서 보기 →</a>` : ''}`;
+    app.innerHTML = id
+      ? `${m && meta(m) ? `<p class="muted">${meta(m)}</p>` : ''}<div class="embed"><iframe src="${ytEmbed(id)}" title="${esc(m?.title || '매치 영상')}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      : '<p class="muted">영상을 찾을 수 없습니다.</p>';
+  }
+
+  loadVideos()
+    .then((v) => { const list = matchVideos(v); if (vid) renderDetail(list); else renderList(list); })
+    .catch(() => { app.innerHTML = '<p class="muted">채널 영상을 불러오지 못했습니다.</p>'; });
+</script>
+```
+옛 상세 주소 `?d=…`는 `v`가 없으므로 목록으로 보인다(따로 처리하지 않는다).
+
+- [ ] **Step 6: 홈의 최근 매치·매치 타일을 영상 기준으로**
+
+`src/pages/index.astro`:
+
+14행 import를 바꾼다:
+```ts
+  import { matchVideos } from '../lib/match-videos';
+```
+(`parseVideoTitle` import 줄을 이것으로 교체)
+
+39~58행 `art` 함수 전체를 아래로 바꾼다:
+```ts
+  /** 좌측 키 아트 — 최근 매치. 매치 탭과 같이 채널 영상만 본다(스펙 §3.4). */
+  function art(): string {
+    const m = matchVideos(videos ?? [])[0];
+    const id = m?.id ?? '';
+    const title = esc(m?.type ?? '') || '매치';
+    const date = m?.date ?? '';
+    const where = m?.location ?? '';
+    return `<section class="art">
+      ${id ? `<img src="${ytThumbBig(id)}" alt="" onerror="this.onerror=null;this.src='${ytThumb(id)}'">` : ''}
+      <span class="art-kicker">최근 매치</span>
+      <h2 class="art-title">${title}</h2>
+      <p class="art-sub">${date ? fmtDate(date) : '날짜 미정'}${where ? ` · ${esc(where)}` : ''}</p>
+      <div class="art-foot">
+        <a class="chip" href="${href('/match/')}">매치 전체 →</a>
+        ${id ? `<a class="chip" href="${href(`/match/?v=${encodeURIComponent(id)}`)}">영상 보기 →</a>` : ''}
+      </div>
+    </section>`;
+  }
+```
+70행 `const matchCount = …` 줄을 지운다.
+79행 `${art(d)}` → `${art()}`.
+83행 매치 타일을 바꾼다:
+```ts
+        ${tile('매치', String(matchVideos(videos ?? []).length), '채널 영상', href('/match/'))}
+```
+
+- [ ] **Step 7: 남은 참조 확인**
+
+Run: `grep -rnE "proposeMatches|serializeMatch|writeMatch|import-modal|meta-modal|d\.matches" src/pages`
+Expected: 출력 없음. (`src/lib/parse.ts`의 `proposeMatches`와 `src/lib/api.ts`의 `serializeMatch`는 테스트가 쓰는 라이브러리 함수라 남긴다.)
+
+- [ ] **Step 8: 전체 테스트**
+
+Run: `npm test`
+Expected: PASS 전부.
+
+- [ ] **Step 9: 눌러서 확인(컨트롤러가 CDP 스크립트로)**
+
+1. `/weekly-fc/match/` — 썸네일 카드가 최신순, 첫 카드 날짜가 `src/data/videos.ts` 첫 영상 날짜, 제목 옆 「N편」.
+2. 첫 카드 누름 → `?v=<id>`, 제목이 날짜, iframe `src`에 그 id, 「← 목록」·「유튜브에서 보기 →」.
+3. `/weekly-fc/match/?v=없는값` → 「영상을 찾을 수 없습니다.」
+4. `/weekly-fc/match/?d=2026-09-12` → 목록.
+5. 홈 — 최근 매치 그림이 첫 영상, 「영상 보기 →」가 `/weekly-fc/match/?v=…`, 매치 타일 숫자 = 목록 편수.
+6. 390px에서 가로 넘침 없음.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add src/lib/match-videos.ts tests/unit/match-videos.test.mjs src/pages/match/index.astro src/pages/index.astro
+git commit -m "feat(match): 매치 탭을 채널 영상 목록으로 — 목록·재생, 홈 최근 매치도 영상 기준
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01DaDPzugZyKUdGnpyTH5KY4"
+```
 
 ---
 
