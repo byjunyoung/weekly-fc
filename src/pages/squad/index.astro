@@ -7,7 +7,7 @@ import Shell from '../../layouts/Shell.astro';
     <div class="actions">
       <div class="chips" id="pos-filter" role="group" aria-label="포지션 거르기"><button class="chip on" data-pos="ALL" aria-pressed="true">전체</button><button class="chip" data-pos="GK" aria-pressed="false">GK</button><button class="chip" data-pos="DF" aria-pressed="false">DF</button><button class="chip" data-pos="MF" aria-pressed="false">MF</button><button class="chip" data-pos="FW" aria-pressed="false">FW</button></div>
       <input id="q" type="search" placeholder="이름" class="w-search" />
-      <select id="sort" class="w-sort"><option value="ovr">OVR 순</option><option value="num">번호 순</option><option value="name">이름 순</option><option value="att">출석 순</option></select>
+      <select id="sort" class="w-sort"><option value="ovr">OVR 순</option><option value="num">번호 순</option><option value="name">이름 순</option></select>
       <select id="formation" class="w-sort"></select>
       <div class="chips" id="view-toggle" role="group" aria-label="보기 방식"><button class="chip on" data-view="pitch" aria-pressed="true">피치</button><button class="chip" data-view="card" aria-pressed="false">카드</button><button class="chip" data-view="table" aria-pressed="false">표</button></div>
       <button id="add" hidden>선수 추가</button>
@@ -19,12 +19,11 @@ import Shell from '../../layouts/Shell.astro';
   import { onData, isAdmin } from '../../lib/api.ts';
   import { href } from '../../lib/url.ts';
   import { esc } from '../../lib/html.ts';
-  import { ovr, band, STAT_CUTS, RATE_CUTS, attendance, condition } from '../../lib/stats.ts';
+  import { ovr, band, STAT_CUTS } from '../../lib/stats.ts';
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
   import { playerCard, STAT_LABEL } from '../../components/player-card.ts';
   import { avatarSvg } from '../../components/avatar.ts';
   import { avatarSpecFor } from '../../lib/avatar.ts';
-  import { conditionBadge } from '../../components/condition.ts';
   import { FORMATIONS, FORMATION_NAMES, bestEleven } from '../../lib/formation.ts';
   import { grade } from '../../lib/stats.ts';
   import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
@@ -42,25 +41,21 @@ import Shell from '../../layouts/Shell.astro';
   /** 눌린 칩을 색만이 아니라 aria-pressed 로도 알린다. */
   const setChip = (el: HTMLElement, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); };
 
-  function cols(d: Data): Column<Player>[] {
-    const matches = d.matches;
+  function cols(): Column<Player>[] {
     return [
       { key: 'avatar', label: '', sortable: false, get: () => '', cell: (p) => avatarSvg(avatarSpecFor(p.num, p.avatar), 28, p.num), align: 'c' },
       { key: 'num', label: '#', get: (p) => p.num, align: 'r' },
       { key: 'name', label: '이름', get: (p) => p.name, cell: (p) => `<a href="${href(`/squad/${p.num}/`)}"><b>${esc(p.name)}</b></a>` },
       { key: 'pos', label: '포지션', get: (p) => p.pos, cell: (p) => `<span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span> <span class="muted">${esc(p.detail)}</span>` },
-      { key: 'cond', label: '컨디션', get: (p) => condition(p.name, matches).attended, align: 'c', cell: (p) => conditionBadge(p.name, matches) },
       ...STAT_KEYS.map((k): Column<Player> => ({ key: k, label: STAT_LABEL[k], get: (p) => p[k], align: 'r', cell: (p) => `<span class="val val-${band(p[k], STAT_CUTS)}">${p[k] || '–'}</span>` })),
       { key: 'ovr', label: 'OVR', get: (p) => ovr(p), align: 'r', cell: (p) => `<b class="val val-${band(ovr(p), STAT_CUTS)}">${ovr(p) || '–'}</b>` },
-      { key: 'att', label: '출석', get: (p) => attendance(p.name, matches).rate, align: 'r', cell: (p) => { const a = attendance(p.name, matches); return a.total ? `<span class="val val-${band(a.rate, RATE_CUTS)}">${a.rate}%</span>` : '<span class="muted">–</span>'; } },
     ];
   }
 
   // 카드 벽의 정렬 — 표는 머리글 클릭으로 정렬하므로 이쪽은 select 하나로 따로 둔다.
-  function sortCards(rows: Player[], d: Data): Player[] {
+  function sortCards(rows: Player[]): Player[] {
     const by: Record<string, (p: Player) => number | string> = {
       ovr: (p) => -ovr(p), num: (p) => p.num, name: (p) => p.name,
-      att: (p) => -attendance(p.name, d.matches).rate,
     };
     const f = by[sortKey] ?? by.ovr;
     return [...rows].sort((a, b) => { const x = f(a), y = f(b); return typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'ko'); });
@@ -101,7 +96,7 @@ import Shell from '../../layouts/Shell.astro';
       <div class="sq-side">
         <div class="card"><h2>선발 ${esc(formation)}</h2>
           <div class="big">${avg || '–'}<span class="muted sq-avg-unit"> 평균 OVR</span></div>
-          <p class="muted">OVR 순 자동 배치 · ${lineCount}${oop ? ` · <span class="cond cond-mid">${oop}명</span>이 자리 밖` : ''}</p></div>
+          <p class="muted">OVR 순 자동 배치 · ${lineCount}${oop ? ` · <b>${oop}명</b>이 자리 밖` : ''}</p></div>
         <div class="card"><h2>벤치 ${bench.length}명</h2><div class="sq-bench">${benchRows}</div></div>
       </div>
     </div>`;
@@ -116,10 +111,10 @@ import Shell from '../../layouts/Shell.astro';
     document.getElementById('sort')!.hidden = view !== 'card';
     document.getElementById('formation')!.hidden = view !== 'pitch';
     if (view === 'pitch') { app.className = ''; app.innerHTML = rows.length ? pitchView(rows, d) : '<p class="pcard-empty">명단이 비어 있습니다</p>'; return; }
-    if (view === 'table') { app.className = 'tbl-wrap'; mountTable(app, cols(d), rows, state, { empty: '명단이 비어 있습니다' }); return; }
+    if (view === 'table') { app.className = 'tbl-wrap'; mountTable(app, cols(), rows, state, { empty: '명단이 비어 있습니다' }); return; }
     app.className = 'pcard-wall';
     app.innerHTML = rows.length
-      ? sortCards(rows, d).map((p) => `<a href="${href(`/squad/${p.num}/`)}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 116, p.num, true))}</a>`).join('')
+      ? sortCards(rows).map((p) => `<a href="${href(`/squad/${p.num}/`)}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 116, p.num, true))}</a>`).join('')
       : '<p class="pcard-empty">명단이 비어 있습니다</p>';
   }
 

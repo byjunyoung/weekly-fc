@@ -37,15 +37,14 @@ import Shell from '../layouts/Shell.astro';
     const fromVideo = (videos ?? []).map(parseVideoTitle).filter((p): p is NonNullable<typeof p> => !!p)
       .sort((a, b) => b.date.localeCompare(a.date))[0];
     const id = m?.youtube || fromVideo?.id || '';
-    const title = m ? (m.winner ? `${esc(m.winner)} 승` : esc(m.type) || '매치') : esc(fromVideo?.type ?? '') || '매치';
+    const title = esc(m?.type || fromVideo?.type || '') || '매치';
     const date = m?.date ?? fromVideo?.date ?? '';
     const where = m?.location || fromVideo?.location || '';
-    const who = m ? `${m.attendees.length}명 참석` : '참석 기록은 아직 없습니다';
     return `<section class="art">
       ${id ? `<img src="${ytThumbBig(id)}" alt="" onerror="this.onerror=null;this.src='${ytThumb(id)}'">` : ''}
       <span class="art-kicker">최근 매치</span>
       <h2 class="art-title">${title}</h2>
-      <p class="art-sub">${date ? fmtDate(date) : '날짜 미정'}${where ? ` · ${esc(where)}` : ''} · ${who}</p>
+      <p class="art-sub">${date ? fmtDate(date) : '날짜 미정'}${where ? ` · ${esc(where)}` : ''}</p>
       <div class="art-foot">
         <a class="chip" href="${href('/match/')}">매치 전체 →</a>
         ${id ? `<a class="chip" href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener">영상 보기 →</a>` : ''}

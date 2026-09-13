@@ -239,9 +239,7 @@ a.card:hover { background: var(--charcoal); }
   color: var(--body); font-size: var(--fs-xs); font-weight: var(--fw-strong); cursor: pointer; }
 .chip:hover { background: var(--charcoal); color: var(--fg); }
 .chip.on { background: var(--fg); border-color: var(--fg); color: var(--canvas); }
-.w-search { width: 150px; } .w-sort { width: 124px; } .w-tname { width: 88px; } .w-points { width: 76px; }
-.att-preview { margin-top: var(--s-sm); }
-.res-chips { margin-top: var(--s-xs); }
+.w-search { width: 150px; } .w-sort { width: 124px; }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-md); }
 .thumb { border-radius: var(--r-md); overflow: hidden; background: var(--card); }
 .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--charcoal); }
@@ -328,18 +326,6 @@ a.card:hover { background: var(--charcoal); }
 .pcard-stat-label { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
 .pcard-note { margin: var(--s-sm) 0 0; font-size: var(--fs-xs); color: var(--ink-soft); text-align: center; }
 .pcard .muted { color: var(--ink-soft); }
-.pcard-flip { position: relative; width: 100%; transform-style: preserve-3d; transition: transform var(--dur-slow) var(--ease-std); }
-.pcard-flip.flipped { transform: rotateY(180deg); }
-.pcard-face { width: 100%; backface-visibility: hidden; }
-.pcard-face-back { position: absolute; inset: 0; transform: rotateY(180deg); text-align: left;
-  background: var(--card); color: var(--fg); padding: var(--s-md); }
-.pcard-face-back .label { color: var(--muted); }
-.pcard-flip-btn { display: block; width: 100%; min-height: 0; padding: var(--s-xs); border: 0; border-radius: 0;
-  border-top: 1px solid var(--ink-line); background: rgba(0, 0, 0, .12); color: var(--ink); font-size: var(--fs-xs); }
-.pcard-flip-btn:hover { background: rgba(0, 0, 0, .22); }
-.pcard-back-stats { display: flex; justify-content: space-between; gap: var(--s-xs); margin: var(--s-xs) 0; }
-.pcard-back-stats > div { display: flex; flex-direction: column; gap: 2px; }
-.pcard-recent { list-style: none; margin: var(--s-xs) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-xxs); font-size: var(--fs-sm); color: var(--muted); }
 .pcard-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: var(--s-lg) var(--s-md); }
 .pcard-wall .pcard { max-width: none; }
 .pcard-wall-sm { grid-template-columns: repeat(5, 1fr); }
@@ -407,8 +393,6 @@ details.year[open] > summary::before { content: "▾ "; }
 .toast { position: fixed; left: 50%; bottom: var(--s-lg); transform: translateX(-50%); z-index: 50;
   padding: var(--s-sm) var(--s-lg); border-radius: var(--r-full); background: var(--fg); color: var(--canvas);
   font-size: var(--fs-sm); font-weight: var(--fw-strong); }
-.recap-img { max-width: 540px; border-radius: var(--r-md); }
-.recap-dl { display: inline-block; }
 
 
 @media (prefers-reduced-motion: reduce) {

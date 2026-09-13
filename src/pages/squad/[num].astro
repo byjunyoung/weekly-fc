@@ -19,9 +19,9 @@ const { num } = Astro.params;
   import { onData, isAdmin, write, writeAvatar, fetchFull, serializePlayer } from '../../lib/api.ts';
   import { href } from '../../lib/url.ts';
   import { esc, fmtDate, fmtWon, monthLabel, toast } from '../../lib/html.ts';
-  import { attendance, wins, band, RATE_CUTS, STAT_CUTS } from '../../lib/stats.ts';
+  import { band, STAT_CUTS } from '../../lib/stats.ts';
   import { nextDuty } from '../../lib/rotation.ts';
-  import { playerCard, playerCardBack, STAT_KO, STAT_LABEL } from '../../components/player-card.ts';
+  import { playerCard, STAT_KO, STAT_LABEL } from '../../components/player-card.ts';
   import { avatarSvg } from '../../components/avatar.ts';
   import { PARTS, avatarSpecFor, serializeAvatar, type AvatarSpec } from '../../lib/avatar.ts';
   import { countUp } from '../../lib/motion.ts';
@@ -43,8 +43,6 @@ const { num } = Astro.params;
     if (isAdmin()) $('edit').onclick = () => openEdit(p);
     if (!p) { $('title').textContent = `선수 #${num}`; app.innerHTML = `<p class="muted">이 번호의 선수가 없습니다.${isAdmin() ? ' 편집으로 추가할 수 있습니다.' : ''}</p>`; if (isNew && isAdmin()) openEdit(undefined); return; }
     $('title').textContent = p.name;
-    const my = data.matches.filter((m) => m.attendees.includes(p.name));
-    const a = attendance(p.name, data.matches), w = wins(p.name, data.matches);
     const fines = data.fines.filter((f) => f.player === p.name);
     const unpaid = fines.filter((f) => !f.paid).reduce((s, f) => s + f.amount, 0);
     const duty = nextDuty(data.players, data.rotation, p.name);
@@ -52,32 +50,22 @@ const { num } = Astro.params;
     // 능력치 상세 — 아이템 카드는 숫자만 보여주므로(FC 문법), 색 구간이 보이는 막대는 여기에 둔다.
     const attrRows = STAT_KEYS.map((k) => { const v = p[k], b = band(v, STAT_CUTS); return `<div class="attr-row"><span class="attr-key">${STAT_LABEL[k]}</span><b class="val val-${b}">${v || '–'}</b><i class="attr-bar"><b class="val-${b}" style="--fill:${Math.max(0, Math.min(100, v))}%"></b></i></div>`; }).join('');
     app.innerHTML = `<div class="player-hero">
-      ${playerCard(p, avatarHtml, playerCardBack(p, data.matches))}
+      ${playerCard(p, avatarHtml)}
       <div class="player-side">
         <div class="cards player-tiles">
-          <div class="card"><h2>출석</h2><div class="big">${a.total ? `<span class="val val-${band(a.rate, RATE_CUTS)}" id="pc-att-val">${a.rate}%</span>` : '–'}</div><p class="muted">${a.attended} / ${a.total} 매치</p></div>
-          <div class="card"><h2>승률</h2><div class="big">${w.played ? `${w.rate}%` : '–'}</div><p class="muted">${w.won}승 / 결과 있는 ${w.played} 매치</p></div>
           <div class="card"><h2>벌금</h2><div class="big ${unpaid ? 'warn' : ''}" id="pc-fine-big">${fmtWon(unpaid)}</div><p class="muted">미납 · 누계 ${fmtWon(fines.reduce((s, f) => s + f.amount, 0))} (${fines.length}건)</p></div>
           <div class="card"><h2>봉사</h2><div class="big" style="font-size:var(--fs-lg)">${duty ? monthLabel(duty.year, duty.month) : '–'}</div><p class="muted">${p.rot ? `순번 ${p.rot} · 다음 차례` : '로테이션 제외'}</p></div>
         </div>
         <div class="card"><h2>능력치</h2><div class="attr-list">${attrRows}</div></div>
       </div>
     </div>
-      <div class="card"><h2>참여 이력</h2>${my.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th><th>장소</th><th>유형</th><th>결과</th></tr></thead><tbody>${my.map((m) => { const won = m.winner && m.teams.find((t) => t.name === m.winner)?.players.includes(p.name); return `<tr><td><a href="${href(`/match/?d=${encodeURIComponent(m.id)}`)}">${fmtDate(m.date)}</a></td><td>${esc(m.location) || '–'}</td><td>${esc(m.type) || '–'}</td><td>${m.winner ? (won ? '<span class="val val-a">승</span>' : '<span class="val val-d">패</span>') : '<span class="muted">–</span>'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted">아직 참석 기록이 없습니다.</p>'}</div>
       ${fines.length ? `<div class="card"><h2>벌금 내역</h2><div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th><th>유형</th><th class="r">금액</th><th>납부</th></tr></thead><tbody>${fines.map((f) => `<tr><td>${fmtDate(f.date)}</td><td>${esc(f.type)}</td><td class="r">${fmtWon(f.amount)}</td><td>${f.paid ? '완료' : '<span class="warn">미납</span>'}</td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
     $('avatar-edit-btn').onclick = () => openAvatarEditor(p);
-    // 카드 뒤집기(8절) — back을 준 카드에만 버튼이 있다. reduced-motion에서도 그냥
-    // 즉시 뒤집힌다: .pcard-flip의 transition을 tokens.css가 이미 꺼두기 때문.
-    app.querySelector<HTMLElement>('[data-pcard-flip]')?.addEventListener('click', () => {
-      app.querySelector('[data-pcard-flip-inner]')?.classList.toggle('flipped');
-    });
-    // 카운트업(8절) — OVR·출석률·정산(미납) 합계를 0에서 실제 값으로. "–"로
+    // 카운트업(8절) — OVR·정산(미납) 합계를 0에서 실제 값으로. "–"로
     // 표시되는(값 없음) 자리는 셀 게 없으니 그대로 둔다. reduced-motion은
     // countUp 내부에서 처리한다(바로 최종값, 프레임 루프 없음).
     const ovrEl = app.querySelector<HTMLElement>('[data-ovr]');
     if (ovrEl) { const target = Number(ovrEl.dataset.ovr); if (target > 0) countUp(ovrEl, target); }
-    const attEl = document.getElementById('pc-att-val');
-    if (a.total > 0 && attEl) countUp(attEl, a.rate, (n) => `${n}%`);
     countUp($('pc-fine-big'), unpaid, fmtWon);
   }
 

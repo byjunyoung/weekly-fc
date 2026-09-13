@@ -1,0 +1,20 @@
+---
+// src/components/Redirect.astro — 옛 주소를 새 주소로 넘긴다. 카톡에 공유된 옛 링크를 살리려고 둔다.
+import { href } from '../lib/url';
+interface Props { to: string; title: string }
+const { to, title } = Astro.props;
+const url = href(to);
+---
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta http-equiv="refresh" content={`0; url=${url}`} />
+  <title>{title} · WEEKLY FC</title>
+</head>
+<body>
+  <p><a href={url}>{title}(으)로 이동</a></p>
+</body>
+</html>

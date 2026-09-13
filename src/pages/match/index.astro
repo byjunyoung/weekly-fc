@@ -5,19 +5,14 @@ import Shell from '../../layouts/Shell.astro';
   <div class="page-head"><h1 id="title">매치</h1><div class="actions" id="actions"></div></div>
   <div id="app" class="stack"></div>
   <wa-dialog id="import-modal" label="영상에서 가져오기" with-footer class="modal-wide"><p class="muted">채널 영상 제목에서 날짜·유형·장소를 읽어 아직 없는 매치를 만듭니다.</p><div id="import-list" class="stack"></div><div slot="footer" class="foot"><button data-close="import-modal">닫기</button><button class="primary" id="import-ok">추가</button></div></wa-dialog>
-  <wa-dialog id="att-modal" label="참석 채우기" with-footer class="modal-wide"><p class="muted">카톡 투표 결과를 복사해 붙여넣으세요. 명단과 대조합니다.</p><textarea id="att-text" rows="6" style="width:100%"></textarea><div id="att-preview" class="stack att-preview"></div><div slot="footer" class="foot"><button data-close="att-modal">취소</button><button class="primary" id="att-ok">저장</button></div></wa-dialog>
-  <wa-dialog id="res-modal" label="결과 적기" with-footer class="modal-xwide"><div id="res-form" class="stack"></div><div slot="footer" class="foot"><button data-close="res-modal">취소</button><button class="primary" id="res-ok">저장</button></div></wa-dialog>
   <wa-dialog id="meta-modal" label="매치 정보" with-footer><form class="form" id="meta-form"></form><div slot="footer" class="foot"><button class="danger" id="meta-del">삭제</button><span style="flex:1"></span><button data-close="meta-modal">취소</button><button class="primary" id="meta-ok">저장</button></div></wa-dialog>
 </Shell>
 <script>
   import { onData, isAdmin, write, loadVideos, serializeMatch } from '../../lib/api.ts';
-  import { proposeMatches, parseAttendance } from '../../lib/parse.ts';
-  import { lineupSvg, type PitchState } from '../../components/lineup-svg.ts';
-  import { mountRecap } from '../../components/recap.ts';
-  import { conditionBadge } from '../../components/condition.ts';
+  import { proposeMatches } from '../../lib/parse.ts';
   import { esc, fmtDate, ytThumb, ytEmbed, toast, seoulToday } from '../../lib/html.ts';
   import { href } from '../../lib/url.ts';
-  import type { Data, Match, Team } from '../../lib/types.ts';
+  import type { Data, Match } from '../../lib/types.ts';
 
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   // wa-dialog 는 open 속성으로 여닫는다. $ 는 다른 곳에서 구체 타입으로 캐스팅하므로 따로 둔다.
@@ -26,10 +21,8 @@ import Shell from '../../layouts/Shell.astro';
   const id = new URLSearchParams(location.search).get('d');
   let data: Data | null = null;
   let view: 'list' | 'thumbs' = (localStorage.getItem('wfc_match_view') as 'list' | 'thumbs') || 'list';
-  let tab: 'info' | 'lineup' | 'recap' = 'info';
   document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => dlg(b.dataset.close!).open = false));
   const link = (m: Match) => href(`/match/?d=${encodeURIComponent(m.id)}`);
-  const result = (m: Match) => (m.winner ? `${esc(m.winner)} 승` : m.teams.length ? '결과 없음' : '');
   const freeId = (date: string): string => {
     if (!data!.matches.some((x) => x.id === date)) return date;
     for (let i = 2; ; i++) { const cand = `${date}-${i}`; if (!data!.matches.some((x) => x.id === cand)) return cand; }
@@ -44,12 +37,12 @@ import Shell from '../../layouts/Shell.astro';
     if (!d.matches.length) { app.innerHTML = `<p class="muted">아직 매치 기록이 없습니다.${isAdmin() ? ' "영상에서 가져오기"로 시작하세요.' : ''}</p>`; return; }
     if (view === 'thumbs') {
       const vids = d.matches.filter((m) => m.youtube);
-      app.innerHTML = `<div class="thumbs">${vids.map((m) => `<a class="thumb" href="${link(m)}"><img src="${ytThumb(m.youtube)}" alt="" loading="lazy"><div class="body"><b>${fmtDate(m.date)}</b><div class="muted">${esc(m.type)}${m.location ? ` · ${esc(m.location)}` : ''} · ${m.attendees.length}명</div></div></a>`).join('')}</div>${vids.length ? '' : '<p class="muted">영상이 붙은 매치가 없습니다.</p>'}`;
+      app.innerHTML = `<div class="thumbs">${vids.map((m) => `<a class="thumb" href="${link(m)}"><img src="${ytThumb(m.youtube)}" alt="" loading="lazy"><div class="body"><b>${fmtDate(m.date)}</b><div class="muted">${esc(m.type)}${m.location ? ` · ${esc(m.location)}` : ''}</div></div></a>`).join('')}</div>${vids.length ? '' : '<p class="muted">영상이 붙은 매치가 없습니다.</p>'}`;
       return;
     }
     const years = [...new Set(d.matches.map((m) => m.date.slice(0, 4)))].sort().reverse();
-    app.innerHTML = years.map((y, i) => `<details class="year" ${i === 0 ? 'open' : ''}><summary>${y} <span class="muted">${d.matches.filter((m) => m.date.startsWith(y)).length}경기</span></summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th><th>장소</th><th>유형</th><th>결과</th><th class="r">참석</th><th class="c">영상</th></tr></thead><tbody>
-      ${d.matches.filter((m) => m.date.startsWith(y)).map((m) => `<tr><td><a href="${link(m)}"><b>${fmtDate(m.date)}</b></a></td><td>${esc(m.location) || '<span class="muted">–</span>'}</td><td>${esc(m.type) || '<span class="muted">–</span>'}</td><td>${result(m) || '<span class="muted">–</span>'}</td><td class="r">${m.attendees.length || '<span class="muted">–</span>'}</td><td class="c">${m.youtube ? '▶' : ''}</td></tr>`).join('')}</tbody></table></div></details>`).join('');
+    app.innerHTML = years.map((y, i) => `<details class="year" ${i === 0 ? 'open' : ''}><summary>${y} <span class="muted">${d.matches.filter((m) => m.date.startsWith(y)).length}경기</span></summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th><th>장소</th><th>유형</th><th class="c">영상</th></tr></thead><tbody>
+      ${d.matches.filter((m) => m.date.startsWith(y)).map((m) => `<tr><td><a href="${link(m)}"><b>${fmtDate(m.date)}</b></a></td><td>${esc(m.location) || '<span class="muted">–</span>'}</td><td>${esc(m.type) || '<span class="muted">–</span>'}</td><td class="c">${m.youtube ? '▶' : ''}</td></tr>`).join('')}</tbody></table></div></details>`).join('');
   }
 
   // ── 상세 ──
@@ -57,24 +50,10 @@ import Shell from '../../layouts/Shell.astro';
     const m = d.matches.find((x) => x.id === id);
     if (!m) { $('title').textContent = '매치'; app.innerHTML = `<p class="muted">그 날짜의 매치가 없습니다.</p><p><a href="${href('/match/')}">← 목록</a></p>`; return; }
     $('title').textContent = fmtDate(m.date);
-    $('actions').innerHTML = `<button id="back">← 목록</button>${isAdmin() ? '<button id="att">참석 채우기</button><button id="res">결과 적기</button><button id="meta">정보</button>' : ''}`;
+    $('actions').innerHTML = `<button id="back">← 목록</button>${isAdmin() ? '<button id="meta">정보</button>' : ''}`;
     $('back').onclick = () => { location.href = href('/match/'); };
-    if (isAdmin()) { $('att').onclick = () => openAtt(m); $('res').onclick = () => openRes(m); $('meta').onclick = () => openMeta(m); }
-    const lineup = d.lineups.find((l) => l.match_id === m.id);
-    let ps: PitchState | null = null; try { ps = lineup ? (JSON.parse(lineup.assignments) as PitchState) : null; } catch { ps = null; }
-    const tabs = `<nav class="tabs">${[['info', '개요'], ['lineup', '라인업'], ['recap', '리캡']].map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${l}</button>`).join('')}</nav>`;
-    let body = '';
-    if (tab === 'info') {
-      const teams = m.teams.length ? `<div class="card"><h2>팀 편성${m.winner ? ` · <span class="val val-a">${esc(m.winner)} 승</span>` : ''}</h2><div class="cards">${m.teams.map((t) => `<div class="card"><h2>${esc(t.name)}${t.points != null ? ` <span class="muted">${t.points}점</span>` : ''}</h2><div class="chips">${t.players.map((p) => `<span class="chip">${esc(p)}</span>`).join('')}</div></div>`).join('')}</div></div>` : '';
-      body = `<div class="cards"><div class="card"><h2>정보</h2><p>${esc(m.type) || '–'} · ${esc(m.location) || '장소 없음'}</p></div><div class="card"><h2>참석 ${m.attendees.length}명</h2><div class="chips">${m.attendees.map((p) => { const pl = d.players.find((x) => x.name === p); const badge = conditionBadge(p, d.matches); return pl ? `<a class="chip" href="${href(`/squad/${pl.num}/`)}">${esc(p)} ${badge}</a>` : `<span class="chip">${esc(p)} ${badge}</span>`; }).join('') || '<span class="muted">아직 없음</span>'}</div></div></div>${teams}${m.youtube ? `<div class="embed"><iframe src="${ytEmbed(m.youtube)}" title="매치 영상" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}`;
-    } else if (tab === 'lineup') {
-      body = ps ? lineupSvg(ps) : `<p class="muted">저장된 라인업이 없습니다. <a href="${href(`/tactics/?match=${encodeURIComponent(m.id)}`)}">전술보드에서 만들기 →</a></p>`;
-    } else {
-      body = `<div id="recap-slot" class="stack"><p class="muted">리캡 카드를 준비 중…</p></div>`;
-    }
-    app.innerHTML = tabs + body;
-    document.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab as typeof tab; renderDetail(d); }));
-    if (tab === 'recap') (window as unknown as { wfcRecap?: (m: Match, ps: PitchState | null) => void }).wfcRecap?.(m, ps);
+    if (isAdmin()) $('meta').onclick = () => openMeta(m);
+    app.innerHTML = `<div class="cards"><div class="card"><h2>정보</h2><p>${esc(m.type) || '–'} · ${esc(m.location) || '장소 없음'}</p></div></div>${m.youtube ? `<div class="embed"><iframe src="${ytEmbed(m.youtube)}" title="매치 영상" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}`;
   }
 
   // ── 관리자: 영상에서 가져오기 ──
@@ -92,43 +71,6 @@ import Shell from '../../layouts/Shell.astro';
         catch (e) { toast((e as Error).message); } finally { ($('import-ok') as HTMLButtonElement).disabled = false; }
       };
     } catch (e) { $('import-list').innerHTML = `<p class="warn">${esc((e as Error).message)}</p>`; }
-  }
-
-  // ── 관리자: 참석 채우기 ──
-  function openAtt(m: Match) {
-    const manualAdd: string[] = [];
-    const manualRemove: string[] = [];
-    let parsed: string[] = [];
-    let unmatched: string[] = [];
-    const ta = $('att-text') as HTMLTextAreaElement; ta.value = '';
-    const compute = (): string[] => {
-      const all = [...m.attendees, ...parsed, ...manualAdd];
-      return [...new Set(all)].filter((n) => !manualRemove.includes(n));
-    };
-    const draw = () => {
-      const picked = compute();
-      $('att-preview').innerHTML = `<div class="label">참석 ${picked.length}명</div><div class="chips">${picked.map((p) => `<button class="chip on" data-rm="${esc(p)}">${esc(p)} ×</button>`).join('')}</div>${unmatched.length ? `<div class="label">못 찾음</div><div class="chips">${unmatched.map((u) => `<span class="chip warn">${esc(u)}</span>`).join('')}</div>` : ''}<div class="label">명단에서 추가</div><div class="chips">${data!.players.filter((p) => !picked.includes(p.name)).map((p) => `<button class="chip" data-add="${esc(p.name)}">${esc(p.name)}</button>`).join('')}</div>`;
-      document.querySelectorAll<HTMLElement>('[data-rm]').forEach((b) => (b.onclick = () => { const name = b.dataset.rm!; manualRemove.push(name); const i = manualAdd.indexOf(name); if (i >= 0) manualAdd.splice(i, 1); draw(); }));
-      document.querySelectorAll<HTMLElement>('[data-add]').forEach((b) => (b.onclick = () => { const name = b.dataset.add!; manualAdd.push(name); const j = manualRemove.indexOf(name); if (j >= 0) manualRemove.splice(j, 1); draw(); }));
-    };
-    ta.oninput = () => { const r = parseAttendance(ta.value, data!.players); parsed = r.matched; unmatched = r.unmatched; draw(); };
-    draw();
-    $('att-ok').onclick = async () => { try { await write('writeMatch', serializeMatch({ ...m, attendees: compute() })); dlg('att-modal').open = false; toast('저장됨'); } catch (e) { toast((e as Error).message); } };
-    dlg('att-modal').open = true;
-  }
-
-  // ── 관리자: 결과 적기 ──
-  function openRes(m: Match) {
-    const n = Math.max(m.type === '3파전' ? 3 : 2, m.teams.length);
-    const teams: Team[] = Array.from({ length: n }, (_, i) => m.teams[i] ?? { name: String.fromCharCode(65 + i), players: [], points: null });
-    const draw = () => {
-      $('res-form').innerHTML = teams.map((t, i) => `<div class="card"><div class="row"><label>팀 이름 <input data-t="${i}" data-f="name" value="${esc(t.name)}" class="w-tname"></label><label>승점 <input data-t="${i}" data-f="points" type="number" value="${t.points ?? ''}" class="w-points"></label></div><div class="chips res-chips">${m.attendees.map((p) => `<button class="chip ${t.players.includes(p) ? 'on' : ''}" data-t="${i}" data-p="${esc(p)}">${esc(p)}</button>`).join('') || '<span class="muted">먼저 참석을 채우세요</span>'}</div></div>`).join('') + `<label class="row">우승 <select id="res-winner"><option value="">없음</option>${teams.map((t) => `<option ${m.winner === t.name ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>`;
-      document.querySelectorAll<HTMLInputElement>('[data-f]').forEach((el) => (el.oninput = () => { const t = teams[Number(el.dataset.t)]; if (el.dataset.f === 'name') t.name = el.value; else t.points = el.value === '' ? null : Number(el.value); }));
-      document.querySelectorAll<HTMLElement>('[data-p]').forEach((b) => (b.onclick = () => { const ti = Number(b.dataset.t), p = b.dataset.p!; teams.forEach((t, i) => { t.players = t.players.filter((x) => x !== p); if (i === ti && !b.classList.contains('on')) t.players.push(p); }); draw(); }));
-    };
-    draw();
-    $('res-ok').onclick = async () => { const winner = ($('res-winner') as HTMLSelectElement).value; try { await write('writeMatch', serializeMatch({ ...m, teams, winner })); dlg('res-modal').open = false; toast('저장됨'); } catch (e) { toast((e as Error).message); } };
-    dlg('res-modal').open = true;
   }
 
   // ── 관리자: 정보 편집 / 직접 추가 ──
@@ -150,5 +92,4 @@ import Shell from '../../layouts/Shell.astro';
   const render = () => { if (!data) return; id ? renderDetail(data) : renderList(data); };
   window.addEventListener('wfc:admin', render);
   onData((d) => { data = d; render(); });
-  (window as unknown as { wfcRecap: typeof mountRecap }).wfcRecap = mountRecap;
 </script>
