@@ -420,6 +420,9 @@ a.card:hover { background: var(--charcoal); }
 .bd-pos { font-size: 10px; font-weight: var(--fw-strong); color: var(--ink-soft); }
 .bd-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-xs); }
 .bd-hint { margin: 0; font-size: var(--fs-xs); text-align: center; }
+.bd-pitch.is-drawing { cursor: crosshair; }
+.bd-pitch.is-drawing .bd-slot { pointer-events: none; }
+.bd-ink, .bd-ink * { fill: none; stroke: var(--fg); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 @media (max-width: 899px) {
   .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); padding-bottom: 72px; }
   .bd-slot { width: 62px; min-height: 50px; }

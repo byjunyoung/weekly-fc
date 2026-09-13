@@ -24,7 +24,11 @@ import Shell from '../../layouts/Shell.astro';
     </section>
     <section class="bd-stage" aria-label="피치">
       <div id="pitch-slot"></div>
-      <div class="bd-tools" id="tools" role="toolbar" aria-label="도구"></div>
+      <div class="bd-tools" id="tools" role="toolbar" aria-label="도구">
+        <div class="chips" id="tool" role="group" aria-label="그리기 도구"><button class="chip on" data-tool="move" aria-pressed="true">이동</button><button class="chip" data-tool="arrow" aria-pressed="false">화살표</button><button class="chip" data-tool="pen" aria-pressed="false">펜</button></div>
+        <button type="button" id="undo">되돌리기</button>
+        <button type="button" id="clear">지우기</button>
+      </div>
       <p class="muted bd-hint" id="hint"></p>
     </section>
   </div>
@@ -39,6 +43,7 @@ import Shell from '../../layouts/Shell.astro';
   import { avatarSvg } from '../../components/avatar.ts';
   import { avatarSpecFor } from '../../lib/avatar.ts';
   import { pitchHtml } from '../../components/pitch-view.ts';
+  import { drawingsSvg, attachDraw, type Tool } from '../../components/board-draw.ts';
   import { SHAPES, MIN_COUNT, MAX_COUNT, type PitchKind } from '../../lib/formation.ts';
   import * as L from '../../lib/lineup.ts';
   import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
@@ -56,6 +61,7 @@ import Shell from '../../layouts/Shell.astro';
    *  캐시 명단에 없던 선수가 새 명단에 있을 수 있어서다. */
   let touched = false;
   let selected: number | null = null;
+  let tool: Tool = 'move';
   let pos = 'ALL', q = '';
   const savedView = load(VIEW_KEY);
   let view: View = savedView === 'card' || savedView === 'table' ? savedView : 'list';
@@ -197,11 +203,18 @@ import Shell from '../../layouts/Shell.astro';
     $('add').hidden = !isAdmin();
     $('sheet-summary').textContent = `명단 ${d.players.length}명 · 선발 ${filled}/${st.count}`;
     renderControls();
-    $('pitch-slot').innerHTML = pitchHtml(st, d.players, selected);
-    bindPitch();
+    const ink = drawingsSvg(st.drawings, st.pitch);
+    $('pitch-slot').innerHTML = pitchHtml(st, d.players, selected, ink);
+    const pitchEl = document.querySelector<HTMLElement>('[data-pitch]');
+    if (tool === 'move') bindPitch();
+    else if (pitchEl) attachDraw(pitchEl, st.pitch, tool, ink, (dr) => commit(L.addDrawing(st, dr)));
+    ($('undo') as HTMLButtonElement).disabled = st.drawings.length === 0;
+    ($('clear') as HTMLButtonElement).disabled = st.drawings.length === 0;
+    document.querySelectorAll('#tool [data-tool]').forEach((b) => setChip(b, (b as HTMLElement).dataset.tool === tool));
     renderList(rows);
-    $('hint').textContent = selected !== null
-      ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
+    $('hint').textContent = tool === 'arrow' ? '피치 위를 끌어 화살표를 그립니다'
+      : tool === 'pen' ? '피치 위를 끌어 자유롭게 그립니다'
+      : selected !== null ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
       : '자리를 누르고 선수를 고르세요 · 카드를 끌면 옮기거나 맞바꿉니다';
   }
 
@@ -212,6 +225,9 @@ import Shell from '../../layouts/Shell.astro';
   document.querySelectorAll<HTMLElement>('#pitch-kind [data-kind]').forEach((b) => (b.onclick = () => commit(L.setPitch(st, b.dataset.kind as PitchKind))));
   $('auto').onclick = () => { if (!data) return; selected = null; commit(L.autoFill(st, data.players)); };
   $('sheet-handle').onclick = () => toggleSheet();
+  document.querySelectorAll<HTMLElement>('#tool [data-tool]').forEach((b) => (b.onclick = () => { tool = b.dataset.tool as Tool; selected = null; render(); }));
+  $('undo').onclick = () => commit(L.undoDrawing(st));
+  $('clear').onclick = () => commit(L.clearDrawings(st));
 
   // 명단은 다시 그릴 때마다 innerHTML 이 바뀌고, 표는 머리글 정렬 때 mountTable 이 스스로 다시 그린다 —
   // 그래서 행마다 붙이지 않고 바깥 한 곳에서 위임으로 받는다.
