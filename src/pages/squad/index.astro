@@ -79,6 +79,9 @@ import Shell from '../../layouts/Shell.astro';
   function commit(next: L.LineupState): void {
     st = next;
     touched = true;
+    // 데이터가 아직 없거나(로딩 중) 비어 있으면(API 실패로 EMPTY) 지금 상태는 진짜 명단을
+    // 반영한 게 아니다 — 그대로 저장하면 진짜 초안을 빈 값으로 덮어쓴다.
+    if (!data || data.players.length === 0) { render(); return; }
     save(L.DRAFT_KEY, L.serialize(st));
     render();
   }
@@ -136,6 +139,12 @@ import Shell from '../../layouts/Shell.astro';
     commit(L.swap(st, a, idx));
   }
 
+  /** tapSlot 은 render() 로 버튼을 다시 그려서 포커스를 지운다 — 키보드 경로에서만 되돌려 준다. */
+  function tapSlotKeepFocus(idx: number): void {
+    tapSlot(idx);
+    document.querySelector<HTMLElement>(`[data-slot="${idx}"]`)?.focus();
+  }
+
   /** 카드 끌기 — 다른 카드 위에 놓으면 교환, 빈 곳이면 그 슬롯 위치만 옮긴다. 6px 안쪽이면 탭으로 본다. */
   function startDrag(e: PointerEvent, el: HTMLElement, pitch: HTMLElement): void {
     if (e.button !== 0) return;
@@ -175,7 +184,7 @@ import Shell from '../../layouts/Shell.astro';
     pitch.querySelectorAll<HTMLElement>('[data-slot]').forEach((el) => {
       el.onpointerdown = (e) => startDrag(e, el, pitch);
       // 키보드(Enter·Space)는 pointer 이벤트가 없다 — detail 0 인 click 으로만 들어온다.
-      el.onclick = (e) => { if (e.detail === 0) tapSlot(Number(el.dataset.slot)); };
+      el.onclick = (e) => { if (e.detail === 0) tapSlotKeepFocus(Number(el.dataset.slot)); };
     });
     pitch.addEventListener('click', (e) => {
       if (!(e.target as Element).closest('[data-slot]') && selected !== null) { selected = null; render(); }
@@ -205,7 +214,9 @@ import Shell from '../../layouts/Shell.astro';
   function render(): void {
     if (!data) return;
     const d = data;
-    if (!touched) st = L.restore(load(L.DRAFT_KEY), d.players);
+    // 명단이 비어 있으면(API 실패 등) 초안을 복원하지 않는다 — 실제 명단이 아니라서 st 만
+    // 조용히 비워버리게 된다. 진짜 명단이 온 뒤에 한 번만 복원한다.
+    if (!touched && d.players.length > 0) st = L.restore(load(L.DRAFT_KEY), d.players);
     const rows = d.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
     const filled = st.slots.filter((x) => x != null).length;
     $('count').textContent = `${d.players.length}명`;
@@ -261,6 +272,10 @@ import Shell from '../../layouts/Shell.astro';
   const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
   const shareCanvas = document.createElement('canvas');
   let shareFile: File | null = null;
+  /** redrawShare() 가 마지막으로 그린 제목. share-go 에서 입력값과 어긋나면 다시 그린다 —
+   *  onchange 는 blur 뒤에 붙어서, 터치에서 「공유하기」를 탭하면 change → click 이 거의
+   *  동시에 들어와 그리기가 끝나기 전에 공유가 나갈 수 있다. */
+  let drawnTitle = '';
   const titleNow = () => st.title || L.defaultTitle(seoulToday());
 
   function shareEnv(file: File | null): ShareEnv {
@@ -270,17 +285,27 @@ import Shell from '../../layouts/Shell.astro';
     return { canShareFiles, ua: navigator.userAgent, touchPoints: navigator.maxTouchPoints || 0 };
   }
 
-  async function drawShare(): Promise<File> {
+  /** data:URL → File. toBlob 의 콜백/프라미스를 거치지 않아 완전히 동기다 —
+   *  share-go 안에서 그린 파일을 바로 navigator.share 에 넘겨야 사용자 제스처가 유지된다. */
+  function dataUrlToFile(url: string, name: string): File {
+    const base64 = url.slice(url.indexOf(',') + 1);
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new File([bytes], name, { type: 'image/png' });
+  }
+
+  /** 동기 재그리기 — 캔버스·미리보기·내려받기 링크·공유 파일을 한 번에 새로 만든다. */
+  function redrawShare(): File {
     if (!data) throw new Error('명단을 아직 못 불러왔습니다');
-    await document.fonts.ready; // Pretendard 가 늦게 오면 캔버스가 대체 글꼴로 굳는다
     drawLineupImage(shareCanvas, st, data.players, titleNow());
     const url = shareCanvas.toDataURL('image/png');
     ($('share-img') as HTMLImageElement).src = url;
     const dl = $('share-dl') as HTMLAnchorElement;
     dl.href = url;
     dl.download = shareFileName(seoulToday());
-    const blob = await new Promise<Blob | null>((res) => shareCanvas.toBlob(res, 'image/png'));
-    return new File([blob ?? new Blob()], shareFileName(seoulToday()), { type: 'image/png' });
+    drawnTitle = titleNow();
+    return dataUrlToFile(url, shareFileName(seoulToday()));
   }
 
   function showMethod(m: ShareMethod): void {
@@ -293,18 +318,30 @@ import Shell from '../../layouts/Shell.astro';
 
   $('share').onclick = async () => {
     selected = null;
+    render(); // 선택 테두리가 다이얼로그 뒤에 남지 않도록
     ($('share-title') as HTMLInputElement).value = titleNow();
     dlg('share-modal').open = true;
-    try { shareFile = await drawShare(); showMethod(pickShareMethod(shareEnv(shareFile))); } catch (e) { toast((e as Error).message); }
+    try {
+      await document.fonts.ready; // Pretendard 가 늦게 오면 캔버스가 대체 글꼴로 굳는다 — 처음 열 때만 기다린다
+      shareFile = redrawShare();
+      showMethod(pickShareMethod(shareEnv(shareFile)));
+    } catch (e) { toast((e as Error).message); }
   };
-  ($('share-title') as HTMLInputElement).onchange = async (e) => {
+  ($('share-title') as HTMLInputElement).onchange = (e) => {
     const v = (e.target as HTMLInputElement).value.trim();
     // 기본 제목을 그대로 두면 저장하지 않는다 — 다음 주에 열면 그 주 토요일로 다시 계산돼야 한다.
     commit(L.setTitle(st, v === L.defaultTitle(seoulToday()) ? '' : v));
-    try { shareFile = await drawShare(); } catch (err) { toast((err as Error).message); }
+    try { shareFile = redrawShare(); } catch (err) { toast((err as Error).message); }
   };
   $('share-go').onclick = async () => {
     if (!shareFile) return;
+    // 제목을 고친 뒤 blur 없이 바로 탭하면 change 가 아직 안 왔을 수 있다 — 여기서도 같은 규칙으로
+    // 반영하고 다시 그린다. navigator.share 앞까지는 전부 동기라 사용자 제스처가 끊기지 않는다.
+    const v = ($('share-title') as HTMLInputElement).value.trim();
+    if (v !== drawnTitle) {
+      commit(L.setTitle(st, v === L.defaultTitle(seoulToday()) ? '' : v));
+      try { shareFile = redrawShare(); } catch (e) { toast((e as Error).message); return; }
+    }
     try { await navigator.share({ files: [shareFile], title: titleNow() }); }
     catch (e) { if ((e as DOMException).name !== 'AbortError') showMethod(fallbackMethod(shareEnv(null))); }
   };
