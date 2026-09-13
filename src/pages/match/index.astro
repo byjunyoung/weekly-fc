@@ -20,7 +20,7 @@ import Shell from '../../layouts/Shell.astro';
   function renderList(list: MatchVideo[]): void {
     $('count').textContent = `${list.length}편`;
     app.innerHTML = list.length
-      ? `<div class="thumbs">${list.map((m) => `<a class="thumb" href="${href(`/match/?v=${encodeURIComponent(m.id)}`)}"><img src="${ytThumb(m.id)}" alt="" loading="lazy"><div class="body"><b>${m.date ? fmtDate(m.date) : esc(m.title)}</b><div class="muted">${meta(m) || esc(m.title)}</div></div></a>`).join('')}</div>`
+      ? `<div class="thumbs">${list.map((m) => `<a class="thumb" href="${href(`/match/?v=${encodeURIComponent(m.id)}`)}"><img src="${ytThumb(m.id)}" alt="" loading="lazy"><div class="body"><b>${m.date ? esc(fmtDate(m.date)) : esc(m.title)}</b><div class="muted">${meta(m) || esc(m.title)}</div></div></a>`).join('')}</div>`
       : '<p class="muted">채널 영상을 불러오지 못했습니다.</p>';
   }
 

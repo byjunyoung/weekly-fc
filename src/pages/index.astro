@@ -10,7 +10,7 @@ import Shell from '../layouts/Shell.astro';
   import { getMe } from '../lib/me';
   import { href } from '../lib/url';
   import { esc, fmtDate, fmtWon, monthLabel, ytThumb, ytThumbBig } from '../lib/html';
-  import { rotationFor, nextDuty } from '../lib/rotation';
+  import { rotationFor } from '../lib/rotation';
   import { matchVideos } from '../lib/match-videos';
   import { fineSummary, ovr } from '../lib/stats';
   import { LINKS } from '../lib/rules';
@@ -47,7 +47,7 @@ import Shell from '../layouts/Shell.astro';
       ${id ? `<img src="${ytThumbBig(id)}" alt="" onerror="this.onerror=null;this.src='${ytThumb(id)}'">` : ''}
       <span class="art-kicker">최근 매치</span>
       <h2 class="art-title">${title}</h2>
-      <p class="art-sub">${date ? fmtDate(date) : '날짜 미정'}${where ? ` · ${esc(where)}` : ''}</p>
+      <p class="art-sub">${date ? esc(fmtDate(date)) : '날짜 미정'}${where ? ` · ${esc(where)}` : ''}</p>
       <div class="art-foot">
         <a class="chip" href="${href('/match/')}">매치 전체 →</a>
         ${id ? `<a class="chip" href="${href(`/match/?v=${encodeURIComponent(id)}`)}">영상 보기 →</a>` : ''}

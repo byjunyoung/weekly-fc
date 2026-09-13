@@ -2,7 +2,7 @@
 // (3~5단계에서 캔버스 컨텍스트로도 그대로 쓸 수 있어야 하므로).
 // 색은 var(--토큰, 폴백hex) 형태로 써서 두 상황 모두 맞춘다: 페이지에 인라인으로
 // 붙으면 실제 CSS 변수를, canvas용 Image src(data:image/svg+xml)처럼 문서 밖
-// 단독 SVG로 쓰이면 recap.ts의 tok() 폴백과 같은 값을 쓴다(짙은 바탕 기준).
+// 단독 SVG로 쓰이면 폴백 hex 값을 쓴다(짙은 바탕 기준, tokens.css 다크 값과 맞춰 둠).
 import { esc } from '../lib/html.ts';
 import { PARTS, isUnsetAvatar, type AvatarSpec } from '../lib/avatar.ts';
 
