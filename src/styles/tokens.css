@@ -395,7 +395,7 @@ a.card:hover { background: var(--charcoal); }
 #pitch-slot { display: flex; justify-content: center; width: 100%; }
 /* 피치 바탕색은 옛 .sq-pitch 값을 그대로 가져왔다. */
 .bd-pitch { position: relative; width: min(100%, 440px); background: #0b1a13; border-radius: var(--r-md); overflow: hidden;
-  touch-action: none; user-select: none; -webkit-user-select: none; }
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .bd-futsal { width: min(100%, 340px); }
 .bd-lines, .bd-draw { position: absolute; inset: 0; width: 100%; height: 100%; }
 .bd-lines { fill: none; stroke: rgba(255, 255, 255, .22); stroke-width: 1.5px; }
@@ -417,7 +417,7 @@ a.card:hover { background: var(--charcoal); }
 .bd-pos { font-size: 10px; font-weight: var(--fw-strong); color: var(--ink-soft); }
 .bd-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-xs); }
 .bd-hint { margin: 0; font-size: var(--fs-xs); text-align: center; }
-.bd-pitch.is-drawing { cursor: crosshair; }
+.bd-pitch.is-drawing { cursor: crosshair; touch-action: none; }
 .bd-pitch.is-drawing .bd-slot { pointer-events: none; }
 .bd-ink, .bd-ink * { fill: none; stroke: var(--fg); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .bd-share-row { display: flex; justify-content: center; }
