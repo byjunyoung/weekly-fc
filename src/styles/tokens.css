@@ -287,6 +287,8 @@ a.card:hover { background: var(--charcoal); }
 .tile-label { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
 .tile-big { margin-top: auto; font-size: var(--fs-h-xl); font-weight: var(--fw-num); line-height: 1.1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .tile-sub { margin-top: var(--s-xxs); font-size: var(--fs-xs); color: var(--muted); }
+/* 봉사 두 명 — 같은 크기로 나란히. 좁은 타일에서는 줄바꿈해도 크기는 같다. */
+.tile-duo { display: flex; flex-wrap: wrap; gap: 0 var(--s-sm); margin-top: auto; font-size: var(--fs-h-lg); font-weight: var(--fw-num); line-height: 1.25; }
 .tile-wide { grid-column: span 2; }
 .tile-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-xxs); margin-top: var(--s-xs); }
 .tile-thumbs img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-sm); }

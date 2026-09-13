@@ -31,6 +31,11 @@ import Shell from '../layouts/Shell.astro';
       : `<a class="${cls}" href="${to}">${body}</a>`;
   }
 
+  /** 봉사 타일 — 두 명은 대등하다. 한 명을 큰 값, 한 명을 보조 줄에 두면 위계가 생긴다. */
+  function duoTile(label: string, a: string, b: string, sub: string, to: string): string {
+    return `<a class="tile" href="${to}"><span class="tile-label">${esc(label)}</span><span class="tile-duo"><b>${esc(a)}</b><b>${esc(b)}</b></span><span class="tile-sub">${sub}</span></a>`;
+  }
+
   /** 좌측 키 아트 — 최근 매치. 시트가 비어 있으면 영상 제목에서 날짜·유형을 읽어 쓴다. */
   function art(d: Data): string {
     const m = d.matches[0];
@@ -76,10 +81,10 @@ import Shell from '../layouts/Shell.astro';
         ${meTile}
         ${tile('스쿼드', String(d.players.length), pos, href('/squad/'))}
         ${tile('매치', String(matchCount), d.matches.length ? '시트 기록' : '영상 기준', href('/match/'))}
-        ${tile('전술판', '11 v 11', '포메이션 · 드로잉', href('/tactics/'))}
-        ${tile(`${monthLabel(y, mo)} 봉사`, esc(duty.p1), `${esc(duty.p2)} · ${duty.done ? '완료' : '대관비·조끼·정산'}`, href('/record/duty/'))}
-        ${tile('다음 봉사', esc(dutyNext.p1), `${esc(dutyNext.p2)} · ${monthLabel(nm.y, nm.mo)}`, href('/record/duty/'))}
-        ${tile('미납 벌금', fmtWon(fs.unpaid), `${fs.unpaidCount}건 · 기록 보기`, href('/record/fines/'))}
+        ${tile('라인업', '짜서 공유', '명단에서 골라 이미지로', href('/squad/'))}
+        ${duoTile(`${monthLabel(y, mo)} 봉사`, duty.p1, duty.p2, duty.done ? '완료' : '대관비·조끼·정산', href('/rules/#duty'))}
+        ${duoTile('다음 봉사', dutyNext.p1, dutyNext.p2, monthLabel(nm.y, nm.mo), href('/rules/#duty'))}
+        ${tile('미납 벌금', fmtWon(fs.unpaid), `${fs.unpaidCount}건 · 내역 보기`, href('/rules/#fees'))}
         ${tile('최신 영상', String((videos ?? []).length), '채널에서 보기 · 매주 토요일 기록', LINKS.youtube, `<div class="tile-thumbs">${thumbs}</div>`, true)}
       </div>
     </div>`;
