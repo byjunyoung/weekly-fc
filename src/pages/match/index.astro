@@ -2,94 +2,39 @@
 import Shell from '../../layouts/Shell.astro';
 ---
 <Shell title="매치">
-  <div class="page-head"><h1 id="title">매치</h1><div class="actions" id="actions"></div></div>
+  <div class="page-head"><h1 id="title">매치 <span class="muted" id="count"></span></h1><div class="actions" id="actions"></div></div>
   <div id="app" class="stack"></div>
-  <wa-dialog id="import-modal" label="영상에서 가져오기" with-footer class="modal-wide"><p class="muted">채널 영상 제목에서 날짜·유형·장소를 읽어 아직 없는 매치를 만듭니다.</p><div id="import-list" class="stack"></div><div slot="footer" class="foot"><button data-close="import-modal">닫기</button><button class="primary" id="import-ok">추가</button></div></wa-dialog>
-  <wa-dialog id="meta-modal" label="매치 정보" with-footer><form class="form" id="meta-form"></form><div slot="footer" class="foot"><button class="danger" id="meta-del">삭제</button><span style="flex:1"></span><button data-close="meta-modal">취소</button><button class="primary" id="meta-ok">저장</button></div></wa-dialog>
 </Shell>
 <script>
-  import { onData, isAdmin, write, loadVideos, serializeMatch } from '../../lib/api.ts';
-  import { proposeMatches } from '../../lib/parse.ts';
-  import { esc, fmtDate, ytThumb, ytEmbed, toast, seoulToday } from '../../lib/html.ts';
+  // 매치 탭 = 채널 영상 목록. 시트 매치 기록·관리자 가져오기는 쓰지 않는다(스펙 §3.4).
+  import { loadVideos } from '../../lib/api.ts';
+  import { matchVideos, type MatchVideo } from '../../lib/match-videos.ts';
+  import { esc, fmtDate, ytThumb, ytEmbed, ytWatch } from '../../lib/html.ts';
   import { href } from '../../lib/url.ts';
-  import type { Data, Match } from '../../lib/types.ts';
 
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
-  // wa-dialog 는 open 속성으로 여닫는다. $ 는 다른 곳에서 구체 타입으로 캐스팅하므로 따로 둔다.
-  const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
   const app = $('app');
-  const id = new URLSearchParams(location.search).get('d');
-  let data: Data | null = null;
-  let view: 'list' | 'thumbs' = (localStorage.getItem('wfc_match_view') as 'list' | 'thumbs') || 'list';
-  document.querySelectorAll<HTMLElement>('[data-close]').forEach((b) => (b.onclick = () => dlg(b.dataset.close!).open = false));
-  const link = (m: Match) => href(`/match/?d=${encodeURIComponent(m.id)}`);
-  const freeId = (date: string): string => {
-    if (!data!.matches.some((x) => x.id === date)) return date;
-    for (let i = 2; ; i++) { const cand = `${date}-${i}`; if (!data!.matches.some((x) => x.id === cand)) return cand; }
-  };
+  const vid = new URLSearchParams(location.search).get('v') ?? '';
+  const meta = (m: MatchVideo) => [m.type, m.location].filter(Boolean).map(esc).join(' · ');
 
-  // ── 목록 ──
-  function renderList(d: Data) {
-    $('title').textContent = '매치';
-    $('actions').innerHTML = `<div class="chips"><button class="chip ${view === 'list' ? 'on' : ''}" data-view="list">줄</button><button class="chip ${view === 'thumbs' ? 'on' : ''}" data-view="thumbs">썸네일</button></div>${isAdmin() ? '<button id="import">영상에서 가져오기</button><button id="new">직접 추가</button>' : ''}`;
-    document.querySelectorAll<HTMLElement>('[data-view]').forEach((b) => (b.onclick = () => { view = b.dataset.view as typeof view; localStorage.setItem('wfc_match_view', view); renderList(d); }));
-    if (isAdmin()) { $('import').onclick = openImport; $('new').onclick = () => openMeta(null); }
-    if (!d.matches.length) { app.innerHTML = `<p class="muted">아직 매치 기록이 없습니다.${isAdmin() ? ' "영상에서 가져오기"로 시작하세요.' : ''}</p>`; return; }
-    if (view === 'thumbs') {
-      const vids = d.matches.filter((m) => m.youtube);
-      app.innerHTML = `<div class="thumbs">${vids.map((m) => `<a class="thumb" href="${link(m)}"><img src="${ytThumb(m.youtube)}" alt="" loading="lazy"><div class="body"><b>${fmtDate(m.date)}</b><div class="muted">${esc(m.type)}${m.location ? ` · ${esc(m.location)}` : ''}</div></div></a>`).join('')}</div>${vids.length ? '' : '<p class="muted">영상이 붙은 매치가 없습니다.</p>'}`;
-      return;
-    }
-    const years = [...new Set(d.matches.map((m) => m.date.slice(0, 4)))].sort().reverse();
-    app.innerHTML = years.map((y, i) => `<details class="year" ${i === 0 ? 'open' : ''}><summary>${y} <span class="muted">${d.matches.filter((m) => m.date.startsWith(y)).length}경기</span></summary><div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th><th>장소</th><th>유형</th><th class="c">영상</th></tr></thead><tbody>
-      ${d.matches.filter((m) => m.date.startsWith(y)).map((m) => `<tr><td><a href="${link(m)}"><b>${fmtDate(m.date)}</b></a></td><td>${esc(m.location) || '<span class="muted">–</span>'}</td><td>${esc(m.type) || '<span class="muted">–</span>'}</td><td class="c">${m.youtube ? '▶' : ''}</td></tr>`).join('')}</tbody></table></div></details>`).join('');
+  function renderList(list: MatchVideo[]): void {
+    $('count').textContent = `${list.length}편`;
+    app.innerHTML = list.length
+      ? `<div class="thumbs">${list.map((m) => `<a class="thumb" href="${href(`/match/?v=${encodeURIComponent(m.id)}`)}"><img src="${ytThumb(m.id)}" alt="" loading="lazy"><div class="body"><b>${m.date ? fmtDate(m.date) : esc(m.title)}</b><div class="muted">${meta(m) || esc(m.title)}</div></div></a>`).join('')}</div>`
+      : '<p class="muted">채널 영상을 불러오지 못했습니다.</p>';
   }
 
-  // ── 상세 ──
-  function renderDetail(d: Data) {
-    const m = d.matches.find((x) => x.id === id);
-    if (!m) { $('title').textContent = '매치'; app.innerHTML = `<p class="muted">그 날짜의 매치가 없습니다.</p><p><a href="${href('/match/')}">← 목록</a></p>`; return; }
-    $('title').textContent = fmtDate(m.date);
-    $('actions').innerHTML = `<button id="back">← 목록</button>${isAdmin() ? '<button id="meta">정보</button>' : ''}`;
-    $('back').onclick = () => { location.href = href('/match/'); };
-    if (isAdmin()) $('meta').onclick = () => openMeta(m);
-    app.innerHTML = `<div class="cards"><div class="card"><h2>정보</h2><p>${esc(m.type) || '–'} · ${esc(m.location) || '장소 없음'}</p></div></div>${m.youtube ? `<div class="embed"><iframe src="${ytEmbed(m.youtube)}" title="매치 영상" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>` : ''}`;
+  function renderDetail(list: MatchVideo[]): void {
+    const m = list.find((x) => x.id === vid);
+    const id = m?.id ?? (/^[\w-]{11}$/.test(vid) ? vid : '');
+    $('title').textContent = m?.date ? fmtDate(m.date) : '매치';
+    $('actions').innerHTML = `<a class="chip" href="${href('/match/')}">← 목록</a>${id ? `<a class="chip" href="${ytWatch(id)}" target="_blank" rel="noopener">유튜브에서 보기 →</a>` : ''}`;
+    app.innerHTML = id
+      ? `${m && meta(m) ? `<p class="muted">${meta(m)}</p>` : ''}<div class="embed"><iframe src="${ytEmbed(id)}" title="${esc(m?.title || '매치 영상')}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      : '<p class="muted">영상을 찾을 수 없습니다.</p>';
   }
 
-  // ── 관리자: 영상에서 가져오기 ──
-  async function openImport() {
-    $('import-list').innerHTML = '<p class="muted">채널을 읽는 중…</p>'; dlg('import-modal').open = true;
-    try {
-      const vids = await loadVideos();
-      const props = proposeMatches(vids, data!.matches);
-      $('import-list').innerHTML = props.length ? props.map((m, i) => `<label class="row"><input type="checkbox" checked data-i="${i}"> <b>${fmtDate(m.date)}</b> <span class="muted">${esc(m.type) || '유형 모름'} · ${esc(m.location) || '장소 모름'}</span></label>`).join('') : `<p class="muted">새로 만들 매치가 없습니다. (영상 ${vids.length}개 읽음)</p>`;
-      $('import-ok').onclick = async () => {
-        const picked = [...document.querySelectorAll<HTMLInputElement>('#import-list input:checked')].map((c) => props[Number(c.dataset.i)]);
-        if (!picked.length) return;
-        ($('import-ok') as HTMLButtonElement).disabled = true;
-        try { for (const m of picked) await write('writeMatch', serializeMatch(m)); toast(`${picked.length}개 추가됨`); dlg('import-modal').open = false; }
-        catch (e) { toast((e as Error).message); } finally { ($('import-ok') as HTMLButtonElement).disabled = false; }
-      };
-    } catch (e) { $('import-list').innerHTML = `<p class="warn">${esc((e as Error).message)}</p>`; }
-  }
-
-  // ── 관리자: 정보 편집 / 직접 추가 ──
-  function openMeta(m: Match | null) {
-    const v = m ?? { id: '', date: seoulToday(), location: '', youtube: '', type: '' as const, attendees: [], teams: [], winner: '' };
-    ($('meta-form') as HTMLFormElement).innerHTML = `<label>날짜<input name="date" type="date" value="${v.date}" required></label><label>유형<select name="type">${['', '2파전', '3파전'].map((t) => `<option ${t === v.type ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label>장소<input name="location" value="${esc(v.location)}"></label><label class="full">유튜브 ID 또는 주소<input name="youtube" value="${esc(v.youtube)}"></label>`;
-    $('meta-del').hidden = !m;
-    $('meta-ok').onclick = async () => {
-      const fd = new FormData($('meta-form') as HTMLFormElement); const g = (k: string) => String(fd.get(k) ?? '').trim();
-      const yt = g('youtube').match(/(?:v=|youtu\.be\/|\/embed\/)([\w-]{11})/)?.[1] ?? g('youtube');
-      const date = g('date'); if (!date) return;
-      const idNew = m ? m.id : freeId(date);
-      try { await write('writeMatch', serializeMatch({ ...v, id: idNew, date, type: g('type') as Match['type'], location: g('location'), youtube: yt })); dlg('meta-modal').open = false; if (!m) location.href = href(`/match/?d=${encodeURIComponent(idNew)}`); } catch (e) { toast((e as Error).message); }
-    };
-    $('meta-del').onclick = async () => { if (!m || !confirm('이 매치를 지울까요?')) return; try { await write('deleteMatch', { id: m.id }); location.href = href('/match/'); } catch (e) { toast((e as Error).message); } };
-    dlg('meta-modal').open = true;
-  }
-
-  const render = () => { if (!data) return; id ? renderDetail(data) : renderList(data); };
-  window.addEventListener('wfc:admin', render);
-  onData((d) => { data = d; render(); });
+  loadVideos()
+    .then((v) => { const list = matchVideos(v); if (vid) renderDetail(list); else renderList(list); })
+    .catch(() => { app.innerHTML = '<p class="muted">채널 영상을 불러오지 못했습니다.</p>'; });
 </script>
