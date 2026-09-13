@@ -38,6 +38,8 @@
 | `/match/` | 영상 목록 · 영상 보기 |
 | `/rules/` | 운영 탭(§3) |
 
+**모든 페이지는 검색 제외(noindex)다.** 운영 규칙도 미납자 실명·금액과 봉사표 실명을 그리므로 색인하지 않고, sitemap 도 두지 않는다(사용자 결정 2026-09-14, 최종 리뷰 지적).
+
 **옛 주소는 넘겨준다.** 카톡에 공유된 링크가 있을 수 있다. `/tactics/` → `/squad/`, `/about/` → `/rules/`, `/record/` · `/record/fines/` → `/rules/#fees`, `/record/duty/` → `/rules/#duty`. 정적 사이트라 `<meta http-equiv="refresh">` + 링크 한 줄로 만든다.
 
 ## 3. 걷어내기 · 운영 탭 · 봉사
