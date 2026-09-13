@@ -4,8 +4,7 @@ import { FINE_TYPES, FINE_AMOUNT, FINE_NOTE, FINE_EXEMPT, MATCH_TIME, MATCH_MIN,
 const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
 const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '비용·벌금'], ['duty', '봉사'], ['bank', '모임 통장'], ['manner', '에티켓']];
 ---
-<Shell title="운영 규칙" index={true} description="WEEKLY FC 운영 규칙 — 매주 토요일 풋살. 참여 방법·비용·벌금·봉사·모임 통장.">
-  <Fragment slot="head"><link rel="canonical" href="https://byjunyoung.github.io/weekly-fc/rules/" /></Fragment>
+<Shell title="운영 규칙" description="WEEKLY FC 운영 규칙 — 매주 토요일 풋살. 참여 방법·비용·벌금·봉사·모임 통장.">
   <div class="page-head"><h1>운영 규칙</h1><div class="actions"><a class="chip" href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡 →</a></div></div>
   <nav class="tabs">{toc.map(([id, l]) => <a href={`#${id}`}>{l}</a>)}</nav>
   <article class="prose stack">
