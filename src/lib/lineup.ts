@@ -97,6 +97,21 @@ export function benchOf(s: LineupState, players: Player[]): Player[] {
   return players.filter((p) => !s.slots.includes(p.num)).sort((a, b) => ovr(b) - ovr(a) || a.num - b.num);
 }
 
+export type StripItem = { player: Player; starter: boolean };
+/** 모바일 벤치 줄 순서 — 벤치(OVR 내림차순, 같으면 번호) 먼저, 이어서 선발(슬롯 순서). 명단에 없는
+ *  번호가 슬롯에 있으면(탈퇴 등) 건너뛴다. */
+export function stripOrder(s: LineupState, players: Player[]): StripItem[] {
+  const byNum = new Map(players.map((p) => [p.num, p] as const));
+  const bench: StripItem[] = benchOf(s, players).map((player) => ({ player, starter: false }));
+  const starters: StripItem[] = [];
+  for (const num of s.slots) {
+    if (num == null) continue;
+    const player = byNum.get(num);
+    if (player) starters.push({ player, starter: true });
+  }
+  return [...bench, ...starters];
+}
+
 export const addDrawing = (s: LineupState, d: Drawing): LineupState => ({ ...s, drawings: [...s.drawings, d] });
 export const undoDrawing = (s: LineupState): LineupState => ({ ...s, drawings: s.drawings.slice(0, -1) });
 export const clearDrawings = (s: LineupState): LineupState => ({ ...s, drawings: [] });
