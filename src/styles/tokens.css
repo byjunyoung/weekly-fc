@@ -63,7 +63,7 @@
   /* ── 치수 ─────────────────────────────────────────────────── */
   --header-h: 64px; --header-h-m: 102px; --hint-h: 0px;
   --max: 1280px; --prose-max: 680px; --pcard-w: 268px; --pitch-max: 400px;
-  --modal-xwide: 640px; --row-h: 48px; --ctrl-h: 48px;
+  --modal-xwide: 640px; --row-h: 48px; --ctrl-h: 48px; --strip-h: 76px;
   --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
 
   /* ── 글자 (DESIGN.md typography) ─────────────────────────── */
@@ -374,6 +374,7 @@ a.card:hover { background: var(--charcoal); }
 .bd-list { display: flex; flex-direction: column; gap: var(--s-sm); min-width: 0; }
 .bd-list-head { display: flex; flex-wrap: wrap; gap: var(--s-xs); align-items: center; }
 .bd-sheet-handle { display: none; }
+.bd-strip { display: none; }
 #list-body { max-height: calc(100dvh - var(--header-h) - 220px); overflow-y: auto; }
 .bd-list .pcard-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-md) var(--s-xs); }
 .bd-rows { display: flex; flex-direction: column; background: var(--card); border-radius: var(--r-md); }
@@ -427,19 +428,31 @@ a.card:hover { background: var(--charcoal); }
 .bd-share-title input { flex: 1; }
 .bd-share-img { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r-md); background: var(--charcoal); }
 @media (max-width: 899px) {
-  .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); padding-bottom: 72px; }
+  .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); padding-bottom: calc(var(--strip-h) + var(--s-sm)); }
   .bd-slot { width: 62px; min-height: 50px; }
   .bd-ovr { font-size: var(--fs-body); }
   .bd-tools { flex-wrap: nowrap; gap: var(--s-xxs); }
   .bd-tools .chips { flex-wrap: nowrap; gap: var(--s-xxs); }
   .bd-tools .chip, .bd-tools > button { min-height: 36px; padding: var(--s-xxs) var(--s-sm); font-size: var(--fs-xs); white-space: nowrap; }
-  /* 명단은 아래에서 끌어올리는 시트 — 접힌 높이는 손잡이 한 줄. */
-  .bd-list { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; max-height: 64px; padding: 0 var(--s-md) var(--s-md);
-    background: var(--elevated); border-top: 1px solid var(--hairline); border-radius: var(--r-lg) var(--r-lg) 0 0;
+  /* 명단은 아래에서 끌어올리는 시트 — 닫힌 상태는 화면에 아무것도 남기지 않는다(벤치 줄이 고르는 자리를 대신한다). */
+  .bd-list { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; max-height: 0; padding: 0;
     overflow: hidden; transition: max-height var(--dur-slow) var(--ease-std); }
-  .bd-list.is-open { max-height: 70dvh; overflow-y: auto; }
+  .bd-list.is-open { max-height: 70dvh; padding: 0 var(--s-md) var(--s-md); overflow-y: auto;
+    background: var(--elevated); border-top: 1px solid var(--hairline); border-radius: var(--r-lg) var(--r-lg) 0 0; }
   .bd-sheet-handle { display: flex; justify-content: center; width: 100%; min-height: 56px; border: 0; border-radius: 0; background: none; font-size: var(--fs-sm); }
   #list-body { max-height: none; }
+  /* 벤치 줄 — 시트가 닫혀 있을 때 화면 아래 고정, 누르면 onPick 으로 같은 규칙을 탄다. 시트가 열리면(z-index 위) 이 줄을 덮는다. */
+  .bd-strip { display: flex; align-items: center; gap: var(--s-sm); position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    min-height: var(--strip-h); padding: 0 var(--s-md); background: var(--elevated); border-top: 1px solid var(--hairline); }
+  .bd-strip-label { flex: 0 0 auto; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); white-space: nowrap; }
+  .bd-strip-chips { display: flex; align-items: center; gap: var(--s-xs); flex: 1 1 auto; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .bd-chip { display: inline-flex; align-items: center; gap: var(--s-xxs); flex: 0 0 auto; min-height: 34px; padding: var(--s-xxs) var(--s-xs);
+    border: 1px solid var(--hairline); border-radius: var(--r-full); background: var(--card); color: var(--fg); font-size: var(--fs-xs); font-weight: var(--fw-strong); white-space: nowrap; }
+  .bd-chip b { overflow: hidden; text-overflow: ellipsis; max-width: 8em; font-weight: var(--fw-strong); }
+  .bd-chip-ovr { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bd-chip.is-on { opacity: .5; }
+  .bd-chip-check { font-weight: var(--fw-heavy); }
+  .bd-strip-all { flex: 0 0 auto; min-height: 34px; padding: var(--s-xxs) var(--s-sm); font-size: var(--fs-xs); }
 }
 
 /* ══ 기타 ══════════════════════════════════════════════════ */

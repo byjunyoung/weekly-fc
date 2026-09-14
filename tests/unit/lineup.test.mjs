@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initial, setCount, setShape, place, tapPlayer, swap, moveSlot, autoFill, benchOf, positionOf, addDrawing, undoDrawing, clearDrawings, restore, serialize, defaultTitle } from '../../src/lib/lineup.ts';
+import { initial, setCount, setShape, place, tapPlayer, swap, moveSlot, autoFill, benchOf, stripOrder, positionOf, addDrawing, undoDrawing, clearDrawings, restore, serialize, defaultTitle } from '../../src/lib/lineup.ts';
 import { slotsFor } from '../../src/lib/formation.ts';
 
 const P = (num, pos, s = 70) => ({ num, name: `p${num}`, pos, detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '' });
@@ -83,6 +83,33 @@ test('autoFill: 자리 무리에 맞는 OVR 높은 사람부터, 벤치는 OVR �
   const s = autoFill(initial(5), ps); // 1-2-1: GK · CB · CM · CM · ST
   assert.deepEqual(s.slots, [2, 3, 1, 7, 4]);
   assert.deepEqual(benchOf(s, ps).map((p) => p.num), [5, 6]);
+});
+
+test('stripOrder: 벤치는 OVR 순으로 먼저, 선발은 슬롯 순서로 이어진다', () => {
+  const ps = [P(1, 'GK', 60), P(2, 'DF', 80), P(3, 'MF', 90), P(4, 'FW', 65), P(5, 'MF', 75), P(6, 'DF', 95)];
+  const s = place(place(initial(5), 0, 1), 1, 6); // 1-2-1: GK·CB·CM·CM·ST — GK=1, CB=6
+  const items = stripOrder(s, ps);
+  assert.deepEqual(items.map((i) => i.player.num), [3, 2, 5, 4, 1, 6]);
+});
+
+test('stripOrder: starter 값은 슬롯에 있는지를 그대로 따른다', () => {
+  const ps = [P(1, 'GK', 60), P(2, 'DF', 80)];
+  const s = place(initial(5), 0, 1);
+  const items = stripOrder(s, ps);
+  assert.deepEqual(items.map((i) => i.player.num), [2, 1]);
+  assert.deepEqual(items.map((i) => i.starter), [false, true]);
+});
+
+test('stripOrder: 명단에 없는 번호가 슬롯에 있으면 건너뛴다', () => {
+  const ps = [P(1, 'GK', 60)];
+  const s = place(initial(5), 1, 99); // 슬롯 1(CB)에 명단에 없는 99
+  const items = stripOrder(s, ps);
+  assert.deepEqual(items.map((i) => i.player.num), [1]);
+  assert.deepEqual(items.map((i) => i.starter), [false]);
+});
+
+test('stripOrder: 명단이 비어 있으면 빈 배열', () => {
+  assert.deepEqual(stripOrder(initial(5), []), []);
 });
 
 test('그림: 더하기·되돌리기·지우기', () => {

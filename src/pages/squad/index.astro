@@ -33,6 +33,11 @@ import Shell from '../../layouts/Shell.astro';
       <p class="muted bd-hint" id="hint"></p>
     </section>
   </div>
+  <div class="bd-strip" id="strip">
+    <span class="bd-strip-label" id="strip-label"></span>
+    <div class="bd-strip-chips" id="strip-chips"></div>
+    <button type="button" class="bd-strip-all" id="strip-all">전체</button>
+  </div>
   <wa-dialog id="share-modal" label="이미지 공유" with-footer class="bd-share">
     <label class="bd-share-title"><span class="label">제목</span><input id="share-title" maxlength="40" /></label>
     <img id="share-img" class="bd-share-img" alt="라인업 이미지 미리보기" />
@@ -132,7 +137,7 @@ import Shell from '../../layouts/Shell.astro';
   const DRAG_PX = 6;
 
   function tapSlot(idx: number): void {
-    if (selected === null) { selected = idx; render(); openSheet(); return; }
+    if (selected === null) { selected = idx; render(); return; }
     if (selected === idx) { selected = null; render(); return; }
     const a = selected;
     selected = null;
@@ -192,14 +197,27 @@ import Shell from '../../layouts/Shell.astro';
   }
 
   // ── 모바일 명단 시트 ─────────────────────────────────────
-  const narrow = () => matchMedia('(max-width: 899px)').matches;
   function toggleSheet(open?: boolean): void {
     const list = $('list');
     const on = open ?? !list.classList.contains('is-open');
     list.classList.toggle('is-open', on);
     $('sheet-handle').setAttribute('aria-expanded', String(on));
   }
-  const openSheet = () => { if (narrow()) toggleSheet(true); };
+
+  // ── 모바일 벤치 줄 ────────────────────────────────────────
+  /** 칩을 다시 그려도 가로 스크롤 위치가 튀지 않게 앞뒤로 보존한다. */
+  function renderStrip(): void {
+    if (!data) return;
+    const items = L.stripOrder(st, data.players);
+    const benchCount = items.filter((i) => !i.starter).length;
+    $('strip-label').textContent = selected !== null ? `${L.slotsOf(st)[selected].label} 자리 ←` : `벤치 ${benchCount}`;
+    const chipsEl = $('strip-chips');
+    const scrollLeft = chipsEl.scrollLeft;
+    chipsEl.innerHTML = items.map(({ player: p, starter }) =>
+      `<button type="button" class="bd-chip${starter ? ' is-on' : ''}" data-pick="${p.num}" aria-pressed="${starter}"><span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span><b>${esc(p.name)}</b><span class="bd-chip-ovr">${ovr(p) || '–'}</span>${starter ? '<span class="bd-chip-check" aria-hidden="true">✓</span>' : ''}</button>`
+    ).join('');
+    chipsEl.scrollLeft = scrollLeft;
+  }
 
   // ── 그리기 ────────────────────────────────────────────
   function renderControls(): void {
@@ -232,6 +250,7 @@ import Shell from '../../layouts/Shell.astro';
     ($('clear') as HTMLButtonElement).disabled = st.drawings.length === 0;
     document.querySelectorAll('#tool [data-tool]').forEach((b) => setChip(b, (b as HTMLElement).dataset.tool === tool));
     renderList(rows);
+    renderStrip();
     $('hint').textContent = tool === 'arrow' ? '피치 위를 끌어 화살표를 그립니다'
       : tool === 'pen' ? '피치 위를 끌어 자유롭게 그립니다'
       : selected !== null ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
@@ -245,6 +264,7 @@ import Shell from '../../layouts/Shell.astro';
   document.querySelectorAll<HTMLElement>('#pitch-kind [data-kind]').forEach((b) => (b.onclick = () => commit(L.setPitch(st, b.dataset.kind as PitchKind))));
   $('auto').onclick = () => { if (!data) return; selected = null; commit(L.autoFill(st, data.players)); };
   $('sheet-handle').onclick = () => toggleSheet();
+  $('strip-all').onclick = () => toggleSheet(true);
   document.querySelectorAll<HTMLElement>('#tool [data-tool]').forEach((b) => (b.onclick = () => { tool = b.dataset.tool as Tool; selected = null; render(); }));
   $('undo').onclick = () => commit(L.undoDrawing(st));
   $('clear').onclick = () => commit(L.clearDrawings(st));
@@ -259,6 +279,12 @@ import Shell from '../../layouts/Shell.astro';
   listBody.addEventListener('keydown', (e) => {
     const el = (e.target as Element).closest<HTMLElement>('[role="button"][data-pick]');
     if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(Number(el.dataset.pick)); }
+  });
+
+  // 벤치 줄 칩도 명단 행과 같은 규칙(onPick)으로 받는다 — 다시 그려도 한 번만 붙인다.
+  $('strip-chips').addEventListener('click', (e) => {
+    const el = (e.target as Element).closest<HTMLElement>('[data-pick]');
+    if (el) onPick(Number(el.dataset.pick));
   });
 
   document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => setChip(x, x === b)); render(); }));
