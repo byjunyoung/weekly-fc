@@ -9,9 +9,7 @@ const nav = [
   { href: href('/'), label: '홈' },
   { href: href('/squad/'), label: '스쿼드' },
   { href: href('/match/'), label: '매치' },
-  { href: href('/record/'), label: '기록' },
-  { href: href('/tactics/'), label: '전술' },
-  { href: href('/about/'), label: '소개' },
+  { href: href('/rules/'), label: '운영' },
 ];
 const path = Astro.url.pathname;
 const isActive = (h: string) => (h === href('/') ? path === href('/') : path.startsWith(h));

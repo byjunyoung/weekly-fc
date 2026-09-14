@@ -1,9 +1,0 @@
----
-// src/components/Tabs.astro — 화면 안 탭 줄 (정적 링크). 클라이언트 탭은 페이지가 직접 그린다.
-interface Props { items: { href: string; label: string }[] }
-const { items } = Astro.props;
-const path = Astro.url.pathname;
----
-<nav class="tabs">
-  {items.map((t) => <a href={t.href} class:list={[{ active: path === t.href }]}>{t.label}</a>)}
-</nav>

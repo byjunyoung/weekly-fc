@@ -4,134 +4,347 @@ import Shell from '../../layouts/Shell.astro';
 <Shell title="스쿼드">
   <div class="page-head">
     <h1>스쿼드 <span class="muted" id="count"></span></h1>
-    <div class="actions">
-      <div class="chips" id="pos-filter" role="group" aria-label="포지션 거르기"><button class="chip on" data-pos="ALL" aria-pressed="true">전체</button><button class="chip" data-pos="GK" aria-pressed="false">GK</button><button class="chip" data-pos="DF" aria-pressed="false">DF</button><button class="chip" data-pos="MF" aria-pressed="false">MF</button><button class="chip" data-pos="FW" aria-pressed="false">FW</button></div>
-      <input id="q" type="search" placeholder="이름" class="w-search" />
-      <select id="sort" class="w-sort"><option value="ovr">OVR 순</option><option value="num">번호 순</option><option value="name">이름 순</option><option value="att">출석 순</option></select>
-      <select id="formation" class="w-sort"></select>
-      <div class="chips" id="view-toggle" role="group" aria-label="보기 방식"><button class="chip on" data-view="pitch" aria-pressed="true">피치</button><button class="chip" data-view="card" aria-pressed="false">카드</button><button class="chip" data-view="table" aria-pressed="false">표</button></div>
-      <button id="add" hidden>선수 추가</button>
-    </div>
+    <div class="actions"><button id="add" hidden>선수 추가</button></div>
   </div>
-  <div id="app"></div>
+  <div class="bd-controls" role="group" aria-label="라인업 설정">
+    <div class="bd-stepper"><span class="label">인원</span><button type="button" id="cnt-dec" aria-label="인원 줄이기">−</button><b id="cnt" aria-live="polite"></b><button type="button" id="cnt-inc" aria-label="인원 늘리기">+</button></div>
+    <label class="bd-field"><span class="label">포메이션</span><select id="shape"></select></label>
+    <div class="chips" id="pitch-kind" role="group" aria-label="경기장"><button class="chip" data-kind="futsal" aria-pressed="false">풋살</button><button class="chip" data-kind="soccer" aria-pressed="false">축구</button></div>
+    <button type="button" id="auto">자동 배치</button>
+  </div>
+  <div class="bd">
+    <section class="bd-list" id="list" aria-label="명단">
+      <button type="button" class="bd-sheet-handle" id="sheet-handle" aria-expanded="false"><span id="sheet-summary"></span></button>
+      <div class="bd-list-head">
+        <div class="chips" id="pos-filter" role="group" aria-label="포지션 거르기"><button class="chip on" data-pos="ALL" aria-pressed="true">전체</button><button class="chip" data-pos="GK" aria-pressed="false">GK</button><button class="chip" data-pos="DF" aria-pressed="false">DF</button><button class="chip" data-pos="MF" aria-pressed="false">MF</button><button class="chip" data-pos="FW" aria-pressed="false">FW</button></div>
+        <input id="q" type="search" placeholder="이름" class="w-search" />
+        <div class="chips" id="view-toggle" role="group" aria-label="명단 보기"><button class="chip" data-view="list" aria-pressed="false">목록</button><button class="chip" data-view="card" aria-pressed="false">카드</button><button class="chip" data-view="table" aria-pressed="false">표</button></div>
+      </div>
+      <div id="list-body"></div>
+    </section>
+    <section class="bd-stage" aria-label="피치">
+      <div id="pitch-slot"></div>
+      <div class="bd-tools" id="tools" role="toolbar" aria-label="도구">
+        <div class="chips" id="tool" role="group" aria-label="그리기 도구"><button class="chip on" data-tool="move" aria-pressed="true">이동</button><button class="chip" data-tool="arrow" aria-pressed="false">화살표</button><button class="chip" data-tool="pen" aria-pressed="false">펜</button></div>
+        <button type="button" id="undo">되돌리기</button>
+        <button type="button" id="clear">지우기</button>
+      </div>
+      <div class="bd-share-row"><button type="button" class="primary" id="share">이미지 공유</button></div>
+      <p class="muted bd-hint" id="hint"></p>
+    </section>
+  </div>
+  <wa-dialog id="share-modal" label="이미지 공유" with-footer class="bd-share">
+    <label class="bd-share-title"><span class="label">제목</span><input id="share-title" maxlength="40" /></label>
+    <img id="share-img" class="bd-share-img" alt="라인업 이미지 미리보기" />
+    <p class="muted" id="share-note"></p>
+    <div slot="footer" class="foot"><button data-close="share-modal">닫기</button><a class="btn" id="share-dl" hidden>내려받기</a><button class="primary" id="share-go" hidden>공유하기</button></div>
+  </wa-dialog>
 </Shell>
 <script>
   import { onData, isAdmin } from '../../lib/api.ts';
   import { href } from '../../lib/url.ts';
-  import { esc } from '../../lib/html.ts';
-  import { ovr, band, STAT_CUTS, RATE_CUTS, attendance, condition } from '../../lib/stats.ts';
+  import { esc, toast, seoulToday } from '../../lib/html.ts';
+  import { drawLineupImage } from '../../components/share-image.ts';
+  import { pickShareMethod, fallbackMethod, shareFileName, type ShareEnv, type ShareMethod } from '../../lib/share.ts';
+  import { ovr, band, grade, STAT_CUTS } from '../../lib/stats.ts';
   import { mountTable, type Column, type TableState } from '../../components/table.ts';
   import { playerCard, STAT_LABEL } from '../../components/player-card.ts';
   import { avatarSvg } from '../../components/avatar.ts';
   import { avatarSpecFor } from '../../lib/avatar.ts';
-  import { conditionBadge } from '../../components/condition.ts';
-  import { FORMATIONS, FORMATION_NAMES, bestEleven } from '../../lib/formation.ts';
-  import { grade } from '../../lib/stats.ts';
+  import { pitchHtml } from '../../components/pitch-view.ts';
+  import { drawingsSvg, attachDraw, type Tool } from '../../components/board-draw.ts';
+  import { SHAPES, MIN_COUNT, MAX_COUNT, type PitchKind } from '../../lib/formation.ts';
+  import * as L from '../../lib/lineup.ts';
   import { STAT_KEYS, type Data, type Player } from '../../lib/types.ts';
 
-  // 기본은 카드 벽 — 아이템을 늘어놓은 화면이 FC의 첫인상이다. 표(FM식 밀도)는 토글로 남긴다.
+  type View = 'list' | 'card' | 'table';
   const VIEW_KEY = 'wfc.squad.view';
-  let data: Data | null = null, pos = 'ALL', q = '';
-  type View = 'pitch' | 'card' | 'table';
-  let view: View = (localStorage.getItem(VIEW_KEY) as View) || 'pitch';
-  const FORM_KEY = 'wfc.squad.formation';
-  let formation = localStorage.getItem(FORM_KEY) || FORMATION_NAMES[0];
-  let sortKey = 'ovr';
-  const state: TableState = { sortKey: 'num', sortDir: 'asc' };
-  const app = document.getElementById('app')!;
-  /** 눌린 칩을 색만이 아니라 aria-pressed 로도 알린다. */
-  const setChip = (el: HTMLElement, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); };
+  const load = (k: string): string | null => { try { return localStorage.getItem(k); } catch { return null; } };
+  const save = (k: string, v: string): void => { try { localStorage.setItem(k, v); } catch { /* 저장 못 해도 화면은 돈다 */ } };
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  const setChip = (el: Element, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-pressed', String(on)); };
 
-  function cols(d: Data): Column<Player>[] {
-    const matches = d.matches;
+  let data: Data | null = null;
+  let st: L.LineupState = L.initial();
+  /** 사용자가 한 번이라도 바꿨는지. 그 전에는 새 데이터가 올 때마다 초안을 다시 복원한다 —
+   *  캐시 명단에 없던 선수가 새 명단에 있을 수 있어서다. */
+  let touched = false;
+  let selected: number | null = null;
+  let tool: Tool = 'move';
+  let pos = 'ALL', q = '';
+  const savedView = load(VIEW_KEY);
+  let view: View = savedView === 'card' || savedView === 'table' ? savedView : 'list';
+  const tableState: TableState = { sortKey: 'ovr', sortDir: 'desc' };
+
+  function commit(next: L.LineupState): void {
+    st = next;
+    touched = true;
+    // 데이터가 아직 없거나(로딩 중) 비어 있으면(API 실패로 EMPTY) 지금 상태는 진짜 명단을
+    // 반영한 게 아니다 — 그대로 저장하면 진짜 초안을 빈 값으로 덮어쓴다.
+    if (!data || data.players.length === 0) { render(); return; }
+    save(L.DRAFT_KEY, L.serialize(st));
+    render();
+  }
+
+  // ── 명단 ──────────────────────────────────────────────
+  const byOvr = (rows: Player[]) => [...rows].sort((a, b) => ovr(b) - ovr(a) || a.num - b.num);
+
+  function cols(): Column<Player>[] {
     return [
+      { key: 'pick', label: '선발', sortable: false, align: 'c', get: (p) => (L.isStarter(st, p.num) ? 1 : 0),
+        cell: (p) => `<button type="button" class="${L.isStarter(st, p.num) ? 'primary' : ''}" data-pick="${p.num}" aria-pressed="${L.isStarter(st, p.num)}">${L.isStarter(st, p.num) ? '선발' : '넣기'}</button>` },
       { key: 'avatar', label: '', sortable: false, get: () => '', cell: (p) => avatarSvg(avatarSpecFor(p.num, p.avatar), 28, p.num), align: 'c' },
       { key: 'num', label: '#', get: (p) => p.num, align: 'r' },
       { key: 'name', label: '이름', get: (p) => p.name, cell: (p) => `<a href="${href(`/squad/${p.num}/`)}"><b>${esc(p.name)}</b></a>` },
       { key: 'pos', label: '포지션', get: (p) => p.pos, cell: (p) => `<span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span> <span class="muted">${esc(p.detail)}</span>` },
-      { key: 'cond', label: '컨디션', get: (p) => condition(p.name, matches).attended, align: 'c', cell: (p) => conditionBadge(p.name, matches) },
       ...STAT_KEYS.map((k): Column<Player> => ({ key: k, label: STAT_LABEL[k], get: (p) => p[k], align: 'r', cell: (p) => `<span class="val val-${band(p[k], STAT_CUTS)}">${p[k] || '–'}</span>` })),
       { key: 'ovr', label: 'OVR', get: (p) => ovr(p), align: 'r', cell: (p) => `<b class="val val-${band(ovr(p), STAT_CUTS)}">${ovr(p) || '–'}</b>` },
-      { key: 'att', label: '출석', get: (p) => attendance(p.name, matches).rate, align: 'r', cell: (p) => { const a = attendance(p.name, matches); return a.total ? `<span class="val val-${band(a.rate, RATE_CUTS)}">${a.rate}%</span>` : '<span class="muted">–</span>'; } },
     ];
   }
 
-  // 카드 벽의 정렬 — 표는 머리글 클릭으로 정렬하므로 이쪽은 select 하나로 따로 둔다.
-  function sortCards(rows: Player[], d: Data): Player[] {
-    const by: Record<string, (p: Player) => number | string> = {
-      ovr: (p) => -ovr(p), num: (p) => p.num, name: (p) => p.name,
-      att: (p) => -attendance(p.name, d.matches).rate,
+  function renderList(rows: Player[]): void {
+    const body = $('list-body');
+    const empty = '<p class="pcard-empty">명단이 비어 있습니다</p>';
+    if (view === 'table') {
+      body.className = 'tbl-wrap';
+      mountTable(body, cols(), rows, tableState, { empty: '명단이 비어 있습니다', rowKey: (p) => String(p.num) });
+      return;
+    }
+    if (view === 'card') {
+      body.className = 'pcard-wall';
+      body.innerHTML = rows.length ? byOvr(rows).map((p) => { const on = L.isStarter(st, p.num);
+        return `<div class="bd-cardcell"><div class="bd-cardpick${on ? ' is-on' : ''}" role="button" tabindex="0" data-pick="${p.num}" aria-pressed="${on}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 116, p.num, true))}</div><a class="bd-card-link" href="${href(`/squad/${p.num}/`)}">선수 페이지 ›</a></div>`; }).join('') : empty;
+      return;
+    }
+    body.className = '';
+    body.innerHTML = rows.length ? `<div class="bd-rows">${byOvr(rows).map((p) => { const on = L.isStarter(st, p.num);
+      return `<div class="bd-row${on ? ' is-on' : ''}"><button type="button" class="bd-pick" data-pick="${p.num}" aria-pressed="${on}"><span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span><b>${esc(p.name)}</b><span class="bd-row-ovr grade-${grade(ovr(p))}">${ovr(p) || '–'}</span>${on ? '<span class="bd-on">선발</span>' : '<span></span>'}</button><a class="bd-row-link" href="${href(`/squad/${p.num}/`)}" aria-label="${esc(p.name)} 선수 페이지">›</a></div>`; }).join('')}</div>` : empty;
+  }
+
+  function onPick(num: number): void {
+    const r = L.tapPlayer(st, num, selected);
+    if (r.result === 'full') { toast('자리가 다 찼습니다 · 자리를 먼저 고르세요'); return; }
+    selected = null;
+    commit(r.state);
+  }
+
+  // ── 피치 ──────────────────────────────────────────────
+  const DRAG_PX = 6;
+
+  function tapSlot(idx: number): void {
+    if (selected === null) { selected = idx; render(); openSheet(); return; }
+    if (selected === idx) { selected = null; render(); return; }
+    const a = selected;
+    selected = null;
+    commit(L.swap(st, a, idx));
+  }
+
+  /** tapSlot 은 render() 로 버튼을 다시 그려서 포커스를 지운다 — 키보드 경로에서만 되돌려 준다. */
+  function tapSlotKeepFocus(idx: number): void {
+    tapSlot(idx);
+    document.querySelector<HTMLElement>(`[data-slot="${idx}"]`)?.focus();
+  }
+
+  /** 카드 끌기 — 다른 카드 위에 놓으면 교환, 빈 곳이면 그 슬롯 위치만 옮긴다. 6px 안쪽이면 탭으로 본다. */
+  function startDrag(e: PointerEvent, el: HTMLElement, pitch: HTMLElement): void {
+    if (e.button !== 0) return;
+    const idx = Number(el.dataset.slot);
+    const x0 = e.clientX, y0 = e.clientY;
+    let dragging = false;
+    el.setPointerCapture(e.pointerId);
+    const off = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', cancel); };
+    const move = (ev: PointerEvent) => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!dragging && Math.hypot(dx, dy) < DRAG_PX) return;
+      dragging = true;
+      el.classList.add('is-dragging');
+      el.style.translate = `${dx}px ${dy}px`;
     };
-    const f = by[sortKey] ?? by.ovr;
-    return [...rows].sort((a, b) => { const x = f(a), y = f(b); return typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'ko'); });
+    const cancel = () => { off(); render(); };
+    const up = (ev: PointerEvent) => {
+      off();
+      if (!dragging) { tapSlot(idx); return; }
+      el.style.visibility = 'hidden';
+      const under = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>('[data-slot]');
+      el.style.visibility = '';
+      if (under && under !== el) { selected = null; commit(L.swap(st, idx, Number(under.dataset.slot))); return; }
+      const r = pitch.getBoundingClientRect();
+      const inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      if (inside) commit(L.moveSlot(st, idx, [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height]));
+      else render();
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', cancel);
   }
 
-  // 피치 선 — viewBox 가 컨테이너 비율(68x105)과 같아 원이 찌그러지지 않는다.
-  const PITCH_LINES = `<svg class="sq-lines" viewBox="0 0 68 105" fill="none" stroke="rgba(255,255,255,.16)" stroke-width=".4">
-    <rect x="2" y="2" width="64" height="101"/><line x1="2" y1="52.5" x2="66" y2="52.5"/><circle cx="34" cy="52.5" r="9.15"/>
-    <rect x="13.2" y="2" width="41.6" height="16.5"/><rect x="24.8" y="2" width="18.4" height="5.5"/>
-    <rect x="13.2" y="86.5" width="41.6" height="16.5"/><rect x="24.8" y="97.5" width="18.4" height="5.5"/>
-    <circle cx="34" cy="52.5" r=".6" fill="rgba(255,255,255,.16)"/></svg>`;
-
-  function pitchView(rows: Player[], d: Data): string {
-    const slots = FORMATIONS[formation] ?? FORMATIONS[FORMATION_NAMES[0]];
-    const { lineup, bench } = bestEleven(rows, slots);
-    const cards = lineup.map(({ slot, player, outOfPosition }) => {
-      const at = `left:${(slot.x * 100).toFixed(1)}%;top:${(slot.y * 100).toFixed(1)}%`;
-      if (!player) return `<div class="sq-slot" style="${at}"><div class="sq-empty">${esc(slot.label)}</div></div>`;
-      const o = ovr(player);
-      const title = outOfPosition ? ` title="${esc(player.pos) || '미정'} 인데 ${esc(slot.label)} 자리에 섰습니다"` : '';
-      return `<div class="sq-slot" style="${at}">
-        <a class="sq-card pcard-${grade(o)}${outOfPosition ? ' oop' : ''}" href="${href(`/squad/${player.num}/`)}"${title}>
-          <b class="sq-ovr">${o || '–'}</b>
-          <span class="sq-name">${esc(player.name)}</span>
-          <span class="sq-slotlabel">${esc(slot.label)}</span>
-        </a></div>`;
-    }).join('');
-    const oop = lineup.filter((a) => a.outOfPosition).length;
-    const picked = lineup.map((a) => a.player).filter((p): p is Player => !!p);
-    const avg = picked.length ? Math.round(picked.reduce((t, p) => t + ovr(p), 0) / picked.length) : 0;
-    const lineCount = (['GK', 'DF', 'MF', 'FW'] as const)
-      .map((k) => `${k} ${picked.filter((p) => p.pos === k).length}`).join(' · ');
-    const benchRows = bench.length
-      ? bench.map((p) => `<a class="sq-bench-row" href="${href(`/squad/${p.num}/`)}"><span class="pos pos-${p.pos.toLowerCase()}">${p.pos || '–'}</span><b>${esc(p.name)}</b><span class="sq-bench-ovr grade-${grade(ovr(p))}">${ovr(p) || '–'}</span></a>`).join('')
-      : '<p class="muted">벤치가 비었습니다.</p>';
-    return `<div class="sq">
-      <div class="sq-pitch">${PITCH_LINES}${cards}</div>
-      <div class="sq-side">
-        <div class="card"><h2>선발 ${esc(formation)}</h2>
-          <div class="big">${avg || '–'}<span class="muted sq-avg-unit"> 평균 OVR</span></div>
-          <p class="muted">OVR 순 자동 배치 · ${lineCount}${oop ? ` · <span class="cond cond-mid">${oop}명</span>이 자리 밖` : ''}</p></div>
-        <div class="card"><h2>벤치 ${bench.length}명</h2><div class="sq-bench">${benchRows}</div></div>
-      </div>
-    </div>`;
+  function bindPitch(): void {
+    const pitch = document.querySelector<HTMLElement>('[data-pitch]');
+    if (!pitch) return;
+    pitch.querySelectorAll<HTMLElement>('[data-slot]').forEach((el) => {
+      el.onpointerdown = (e) => startDrag(e, el, pitch);
+      // 키보드(Enter·Space)는 pointer 이벤트가 없다 — detail 0 인 click 으로만 들어온다.
+      el.onclick = (e) => { if (e.detail === 0) tapSlotKeepFocus(Number(el.dataset.slot)); };
+    });
+    pitch.addEventListener('click', (e) => {
+      if (!(e.target as Element).closest('[data-slot]') && selected !== null) { selected = null; render(); }
+    });
   }
 
-  function render() {
+  // ── 모바일 명단 시트 ─────────────────────────────────────
+  const narrow = () => matchMedia('(max-width: 899px)').matches;
+  function toggleSheet(open?: boolean): void {
+    const list = $('list');
+    const on = open ?? !list.classList.contains('is-open');
+    list.classList.toggle('is-open', on);
+    $('sheet-handle').setAttribute('aria-expanded', String(on));
+  }
+  const openSheet = () => { if (narrow()) toggleSheet(true); };
+
+  // ── 그리기 ────────────────────────────────────────────
+  function renderControls(): void {
+    $('cnt').textContent = String(st.count);
+    ($('cnt-dec') as HTMLButtonElement).disabled = st.count <= MIN_COUNT;
+    ($('cnt-inc') as HTMLButtonElement).disabled = st.count >= MAX_COUNT;
+    ($('shape') as HTMLSelectElement).innerHTML = SHAPES[st.count].map((k) => `<option value="${k}"${k === st.shape ? ' selected' : ''}>${k}</option>`).join('');
+    document.querySelectorAll('#pitch-kind [data-kind]').forEach((b) => setChip(b, (b as HTMLElement).dataset.kind === st.pitch));
+    document.querySelectorAll('#view-toggle [data-view]').forEach((b) => setChip(b, (b as HTMLElement).dataset.view === view));
+  }
+
+  function render(): void {
     if (!data) return;
     const d = data;
+    // 명단이 비어 있으면(API 실패 등) 초안을 복원하지 않는다 — 실제 명단이 아니라서 st 만
+    // 조용히 비워버리게 된다. 진짜 명단이 온 뒤에 한 번만 복원한다.
+    if (!touched && d.players.length > 0) st = L.restore(load(L.DRAFT_KEY), d.players);
     const rows = d.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
-    document.getElementById('count')!.textContent = `${rows.length}명`;
-    document.getElementById('add')!.hidden = !isAdmin();
-    document.getElementById('sort')!.hidden = view !== 'card';
-    document.getElementById('formation')!.hidden = view !== 'pitch';
-    if (view === 'pitch') { app.className = ''; app.innerHTML = rows.length ? pitchView(rows, d) : '<p class="pcard-empty">명단이 비어 있습니다</p>'; return; }
-    if (view === 'table') { app.className = 'tbl-wrap'; mountTable(app, cols(d), rows, state, { empty: '명단이 비어 있습니다' }); return; }
-    app.className = 'pcard-wall';
-    app.innerHTML = rows.length
-      ? sortCards(rows, d).map((p) => `<a href="${href(`/squad/${p.num}/`)}">${playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 116, p.num, true))}</a>`).join('')
-      : '<p class="pcard-empty">명단이 비어 있습니다</p>';
+    const filled = st.slots.filter((x) => x != null).length;
+    $('count').textContent = `${d.players.length}명`;
+    $('add').hidden = !isAdmin();
+    $('sheet-summary').textContent = `명단 ${d.players.length}명 · 선발 ${filled}/${st.count}`;
+    renderControls();
+    const ink = drawingsSvg(st.drawings, st.pitch);
+    $('pitch-slot').innerHTML = pitchHtml(st, d.players, selected, ink);
+    const pitchEl = document.querySelector<HTMLElement>('[data-pitch]');
+    if (tool === 'move') bindPitch();
+    else if (pitchEl) attachDraw(pitchEl, st.pitch, tool, ink, (dr) => commit(L.addDrawing(st, dr)));
+    ($('undo') as HTMLButtonElement).disabled = st.drawings.length === 0;
+    ($('clear') as HTMLButtonElement).disabled = st.drawings.length === 0;
+    document.querySelectorAll('#tool [data-tool]').forEach((b) => setChip(b, (b as HTMLElement).dataset.tool === tool));
+    renderList(rows);
+    $('hint').textContent = tool === 'arrow' ? '피치 위를 끌어 화살표를 그립니다'
+      : tool === 'pen' ? '피치 위를 끌어 자유롭게 그립니다'
+      : selected !== null ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
+      : '자리를 누르고 선수를 고르세요 · 카드를 끌면 옮기거나 맞바꿉니다';
   }
 
-  document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => setChip(x as HTMLElement, x === b)); render(); }));
-  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as View; localStorage.setItem(VIEW_KEY, view); document.querySelectorAll('#view-toggle .chip').forEach((x) => setChip(x as HTMLElement, x === b)); render(); }));
-  const formSel = document.getElementById('formation') as HTMLSelectElement;
-  formSel.innerHTML = FORMATION_NAMES.map((n) => `<option value="${n}"${n === formation ? ' selected' : ''}>${n}</option>`).join('');
-  formSel.onchange = (e) => { formation = (e.target as HTMLSelectElement).value; localStorage.setItem(FORM_KEY, formation); render(); };
-  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((x) => setChip(x, x.dataset.view === view));
-  (document.getElementById('sort') as HTMLSelectElement).onchange = (e) => { sortKey = (e.target as HTMLSelectElement).value; render(); };
-  (document.getElementById('q') as HTMLInputElement).oninput = (e) => { q = (e.target as HTMLInputElement).value.trim(); render(); };
-  document.getElementById('add')!.onclick = () => { const used = new Set(data!.players.map((p) => p.num)); let n = 1; while (used.has(n)) n++; location.href = href(`/squad/${n}/?new=1`); };
+  // ── 배선 ──────────────────────────────────────────────
+  $('cnt-dec').onclick = () => { selected = null; commit(L.setCount(st, st.count - 1)); };
+  $('cnt-inc').onclick = () => { selected = null; commit(L.setCount(st, st.count + 1)); };
+  ($('shape') as HTMLSelectElement).onchange = (e) => { selected = null; commit(L.setShape(st, (e.target as HTMLSelectElement).value)); };
+  document.querySelectorAll<HTMLElement>('#pitch-kind [data-kind]').forEach((b) => (b.onclick = () => commit(L.setPitch(st, b.dataset.kind as PitchKind))));
+  $('auto').onclick = () => { if (!data) return; selected = null; commit(L.autoFill(st, data.players)); };
+  $('sheet-handle').onclick = () => toggleSheet();
+  document.querySelectorAll<HTMLElement>('#tool [data-tool]').forEach((b) => (b.onclick = () => { tool = b.dataset.tool as Tool; selected = null; render(); }));
+  $('undo').onclick = () => commit(L.undoDrawing(st));
+  $('clear').onclick = () => commit(L.clearDrawings(st));
+
+  // 명단은 다시 그릴 때마다 innerHTML 이 바뀌고, 표는 머리글 정렬 때 mountTable 이 스스로 다시 그린다 —
+  // 그래서 행마다 붙이지 않고 바깥 한 곳에서 위임으로 받는다.
+  const listBody = $('list-body');
+  listBody.addEventListener('click', (e) => {
+    const el = (e.target as Element).closest<HTMLElement>('[data-pick]');
+    if (el) onPick(Number(el.dataset.pick));
+  });
+  listBody.addEventListener('keydown', (e) => {
+    const el = (e.target as Element).closest<HTMLElement>('[role="button"][data-pick]');
+    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(Number(el.dataset.pick)); }
+  });
+
+  document.querySelectorAll<HTMLElement>('#pos-filter .chip').forEach((b) => (b.onclick = () => { pos = b.dataset.pos!; document.querySelectorAll('#pos-filter .chip').forEach((x) => setChip(x, x === b)); render(); }));
+  document.querySelectorAll<HTMLElement>('#view-toggle .chip').forEach((b) => (b.onclick = () => { view = b.dataset.view as View; save(VIEW_KEY, view); render(); }));
+  ($('q') as HTMLInputElement).oninput = (e) => { q = (e.target as HTMLInputElement).value.trim(); render(); };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selected !== null) { selected = null; render(); } });
+  $('add').onclick = () => { const used = new Set(data!.players.map((p) => p.num)); let n = 1; while (used.has(n)) n++; location.href = href(`/squad/${n}/?new=1`); };
   window.addEventListener('wfc:admin', render);
+
+  // ── 이미지 공유 ────────────────────────────────────────
+  const dlg = (id: string) => document.getElementById(id) as HTMLElement & { open: boolean };
+  const shareCanvas = document.createElement('canvas');
+  let shareFile: File | null = null;
+  /** redrawShare() 가 마지막으로 그린 제목. share-go 에서 입력값과 어긋나면 다시 그린다 —
+   *  onchange 는 blur 뒤에 붙어서, 터치에서 「공유하기」를 탭하면 change → click 이 거의
+   *  동시에 들어와 그리기가 끝나기 전에 공유가 나갈 수 있다. */
+  let drawnTitle = '';
+  const titleNow = () => st.title || L.defaultTitle(seoulToday());
+
+  function shareEnv(file: File | null): ShareEnv {
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    let canShareFiles = false;
+    try { canShareFiles = !!file && typeof nav.share === 'function' && !!nav.canShare?.({ files: [file] }); } catch { canShareFiles = false; }
+    return { canShareFiles, ua: navigator.userAgent, touchPoints: navigator.maxTouchPoints || 0 };
+  }
+
+  /** data:URL → File. toBlob 의 콜백/프라미스를 거치지 않아 완전히 동기다 —
+   *  share-go 안에서 그린 파일을 바로 navigator.share 에 넘겨야 사용자 제스처가 유지된다. */
+  function dataUrlToFile(url: string, name: string): File {
+    const base64 = url.slice(url.indexOf(',') + 1);
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new File([bytes], name, { type: 'image/png' });
+  }
+
+  /** 동기 재그리기 — 캔버스·미리보기·내려받기 링크·공유 파일을 한 번에 새로 만든다. */
+  function redrawShare(): File {
+    if (!data) throw new Error('명단을 아직 못 불러왔습니다');
+    drawLineupImage(shareCanvas, st, data.players, titleNow());
+    const url = shareCanvas.toDataURL('image/png');
+    ($('share-img') as HTMLImageElement).src = url;
+    const dl = $('share-dl') as HTMLAnchorElement;
+    dl.href = url;
+    dl.download = shareFileName(seoulToday());
+    drawnTitle = titleNow();
+    return dataUrlToFile(url, shareFileName(seoulToday()));
+  }
+
+  function showMethod(m: ShareMethod): void {
+    $('share-go').hidden = m !== 'share';
+    $('share-dl').hidden = m !== 'download';
+    $('share-note').textContent = m === 'longpress' ? '이미지를 길게 눌러 사진에 저장한 뒤 카톡으로 보내세요'
+      : m === 'download' ? '내려받은 이미지를 카톡으로 보내세요'
+      : '공유하기를 누르면 카톡 등으로 바로 보낼 수 있습니다';
+  }
+
+  $('share').onclick = async () => {
+    selected = null;
+    render(); // 선택 테두리가 다이얼로그 뒤에 남지 않도록
+    ($('share-title') as HTMLInputElement).value = titleNow();
+    dlg('share-modal').open = true;
+    try {
+      await document.fonts.ready; // Pretendard 가 늦게 오면 캔버스가 대체 글꼴로 굳는다 — 처음 열 때만 기다린다
+      shareFile = redrawShare();
+      showMethod(pickShareMethod(shareEnv(shareFile)));
+    } catch (e) { toast((e as Error).message); }
+  };
+  ($('share-title') as HTMLInputElement).onchange = (e) => {
+    const v = (e.target as HTMLInputElement).value.trim();
+    // 기본 제목을 그대로 두면 저장하지 않는다 — 다음 주에 열면 그 주 토요일로 다시 계산돼야 한다.
+    commit(L.setTitle(st, v === L.defaultTitle(seoulToday()) ? '' : v));
+    try { shareFile = redrawShare(); } catch (err) { toast((err as Error).message); }
+  };
+  $('share-go').onclick = async () => {
+    if (!shareFile) return;
+    // 제목을 고친 뒤 blur 없이 바로 탭하면 change 가 아직 안 왔을 수 있다 — 여기서도 같은 규칙으로
+    // 반영하고 다시 그린다. navigator.share 앞까지는 전부 동기라 사용자 제스처가 끊기지 않는다.
+    const v = ($('share-title') as HTMLInputElement).value.trim();
+    if (v !== drawnTitle) {
+      commit(L.setTitle(st, v === L.defaultTitle(seoulToday()) ? '' : v));
+      try { shareFile = redrawShare(); } catch (e) { toast((e as Error).message); return; }
+    }
+    try { await navigator.share({ files: [shareFile], title: titleNow() }); }
+    catch (e) { if ((e as DOMException).name !== 'AbortError') showMethod(fallbackMethod(shareEnv(null))); }
+  };
+
   onData((d) => { data = d; render(); });
 </script>

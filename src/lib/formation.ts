@@ -1,11 +1,27 @@
-// src/lib/formation.ts — 포메이션 슬롯과 베스트 11 배치.
+// src/lib/formation.ts — 인원별 포메이션 슬롯과 자동 배치.
 // 좌표는 0~1, 세로 피치 기준이고 y=0 이 상대 골대, y=1 이 우리 골대다.
+// 전에는 이 파일(11인 4종)과 옛 캔버스 전술판(CURATED 5·7·11인)에 목록이 흩어져 있었다 — 여기 하나로 합친다.
 import { ovr } from './stats.ts';
 import type { Player, Pos } from './types.ts';
 
 export type Slot = { label: string; group: Pos; x: number; y: number };
+export type PitchKind = 'futsal' | 'soccer';
+export const MIN_COUNT = 5;
+export const MAX_COUNT = 11;
 
-/** 슬롯 라벨 → 어느 포지션 무리에서 뽑을지. 라벨은 축구 표기를 그대로 쓰고,
+/** 인원(GK 포함) → 고를 수 있는 모양. 모양은 GK 를 뺀 줄별 인원이고 첫 항목이 기본이다.
+ *  6·8인은 플랩에서 흔해 새로 넣었다. */
+export const SHAPES: Record<number, string[]> = {
+  5: ['1-2-1', '2-2', '3-1', '1-3'],
+  6: ['2-2-1', '2-1-2', '3-1-1'],
+  7: ['2-3-1', '3-2-1', '2-2-2'],
+  8: ['3-3-1', '3-2-2', '2-3-2'],
+  9: ['3-3-2', '3-4-1'],
+  10: ['4-3-2', '3-4-2'],
+  11: ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2'],
+};
+
+/** 11인은 손으로 맞춘 배치 — 슬롯 라벨 → 어느 포지션 무리에서 뽑을지. 라벨은 축구 표기를 그대로 쓰고,
  *  명단의 pos 는 GK·DF·MF·FW 네 가지뿐이라 여기서 한 번 접는다. */
 export const FORMATIONS: Record<string, Slot[]> = {
   '4-3-3': [
@@ -70,3 +86,45 @@ export function bestEleven(players: Player[], slots: Slot[]): { lineup: Assigned
   });
   return { lineup, bench: byOvr.filter((p) => !used.has(p.num)) };
 }
+
+// ── 5~10인: 모양 문자열에서 슬롯을 만든다 ─────────────────────────────
+const ROW_GROUPS: Record<number, Pos[]> = { 2: ['DF', 'FW'], 3: ['DF', 'MF', 'FW'], 4: ['DF', 'MF', 'MF', 'FW'] };
+/** 무리별, 줄 인원별 라벨(왼쪽 → 오른쪽). */
+const ROW_LABELS: Record<Exclude<Pos, 'GK'>, string[][]> = {
+  DF: [[], ['CB'], ['CB', 'CB'], ['LB', 'CB', 'RB'], ['LB', 'CB', 'CB', 'RB'], ['LWB', 'CB', 'CB', 'CB', 'RWB']],
+  MF: [[], ['CM'], ['CM', 'CM'], ['LM', 'CM', 'RM'], ['LM', 'CM', 'CM', 'RM'], ['LM', 'CM', 'CM', 'CM', 'RM']],
+  FW: [[], ['ST'], ['ST', 'ST'], ['LW', 'ST', 'RW']],
+};
+/** 줄 인원별 좌우 여백 — 인원이 적을수록 가운데로 모은다. */
+const ROW_MARGIN = [0, 0.5, 0.3, 0.18, 0.14, 0.1];
+const r2 = (v: number) => Math.round(v * 100) / 100;
+
+function generate(shape: string): Slot[] {
+  const rows = shape.split('-').map(Number);
+  const groups = ROW_GROUPS[rows.length];
+  const slots: Slot[] = [{ label: 'GK', group: 'GK', x: 0.5, y: 0.92 }];
+  rows.forEach((k, r) => {
+    const group = groups[r] as Exclude<Pos, 'GK'>;
+    const y = 0.75 - (0.53 * r) / (rows.length - 1);
+    const m = ROW_MARGIN[k];
+    for (let i = 0; i < k; i++) {
+      const x = k === 1 ? 0.5 : m + ((1 - 2 * m) * i) / (k - 1);
+      slots.push({ label: ROW_LABELS[group][k][i], group, x: r2(x), y: r2(y) });
+    }
+  });
+  return slots;
+}
+
+export function clampCount(n: number): number {
+  const v = Math.round(n);
+  return Number.isFinite(v) ? Math.min(MAX_COUNT, Math.max(MIN_COUNT, v)) : MAX_COUNT;
+}
+
+export function slotsFor(count: number, shape: string): Slot[] {
+  const n = clampCount(count);
+  const key = SHAPES[n].includes(shape) ? shape : SHAPES[n][0];
+  return n === 11 ? FORMATIONS[key] : generate(key);
+}
+
+/** 7명 이하는 풋살장이 기본 — 사용자가 토글로 바꿀 수 있다. */
+export const defaultPitch = (count: number): 'futsal' | 'soccer' => (clampCount(count) <= 7 ? 'futsal' : 'soccer');

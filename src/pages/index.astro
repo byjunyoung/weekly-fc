@@ -10,8 +10,8 @@ import Shell from '../layouts/Shell.astro';
   import { getMe } from '../lib/me';
   import { href } from '../lib/url';
   import { esc, fmtDate, fmtWon, monthLabel, ytThumb, ytThumbBig } from '../lib/html';
-  import { rotationFor, nextDuty } from '../lib/rotation';
-  import { parseVideoTitle } from '../lib/parse';
+  import { rotationFor } from '../lib/rotation';
+  import { matchVideos } from '../lib/match-videos';
   import { fineSummary, ovr } from '../lib/stats';
   import { LINKS } from '../lib/rules';
   import type { Data, Video } from '../lib/types';
@@ -31,24 +31,26 @@ import Shell from '../layouts/Shell.astro';
       : `<a class="${cls}" href="${to}">${body}</a>`;
   }
 
-  /** 좌측 키 아트 — 최근 매치. 시트가 비어 있으면 영상 제목에서 날짜·유형을 읽어 쓴다. */
-  function art(d: Data): string {
-    const m = d.matches[0];
-    const fromVideo = (videos ?? []).map(parseVideoTitle).filter((p): p is NonNullable<typeof p> => !!p)
-      .sort((a, b) => b.date.localeCompare(a.date))[0];
-    const id = m?.youtube || fromVideo?.id || '';
-    const title = m ? (m.winner ? `${esc(m.winner)} 승` : esc(m.type) || '매치') : esc(fromVideo?.type ?? '') || '매치';
-    const date = m?.date ?? fromVideo?.date ?? '';
-    const where = m?.location || fromVideo?.location || '';
-    const who = m ? `${m.attendees.length}명 참석` : '참석 기록은 아직 없습니다';
+  /** 봉사 타일 — 두 명은 대등하다. 한 명을 큰 값, 한 명을 보조 줄에 두면 위계가 생긴다. */
+  function duoTile(label: string, a: string, b: string, sub: string, to: string): string {
+    return `<a class="tile" href="${to}"><span class="tile-label">${esc(label)}</span><span class="tile-duo"><b>${esc(a)}</b><b>${esc(b)}</b></span><span class="tile-sub">${sub}</span></a>`;
+  }
+
+  /** 좌측 키 아트 — 최근 매치. 매치 탭과 같이 채널 영상만 본다(스펙 §3.4). */
+  function art(): string {
+    const m = matchVideos(videos ?? [])[0];
+    const id = m?.id ?? '';
+    const title = esc(m?.type ?? '') || '매치';
+    const date = m?.date ?? '';
+    const where = m?.location ?? '';
     return `<section class="art">
       ${id ? `<img src="${ytThumbBig(id)}" alt="" onerror="this.onerror=null;this.src='${ytThumb(id)}'">` : ''}
       <span class="art-kicker">최근 매치</span>
       <h2 class="art-title">${title}</h2>
-      <p class="art-sub">${date ? fmtDate(date) : '날짜 미정'}${where ? ` · ${esc(where)}` : ''} · ${who}</p>
+      <p class="art-sub">${date ? esc(fmtDate(date)) : '날짜 미정'}${where ? ` · ${esc(where)}` : ''}</p>
       <div class="art-foot">
         <a class="chip" href="${href('/match/')}">매치 전체 →</a>
-        ${id ? `<a class="chip" href="https://www.youtube.com/watch?v=${id}" target="_blank" rel="noopener">영상 보기 →</a>` : ''}
+        ${id ? `<a class="chip" href="${href(`/match/?v=${encodeURIComponent(id)}`)}">영상 보기 →</a>` : ''}
       </div>
     </section>`;
   }
@@ -63,7 +65,6 @@ import Shell from '../layouts/Shell.astro';
     const fs = fineSummary(d.fines);
     const me = d.players.find((p) => p.num === getMe());
     const pos = (['GK', 'DF', 'MF', 'FW'] as const).map((k) => `${k} ${d.players.filter((p) => p.pos === k).length}`).join(' · ');
-    const matchCount = d.matches.length || (videos ?? []).filter((v) => parseVideoTitle(v)).length;
     const thumbs = (videos ?? []).slice(0, 4).map((v) => `<img src="${ytThumb(v.id)}" alt="" loading="lazy">`).join('');
 
     // 내 자리 — 이름을 고르면 내 OVR 이, 아니면 고르라는 안내가 같은 자리에 든다(빈 타일을 만들지 않는다).
@@ -72,15 +73,15 @@ import Shell from '../layouts/Shell.astro';
       : `<button class="tile" id="pick-me" type="button"><span class="tile-label">내 선수</span><b class="tile-big">?</b><span class="tile-sub">이름을 고르면 내 카드가 뜹니다</span></button>`;
 
     app.innerHTML = `<div class="menu">
-      ${art(d)}
+      ${art()}
       <div class="rail">
         ${meTile}
         ${tile('스쿼드', String(d.players.length), pos, href('/squad/'))}
-        ${tile('매치', String(matchCount), d.matches.length ? '시트 기록' : '영상 기준', href('/match/'))}
-        ${tile('전술판', '11 v 11', '포메이션 · 드로잉', href('/tactics/'))}
-        ${tile(`${monthLabel(y, mo)} 봉사`, esc(duty.p1), `${esc(duty.p2)} · ${duty.done ? '완료' : '대관비·조끼·정산'}`, href('/record/duty/'))}
-        ${tile('다음 봉사', esc(dutyNext.p1), `${esc(dutyNext.p2)} · ${monthLabel(nm.y, nm.mo)}`, href('/record/duty/'))}
-        ${tile('미납 벌금', fmtWon(fs.unpaid), `${fs.unpaidCount}건 · 기록 보기`, href('/record/fines/'))}
+        ${tile('매치', String(matchVideos(videos ?? []).length), '채널 영상', href('/match/'))}
+        ${tile('라인업', '짜서 공유', '명단에서 골라 이미지로', href('/squad/'))}
+        ${duoTile(`${monthLabel(y, mo)} 봉사`, duty.p1, duty.p2, duty.done ? '완료' : '대관비·조끼·정산', href('/rules/#duty'))}
+        ${duoTile('다음 봉사', dutyNext.p1, dutyNext.p2, monthLabel(nm.y, nm.mo), href('/rules/#duty'))}
+        ${tile('미납 벌금', fmtWon(fs.unpaid), `${fs.unpaidCount}건 · 내역 보기`, href('/rules/#fees'))}
         ${tile('최신 영상', String((videos ?? []).length), '채널에서 보기 · 매주 토요일 기록', LINKS.youtube, `<div class="tile-thumbs">${thumbs}</div>`, true)}
       </div>
     </div>`;
