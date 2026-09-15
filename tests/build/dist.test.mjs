@@ -74,3 +74,13 @@ test('antd CSS는 wfc 변수 클래스로 뽑혔고 스펙 부품 규칙을 담�
   }
   assert.ok(/\.ant-btn[^{]*\{[^}]*background/.test(css), '부품 규칙이 비었다 — zeroRuntime 을 켠 채 뽑았다');
 });
+test('상단바 이름·관리자 버튼은 React 섬으로 그려지고 옛 모달·토스트는 없다', () => {
+  for (const p of SHELL_PAGES) {
+    const html = read(p);
+    const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/TopbarActions\.[^"]+\.js"[^>]*>/);
+    assert.ok(island, `${p}: TopbarActions 섬 없음`);
+    assert.ok(island[0].includes('client="load"'), `${p}: client:load 아님`);
+    assert.ok(html.includes('id="me-btn"') && html.includes('id="admin-btn"'), `${p}: 버튼이 빌드 때 안 그려짐`);
+    for (const old of ['id="pin-modal"', 'id="me-modal"', 'id="toast"']) assert.ok(!html.includes(old), `${p}: ${old} 가 남음`);
+  }
+});
