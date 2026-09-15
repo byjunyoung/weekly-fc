@@ -17,6 +17,9 @@ export const PAGES = [
   'about/index.html',
 ];
 export const INDEXABLE = [];
+// 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
+const REDIRECTS = ['record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'tactics/index.html', 'about/index.html'];
+export const SHELL_PAGES = PAGES.filter((p) => !REDIRECTS.includes(p));
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
 
 test('모든 페이지가 dist에 있다', () => {
@@ -54,4 +57,33 @@ test('옛 주소는 새 주소로 넘긴다', () => {
     'tactics/index.html': '/weekly-fc/squad/',
   };
   for (const [p, to] of Object.entries(cases)) assert.ok(read(p).includes(`url=${to}"`), `${p} → ${to}`);
+});
+test('셸 페이지는 빌드 때 뽑은 antd CSS를 head에서 불러온다', () => {
+  assert.ok(existsSync('dist/antd.css'), 'dist/antd.css 없음 — prebuild 의 extract-antd-css 가 안 돌았다');
+  for (const p of SHELL_PAGES) {
+    const head = read(p).split('</head>')[0];
+    assert.ok(head.includes('<link rel="stylesheet" href="/weekly-fc/antd.css"'), p);
+  }
+});
+test('antd CSS는 wfc 변수 클래스로 뽑혔고 스펙 부품 규칙을 담는다', () => {
+  const css = readFileSync('dist/antd.css', 'utf8');
+  assert.ok(css.includes('.wfc'), 'wfc 변수 클래스 없음');
+  // 1~4단계에서 쓸 부품이 제외 목록에 잘못 들어가지 않았는지
+  for (const c of ['ant-btn', 'ant-modal', 'ant-message', 'ant-app', 'ant-input', 'ant-input-number', 'ant-select', 'ant-picker', 'ant-form', 'ant-table', 'ant-pagination', 'ant-checkbox', 'ant-segmented', 'ant-popover', 'ant-tooltip', 'ant-drawer', 'ant-card', 'ant-descriptions']) {
+    assert.ok(css.includes(`.${c}`), c);
+  }
+  assert.ok(/\.ant-btn[^{]*\{[^}]*background/.test(css), '부품 규칙이 비었다 — zeroRuntime 을 켠 채 뽑았다');
+});
+test('상단바 이름·관리자 버튼은 React 섬으로 그려지고 옛 모달·토스트는 없다', () => {
+  for (const p of SHELL_PAGES) {
+    const html = read(p);
+    const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/TopbarActions\.[^"]+\.js"[^>]*>/);
+    assert.ok(island, `${p}: TopbarActions 섬 없음`);
+    assert.ok(island[0].includes('client="load"'), `${p}: client:load 아님`);
+    assert.ok(html.includes('id="me-btn"') && html.includes('id="admin-btn"'), `${p}: 버튼이 빌드 때 안 그려짐`);
+    for (const old of ['id="pin-modal"', 'id="me-modal"', 'id="toast"']) assert.ok(!html.includes(old), `${p}: ${old} 가 남음`);
+    const adminBtn = html.match(/<button\b[^>]*\bid="admin-btn"[^>]*>/);
+    assert.ok(adminBtn, `${p}: admin-btn 태그 없음`);
+    assert.ok(/\bclass="[^"]*\bwfc\b[^"]*"/.test(adminBtn[0]), `${p}: 빌드 때 그린 버튼에 wfc 변수 클래스가 없다(빌드 CSS와 어긋남)`);
+  }
 });

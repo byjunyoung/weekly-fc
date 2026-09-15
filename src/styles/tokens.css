@@ -104,7 +104,7 @@ html { background: var(--canvas); color: var(--fg); font-family: var(--font); fo
   font-weight: var(--fw-body); line-height: 1.5; -webkit-font-smoothing: antialiased; word-break: keep-all; }
 body { margin: 0; min-height: 100vh; }
 a { color: inherit; text-decoration: none; }
-button, input, select, textarea { font: inherit; color: inherit; }
+button:where(:not(.wfc, .wfc *)), input:where(:not(.wfc, .wfc *)), select:where(:not(.wfc, .wfc *)), textarea:where(:not(.wfc, .wfc *)) { font: inherit; color: inherit; }
 img, video, canvas { display: block; max-width: 100%; height: auto; }
 [hidden] { display: none !important; }
 h1, h2, h3 { margin: 0; }
@@ -117,22 +117,23 @@ h2 { font-size: var(--fs-h-md); font-weight: var(--fw-heavy); line-height: 1.2; 
 .h2-tight { margin-bottom: var(--s-xs); }
 
 /* ══ 버튼·입력 ═════════════════════════════════════════════ */
-/* 정본: 알약(rounded.full), 높이 48, padding 12/28. 대문자·자간 확장은 쓰지 않는다. */
-button, .btn {
+/* 정본: 알약(rounded.full), 높이 48, padding 12/28. 대문자·자간 확장은 쓰지 않는다.
+   antd 부품(.wfc 안)에는 걸지 않는다 — antd 가 안 정하는 속성이 새어 들어간다. :where() 로 감싸 원래 우선순위를 그대로 둔다. */
+button:where(:not(.wfc, .wfc *)), .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-xs);
   min-height: 40px; padding: 10px 22px; border: 1px solid var(--hairline-strong); border-radius: var(--r-full);
   background: transparent; color: var(--fg); font-size: var(--fs-sm); font-weight: var(--fw-strong);
   cursor: pointer; transition: background var(--dur-micro) var(--ease-std), border-color var(--dur-micro) var(--ease-std), color var(--dur-micro) var(--ease-std);
 }
-button:hover { background: rgba(255, 255, 255, .1); }
-button.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
-button.primary:hover { background: var(--primary-pressed); border-color: var(--primary-pressed); }
-button.danger { color: var(--warn); border-color: var(--warn); }
-button.danger:hover { background: var(--warn-bg); }
-button:disabled { opacity: .38; cursor: default; }
-input, select, textarea { min-height: 40px; padding: 10px var(--s-md); border: 1px solid var(--hairline-strong);
+button:where(:not(.wfc, .wfc *)):hover { background: rgba(255, 255, 255, .1); }
+button:where(:not(.wfc, .wfc *)).primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+button:where(:not(.wfc, .wfc *)).primary:hover { background: var(--primary-pressed); border-color: var(--primary-pressed); }
+button:where(:not(.wfc, .wfc *)).danger { color: var(--warn); border-color: var(--warn); }
+button:where(:not(.wfc, .wfc *)).danger:hover { background: var(--warn-bg); }
+button:where(:not(.wfc, .wfc *)):disabled { opacity: .38; cursor: default; }
+input:where(:not(.wfc, .wfc *)), select:where(:not(.wfc, .wfc *)), textarea:where(:not(.wfc, .wfc *)) { min-height: 40px; padding: 10px var(--s-md); border: 1px solid var(--hairline-strong);
   border-radius: var(--r-sm); background: var(--elevated); color: var(--fg); font-size: var(--fs-sm); }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--link); outline-offset: 1px; border-color: var(--link); }
+input:where(:not(.wfc, .wfc *)):focus, select:where(:not(.wfc, .wfc *)):focus, textarea:where(:not(.wfc, .wfc *)):focus { outline: 2px solid var(--link); outline-offset: 1px; border-color: var(--link); }
 :where(a, button, [tabindex]) { scroll-margin-top: calc(var(--header-h) + var(--s-sm)); }
 :where(a, button, [tabindex]):focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 a.inline { color: var(--link); }
@@ -151,8 +152,6 @@ a.inline:hover { text-decoration: underline; }
 .topnav a:hover { color: var(--fg); background: rgba(255, 255, 255, .08); }
 .topnav a.active { color: var(--fg); background: rgba(255, 255, 255, .14); }
 .topbar-act { display: flex; align-items: center; gap: var(--s-xs); }
-.topbar-act button { min-height: 34px; padding: 6px 16px; font-size: var(--fs-xs); }
-.topbar-act .admin-on { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 .main { max-width: var(--max); margin: 0 auto; padding: var(--s-xl); }
 body.wide .main { max-width: none; padding: var(--s-md); }
 
@@ -459,9 +458,6 @@ a.card:hover { background: var(--charcoal); }
 details.year > summary { cursor: pointer; padding: var(--s-sm) 0; font-weight: var(--fw-strong); list-style: none; }
 details.year > summary::before { content: "▸ "; color: var(--muted); }
 details.year[open] > summary::before { content: "▾ "; }
-.toast { position: fixed; left: 50%; bottom: var(--s-lg); transform: translateX(-50%); z-index: 50;
-  padding: var(--s-sm) var(--s-lg); border-radius: var(--r-full); background: var(--fg); color: var(--canvas);
-  font-size: var(--fs-sm); font-weight: var(--fw-strong); }
 
 
 @media (prefers-reduced-motion: reduce) {
@@ -505,6 +501,6 @@ wa-dialog::part(title) { font-size: var(--fs-h-lg); font-weight: var(--fw-displa
 wa-dialog::part(body) { padding-top: var(--s-sm); }
 wa-dialog .foot { display: flex; justify-content: flex-end; gap: var(--s-xs); }
 wa-select::part(combobox) { background: var(--elevated); border-color: var(--hairline-strong); border-radius: var(--r-sm); }
-/* 이름 고르기 격자 — wa-dialog 안에 든다. */
+/* 이름 고르기 격자 — 상단바 섬의 antd Modal 안에 든다. 칸이 좁아(104px) antd 버튼 좌우 여백만 줄인다. */
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s-xs); }
-.pick-list button { min-height: 36px; padding: var(--s-xs) var(--s-xxs); font-size: var(--fs-sm); }
+.pick-list .ant-btn { padding-inline: var(--s-xxs); }

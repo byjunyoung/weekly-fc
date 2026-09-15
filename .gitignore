@@ -5,6 +5,9 @@ node_modules.nosync/
 .astro/
 .DS_Store
 
+# prebuild 가 뽑는 antd 부품 CSS(scripts/extract-antd-css.mjs)
+public/antd.css
+
 # iCloud 충돌 사본
 *[0-9].json
 * 2.*
