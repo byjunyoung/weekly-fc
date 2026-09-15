@@ -87,3 +87,26 @@ test('상단바 이름·관리자 버튼은 React 섬으로 그려지고 옛 모
     assert.ok(/\bclass="[^"]*\bwfc\b[^"]*"/.test(adminBtn[0]), `${p}: 빌드 때 그린 버튼에 wfc 변수 클래스가 없다(빌드 CSS와 어긋남)`);
   }
 });
+test('운영 탭 벌금 — 기준표는 빌드 때 그린 antd 표, 현황·내역은 FeesLive 섬, 옛 벌금 모달 없음', () => {
+  const html = read('rules/index.html');
+  const fees = html.slice(html.indexOf('<section id="fees"'), html.indexOf('<section id="duty"'));
+  assert.ok(fees.includes('ant-table'), '벌금 기준표가 antd 표가 아니다');
+  for (const s of ['지각', '시작 후 도착', '30,000원', '노쇼', '종료까지 미참', '50,000원']) assert.ok(fees.includes(s), `기준표 내용: ${s}`);
+  assert.ok(!/component-url="[^"]*FineRulesTable/.test(html), '기준표가 섬이 됐다 — 정적이어야 JS 가 안 붙는다');
+  const island = fees.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/FeesLive\.[^"]+\.js"[^>]*>/);
+  assert.ok(island, 'FeesLive 섬 없음');
+  assert.ok(island[0].includes('client="load"'), 'FeesLive 가 client:load 아님');
+  // 기존 CDP 시나리오(t10)가 찾는 자리 — 데이터가 오기 전(빌드 때)에도 있어야 한다
+  for (const id of ['fees-total', 'fees-unpaid', 'fees-app']) assert.ok(fees.includes(`id="${id}"`), id);
+  assert.ok(!html.includes('id="fine-modal"'), '옛 벌금 모달(wa-dialog)이 남음');
+});
+test('운영 탭 봉사 — 봉사표는 DutyLive 섬, 이 페이지엔 옛 페이지 스크립트·Web Awesome 대화상자가 없다', () => {
+  const html = read('rules/index.html');
+  const duty = html.slice(html.indexOf('<section id="duty"'), html.indexOf('<section id="bank"'));
+  const island = duty.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/DutyLive\.[^"]+\.js"[^>]*>/);
+  assert.ok(island, 'DutyLive 섬 없음');
+  assert.ok(island[0].includes('client="load"'), 'DutyLive 가 client:load 아님');
+  for (const id of ['duty-year', 'duty-app']) assert.ok(duty.includes(`id="${id}"`), id);
+  assert.ok(!html.includes('<wa-dialog'), 'wa-dialog 가 남음');
+  assert.ok(!/rules\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
+});
