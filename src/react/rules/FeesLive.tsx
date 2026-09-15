@@ -3,8 +3,9 @@
 import { App, Button, DatePicker, Form, InputNumber, Modal, Popconfirm, Select, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ko';
 import type { Dayjs } from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { serializeFine, write } from '../../lib/api';
 import { fmtDate, fmtWon, seoulToday } from '../../lib/html';
 import { FINE_TYPES } from '../../lib/rules';
@@ -17,6 +18,9 @@ import { useData } from '../useData';
 import { amountFor, byAmount, byDate, byPaid, byPlayer, byType, emptyDraft, newFine, togglePaid, unpaidRows } from './model';
 import type { FineDraft, UnpaidRow } from './model';
 
+// 날짜 선택 달력이 필요한 곳이 이 섬뿐이라, 로케일도 모든 페이지가 아니라 여기서만 켠다.
+dayjs.locale('ko');
+
 type FormValues = { date: Dayjs; player: string; type: FineType; amount: number };
 
 function Fees() {
@@ -24,9 +28,13 @@ function Fees() {
   const { data } = useData();
   const admin = useAdmin();
   const [form] = Form.useForm<FormValues>();
-  const [draft, setDraft] = useState<FineDraft | null>(null); // null 이면 모달 닫힘
+  const [open, setOpen] = useState(false); // 모달 열림 여부 — draft 와 분리해 닫는 애니메이션 중에도 내용이 남아 있게 한다
+  const [draft, setDraft] = useState<FineDraft | null>(null); // null 이면 폼 초기값 없음(애니메이션 끝난 뒤 비운다)
   const [saving, setSaving] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<Set<string>>(new Set()); // 줄별 진행 표시 — `${id}:pay` / `${id}:del`
+
+  // 관리자 모드가 꺼지면(핀 재확인 실패 등) 모달도 같이 닫는다.
+  useEffect(() => { if (!admin) setOpen(false); }, [admin]);
 
   const summary = data ? fineSummary(data.fines) : null;
   const playerLink = (name: string) => {
@@ -34,15 +42,21 @@ function Fees() {
     return p ? <a href={href(`/squad/${p.num}/`)}>{name}</a> : name;
   };
   // 납부 처리·삭제 — 누른 줄만 진행 표시, 실패하면 오류 문구만 띄운다.
-  const run = async (id: string, action: string, payload: unknown) => {
-    setBusyId(id);
-    try { await write(action, payload); } catch (e) { message.error((e as Error).message); } finally { setBusyId(null); }
+  const run = async (key: string, action: string, payload: unknown) => {
+    setBusy((b) => new Set(b).add(key));
+    try {
+      await write(action, payload);
+    } catch (e) {
+      message.error((e as Error).message);
+    } finally {
+      setBusy((b) => { const next = new Set(b); next.delete(key); return next; });
+    }
   };
   const save = async (v: FormValues) => {
     setSaving(true);
     try {
       await write('writeFine', serializeFine(newFine({ date: v.date.format('YYYY-MM-DD'), player: v.player, type: v.type, amount: v.amount }, Date.now())));
-      setDraft(null);
+      setOpen(false);
       message.success('저장됨');
     } catch (e) {
       message.error((e as Error).message); // 모달·입력값은 그대로 둔다(스펙 §6)
@@ -64,14 +78,14 @@ function Fees() {
     {
       title: '납부', dataIndex: 'paid', sorter: byPaid,
       render: (_: boolean, f) => (admin
-        ? <Button size="small" type={f.paid ? 'default' : 'primary'} loading={busyId === f.id} onClick={() => run(f.id, 'writeFine', serializeFine(togglePaid(f)))}>{f.paid ? '완료' : '납부 처리'}</Button>
+        ? <Button size="small" type={f.paid ? 'default' : 'primary'} loading={busy.has(`${f.id}:pay`)} onClick={() => run(`${f.id}:pay`, 'writeFine', serializeFine(togglePaid(f)))}>{f.paid ? '완료' : '납부 처리'}</Button>
         : f.paid ? '완료' : <span className="warn">미납</span>),
     },
     ...(admin ? [{
       key: 'del', title: '',
       render: (_: unknown, f: Fine) => (
-        <Popconfirm title="이 벌금 기록을 지울까요?" okText="삭제" cancelText="취소" okButtonProps={{ danger: true }} onConfirm={() => run(f.id, 'deleteFine', { id: f.id })}>
-          <Button size="small" danger loading={busyId === f.id}>삭제</Button>
+        <Popconfirm title="이 벌금 기록을 지울까요?" okText="삭제" cancelText="취소" okButtonProps={{ danger: true }} onConfirm={() => run(`${f.id}:del`, 'deleteFine', { id: f.id })}>
+          <Button size="small" danger loading={busy.has(`${f.id}:del`)}>삭제</Button>
         </Popconfirm>
       ),
     }] : []),
@@ -82,7 +96,7 @@ function Fees() {
     <>
       <div className="row rules-live-head">
         <span className="label">미납 현황 <span id="fees-total">{summary && `· ${fmtWon(summary.unpaid)} (${summary.unpaidCount}건)`}</span></span>
-        <span id="fees-actions">{admin && data && <Button id="fees-add" onClick={() => setDraft(emptyDraft(seoulToday(), data.players))}>벌금 추가</Button>}</span>
+        <span id="fees-actions">{admin && data && <Button id="fees-add" onClick={() => { setDraft(emptyDraft(seoulToday(), data.players)); setOpen(true); }}>벌금 추가</Button>}</span>
       </div>
       <div id="fees-unpaid">
         {data && <Table<UnpaidRow> size="small" rowKey="name" pagination={false} columns={unpaidCols} dataSource={unpaidRows(data.fines, data.players)} locale={{ emptyText: '미납 없음' }} />}
@@ -91,10 +105,11 @@ function Fees() {
       <div id="fees-app">
         {data && <Table<Fine> size="small" rowKey="id" pagination={false} scroll={{ x: 'max-content' }} showSorterTooltip={false} columns={fineCols} dataSource={data.fines} locale={{ emptyText: '벌금 기록이 없습니다' }} />}
       </div>
-      <Modal title="벌금 기록" open={draft !== null} width={460} destroyOnHidden onCancel={() => setDraft(null)}
-        okText="저장" cancelText="취소" confirmLoading={saving} onOk={() => form.submit()}>
+      <Modal title="벌금 기록" open={open} width={460} destroyOnHidden afterClose={() => setDraft(null)} onCancel={() => setOpen(false)}
+        okText="저장" cancelText="취소" confirmLoading={saving} onOk={() => form.submit()}
+        cancelButtonProps={{ disabled: saving }} maskClosable={!saving} closable={!saving} keyboard={!saving}>
         {draft && data && (
-          <Form<FormValues> form={form} id="fine-form" layout="vertical" initialValues={{ ...draft, date: dayjs(draft.date) }} onFinish={save}
+          <Form<FormValues> form={form} id="fine-form" layout="vertical" clearOnDestroy initialValues={{ ...draft, date: dayjs(draft.date) }} onFinish={save}
             onValuesChange={(changed: Partial<FormValues>) => { if (changed.type) form.setFieldValue('amount', amountFor(changed.type)); }}>
             <Form.Item name="date" label="날짜" rules={[{ required: true, message: '날짜를 고르세요' }]}>
               <DatePicker format="YYYY-MM-DD" allowClear={false} inputReadOnly style={{ width: '100%' }} />

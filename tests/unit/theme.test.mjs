@@ -77,6 +77,14 @@ test('표는 지금 .tbl 모습 — 머리 바탕·글자, 줄 경계, 글자 �
   assert.equal(t.headerSplitColor, 'transparent');
 });
 
+test('표 모서리·칸 여백·머리 굵기도 지금 .tbl 과 같다', () => {
+  const t = themeConfig.components.Table;
+  assert.equal(t.headerBorderRadius, px('r-md'));
+  assert.equal(t.cellPaddingInlineSM, px('s-md'));
+  assert.equal(t.cellPaddingBlockSM, 13); // 14px 글자·줄높이 약 22px + 위아래 13 = 줄 높이 약 48(--row-h)
+  assert.equal(t.fontWeightStrong, Number(tok('fw-heavy')));
+});
+
 test('연도 고르기는 지금 칩 모습 — 알약, 선택 = 흰 바탕·검정 글자, 평소 글자 --body, hover --charcoal, 바탕 --elevated', () => {
   const s = themeConfig.components.Segmented;
   assert.equal(s.itemSelectedBg, tok('fg'));
