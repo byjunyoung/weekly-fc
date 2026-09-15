@@ -76,3 +76,16 @@ test('표는 지금 .tbl 모습 — 머리 바탕·글자, 줄 경계, 글자 �
   assert.equal(t.bodySortBg, 'transparent');
   assert.equal(t.headerSplitColor, 'transparent');
 });
+
+test('연도 고르기는 지금 칩 모습 — 알약, 선택 = 흰 바탕·검정 글자, 평소 글자 --body, hover --charcoal, 바탕 --elevated', () => {
+  const s = themeConfig.components.Segmented;
+  assert.equal(s.itemSelectedBg, tok('fg'));
+  assert.equal(s.itemSelectedColor, tok('canvas'));
+  assert.equal(s.itemColor, tok('body'));
+  assert.equal(s.itemHoverBg, tok('charcoal'));
+  assert.equal(s.itemHoverColor, tok('fg'));
+  assert.equal(s.trackBg, tok('elevated'));
+  assert.equal(s.borderRadius, 9999);
+  assert.equal(s.borderRadiusSM, 9999);
+  assert.equal(s.fontSize, px('fs-xs'));
+});

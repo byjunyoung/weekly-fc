@@ -63,5 +63,11 @@ export const themeConfig: ThemeConfig = {
       borderColor: 'rgba(229, 229, 229, .2)', headerSplitColor: 'transparent', cellFontSizeSM: 14,
       rowHoverBg: 'rgba(255, 255, 255, .06)', bodySortBg: 'transparent',
     },
+    // 봉사표 연도 고르기 — 지금 .chip / .chip.on(알약, 12px, 선택 = 흰 바탕·검정 글자, hover --charcoal).
+    Segmented: {
+      itemColor: 'rgba(255, 255, 255, .7)', itemHoverColor: '#ffffff', itemHoverBg: '#1f2024', itemActiveBg: '#1f2024',
+      itemSelectedBg: '#ffffff', itemSelectedColor: '#000000', trackBg: '#121314',
+      borderRadius: 9999, borderRadiusSM: 9999, borderRadiusXS: 9999, fontSize: 12,
+    },
   },
 };

@@ -100,3 +100,13 @@ test('운영 탭 벌금 — 기준표는 빌드 때 그린 antd 표, 현황·내
   for (const id of ['fees-total', 'fees-unpaid', 'fees-app']) assert.ok(fees.includes(`id="${id}"`), id);
   assert.ok(!html.includes('id="fine-modal"'), '옛 벌금 모달(wa-dialog)이 남음');
 });
+test('운영 탭 봉사 — 봉사표는 DutyLive 섬, 이 페이지엔 옛 페이지 스크립트·Web Awesome 대화상자가 없다', () => {
+  const html = read('rules/index.html');
+  const duty = html.slice(html.indexOf('<section id="duty"'), html.indexOf('<section id="bank"'));
+  const island = duty.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/DutyLive\.[^"]+\.js"[^>]*>/);
+  assert.ok(island, 'DutyLive 섬 없음');
+  assert.ok(island[0].includes('client="load"'), 'DutyLive 가 client:load 아님');
+  for (const id of ['duty-year', 'duty-app']) assert.ok(duty.includes(`id="${id}"`), id);
+  assert.ok(!html.includes('<wa-dialog'), 'wa-dialog 가 남음');
+  assert.ok(!/rules\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
+});

@@ -2,6 +2,7 @@
 import Shell from '../layouts/Shell.astro';
 import FineRulesTable from '../react/rules/FineRulesTable.tsx';
 import FeesLive from '../react/rules/FeesLive.tsx';
+import DutyLive from '../react/rules/DutyLive.tsx';
 import { FINE_EXEMPT, MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS, DUTY_PER_MONTH } from '../lib/rules.ts';
 const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '비용·벌금'], ['duty', '봉사'], ['bank', '모임 통장'], ['manner', '에티켓']];
 ---
@@ -23,53 +24,12 @@ const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '
     </section>
     <section id="duty"><h2>봉사</h2>
       <ul><li>대관비·음료비 선납</li><li>음료 구매, 조끼 대여·반납</li><li>매치 종료 후 채팅방에서 정산 진행</li><li>매월 {DUTY_PER_MONTH}명 로테이션</li></ul>
-      <div class="rules-live">
-        <div class="row rules-live-head"><span class="label">봉사표</span><div class="chips" id="duty-year"></div></div>
-        <div id="duty-app" class="tbl-wrap"></div>
-      </div>
+      <DutyLive client:load />
     </section>
     <section id="bank"><h2>모임 통장</h2><p>{BANK.name} {BANK.number} ({BANK.holder})<br/>모임 시작일 {BANK.since} · 통장 초대 문의: {BANK.contact}</p></section>
     <section id="manner"><h2>에티켓</h2><ul><li>투표에 꼭 참여하기</li><li>불참 등 특이사항은 사전에 공유</li><li>서로 존중하는 채팅</li></ul></section>
   </article>
 </Shell>
-<script>
-  import { onData, isAdmin, write, serializeRotation } from '../lib/api.ts';
-  import { esc, toast } from '../lib/html.ts';
-  import { yearRows } from '../lib/rotation.ts';
-  import type { Data, RotationRow } from '../lib/types.ts';
-
-  // 벌금 영역은 React 섬(src/react/rules/FeesLive.tsx)으로 옮겼다. 봉사표는 Task 3 에서 옮긴다.
-  const $ = (id: string) => document.getElementById(id) as HTMLElement;
-  let data: Data | null = null;
-  const now = new Date();
-  let year = now.getFullYear();
-
-  // ── 봉사 — record/duty.astro 에서 옮겨 왔다. 두 명은 대등하므로 한 칸에 나란히 둔다. ──
-  function renderDuty(d: Data) {
-    $('duty-year').innerHTML = [year - 1, year, year + 1].map((y) => `<button class="chip ${y === year ? 'on' : ''}" data-y="${y}" aria-pressed="${y === year}">${y}</button>`).join('');
-    $('duty-year').querySelectorAll<HTMLElement>('[data-y]').forEach((b) => (b.onclick = () => { year = Number(b.dataset.y); renderDuty(d); }));
-    const rows = yearRows(d.players, d.rotation, year);
-    const names = d.players.map((p) => p.name);
-    const pick = (r: RotationRow, k: 'p1' | 'p2') => {
-      const val = r[k];
-      // 시트 값이 현재 명단에 없으면(퇴단 등) 브라우저가 첫 옵션을 대신 보여준다 — 저장된 값을 앞에 끼워 넣는다.
-      const extra = val && !names.includes(val) ? `<option selected>${esc(val)}</option>` : '';
-      return `<select data-y="${r.year}" data-m="${r.month}" data-k="${k}">${extra}${names.map((n) => `<option ${n === val ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
-    };
-    const pair = (r: RotationRow) => isAdmin() ? `<span class="duty-pair">${pick(r, 'p1')}${pick(r, 'p2')}</span>` : `<span class="duty-pair"><b>${esc(r.p1)}</b><b>${esc(r.p2)}</b></span>`;
-    $('duty-app').innerHTML = `<table class="tbl"><thead><tr><th>월</th><th>당번</th><th class="c">완료</th></tr></thead><tbody>${rows.map((r) => { const cur = r.year === now.getFullYear() && r.month === now.getMonth() + 1; return `<tr class="${cur ? 'row-current' : ''}"><td>${r.month}월${cur ? ' <span class="label">이번 달</span>' : ''}</td><td>${pair(r)}</td><td class="c">${isAdmin() ? `<input type="checkbox" data-y="${r.year}" data-m="${r.month}" data-k="done" ${r.done ? 'checked' : ''}>` : r.done ? '✓' : ''}</td></tr>`; }).join('')}</tbody></table>`;
-    $('duty-app').querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-k]').forEach((el) => (el.onchange = async () => {
-      const y = Number(el.dataset.y), m = Number(el.dataset.m);
-      const r = yearRows(d.players, d.rotation, y).find((x) => x.month === m)!;
-      const next: RotationRow = { ...r, [el.dataset.k!]: el.dataset.k === 'done' ? (el as HTMLInputElement).checked : el.value } as RotationRow;
-      try { await write('writeRotation', serializeRotation(next)); toast('저장됨'); } catch (e) { toast((e as Error).message); }
-    }));
-  }
-
-  const render = () => { if (!data) return; renderDuty(data); };
-  window.addEventListener('wfc:admin', render);
-  onData((d) => { data = d; render(); });
-</script>
 <style>
   /* 한글 본문 — 한 줄 길이는 WCAG 1.4.8 의 CJK 40자 상한(--prose-max 600px ÷ 15px),
      행간은 klreq 7.4.1 의 비례 줄간격 예시 160%. w3.org/TR/WCAG22 · w3.org/TR/klreq */
