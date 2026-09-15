@@ -13,12 +13,13 @@
 | 겉모습 | **지금 짙은 톤(PlayStation DESIGN.md) 유지**. antd 기본 모습으로 바꾸지 않는다 | 사용자 결정 |
 | 구조 | **페이지마다 React 섬 하나**(`client:load`). Astro 페이지·레이아웃은 남긴다 | 주소·옛 주소 넘김·noindex·빌드 검사를 그대로 둔다 |
 | 버전 | **antd 6 + React 19** | v5는 React 19에서 패치가 필요하다([v5-for-19](https://5x.ant.design/docs/react/v5-for-19/)). v6는 React 18 이상, CSS 변수 기본([v6 마이그레이션](https://ant.design/docs/react/migration-v6/)) |
+| 무게 | **antd 전면 도입, 무게 감수**. 페이지 JS gzip 약 180~380KB(지금 41~53KB) | 실측(§7.1) 뒤 사용자 결정. Table·DatePicker를 빼는 안(약 180~260KB)과 도입 취소 안을 두고 골랐다 |
 | 순서·배포 | **기반 → 운영 → 선수 상세 → 매치·홈 → 스쿼드**, 단계마다 main 배포 | 작은 화면으로 테마·스타일 추출을 검증한 뒤 가장 큰 스쿼드로 간다 |
 | 섬 사이 상태 | **기존 window 이벤트(`wfc:data`·`wfc:error`·`wfc:admin`)를 훅이 구독**. Nano Stores는 섬끼리 따로 나눌 상태가 생길 때만 | 섞인 기간에 옛 화면은 이벤트로만 듣는다. 저장소를 하나 더 두면 두 경로를 동기화해야 한다 |
 | 도메인 부품 | 피치·그리기·아래 고정 벤치 줄·1080×1350 공유 이미지는 **React로 옮기되 직접 만든 채로** | antd에 대응 부품이 없다 |
 | Web Awesome | **4단계(스쿼드) 끝에 제거** | 옛 화면이 `wa-dialog`를 쓰는 동안은 남긴다 |
 
-1~4행은 사용자 결정(2026-09-15), 나머지는 설계 승인(같은 날).
+1~5행은 사용자 결정(2026-09-15), 나머지는 설계 승인(같은 날).
 
 ## 2. 구조
 
@@ -88,7 +89,15 @@ Astro 페이지 (.astro) ── 주소·옛 주소 넘김·noindex·빌드 검�
 
 - antd 6의 `zeroRuntime` 설정과 `@ant-design/static-style-extract`로 빌드할 때 antd CSS 파일을 만든다([6.0 발표](https://medium.com/ant-design/ant-design-6-0-is-here-0f5b2803e6a0), [dev.to 마이그레이션 글](https://dev.to/nainikmehta/migrate-to-ant-design-v6-zeroruntime-css-variables-4c99)).
 - 공통 레이아웃 head에 그 CSS를 링크한다. 첫 화면부터 스타일이 입혀져 있어야 한다(Astro에서 antd 스타일이 빠지는 사례: [withastro/astro#6497](https://github.com/withastro/astro/issues/6497)).
-- 이 방식이 문서대로 안 되면 대안으로 간다: 페이지 빌드 때 스타일을 추출해 head에 넣는다([공식 SSR 추출 글](https://ant.design/docs/blog/extract-ssr/)). 0단계 첫 작업이 이 확인이다(§5).
+- 이 방식이 문서대로 안 되면 대안으로 간다: 페이지 빌드 때 스타일을 추출해 head에 넣는다([공식 SSR 추출 글](https://ant.design/docs/blog/extract-ssr/)).
+
+2026-09-15 실험(antd 6.6.4, `@ant-design/static-style-extract` 2.1.0, Astro 7.3 빌드)에서 확인한 것:
+
+- **뽑을 때는 `zeroRuntime`을 꺼야 한다.** 켠 채로 `extractStyle({ customTheme })`에 넘기면 CSS 변수만 나오고 부품 규칙이 비어 화면이 맨 모습이다. 끄고 뽑으면 전 부품 규칙이 나온다(원본 1,019KB, gzip 110KB).
+- **쓰지 않는 부품군은 `excludes`로 뺀다**(gzip 약 64KB). 쓰는 부품만 고르는 `includes`(약 58KB)는 Table이 안에서 쓰는 Pagination·Checkbox·Dropdown 같은 부품을 빠뜨리기 쉬워 쓰지 않는다. 새 부품을 쓰게 되면 제외 목록에서 뺀다.
+- **CSS 변수 클래스를 고정해야 한다.** 기본값이면 추출 CSS는 `.css-var-_R_0_`, 페이지는 React `useId`로 `css-var-_r1R_0_`를 만들어 변수가 안 걸린다. `cssVar: { key: 'wfc' }`와 `hashed: false`를 주면 둘 다 `wfc` 클래스로 맞는다.
+- **`darkAlgorithm`은 주색·링크색을 바꾼다**(`#0070d1` → `#0362b5`, `#53b1ff` → `#4a99dc`). `token`에 적어도 안 돌아온다. `algorithm: [darkAlgorithm, 우리 색 다시 얹기]`처럼 뒤에 함수 하나를 더 두면 정확한 값이 남는다.
+- 추출 스크립트는 Node가 `theme.ts`를 바로 불러 쓴다(Node 22.18 이상 타입 제거). `package.json` `engines`가 이미 `>=22.18.0`이다.
 
 ## 4. 상태 · 섞인 기간
 
@@ -158,11 +167,31 @@ api.ts (캐시·refresh·login·write) ── 그대로
 | 선수 상세 스크립트 | 6,230B | 2,982B |
 | 운영 스크립트 | 4,622B | 2,099B |
 
-페이지별 합산 크기는 0단계 시작 때 다시 잰다(앞선 측정은 경로 매칭이 틀려 0이 나왔다).
+페이지가 실제로 받는 합계(모듈 import를 따라가며 중복 없이, 2026-09-15 dist):
+
+| 페이지 | JS gzip | CSS gzip |
+|---|---|---|
+| 홈 | 42,667B | 13,037B |
+| 스쿼드 | 52,675B | 13,037B |
+| 선수 상세 | 46,779B | 13,037B |
+| 매치 | 40,886B | 13,037B |
+| 운영 | 43,848B | 13,037B |
+
+도입 전 실험(antd 6.6.4, React 19.3, esbuild minify + gzip, react 제외):
+
+| 조합 | JS gzip |
+|---|---|
+| react + react-dom | 68,859B |
+| ConfigProvider만 | 43,311B |
+| 0단계(App·Button·Modal·Input) | 114,793B |
+| Table 하나 | 197,709B |
+| 1단계 운영 전체 | 280,279B |
+| 스펙 부품 전체 | 307,809B |
+| 빌드 때 뽑은 antd CSS(쓰지 않는 부품군 제외) | 63,815B |
 
 ### 7.2 단계별로 따로 확인
 
-- **0단계** — 관리자 PIN은 에이전트가 넣지 않는다. 모달 열기·닫기·Esc·포커스 복귀까지만 확인하고 로그인은 사용자가 한다. 홈 첫 로딩 JS가 gzip 200KB를 넘으면 1단계로 가지 않고 멈춰 보고한다. 200KB는 React 19와 antd 부품 몇 개 규모를 짐작한 선이다(추정). 실측 뒤 조정할 수 있다.
+- **0단계** — 관리자 PIN은 에이전트가 넣지 않는다. 모달 열기·닫기·Esc·포커스 복귀까지만 확인하고 로그인은 사용자가 한다. 크기는 멈춤 기준 없이 실측해 보고만 한다(§1 무게 결정).
 - **1·2단계** — 관리자 모드를 끈 화면은 에이전트가 확인한다. 벌금 추가·납부·삭제, 봉사 당번 수정, 선수 편집이 시트에 써지는지는 사용자가 PIN으로 확인한다.
 - **4단계** — 모바일 벤치 줄·피치 위 스크롤·그리기·이미지 공유가 지금처럼 동작한다(시나리오 strip 20항목, t10·t11·fix). dist에 Web Awesome 코드가 남지 않는다.
 
@@ -193,7 +222,7 @@ api.ts (캐시·refresh·login·write) ── 그대로
 | 로컬 검증이 느려짐 | 8GB 맥에서 `astro check`가 끝나지 않았다 | 빌드 시간을 기준선과 함께 잰다. 타입 검사는 필수 관문에서 뺀다 |
 | 스쿼드 화면 회귀 | 376줄로 가장 크고 드래그·그리기·벤치 줄이 얽혀 있다 | 마지막 단계. `src/lib` 단위 테스트와 CDP 시나리오 전체 통과 |
 | 모바일 시트 느낌이 달라짐 | antd `Drawer`에는 끌어서 여닫는 손잡이가 없다(추정, 4단계에서 확인) | 손잡이 탭으로 닫기와 높이를 지금 값으로 맞춘다 |
-| 로딩이 무거워짐 | React·antd 추가 | §7.2 0단계 멈춤 기준 |
+| 로딩이 무거워짐 | 실측 4~8배(§7.1) | 사용자가 감수하기로 했다(§1). 단계마다 실측해 보고하고, 페이지끼리 공통 코드를 나눠 캐시되게 둔다 |
 
 ### 8.2 범위 밖
 
