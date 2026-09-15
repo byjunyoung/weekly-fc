@@ -1,0 +1,60 @@
+// src/react/theme.ts — antd 테마 한 곳. 값은 src/styles/tokens.css 를 그대로 옮긴다(tests/unit/theme.test.mjs 가 대조).
+// 이 파일은 브라우저 번들과 scripts/extract-antd-css.mjs(Node) 양쪽에서 불린다 — Node 에서 바로 돌도록 타입 외 문법만 쓴다.
+import { theme as antdTheme } from 'antd';
+import type { MappingAlgorithm, ThemeConfig } from 'antd';
+
+/** CSS 변수를 거는 클래스. 기본값이면 빌드 때 뽑은 CSS(.css-var-_R_0_)와 화면(React useId 로 만든 이름)이 달라 변수가 안 걸린다. */
+export const CSS_VAR_KEY = 'wfc';
+
+/** darkAlgorithm 은 주색 #0070d1 을 #0362b5 로, 링크 #53b1ff 를 #4a99dc 로 바꾼다. token 에 적어도 안 돌아와서 알고리즘 뒤에 다시 얹는다. */
+export const EXACT_COLORS = {
+  colorPrimary: '#0070d1',
+  colorPrimaryHover: '#0064b7',
+  colorPrimaryActive: '#0064b7',
+  colorLink: '#53b1ff',
+  colorLinkHover: '#53b1ff',
+  colorError: '#ff5c74',
+  colorSuccess: '#59cf84',
+};
+const keepExactColors: MappingAlgorithm = (_seed, map) => ({ ...map!, ...EXACT_COLORS });
+
+export const themeConfig: ThemeConfig = {
+  zeroRuntime: true,
+  cssVar: { key: CSS_VAR_KEY },
+  hashed: false,
+  algorithm: [antdTheme.darkAlgorithm, keepExactColors],
+  token: {
+    colorPrimary: '#0070d1',
+    colorBgBase: '#000000',
+    colorBgLayout: '#000000',
+    colorBgContainer: '#181818',
+    colorBgElevated: '#1f2024',
+    colorText: '#ffffff',
+    colorTextSecondary: 'rgba(255, 255, 255, .7)',
+    colorTextTertiary: 'rgba(229, 229, 229, .55)',
+    colorBorder: 'rgba(229, 229, 229, .38)',
+    colorBorderSecondary: 'rgba(229, 229, 229, .2)',
+    colorLink: '#53b1ff',
+    colorError: '#ff5c74',
+    colorSuccess: '#59cf84',
+    borderRadiusSM: 4,
+    borderRadius: 8,
+    borderRadiusLG: 16,
+    fontFamily: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+    fontSize: 16,
+  },
+  components: {
+    // 지금 tokens.css 의 button 규칙(알약, 높이 40, 좌우 22, 14px·500)과 .topbar-act button(34, 좌우 16, 12px)을 옮긴다.
+    Button: {
+      borderRadius: 9999, borderRadiusSM: 9999, borderRadiusLG: 9999,
+      controlHeight: 40, paddingInline: 22, contentFontSize: 14,
+      controlHeightSM: 34, paddingInlineSM: 16, contentFontSizeSM: 12,
+      fontWeight: 500,
+      defaultBg: 'transparent', defaultColor: '#ffffff', defaultBorderColor: 'rgba(229, 229, 229, .38)',
+      defaultHoverBg: 'rgba(255, 255, 255, .1)', defaultHoverColor: '#ffffff', defaultHoverBorderColor: 'rgba(229, 229, 229, .38)',
+      defaultShadow: 'none', primaryShadow: 'none', dangerShadow: 'none',
+    },
+    // 지금 wa-dialog::part(...) 규칙 — 카드 면, 모서리 16, 제목 22·굵기 400.
+    Modal: { contentBg: '#181818', headerBg: '#181818', titleFontSize: 22, fontWeightStrong: 400, borderRadiusLG: 16 },
+  },
+};
