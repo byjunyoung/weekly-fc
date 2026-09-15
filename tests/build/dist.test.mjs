@@ -82,5 +82,8 @@ test('상단바 이름·관리자 버튼은 React 섬으로 그려지고 옛 모
     assert.ok(island[0].includes('client="load"'), `${p}: client:load 아님`);
     assert.ok(html.includes('id="me-btn"') && html.includes('id="admin-btn"'), `${p}: 버튼이 빌드 때 안 그려짐`);
     for (const old of ['id="pin-modal"', 'id="me-modal"', 'id="toast"']) assert.ok(!html.includes(old), `${p}: ${old} 가 남음`);
+    const adminBtn = html.match(/<button\b[^>]*\bid="admin-btn"[^>]*>/);
+    assert.ok(adminBtn, `${p}: admin-btn 태그 없음`);
+    assert.ok(/\bclass="[^"]*\bwfc\b[^"]*"/.test(adminBtn[0]), `${p}: 빌드 때 그린 버튼에 wfc 변수 클래스가 없다(빌드 CSS와 어긋남)`);
   }
 });

@@ -24,6 +24,7 @@ function Actions() {
   const [pinErr, setPinErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const pinRef = useRef<InputRef>(null);
+  const pinOpenRef = useRef(false); // submitPin이 await 중 취소/Esc로 닫혔는지 알아야 해서 state 대신 ref로 즉시 확인
 
   // 옛 화면의 toast()(src/lib/html.ts)가 부르는 다리. 섬이 뜨기 전 알림은 없다 — 알림은 모두 사용자 조작 뒤에 난다.
   useEffect(() => {
@@ -32,16 +33,22 @@ function Actions() {
     return () => { delete w.wfcToast; };
   }, [message]);
 
+  const closePin = () => { pinOpenRef.current = false; setPinOpen(false); };
   const onAdmin = () => {
     if (admin) { logout(); window.dispatchEvent(new Event('wfc:admin')); return; }
-    setPin(''); setPinErr(null); setPinOpen(true);
+    setPin(''); setPinErr(null); setPinOpen(true); pinOpenRef.current = true;
   };
   const submitPin = async () => {
     if (busy) return;
     setBusy(true);
     const r = await login(pin.trim());
     setBusy(false);
-    if (r === 'ok') { setPinOpen(false); window.dispatchEvent(new Event('wfc:admin')); }
+    if (!pinOpenRef.current) {
+      // 응답 기다리는 동안 취소/Esc로 이미 닫혔다면 로그인 성공이어도 관리자로 전환하지 않고 저장된 PIN을 되돌린다.
+      if (r === 'ok') logout();
+      return;
+    }
+    if (r === 'ok') { closePin(); setPin(''); window.dispatchEvent(new Event('wfc:admin')); }
     else setPinErr(pinError(r));
   };
   const pick = (num: number | null) => { setMe(num); setMeOpen(false); };
@@ -51,10 +58,10 @@ function Actions() {
       <Button size="small" id="me-btn" onClick={() => setMeOpen(true)}>{meLabel(players, me)}</Button>
       <Button size="small" id="admin-btn" type={admin ? 'primary' : 'default'} onClick={onAdmin}>{adminLabel(admin)}</Button>
 
-      <Modal title="관리자 모드" open={pinOpen} width={460} onCancel={() => setPinOpen(false)}
+      <Modal title="관리자 모드" open={pinOpen} width={460} onCancel={closePin}
         afterOpenChange={(open) => { if (open) pinRef.current?.focus(); }}
         footer={[
-          <Button key="cancel" onClick={() => setPinOpen(false)}>취소</Button>,
+          <Button key="cancel" onClick={closePin}>취소</Button>,
           <Button key="ok" type="primary" loading={busy} onClick={submitPin}>확인</Button>,
         ]}>
         <p className="muted">관리자 PIN을 입력하세요.</p>

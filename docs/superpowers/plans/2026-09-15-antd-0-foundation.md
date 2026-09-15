@@ -19,7 +19,7 @@
 - Web Awesome은 이 단계에서 지우지 않는다. 운영·선수 상세·스쿼드의 `wa-dialog`와 `Shell.astro`의 `[data-close]` 처리기가 계속 쓴다.
 - 관리자 PIN은 에이전트가 입력하지 않는다.
 - 레포가 iCloud 안이다: `git status` 금지(2분 넘게 멈춤). `git add <경로>`로만 스테이징하고 확인은 `git diff --cached --stat`. `src/data/videos.ts`(빌드마다 바뀜)와 `* 2.*` 충돌 사본은 커밋하지 않는다.
-- `npm ci` 금지 — `node_modules` iCloud 제외 링크를 지운다. 설치는 `npm install`.
+- `npm install`·`npm ci` 모두 `node_modules` iCloud 제외 링크를 지우고 실제 폴더를 만든다. 설치는 컨트롤러가 하고, 끝나면 옛 `node_modules.nosync`를 지운 뒤 `nosync-setup.sh`를 다시 돌린다. 구현 에이전트는 설치하지 않는다.
 - 주석·문구는 한국어, 주변 코드의 밀도·말투를 따른다.
 - 커밋 메시지 끝:
   ```
