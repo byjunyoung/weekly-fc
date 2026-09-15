@@ -56,5 +56,12 @@ export const themeConfig: ThemeConfig = {
     },
     // 지금 wa-dialog::part(...) 규칙 — 카드 면, 모서리 16, 제목 22·굵기 400.
     Modal: { contentBg: '#181818', headerBg: '#181818', titleFontSize: 22, fontWeightStrong: 400, borderRadiusLG: 16 },
+    // 지금 .tbl 규칙 — 머리 바탕 --elevated·글자 --muted, 줄 경계 --hairline, 14px, 줄 hover.
+    // 정렬된 열에 바탕을 따로 깔지 않는다(.tbl th.sorted 는 글자색만 바꾼다).
+    Table: {
+      headerBg: '#121314', headerSortActiveBg: '#121314', headerSortHoverBg: '#121314', headerColor: 'rgba(229, 229, 229, .55)',
+      borderColor: 'rgba(229, 229, 229, .2)', headerSplitColor: 'transparent', cellFontSizeSM: 14,
+      rowHoverBg: 'rgba(255, 255, 255, .06)', bodySortBg: 'transparent',
+    },
   },
 };

@@ -63,3 +63,16 @@ test('버튼은 지금 button 규칙과 같은 알약 모양', () => {
   assert.equal(b.paddingInlineSM, 16);
   assert.equal(b.contentFontSizeSM, 12);
 });
+
+test('표는 지금 .tbl 모습 — 머리 바탕·글자, 줄 경계, 글자 크기, 줄 hover, 정렬 열 바탕 없음', () => {
+  const t = themeConfig.components.Table;
+  assert.equal(t.headerBg, tok('elevated'));
+  assert.equal(t.headerSortActiveBg, tok('elevated'));
+  assert.equal(t.headerSortHoverBg, tok('elevated'));
+  assert.equal(t.headerColor, tok('muted'));
+  assert.equal(t.borderColor, tok('hairline'));
+  assert.equal(t.cellFontSizeSM, px('fs-sm'));
+  assert.equal(t.rowHoverBg, 'rgba(255, 255, 255, .06)');
+  assert.equal(t.bodySortBg, 'transparent');
+  assert.equal(t.headerSplitColor, 'transparent');
+});
