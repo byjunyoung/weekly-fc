@@ -76,7 +76,7 @@
      "디스플레이를 굵기 300 으로 가볍게" 라는 규칙이고, Pretendard 는 가변이라 그대로 된다.
      콘덴스드 대문자 디스플레이(Archivo)는 걷어냈다 — 촌스러움의 주범이었다. */
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  --fs-display-xl: 54px; --fs-display-lg: 44px; --fs-display-md: 35px;
+  --fs-display-xl: 54px; --fs-display-md: 35px;
   --fs-h-xl: 28px; --fs-h-lg: 22px; --fs-h-md: 18px;
   --fs-body: 16px; --fs-sm: 14px; --fs-xs: 12px;
   /* 굵기 — 정본은 디스플레이를 300 으로 쓰지만 그건 라틴(PlayStation SST) 기준이다.
@@ -87,7 +87,7 @@
   --fw-display: 400; --fw-body: 400; --fw-strong: 500; --fw-heavy: 600; --fw-num: 600;
   /* 옛 이름 매핑 */
   --fs-md: var(--fs-body); --fs-lg: var(--fs-h-lg); --fs-xl: var(--fs-h-xl);
-  --fs-xxl: var(--fs-display-md); --fs-hero: var(--fs-display-md); --fs-ovr: 56px;
+  --fs-xxl: var(--fs-display-md); --fs-hero: var(--fs-display-md);
 
   /* ── 도트 폰트(갈무리) — 제목·OVR·능력치 숫자 전용, 본문(--font)은 그대로 ─────
      갈무리9 권장 렌더 크기는 10px다. 그 배수가 아닌 크기로 쓰면 비트맵이 흐려져
@@ -179,7 +179,7 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
 
 @media (max-width: 899px) { .main { padding: var(--s-md); } .topbar { padding: 0 var(--s-md); gap: var(--s-sm); } }
 @media (max-width: 699px) {
-  :root { --fs-display-md: 28px; --fs-ovr: 46px; }
+  :root { --fs-display-md: 28px; }
   .topbar { height: auto; flex-wrap: wrap; padding: 0 var(--s-md); }
   .mark { height: 56px; display: flex; align-items: center; }
   .topbar-act { margin-left: auto; height: 56px; }
