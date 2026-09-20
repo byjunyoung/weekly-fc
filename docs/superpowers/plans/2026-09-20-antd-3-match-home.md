@@ -287,7 +287,7 @@ Claude-Session: https://claude.ai/code/session_01DaDPzugZyKUdGnpyTH5KY4"
 - Produces (Task 3이 쓴다), `src/react/home/model.ts`:
   - `export type MeTile = { kind: 'picked'; ovr: number; name: string; pos: string; num: number } | { kind: 'empty' }`
   - `export type DutyTile = { p1: string; p2: string; monthLabel: string; sub: string }`
-  - `export type RecentMatch = { id: string; typeLabel: string; date: string } | null`
+  - `export type RecentMatch = { id: string; typeLabel: string; date: string; location: string } | null`
   - `export type HomeSummary = { meTile: MeTile; squadCount: number; posSummary: string; matchCount: number; duty: DutyTile; dutyNext: DutyTile; unpaidAmount: number; unpaidCount: number; videoCount: number; thumbIds: string[]; recentMatch: RecentMatch; stamp: string }`
   - `export function nextMonthOf(y: number, mo: number): { y: number; mo: number }`
   - `export function computeHomeSummary(data: Data, videos: Video[], me: number | null, now: Date): HomeSummary`
@@ -349,6 +349,7 @@ test('computeHomeSummary: 최신 영상 4개 썸네일, 최근 매치 = 가장 �
   assert.equal(s.videoCount, 2);
   assert.deepEqual(s.thumbIds, ['v1', 'v2']);
   assert.equal(s.recentMatch.id, 'v1');
+  assert.equal(s.recentMatch.location, '모란공원');
 });
 test('computeHomeSummary: 영상이 없으면 최근 매치 null, 도장 문구', () => {
   const s = computeHomeSummary(data, [], null, now);
@@ -374,7 +375,7 @@ import type { Data, Video } from '../../lib/types.ts';
 
 export type MeTile = { kind: 'picked'; ovr: number; name: string; pos: string; num: number } | { kind: 'empty' };
 export type DutyTile = { p1: string; p2: string; monthLabel: string; sub: string };
-export type RecentMatch = { id: string; typeLabel: string; date: string } | null; // typeLabel: 매치 유형(예 "2파전") — 영상 제목이 아니다
+export type RecentMatch = { id: string; typeLabel: string; date: string; location: string } | null; // typeLabel: 매치 유형(예 "2파전") — 영상 제목이 아니다
 export type HomeSummary = {
   meTile: MeTile; squadCount: number; posSummary: string; matchCount: number;
   duty: DutyTile; dutyNext: DutyTile; unpaidAmount: number; unpaidCount: number;
@@ -401,7 +402,7 @@ export function computeHomeSummary(data: Data, videos: Video[], me: number | nul
     dutyNext: { p1: dutyNextRow.p1, p2: dutyNextRow.p2, monthLabel: monthLabel(nm.y, nm.mo), sub: monthLabel(nm.y, nm.mo) },
     unpaidAmount: fs.unpaid, unpaidCount: fs.unpaidCount,
     videoCount: videos.length, thumbIds: videos.slice(0, 4).map((v) => v.id),
-    recentMatch: first ? { id: first.id, typeLabel: first.type || '매치', date: first.date } : null,
+    recentMatch: first ? { id: first.id, typeLabel: first.type || '매치', date: first.date, location: first.location } : null,
     stamp: `${data.players.length}명 · 영상 ${videos.length}`,
   };
 }
@@ -540,7 +541,7 @@ function App() {
           {s.recentMatch && <img src={ytThumbBig(s.recentMatch.id)} alt="" onError={(e) => { const img = e.currentTarget; img.onerror = null; img.src = ytThumb(s.recentMatch!.id); }} />}
           <span className="art-kicker">최근 매치</span>
           <h2 className="art-title">{esc(s.recentMatch?.typeLabel ?? '') || '매치'}</h2>
-          <p className="art-sub">{s.recentMatch?.date ? esc(fmtDate(s.recentMatch.date)) : '날짜 미정'}</p>
+          <p className="art-sub">{s.recentMatch?.date ? esc(fmtDate(s.recentMatch.date)) : '날짜 미정'}{s.recentMatch?.location ? ` · ${esc(s.recentMatch.location)}` : ''}</p>
           <div className="art-foot">
             <a className="chip" href={href('/match/')}>매치 전체 →</a>
             {s.recentMatch && <a className="chip" href={href(`/match/?v=${encodeURIComponent(s.recentMatch.id)}`)}>영상 보기 →</a>}

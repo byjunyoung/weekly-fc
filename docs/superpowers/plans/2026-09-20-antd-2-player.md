@@ -185,7 +185,7 @@ export const byPaid = (a: Fine, b: Fine): number => Number(a.paid) - Number(b.pa
 - [ ] **Step 4: 통과 확인**
 
 Run: `node --test tests/unit/player-model.test.mjs`
-Expected: PASS 10/10
+Expected: PASS 9/9
 
 - [ ] **Step 5: 커밋**
 
@@ -500,8 +500,8 @@ Claude-Session: https://claude.ai/code/session_01DaDPzugZyKUdGnpyTH5KY4"
 test('선수 상세 — 아바타 에디터는 antd 모달 틀 안에 있고, wa-dialog 는 스쿼드에만 남는다', () => {
   const html = read('squad/9/index.html');
   assert.ok(!html.includes('<wa-dialog'), 'squad/9/ 에 wa-dialog 가 남음');
-  const shell = read('index.html');
-  assert.ok(shell.includes("import '@awesome.me/webawesome/dist/components/dialog/dialog.js'"), 'Shell 의 wa-dialog import 는 아직 있어야 한다(스쿼드가 씀)');
+  const squad = read('squad/index.html');
+  assert.ok(squad.includes('<wa-dialog'), '스쿼드 목록의 wa-dialog 는 아직 있어야 한다(Shell 의 import 도 그래서 남는다)');
 });
 ```
 
