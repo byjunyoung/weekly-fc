@@ -7,7 +7,7 @@ import type { Data, Video } from '../../lib/types.ts';
 
 export type MeTile = { kind: 'picked'; ovr: number; name: string; pos: string; num: number } | { kind: 'empty' };
 export type DutyTile = { p1: string; p2: string; monthLabel: string; sub: string };
-export type RecentMatch = { id: string; typeLabel: string; date: string } | null; // typeLabel: 매치 유형(예 "2파전") — 영상 제목이 아니다
+export type RecentMatch = { id: string; typeLabel: string; date: string; location: string } | null; // typeLabel: 매치 유형(예 "2파전") — 영상 제목이 아니다
 export type HomeSummary = {
   meTile: MeTile; squadCount: number; posSummary: string; matchCount: number;
   duty: DutyTile; dutyNext: DutyTile; unpaidAmount: number; unpaidCount: number;
@@ -34,7 +34,7 @@ export function computeHomeSummary(data: Data, videos: Video[], me: number | nul
     dutyNext: { p1: dutyNextRow.p1, p2: dutyNextRow.p2, monthLabel: monthLabel(nm.y, nm.mo), sub: monthLabel(nm.y, nm.mo) },
     unpaidAmount: fs.unpaid, unpaidCount: fs.unpaidCount,
     videoCount: videos.length, thumbIds: videos.slice(0, 4).map((v) => v.id),
-    recentMatch: first ? { id: first.id, typeLabel: first.type || '매치', date: first.date } : null,
+    recentMatch: first ? { id: first.id, typeLabel: first.type || '매치', date: first.date, location: first.location } : null,
     stamp: `${data.players.length}명 · 영상 ${videos.length}`,
   };
 }

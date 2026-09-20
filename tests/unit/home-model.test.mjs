@@ -52,6 +52,7 @@ test('computeHomeSummary: 최신 영상 4개 썸네일, 최근 매치 = 가장 �
   assert.equal(s.videoCount, 2);
   assert.deepEqual(s.thumbIds, ['v1', 'v2']);
   assert.equal(s.recentMatch.id, 'v1');
+  assert.equal(s.recentMatch.location, '모란공원');
 });
 test('computeHomeSummary: 영상이 없으면 최근 매치 null, 도장 문구', () => {
   const s = computeHomeSummary(data, [], null, now);
