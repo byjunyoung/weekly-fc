@@ -127,3 +127,11 @@ test('선수 상세 — 아바타 에디터는 antd 모달 틀 안에 있고, wa
   const squad = read('squad/index.html');
   assert.ok(squad.includes('<wa-dialog'), '스쿼드 목록의 wa-dialog 는 아직 있어야 한다(Shell 의 import 도 그래서 남는다)');
 });
+test('매치 탭 — 영상 목록은 antd Card 격자, 상세는 iframe 유지, MatchApp 섬 하나', () => {
+  const html = read('match/index.html');
+  const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/MatchApp\.[^"]+\.js"[^>]*>/);
+  assert.ok(island, 'MatchApp 섬 없음');
+  assert.ok(island[0].includes('client="load"'), 'client:load 아님');
+  assert.ok(html.includes('id="title"') && html.includes('id="actions"'), '제목·버튼 자리 없음');
+  assert.ok(!/match\/index\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
+});

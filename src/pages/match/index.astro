@@ -1,40 +1,7 @@
 ---
 import Shell from '../../layouts/Shell.astro';
+import MatchApp from '../../react/match/MatchApp.tsx';
 ---
 <Shell title="매치">
-  <div class="page-head"><h1 id="title">매치 <span class="muted" id="count"></span></h1><div class="actions" id="actions"></div></div>
-  <div id="app" class="stack"></div>
+  <MatchApp client:load />
 </Shell>
-<script>
-  // 매치 탭 = 채널 영상 목록. 시트 매치 기록·관리자 가져오기는 쓰지 않는다(스펙 §3.4).
-  import { loadVideos } from '../../lib/api.ts';
-  import { matchVideos, type MatchVideo } from '../../lib/match-videos.ts';
-  import { esc, fmtDate, ytThumb, ytEmbed, ytWatch } from '../../lib/html.ts';
-  import { href } from '../../lib/url.ts';
-
-  const $ = (id: string) => document.getElementById(id) as HTMLElement;
-  const app = $('app');
-  const vid = new URLSearchParams(location.search).get('v') ?? '';
-  const meta = (m: MatchVideo) => [m.type, m.location].filter(Boolean).map(esc).join(' · ');
-
-  function renderList(list: MatchVideo[]): void {
-    $('count').textContent = `${list.length}편`;
-    app.innerHTML = list.length
-      ? `<div class="thumbs">${list.map((m) => `<a class="thumb" href="${href(`/match/?v=${encodeURIComponent(m.id)}`)}"><img src="${ytThumb(m.id)}" alt="" loading="lazy"><div class="body"><b>${m.date ? esc(fmtDate(m.date)) : esc(m.title)}</b><div class="muted">${meta(m) || esc(m.title)}</div></div></a>`).join('')}</div>`
-      : '<p class="muted">채널 영상을 불러오지 못했습니다.</p>';
-  }
-
-  function renderDetail(list: MatchVideo[]): void {
-    const m = list.find((x) => x.id === vid);
-    const id = m?.id ?? (/^[\w-]{11}$/.test(vid) ? vid : '');
-    $('title').textContent = m?.date ? fmtDate(m.date) : '매치';
-    $('actions').innerHTML = `<a class="chip" href="${href('/match/')}">← 목록</a>${id ? `<a class="chip" href="${ytWatch(id)}" target="_blank" rel="noopener">유튜브에서 보기 →</a>` : ''}`;
-    app.innerHTML = id
-      ? `${m && meta(m) ? `<p class="muted">${meta(m)}</p>` : ''}<div class="embed"><iframe src="${ytEmbed(id)}" title="${esc(m?.title || '매치 영상')}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
-      : '<p class="muted">영상을 찾을 수 없습니다.</p>';
-  }
-
-  loadVideos()
-    .then((v) => { const list = matchVideos(v); if (vid) renderDetail(list); else renderList(list); })
-    .catch(() => { app.innerHTML = '<p class="muted">채널 영상을 불러오지 못했습니다.</p>'; });
-</script>
