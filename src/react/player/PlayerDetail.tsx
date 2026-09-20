@@ -3,7 +3,7 @@ import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Popconfirm,
 import type { TableColumnsType } from 'antd';
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { fetchFull, write } from '../../lib/api';
+import { fetchFull, serializePlayer, write } from '../../lib/api';
 import { esc, fmtDate, fmtWon, monthLabel } from '../../lib/html';
 import { href } from '../../lib/url';
 import { nextDuty } from '../../lib/rotation';
@@ -50,7 +50,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     if (clash) { message.error(`${p.num}번은 이미 ${clash.name}의 번호입니다`); return; }
     setSaving(true);
     try {
-      await write('writePlayer', p);
+      await write('writePlayer', serializePlayer(p));
       const numChanged = p.num !== num;
       if (numChanged && data?.players.some((x) => x.num === num)) {
         try { await write('deletePlayer', { num }); } catch (e) { message.error(`저장은 됐지만 이전 번호(${num}) 삭제 실패: ${(e as Error).message}`); }
