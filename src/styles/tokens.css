@@ -1,4 +1,9 @@
 /* src/styles/tokens.css — 색·치수·글자의 유일한 출처 */
+@font-face {
+  font-family: "Galmuri9";
+  src: url("https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri9.woff2") format("woff2");
+  font-display: swap;
+}
 /* 정본은 레포 루트의 DESIGN.md (getdesign.md 의 PlayStation DESIGN.md). 이 파일은 그 문서를
    코드로 옮긴 것이고, 여기서 값을 새로 만들지 않는다. 정본 문구 중 이 화면을 지배하는 것:
      "게이밍 브랜드치고 유난히 조용한 크롬 … 이 시스템은 장식하지 않는다 —
@@ -84,6 +89,13 @@
   --fs-md: var(--fs-body); --fs-lg: var(--fs-h-lg); --fs-xl: var(--fs-h-xl);
   --fs-xxl: var(--fs-display-md); --fs-hero: var(--fs-display-md); --fs-ovr: 56px;
 
+  /* ── 도트 폰트(갈무리) — 제목·OVR·능력치 숫자 전용, 본문(--font)은 그대로 ─────
+     갈무리9 권장 렌더 크기는 10px다. 그 배수가 아닌 크기로 쓰면 비트맵이 흐려져
+     도트를 쓰는 의미가 없어진다 — 그래서 본문용 --fs-* 사다리와 별도로 10의
+     배수만 담은 세트를 둔다(2026-09-21 리프레시 스펙 §3). */
+  --font-pixel: "Galmuri9", var(--font);
+  --fs-pixel-sm: 20px; --fs-pixel-md: 30px; --fs-pixel-lg: 40px; --fs-pixel-xl: 60px;
+
   /* ── 옛 이름 별칭 ─────────────────────────────────────────
      avatar.ts 는 토큰을 getComputedStyle 로 읽어 SVG 에
      그리므로, 이름만 바꾸면 조용히 색이 빠진다. var() 참조 대신 같은 값을 그대로 둔다. */
@@ -159,7 +171,7 @@ body.wide .main { max-width: none; padding: var(--s-md); }
 .page-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
   gap: var(--s-md); margin-bottom: var(--s-xl); }
 .page-head .actions > .muted { font-size: var(--fs-sm); }
-.page-head h1 { font-size: var(--fs-display-lg); font-weight: var(--fw-display); line-height: 1.2; letter-spacing: 0; }
+.page-head h1 { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-display); line-height: 1.2; letter-spacing: 0; }
 .page-head h1 .muted { font-size: var(--fs-h-md); font-weight: var(--fw-body); }
 .page-head .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
 body.wide .page-head { margin-bottom: var(--s-md); }
@@ -267,7 +279,7 @@ a.card:hover { background: var(--charcoal); }
   transition: background var(--dur-micro) var(--ease-std); }
 .tile:hover { background: var(--charcoal); }
 .tile-label { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
-.tile-big { margin-top: auto; font-size: var(--fs-h-xl); font-weight: var(--fw-num); line-height: 1.1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.tile-big { margin-top: auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-num); line-height: 1.1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .tile-sub { margin-top: var(--s-xxs); font-size: var(--fs-xs); color: var(--muted); }
 /* 봉사 두 명 — 같은 크기로 나란히. 좁은 타일에서는 줄바꿈해도 크기는 같다. */
 .tile-duo { display: flex; flex-wrap: wrap; gap: 0 var(--s-sm); margin-top: auto; font-size: var(--fs-h-lg); font-weight: var(--fw-num); line-height: 1.25; }
@@ -291,7 +303,7 @@ a.card:hover { background: var(--charcoal); }
 .pcard-body { display: flex; flex-direction: column; width: 100%; padding: var(--s-md) var(--s-md) var(--s-lg); }
 .pcard-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-xs); width: 100%; min-height: 104px; }
 .pcard-ovr-block { display: flex; flex-direction: column; align-items: flex-start; align-self: flex-start; }
-.pcard-ovr { display: block; font-size: var(--fs-ovr); font-weight: var(--fw-num); line-height: .9; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.pcard-ovr { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-num); line-height: .9; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .pcard-pos { display: block; font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); line-height: 1.1; }
 .pcard-num { display: block; margin-top: var(--s-xxs); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
 .pcard-portrait { align-self: flex-end; margin: 0 -4px -6px 0; }
@@ -315,7 +327,7 @@ a.card:hover { background: var(--charcoal); }
   .pcard-wall, .pcard-wall-sm { grid-template-columns: repeat(2, 1fr); gap: var(--s-md) var(--s-xs); }
   .pcard-wall .pcard-body { padding: var(--s-sm) var(--s-sm) var(--s-md); }
   .pcard-wall .pcard-head { min-height: 74px; }
-  .pcard-wall .pcard-ovr { font-size: 34px; }
+  .pcard-wall .pcard-ovr { font-size: var(--fs-pixel-md); }
   .pcard-wall .pcard-pos { font-size: var(--fs-h-md); }
   .pcard-wall .pcard-name { font-size: var(--fs-body); }
   .pcard-wall .pcard-portrait svg { width: 68px; height: 68px; }
@@ -391,7 +403,7 @@ a.card:hover { background: var(--charcoal); }
 .bd-slot.is-selected { outline: 3px solid var(--link); outline-offset: 2px; }
 .bd-slot.is-oop { box-shadow: 0 0 0 2px var(--cond-mid); }
 .bd-slot.is-dragging { z-index: 5; opacity: .85; }
-.bd-ovr { font-size: var(--fs-h-md); font-weight: var(--fw-heavy); line-height: 1; font-variant-numeric: tabular-nums; }
+.bd-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-heavy); line-height: 1; font-variant-numeric: tabular-nums; }
 .bd-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); font-weight: var(--fw-strong); line-height: 1.2; }
 .bd-pos { font-size: 10px; font-weight: var(--fw-strong); color: var(--ink-soft); }
 .bd-hint { margin: 0; font-size: var(--fs-xs); text-align: center; }
@@ -403,7 +415,7 @@ a.card:hover { background: var(--charcoal); }
 @media (max-width: 899px) {
   .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); padding-bottom: calc(var(--strip-h) + var(--s-sm)); }
   .bd-slot { width: 62px; min-height: 50px; }
-  .bd-ovr { font-size: var(--fs-body); }
+  .bd-ovr { font-size: var(--fs-pixel-sm); }
   .bd-sheet-handle { display: flex; justify-content: center; width: 100%; min-height: 56px; border: 0; border-radius: 0; background: none; font-size: var(--fs-sm); }
   #list-body { max-height: none; }
   /* 벤치 줄 — 시트가 닫혀 있을 때 화면 아래 고정, 누르면 onPick 으로 같은 규칙을 탄다. 시트가 열리면(z-index 위) 이 줄을 덮는다. */

@@ -154,3 +154,10 @@ test('매치 탭이 완전히 삭제됐다(스펙 §7 · 2026-09-21 리프레시
   const hit = files.find((f) => readFileSync(f, 'utf8').includes('MatchApp'));
   assert.ok(!hit, `MatchApp 흔적이 남음: ${hit}`);
 });
+test('갈무리 도트 폰트가 제목·OVR·능력치 숫자에 적용된다(1a단계, 2026-09-21 리프레시 스펙 §3)', () => {
+  const files = readdirSync('dist/_astro', { withFileTypes: true }).filter((e) => e.name.endsWith('.css')).map((e) => `dist/_astro/${e.name}`);
+  const hit = files.find((f) => readFileSync(f, 'utf8').includes('Galmuri9'));
+  assert.ok(hit, 'Galmuri9 @font-face 를 담은 CSS 청크를 dist/_astro 에서 못 찾음');
+  const css = readFileSync(hit, 'utf8');
+  assert.ok(css.includes('--font-pixel'), '--font-pixel 토큰이 빌드된 CSS에 없음');
+});
