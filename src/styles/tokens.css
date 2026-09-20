@@ -313,7 +313,7 @@ a.card:hover { background: var(--charcoal); }
 .pcard-pos { display: block; font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); line-height: 1.1; }
 .pcard-num { display: block; margin-top: var(--s-xxs); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
 .pcard-portrait { position: relative; align-self: flex-end; margin: 0 -4px -6px 0; }
-.pcard-photo { position: absolute; top: 0; left: 0; object-fit: cover; border-radius: 16%; }
+.pcard-photo { position: absolute; top: 0; left: 0; object-fit: cover; border-radius: 16%; aspect-ratio: 1 / 1; }
 .avatar-chip { position: relative; display: inline-block; line-height: 0; }
 .avatar-btn { display: block; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
 .avatar-btn:hover { background: none; }
