@@ -54,7 +54,9 @@ function App() {
             <div className="thumbs">
               {list.map((m) => (
                 <a key={m.id} href={href(`/match/?v=${encodeURIComponent(m.id)}`)} style={{ display: 'contents' }}>
-                  <Card className="thumb" variant="borderless" cover={<img src={ytThumb(m.id)} alt="" loading="lazy" />}>
+                  <Card className="thumb" variant="borderless" cover={<img src={ytThumb(m.id)} alt="" loading="lazy" />}
+                    role="link" tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); location.assign(href(`/match/?v=${encodeURIComponent(m.id)}`)); } }}>
                     <b>{m.date ? fmtDate(m.date) : m.title}</b>
                     <div className="muted">{videoMeta(m) || m.title}</div>
                   </Card>

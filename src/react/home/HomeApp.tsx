@@ -20,9 +20,17 @@ const TILE_STYLE = { background: 'var(--elevated)', display: 'flex', flexDirecti
 const TILE_BODY = { body: { padding: 0, display: 'contents' as const } };
 
 function LinkTile({ to, wide, children }: { to: string; wide?: boolean; children: ReactNode }) {
+  const isExternal = to.startsWith('http');
+  // 부모 <a> 는 display:contents 라 포커스를 받을 수 없다(CSS 스펙 — 박스 없는 요소는 포커스 대상이 될 수 없다).
+  // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 빈 「내 선수」 타일과 같은 패턴.
+  const go = () => { if (isExternal) window.open(to, '_blank', 'noopener'); else location.assign(to); };
   return (
-    <a href={to} target={to.startsWith('http') ? '_blank' : undefined} rel={to.startsWith('http') ? 'noopener' : undefined} style={{ display: 'contents' }}>
-      <Card className={`tile${wide ? ' tile-wide' : ''}`} variant="borderless" style={TILE_STYLE} styles={TILE_BODY}>{children}</Card>
+    <a href={to} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined} style={{ display: 'contents' }}>
+      <Card className={`tile${wide ? ' tile-wide' : ''}`} variant="borderless" style={TILE_STYLE} styles={TILE_BODY}
+        role="link" tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
+        {children}
+      </Card>
     </a>
   );
 }

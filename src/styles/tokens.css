@@ -136,7 +136,6 @@ input:where(:not(.wfc, .wfc *)), select:where(:not(.wfc, .wfc *)), textarea:wher
 input:where(:not(.wfc, .wfc *)):focus, select:where(:not(.wfc, .wfc *)):focus, textarea:where(:not(.wfc, .wfc *)):focus { outline: 2px solid var(--link); outline-offset: 1px; border-color: var(--link); }
 :where(a, button, [tabindex]) { scroll-margin-top: calc(var(--header-h) + var(--s-sm)); }
 :where(a, button, [tabindex]):focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
-a:focus-visible > .tile, a:focus-visible > .thumb { outline: 2px solid var(--fg); outline-offset: 2px; }
 a.inline { color: var(--link); }
 a.inline:hover { text-decoration: underline; }
 
