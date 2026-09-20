@@ -171,6 +171,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
               <Button danger loading={deleting} disabled={saving}>삭제</Button>
             </Popconfirm>
           ),
+          <span key="spacer" style={{ flex: 1, display: 'inline-block' }} />,
           <Button key="cancel" disabled={saving} onClick={() => setOpen(false)}>취소</Button>,
           <Button key="save" type="primary" loading={saving} onClick={() => form.submit()}>저장</Button>,
         ]}>
