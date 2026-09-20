@@ -155,3 +155,6 @@ test('4단계 뒤 dist 전체에 webawesome 문자열이 없다(스펙 §7.3)', 
   const hit = files.find((f) => readFileSync(f, 'utf8').includes('webawesome'));
   assert.ok(!hit, `webawesome 문자열이 남음: ${hit}`);
 });
+test('선수 사진 폴더가 정적 자산으로 그대로 배포된다(수동 배치 규약, 스펙 3·6절)', () => {
+  assert.ok(existsSync('dist/players/README.md'), 'dist/players/README.md 없음 — public/players/ 가 빌드에 안 실렸다');
+});
