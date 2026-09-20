@@ -259,21 +259,6 @@ a.card:hover { background: var(--charcoal); }
 .stack { display: flex; flex-direction: column; gap: var(--s-xl); }
 
 /* ══ 메인 메뉴(홈) ══════════════════════════════════════════ */
-/* 정본: "사진이 모든 무게를 진다 … 섹션의 60~90%". 아트 패널을 크게 두고 타일은 조용하게. */
-/* 화면 아래에 빈 공간을 남기지 않는다 — 헤더와 화면 머리를 뺀 높이를 메뉴가 다 쓴다. */
-.menu { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 5fr); gap: var(--s-lg);
-  align-items: stretch; min-height: calc(100dvh - var(--header-h) - 148px); }
-@media (max-width: 899px) { .menu { grid-template-columns: minmax(0, 1fr); } }
-.art { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end;
-  min-height: 420px; padding: var(--s-xl); border-radius: var(--r-lg); overflow: hidden; }
-.art > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
-.art::before { content: ""; position: absolute; inset: 0; z-index: 1;
-  background: linear-gradient(180deg, rgba(0,0,0,.05) 0%, rgba(0,0,0,.3) 42%, rgba(0,0,0,.82) 74%, rgba(0,0,0,.94) 100%); }
-.art > :not(img) { position: relative; z-index: 2; }
-.art-kicker { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: rgba(255, 255, 255, .8); }
-.art-title { margin: var(--s-xs) 0 var(--s-xxs); font-size: var(--fs-display-lg); font-weight: var(--fw-display); line-height: 1.1; letter-spacing: 0; }
-.art-sub { color: rgba(255, 255, 255, .78); font-size: var(--fs-sm); }
-.art-foot { margin-top: var(--s-md); display: flex; flex-wrap: wrap; gap: var(--s-xs); }
 .rail { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(128px, 1fr); gap: var(--s-sm); }
 @media (max-width: 639px) { .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* 정본 game-tile: 면 #121314, 반경 8. hover 는 밝기만. */
@@ -286,9 +271,6 @@ a.card:hover { background: var(--charcoal); }
 .tile-sub { margin-top: var(--s-xxs); font-size: var(--fs-xs); color: var(--muted); }
 /* 봉사 두 명 — 같은 크기로 나란히. 좁은 타일에서는 줄바꿈해도 크기는 같다. */
 .tile-duo { display: flex; flex-wrap: wrap; gap: 0 var(--s-sm); margin-top: auto; font-size: var(--fs-h-lg); font-weight: var(--fw-num); line-height: 1.25; }
-.tile-wide { grid-column: span 2; }
-.tile-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-xxs); margin-top: var(--s-xs); }
-.tile-thumbs img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-sm); }
 .home-me { padding: var(--s-lg); margin-bottom: var(--s-xl); background: var(--card); border-radius: var(--r-md); }
 .home-me-body { display: flex; flex-wrap: wrap; gap: var(--s-xl); align-items: flex-start; }
 .home-me-body > .pcard { flex: 0 0 var(--pcard-w); }

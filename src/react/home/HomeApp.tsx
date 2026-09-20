@@ -1,12 +1,10 @@
-// 홈 대시보드 — 왼쪽 히어로(최근 매치, 직접 만든 채로)+오른쪽 타일 8개(antd Card).
+// 홈 대시보드 — 타일 그리드(antd Card).
 import { Card } from 'antd';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { loadVideos } from '../../lib/api';
-import { fmtDate, fmtWon, ytThumb, ytThumbBig } from '../../lib/html';
+import { fmtWon } from '../../lib/html';
 import { getMe } from '../../lib/me';
 import { LINKS } from '../../lib/rules';
-import type { Video } from '../../lib/types';
 import { href } from '../../lib/url';
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
@@ -19,14 +17,14 @@ import type { DutyTile } from './model';
 const TILE_STYLE = { background: 'var(--elevated)', display: 'flex', flexDirection: 'column' as const, textAlign: 'left' as const, padding: 'var(--s-md)', cursor: 'pointer' };
 const TILE_BODY = { body: { padding: 0, display: 'contents' as const } };
 
-function LinkTile({ to, wide, children }: { to: string; wide?: boolean; children: ReactNode }) {
+function LinkTile({ to, children }: { to: string; children: ReactNode }) {
   const isExternal = to.startsWith('http');
   // 부모 <a> 는 display:contents 라 포커스를 받을 수 없다(CSS 스펙 — 박스 없는 요소는 포커스 대상이 될 수 없다).
   // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 빈 「내 선수」 타일과 같은 패턴.
   const go = () => { if (isExternal) window.open(to, '_blank', 'noopener'); else location.assign(to); };
   return (
     <a href={to} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined} style={{ display: 'contents' }}>
-      <Card className={`tile${wide ? ' tile-wide' : ''}`} variant="borderless" style={TILE_STYLE} styles={TILE_BODY}
+      <Card className="tile" variant="borderless" style={TILE_STYLE} styles={TILE_BODY}
         role="link" tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
         {children}
@@ -44,18 +42,12 @@ function EmptyMeTile({ onOpen }: { onOpen: () => void }) {
   );
 }
 const dutyBody = (d: DutyTile) => <><span className="tile-duo"><b>{d.p1}</b><b>{d.p2}</b></span><span className="tile-sub">{d.sub}</span></>;
-function HeroImg({ id }: { id: string }) {
-  const [big, setBig] = useState(true);
-  return <img src={big ? ytThumbBig(id) : ytThumb(id)} alt="" onError={() => setBig(false)} />;
-}
 
 function App() {
   const { data } = useData();
-  const [videos, setVideos] = useState<Video[] | null>(null);
   const [me, setMe] = useState<number | null>(null);
 
   useEffect(() => {
-    loadVideos().then(setVideos).catch(() => setVideos([]));
     const read = () => setMe(getMe());
     read();
     window.addEventListener('wfc:me', read);
@@ -63,37 +55,23 @@ function App() {
   }, []);
   const openMe = () => window.dispatchEvent(new Event('wfc:open-me'));
 
-  if (!data || !videos) return <div className="page-head"><h1>홈</h1><div className="actions" /></div>;
+  if (!data) return <div className="page-head"><h1>홈</h1><div className="actions" /></div>;
 
-  const s = computeHomeSummary(data, videos, me, new Date());
-  const thumbs = videos.slice(0, 4).map((v) => <img key={v.id} src={ytThumb(v.id)} alt="" loading="lazy" />);
+  const s = computeHomeSummary(data, me, new Date());
 
   return (
     <>
       <div className="page-head"><h1>홈</h1><div className="actions"><span className="muted" id="stamp">{s.stamp}</span></div></div>
-      <div className="menu">
-        <section className="art">
-          {s.recentMatch && <HeroImg id={s.recentMatch.id} />}
-          <span className="art-kicker">최근 매치</span>
-          <h2 className="art-title">{(s.recentMatch?.typeLabel ?? '') || '매치'}</h2>
-          <p className="art-sub">{s.recentMatch?.date ? fmtDate(s.recentMatch.date) : '날짜 미정'}{s.recentMatch?.location ? ` · ${s.recentMatch.location}` : ''}</p>
-          <div className="art-foot">
-            <a className="chip" href={href('/match/')}>매치 전체 →</a>
-            {s.recentMatch && <a className="chip" href={href(`/match/?v=${encodeURIComponent(s.recentMatch.id)}`)}>영상 보기 →</a>}
-          </div>
-        </section>
-        <div className="rail">
-          {s.meTile.kind === 'picked'
-            ? <LinkTile to={href(`/squad/${s.meTile.num}/`)}><span className="tile-label">내 선수</span><b className="tile-big">{s.meTile.ovr || '–'}</b><span className="tile-sub">{s.meTile.name} · {s.meTile.pos}</span></LinkTile>
-            : <EmptyMeTile onOpen={openMe} />}
-          <LinkTile to={href('/squad/')}><span className="tile-label">스쿼드</span><b className="tile-big">{s.squadCount}</b><span className="tile-sub">{s.posSummary}</span></LinkTile>
-          <LinkTile to={href('/match/')}><span className="tile-label">매치</span><b className="tile-big">{s.matchCount}</b><span className="tile-sub">채널 영상</span></LinkTile>
-          <LinkTile to={href('/squad/')}><span className="tile-label">라인업</span><b className="tile-big">짜서 공유</b><span className="tile-sub">명단에서 골라 이미지로</span></LinkTile>
-          <LinkTile to={href('/rules/#duty')}><span className="tile-label">{s.duty.monthLabel} 봉사</span>{dutyBody(s.duty)}</LinkTile>
-          <LinkTile to={href('/rules/#duty')}><span className="tile-label">다음 봉사</span>{dutyBody(s.dutyNext)}</LinkTile>
-          <LinkTile to={href('/rules/#fees')}><span className="tile-label">미납 벌금</span><b className="tile-big">{fmtWon(s.unpaidAmount)}</b><span className="tile-sub">{s.unpaidCount}건 · 내역 보기</span></LinkTile>
-          <LinkTile to={LINKS.youtube} wide><span className="tile-label">최신 영상</span><b className="tile-big">{s.videoCount}</b><div className="tile-thumbs">{thumbs}</div><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span></LinkTile>
-        </div>
+      <div className="rail">
+        {s.meTile.kind === 'picked'
+          ? <LinkTile to={href(`/squad/${s.meTile.num}/`)}><span className="tile-label">내 선수</span><b className="tile-big">{s.meTile.ovr || '–'}</b><span className="tile-sub">{s.meTile.name} · {s.meTile.pos}</span></LinkTile>
+          : <EmptyMeTile onOpen={openMe} />}
+        <LinkTile to={href('/squad/')}><span className="tile-label">스쿼드</span><b className="tile-big">{s.squadCount}</b><span className="tile-sub">{s.posSummary}</span></LinkTile>
+        <LinkTile to={href('/squad/')}><span className="tile-label">라인업</span><b className="tile-big">짜서 공유</b><span className="tile-sub">명단에서 골라 이미지로</span></LinkTile>
+        <LinkTile to={href('/rules/#duty')}><span className="tile-label">{s.duty.monthLabel} 봉사</span>{dutyBody(s.duty)}</LinkTile>
+        <LinkTile to={href('/rules/#duty')}><span className="tile-label">다음 봉사</span>{dutyBody(s.dutyNext)}</LinkTile>
+        <LinkTile to={href('/rules/#fees')}><span className="tile-label">미납 벌금</span><b className="tile-big">{fmtWon(s.unpaidAmount)}</b><span className="tile-sub">{s.unpaidCount}건 · 내역 보기</span></LinkTile>
+        <LinkTile to={LINKS.youtube}><span className="tile-label">매치 영상</span><b className="tile-big">유튜브</b><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span></LinkTile>
       </div>
     </>
   );
