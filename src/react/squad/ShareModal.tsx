@@ -29,7 +29,7 @@ export default function ShareModal({ open, onClose, st, players, onSetTitle }: {
   open: boolean; onClose: () => void; st: LineupState; players: Player[]; onSetTitle: (title: string) => void;
 }) {
   const { message } = App.useApp();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(undefined!);
   if (!canvasRef.current) canvasRef.current = document.createElement('canvas');
   const fileRef = useRef<File | null>(null);
   const drawnTitleRef = useRef('');
