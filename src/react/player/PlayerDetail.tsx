@@ -205,7 +205,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
         ]}>
         {avatarSpec && (
           <>
-            <div className="row" style={{ justifyContent: 'center', marginBottom: 'var(--s-md)' }} dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpec, 120) }} />
+            <div className="row" style={{ justifyContent: 'center', marginBottom: 'var(--s-md)' }} dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpec, 128) }} />
             <div className="stack">
               {pickGroup('face', '얼굴형')}
               {pickGroup('hair', '헤어')}

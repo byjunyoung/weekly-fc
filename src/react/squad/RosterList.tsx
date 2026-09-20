@@ -36,7 +36,7 @@ export default function RosterList({ view, onViewChange, pos, onPosChange, q, on
       render: (_, p) => { const on = isStarter(st, p.num);
         return <button type="button" className={on ? 'primary' : ''} onClick={() => onPick(p.num)} aria-pressed={on}>{on ? '선발' : '넣기'}</button>; } },
     { title: '', key: 'avatar', align: 'center', width: 44,
-      render: (_, p) => <span dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 28, p.num) }} /> },
+      render: (_, p) => <span dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 32, p.num) }} /> },
     { title: '#', dataIndex: 'num', key: 'num', align: 'right', sorter: (a, b) => a.num - b.num },
     { title: '이름', dataIndex: 'name', key: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'ko'),
       render: (_, p) => <a href={href(`/squad/${p.num}/`)}><b>{p.name}</b></a> },
@@ -71,7 +71,7 @@ export default function RosterList({ view, onViewChange, pos, onPosChange, q, on
             return (
               <div className="bd-cardcell" key={p.num}>
                 <div className={`bd-cardpick${on ? ' is-on' : ''}`} role="button" tabIndex={0} data-pick={p.num} aria-pressed={on}
-                  dangerouslySetInnerHTML={{ __html: playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 116, p.num, true)) }} />
+                  dangerouslySetInnerHTML={{ __html: playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 112, p.num, true)) }} />
                 <a className="bd-card-link" href={href(`/squad/${p.num}/`)}>선수 페이지 ›</a>
               </div>
             );
