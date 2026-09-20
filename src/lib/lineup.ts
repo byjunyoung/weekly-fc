@@ -5,14 +5,12 @@ import { ovr } from './stats.ts';
 import type { Player } from './types.ts';
 
 export type Pt = [number, number];
-export type Drawing = { kind: 'arrow'; from: Pt; to: Pt } | { kind: 'pen'; points: Pt[] };
 export type LineupState = {
   v: 1; count: number; shape: string; pitch: PitchKind;
   /** 슬롯 순서대로 선수 번호. slotsFor(count, shape)와 길이가 같다. */
   slots: (number | null)[];
   /** 끌어서 옮긴 슬롯의 위치. 키는 슬롯 번호. 모양·인원을 바꾸면 비운다. */
   moved: Record<string, Pt>;
-  drawings: Drawing[];
   /** 빈 문자열이면 defaultTitle 을 쓴다. */
   title: string;
 };
@@ -27,7 +25,7 @@ const without = (slots: (number | null)[], num: number) => slots.map((x) => (x =
 
 export function initial(count = 11): LineupState {
   const n = clampCount(count);
-  return { v: 1, count: n, shape: SHAPES[n][0], pitch: defaultPitch(n), slots: Array(n).fill(null), moved: {}, drawings: [], title: '' };
+  return { v: 1, count: n, shape: SHAPES[n][0], pitch: defaultPitch(n), slots: Array(n).fill(null), moved: {}, title: '' };
 }
 
 export const slotsOf = (s: LineupState): Slot[] => slotsFor(s.count, s.shape);
@@ -112,20 +110,9 @@ export function stripOrder(s: LineupState, players: Player[]): StripItem[] {
   return [...bench, ...starters];
 }
 
-export const addDrawing = (s: LineupState, d: Drawing): LineupState => ({ ...s, drawings: [...s.drawings, d] });
-export const undoDrawing = (s: LineupState): LineupState => ({ ...s, drawings: s.drawings.slice(0, -1) });
-export const clearDrawings = (s: LineupState): LineupState => ({ ...s, drawings: [] });
-
 export const serialize = (s: LineupState): string => JSON.stringify(s);
 
 const isPt = (p: unknown): p is Pt => Array.isArray(p) && p.length === 2 && p.every((v) => typeof v === 'number' && Number.isFinite(v));
-function isDrawing(d: unknown): d is Drawing {
-  if (!d || typeof d !== 'object') return false;
-  const o = d as Record<string, unknown>;
-  if (o.kind === 'arrow') return isPt(o.from) && isPt(o.to);
-  if (o.kind === 'pen') return Array.isArray(o.points) && o.points.length >= 2 && o.points.every(isPt);
-  return false;
-}
 
 /** 초안 복원 — 무엇이 와도 쓸 수 있는 상태를 돌려준다. 명단에 없는 번호(탈퇴 등)는 비운다. */
 export function restore(raw: string | null, players: Player[]): LineupState {
@@ -149,10 +136,9 @@ export function restore(raw: string | null, players: Player[]): LineupState {
       if (inRange(base, i) && isPt(v)) moved[i] = [clamp01(v[0]), clamp01(v[1])];
     }
   }
-  const drawings = (Array.isArray(o.drawings) ? o.drawings : []).filter(isDrawing);
   const pitch: PitchKind = o.pitch === 'futsal' || o.pitch === 'soccer' ? o.pitch : base.pitch;
   const title = typeof o.title === 'string' ? o.title.slice(0, TITLE_MAX) : '';
-  return { ...base, pitch, slots, moved, drawings, title };
+  return { ...base, pitch, slots, moved, title };
 }
 
 /** 기본 제목 — today('YYYY-MM-DD', 서울 기준) 이후 가장 가까운 토요일. 토요일 당일이면 오늘. */

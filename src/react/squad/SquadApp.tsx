@@ -1,10 +1,8 @@
 // src/react/squad/SquadApp.tsx — 스쿼드 화면 오케스트레이터. 인원·포메이션·경기장 컨트롤을 antd 로,
 // 모바일에선 명단을 Drawer(아래에서)로 보여준다(antd Drawer 는 기본 document.body 에 포탈된다 — 데스크톱은
 // Drawer 를 안 쓰고 RosterList 를 그냥 인라인 섹션에 둔다, 같은 컴포넌트 재사용).
-import { App, Button, Drawer, Segmented, Select, Tooltip } from 'antd';
-import { ClearOutlined, UndoOutlined } from '@ant-design/icons';
+import { App, Button, Drawer, Segmented, Select } from 'antd';
 import { useEffect, useState } from 'react';
-import type { Tool } from '../../components/board-draw';
 import * as L from '../../lib/lineup';
 import { MAX_COUNT, MIN_COUNT, SHAPES, type PitchKind } from '../../lib/formation';
 import { href } from '../../lib/url';
@@ -39,7 +37,6 @@ function Squad() {
   const [st, setSt] = useState<L.LineupState>(L.initial());
   const [touched, setTouched] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
-  const [tool, setTool] = useState<Tool>('move');
   const [pos, setPos] = useState('ALL');
   const [q, setQ] = useState('');
   const [view, setView] = useState<View>(() => loadView());
@@ -84,13 +81,10 @@ function Squad() {
     commit(L.swap(st, a, idx));
   }
   function onSwap(a: number, b: number): void { setSelected(null); commit(L.swap(st, a, b)); }
-  function onToolChange(t: Tool): void { setSelected(null); setTool(t); } // 도구를 바꾸면 selected 도 반드시 되돌린다(Global Constraints 참고)
   function onViewChange(v: View): void { setView(v); saveView(v); }
   function onAdd(): void { location.href = href(`/squad/${nextFreeNum(data.players)}/?new=1`); }
 
-  const hint = tool === 'arrow' ? '피치 위를 끌어 화살표를 그립니다'
-    : tool === 'pen' ? '피치 위를 끌어 자유롭게 그립니다'
-    : selected !== null ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
+  const hint = selected !== null ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
     : '자리를 누르고 선수를 고르세요 · 카드를 끌면 옮기거나 맞바꿉니다';
 
   const rosterList = (
@@ -130,15 +124,9 @@ function Squad() {
           <section className="bd-list" aria-label="명단">{rosterList}</section>
         )}
         <section className="bd-stage" aria-label="피치">
-          <Pitch st={st} players={data.players} selected={selected} tool={tool}
+          <Pitch st={st} players={data.players} selected={selected}
             onTapSlot={onTapSlot} onSwap={onSwap} onMoveSlot={(idx, pt) => commit(L.moveSlot(st, idx, pt))}
-            onDraw={(d) => commit(L.addDrawing(st, d))} onDeselect={() => setSelected(null)} />
-          <div className="bd-tools" role="toolbar" aria-label="도구">
-            <Segmented className="chips" value={tool} onChange={(v) => onToolChange(v as Tool)}
-              options={[{ label: '이동', value: 'move' }, { label: '화살표', value: 'arrow' }, { label: '펜', value: 'pen' }]} />
-            <Tooltip title="되돌리기"><Button icon={<UndoOutlined />} disabled={st.drawings.length === 0} onClick={() => commit(L.undoDrawing(st))} aria-label="되돌리기" /></Tooltip>
-            <Tooltip title="지우기"><Button icon={<ClearOutlined />} disabled={st.drawings.length === 0} onClick={() => commit(L.clearDrawings(st))} aria-label="지우기" /></Tooltip>
-          </div>
+            onDeselect={() => setSelected(null)} />
           <div className="bd-share-row"><Button type="primary" onClick={() => setShareOpen(true)}>이미지 공유</Button></div>
           <p className="muted bd-hint">{hint}</p>
         </section>

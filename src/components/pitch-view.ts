@@ -23,7 +23,7 @@ export function pitchLines(kind: PitchKind): string {
     + `<path d="M4 1 C4 8 16 8 16 1"/><path d="M4 39 C4 32 16 32 16 39"/></svg>`;
 }
 
-export function pitchHtml(s: LineupState, players: Player[], selected: number | null, drawInner = ''): string {
+export function pitchHtml(s: LineupState, players: Player[], selected: number | null): string {
   const byNum = new Map(players.map((p) => [p.num, p]));
   const cards = slotsOf(s).map((slot, i) => {
     const [x, y] = positionOf(s, i);
@@ -39,6 +39,5 @@ export function pitchHtml(s: LineupState, players: Player[], selected: number | 
       + `<b class="bd-ovr">${o || '–'}</b><span class="bd-name">${esc(p.name)}</span><span class="bd-pos">${label}</span></button>`;
   }).join('');
   const { w, h } = PITCH_DIM[s.pitch];
-  return `<div class="bd-pitch bd-${s.pitch}" style="aspect-ratio:${w} / ${h}" data-pitch>${pitchLines(s.pitch)}`
-    + `<svg class="bd-draw" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true" data-draw>${drawInner}</svg>${cards}</div>`;
+  return `<div class="bd-pitch bd-${s.pitch}" style="aspect-ratio:${w} / ${h}" data-pitch>${pitchLines(s.pitch)}${cards}</div>`;
 }

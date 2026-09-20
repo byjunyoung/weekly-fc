@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initial, setCount, setShape, place, tapPlayer, swap, moveSlot, autoFill, benchOf, stripOrder, positionOf, addDrawing, undoDrawing, clearDrawings, restore, serialize, defaultTitle } from '../../src/lib/lineup.ts';
+import { initial, setCount, setShape, place, tapPlayer, swap, moveSlot, autoFill, benchOf, stripOrder, positionOf, restore, serialize, defaultTitle } from '../../src/lib/lineup.ts';
 import { slotsFor } from '../../src/lib/formation.ts';
 
 const P = (num, pos, s = 70) => ({ num, name: `p${num}`, pos, detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '' });
@@ -112,18 +112,8 @@ test('stripOrder: 명단이 비어 있으면 빈 배열', () => {
   assert.deepEqual(stripOrder(initial(5), []), []);
 });
 
-test('그림: 더하기·되돌리기·지우기', () => {
-  const a = { kind: 'arrow', from: [0, 0], to: [1, 1] };
-  const b = { kind: 'pen', points: [[0, 0], [0.5, 0.5]] };
-  const s = addDrawing(addDrawing(initial(5), a), b);
-  assert.deepEqual(undoDrawing(s).drawings, [a]);
-  assert.deepEqual(clearDrawings(s).drawings, []);
-  assert.deepEqual(undoDrawing(initial(5)).drawings, []);
-});
-
 test('restore: serialize 왕복은 같은 상태', () => {
   let s = place(initial(6), 0, 1);
-  s = addDrawing(s, { kind: 'arrow', from: [0.1, 0.2], to: [0.3, 0.4] });
   s = { ...s, title: '9/19 (토) 라인업' };
   assert.deepEqual(restore(serialize(s), [P(1, 'GK')]), s);
 });
@@ -134,15 +124,14 @@ test('restore: 깨진 값·빈 값·모르는 버전은 초기 상태', () => {
   assert.deepEqual(restore('{"v":2}', []), initial());
 });
 
-test('restore: 명단에 없는 번호·중복 번호는 비우고, 범위 밖 이동·잘못된 그림·문자열 아닌 제목은 버린다', () => {
+test('restore: 명단에 없는 번호·중복 번호는 비우고, 범위 밖 이동·문자열 아닌 제목은 버린다', () => {
   const raw = JSON.stringify({ v: 1, count: 5, shape: '2-2', pitch: 'soccer', slots: [1, 99, 1, 2, null],
-    moved: { 9: [0.5, 0.5], 1: [0.2, 0.3] }, drawings: [{ kind: 'pen', points: [[0, 0]] }, { kind: 'arrow', from: [0, 0], to: [1, 1] }], title: 3 });
+    moved: { 9: [0.5, 0.5], 1: [0.2, 0.3] }, title: 3 });
   const s = restore(raw, [P(1, 'GK'), P(2, 'DF')]);
   assert.deepEqual(s.slots, [1, null, null, 2, null]);
   assert.equal(s.shape, '2-2');
   assert.equal(s.pitch, 'soccer');
   assert.deepEqual(s.moved, { 1: [0.2, 0.3] });
-  assert.equal(s.drawings.length, 1);
   assert.equal(s.title, '');
 });
 

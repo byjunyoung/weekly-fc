@@ -5,7 +5,6 @@ import { slotsOf, positionOf, type LineupState } from '../lib/lineup.ts';
 import type { PitchKind } from '../lib/formation.ts';
 import type { Player } from '../lib/types.ts';
 import { PITCH_DIM } from './pitch-view.ts';
-import { ARROW_HEAD } from './board-draw.ts';
 
 export const IMG_W = 1080;
 export const IMG_H = 1350;
@@ -72,22 +71,6 @@ export function drawLineupImage(c: HTMLCanvasElement, s: LineupState, players: P
   ctx.translate(px, PITCH_TOP);
   ctx.strokeStyle = 'rgba(255, 255, 255, .22)'; ctx.lineWidth = 3;
   pitchLines(ctx, s.pitch, sx, sy);
-
-  // 그림 — 화살표·펜
-  ctx.strokeStyle = fg; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  for (const d of s.drawings) {
-    ctx.beginPath();
-    if (d.kind === 'pen') {
-      d.points.forEach(([x, y], i) => (i ? ctx.lineTo(x * pw, y * ph) : ctx.moveTo(x * pw, y * ph)));
-    } else {
-      const x1 = d.from[0] * pw, y1 = d.from[1] * ph, x2 = d.to[0] * pw, y2 = d.to[1] * ph;
-      const a = Math.atan2(y2 - y1, x2 - x1), head = ARROW_HEAD[s.pitch] * sx;
-      ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-      ctx.moveTo(x2 - head * Math.cos(a + 0.45), y2 - head * Math.sin(a + 0.45)); ctx.lineTo(x2, y2);
-      ctx.lineTo(x2 - head * Math.cos(a - 0.45), y2 - head * Math.sin(a - 0.45));
-    }
-    ctx.stroke();
-  }
 
   // 선수 — 이름과 자리 라벨만. 포지션 색 띠로 무리를 구분한다.
   const byNum = new Map(players.map((p) => [p.num, p]));

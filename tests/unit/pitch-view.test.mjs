@@ -44,6 +44,3 @@ test('경기장별 viewBox 와 비율', () => {
   assert.ok(pitchHtml(s, [], null).includes('aspect-ratio:68 / 105'));
 });
 
-test('그림 겹 내용은 받은 문자열을 그대로 넣는다', () => {
-  assert.ok(pitchHtml(initial(5), [], null, '<path d="M0 0"/>').includes('data-draw><path d="M0 0"/></svg>'));
-});
