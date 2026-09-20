@@ -239,7 +239,8 @@ a.card:hover { background: var(--charcoal); }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-md); }
 .thumb { border-radius: var(--r-md); overflow: hidden; background: var(--card); }
 .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--charcoal); }
-.thumb .body { padding: var(--s-sm) var(--s-md); font-size: var(--fs-sm); }
+/* antd Card 가 실제로 그리는 몸통 클래스는 .body 가 아니라 .ant-card-body 다. */
+.thumb .ant-card-body { padding: var(--s-sm) var(--s-md); font-size: var(--fs-sm); }
 .home-thumb { margin-top: var(--s-sm); width: 100%; aspect-ratio: 16 / 9; max-height: 230px; object-fit: cover; border-radius: var(--r-sm); }
 .home-grid .span2 { grid-column: span 2; }
 .thumbs-sm { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-xs); }
