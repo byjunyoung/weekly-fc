@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 // 태스크가 페이지를 추가할 때마다 여기에 줄을 더한다.
 export const PAGES = [
@@ -121,11 +121,9 @@ test('선수 상세는 PlayerDetail 섬 하나, 옛 페이지 스크립트·편�
     assert.ok(!/\[num\]\.astro_astro_type_script/.test(html), `${p}: 옛 페이지 스크립트가 남음`);
   }
 });
-test('선수 상세 — 아바타 에디터는 antd 모달 틀 안에 있고, wa-dialog 는 스쿼드에만 남는다', () => {
+test('선수 상세 — 아바타 에디터는 antd 모달 틀 안에 있고, wa-dialog 없음', () => {
   const html = read('squad/9/index.html');
   assert.ok(!html.includes('<wa-dialog'), 'squad/9/ 에 wa-dialog 가 남음');
-  const squad = read('squad/index.html');
-  assert.ok(squad.includes('<wa-dialog'), '스쿼드 목록의 wa-dialog 는 아직 있어야 한다(Shell 의 import 도 그래서 남는다)');
 });
 test('매치 탭 — MatchApp 섬 하나, client:load, 제목·버튼 자리, 옛 페이지 스크립트 없음', () => {
   const html = read('match/index.html');
@@ -141,4 +139,19 @@ test('홈 — HomeApp 섬 하나, client:load, 옛 페이지 스크립트 없음
   assert.ok(island, 'HomeApp 섬 없음');
   assert.ok(island[0].includes('client="load"'), 'client:load 아님');
   assert.ok(!/index\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
+});
+test('스쿼드 — SquadApp 섬 하나, client:load, 옛 페이지 스크립트·wa-dialog 없음', () => {
+  const html = read('squad/index.html');
+  const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/SquadApp\.[^"]+\.js"[^>]*>/);
+  assert.ok(island, 'SquadApp 섬 없음');
+  assert.ok(island[0].includes('client="load"'), 'client:load 아님');
+  assert.ok(!html.includes('<wa-dialog'), 'wa-dialog 가 남음');
+  assert.ok(!/squad\/index\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
+});
+test('4단계 뒤 dist 전체에 webawesome 문자열이 없다(스펙 §7.3)', () => {
+  const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? walk(`${dir}/${e.name}`) : [`${dir}/${e.name}`]);
+  const files = walk('dist').filter((f) => /\.(html|js|css)$/.test(f));
+  const hit = files.find((f) => readFileSync(f, 'utf8').includes('webawesome'));
+  assert.ok(!hit, `webawesome 문자열이 남음: ${hit}`);
 });

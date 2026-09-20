@@ -366,9 +366,6 @@ a.card:hover { background: var(--charcoal); }
 
 /* ══ 스쿼드 한 화면(명단 + 피치) ═══════════════════════════ */
 .bd-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-sm) var(--s-md); margin-bottom: var(--s-lg); }
-.bd-stepper { display: inline-flex; align-items: center; gap: var(--s-xs); }
-.bd-stepper button { min-width: 40px; padding: 0; }
-.bd-stepper b { min-width: 2ch; text-align: center; font-size: var(--fs-h-md); font-variant-numeric: tabular-nums; }
 .bd-field { display: inline-flex; align-items: center; gap: var(--s-xs); }
 .bd { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: var(--s-xl); align-items: start; }
 .bd-list { display: flex; flex-direction: column; gap: var(--s-sm); min-width: 0; }
@@ -423,7 +420,6 @@ a.card:hover { background: var(--charcoal); }
 .bd-ink, .bd-ink * { fill: none; stroke: var(--fg); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .bd-share-row { display: flex; justify-content: center; }
 @media (max-width: 899px) { .bd-share-row { width: 100%; } .bd-share-row button { width: 100%; } }
-.bd-share { --width: 560px; }
 .bd-share-title { display: flex; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
 .bd-share-title input { flex: 1; }
 .bd-share-img { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r-md); background: var(--charcoal); }
@@ -434,11 +430,6 @@ a.card:hover { background: var(--charcoal); }
   .bd-tools { flex-wrap: nowrap; gap: var(--s-xxs); }
   .bd-tools .chips { flex-wrap: nowrap; gap: var(--s-xxs); }
   .bd-tools .chip, .bd-tools > button { min-height: 36px; padding: var(--s-xxs) var(--s-sm); font-size: var(--fs-xs); white-space: nowrap; }
-  /* 명단은 아래에서 끌어올리는 시트 — 닫힌 상태는 화면에 아무것도 남기지 않는다(벤치 줄이 고르는 자리를 대신한다). */
-  .bd-list { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; max-height: 0; padding: 0;
-    overflow: hidden; transition: max-height var(--dur-slow) var(--ease-std); }
-  .bd-list.is-open { max-height: 70dvh; padding: 0 var(--s-md) var(--s-md); overflow-y: auto;
-    background: var(--elevated); border-top: 1px solid var(--hairline); border-radius: var(--r-lg) var(--r-lg) 0 0; }
   .bd-sheet-handle { display: flex; justify-content: center; width: 100%; min-height: 56px; border: 0; border-radius: 0; background: none; font-size: var(--fs-sm); }
   #list-body { max-height: none; }
   /* 벤치 줄 — 시트가 닫혀 있을 때 화면 아래 고정, 누르면 onPick 으로 같은 규칙을 탄다. 시트가 열리면(z-index 위) 이 줄을 덮는다. */
@@ -465,43 +456,6 @@ details.year[open] > summary::before { content: "▾ "; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
-/* ══ Web Awesome 토큰 매핑 ═══════════════════════════════════
-   라이브러리 컴포넌트가 우리 정본(DESIGN.md)을 따르게 만드는 다리다.
-   여기서 이름만 이어주고, 값은 전부 위에서 이미 정의한 것을 쓴다. */
-:root, .wa-dark {
-  --wa-color-surface-default: var(--card);
-  --wa-color-surface-raised: var(--charcoal);
-  --wa-color-surface-lowered: var(--elevated);
-  --wa-color-surface-border: var(--hairline);
-  --wa-color-text-normal: var(--fg);
-  --wa-color-text-quiet: var(--muted);
-  --wa-color-text-link: var(--link);
-  --wa-color-brand-fill-loud: var(--primary);
-  --wa-color-brand-fill-normal: var(--primary);
-  --wa-color-brand-border-loud: var(--primary);
-  --wa-color-brand-on-loud: var(--on-primary);
-  --wa-color-neutral-fill-quiet: var(--elevated);
-  --wa-color-neutral-border-normal: var(--hairline-strong);
-  --wa-color-neutral-on-normal: var(--fg);
-  --wa-font-family-body: var(--font);
-  --wa-font-family-heading: var(--font);
-  --wa-font-weight-body: var(--fw-body);
-  --wa-font-weight-action: var(--fw-strong);
-  --wa-border-radius-s: var(--r-sm);
-  --wa-border-radius-m: var(--r-md);
-  --wa-border-radius-l: var(--r-lg);
-  --wa-border-radius-pill: var(--r-full);
-  --wa-transition-fast: var(--dur-fast);
-  --wa-transition-normal: var(--dur-slow);
-}
-/* 모달 — 정본의 카드 면·반경을 그대로 쓰게 한다. */
-wa-dialog { --width: 460px; }
-wa-dialog::part(dialog) { background: var(--card); border-radius: var(--r-lg); }
-wa-dialog::part(header) { padding-bottom: 0; }
-wa-dialog::part(title) { font-size: var(--fs-h-lg); font-weight: var(--fw-display); }
-wa-dialog::part(body) { padding-top: var(--s-sm); }
-wa-dialog .foot { display: flex; justify-content: flex-end; gap: var(--s-xs); }
-wa-select::part(combobox) { background: var(--elevated); border-color: var(--hairline-strong); border-radius: var(--r-sm); }
 /* 이름 고르기 격자(antd 버튼)와 아바타 부품 고르기(직접 만든 버튼)가 같이 쓴다.
    후자는 antd 부품이 아니라서 .wfc 안에서 전역 button 규칙이 안 걸린다(0단계 :where(:not(.wfc, .wfc *))) — 여기서 되살린다. */
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s-xs); }
