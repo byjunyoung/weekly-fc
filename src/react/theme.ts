@@ -71,5 +71,8 @@ export const themeConfig: ThemeConfig = {
       itemSelectedBg: '#ffffff', itemSelectedColor: '#000000', trackBg: '#121314',
       borderRadius: 9999, borderRadiusSM: 9999, borderRadiusXS: 9999, fontSize: 12,
     },
+    // 벌금·봉사 요약 — 지금 .card 모습(면 --card 는 Descriptions 바탕과 상관없이 antd 배경 기본값 그대로 두고,
+    // 라벨·값 글자만 맞춘다). labelBg 는 bordered 모드의 라벨 칸 바탕.
+    Descriptions: { labelBg: '#121314', labelColor: 'rgba(229, 229, 229, .55)', contentColor: '#ffffff', titleColor: '#ffffff' },
   },
 };

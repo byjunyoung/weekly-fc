@@ -110,3 +110,14 @@ test('운영 탭 봉사 — 봉사표는 DutyLive 섬, 이 페이지엔 옛 페�
   assert.ok(!html.includes('<wa-dialog'), 'wa-dialog 가 남음');
   assert.ok(!/rules\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
 });
+test('선수 상세는 PlayerDetail 섬 하나, 옛 페이지 스크립트·편집 모달 없음', () => {
+  for (const p of ['squad/9/index.html', 'squad/99/index.html']) {
+    const html = read(p);
+    const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/PlayerDetail\.[^"]+\.js"[^>]*>/);
+    assert.ok(island, `${p}: PlayerDetail 섬 없음`);
+    assert.ok(island[0].includes('client="load"'), `${p}: client:load 아님`);
+    assert.ok(html.includes('id="title"') && html.includes('id="actions"'), `${p}: 제목·버튼 자리 없음`);
+    assert.ok(!html.includes('id="edit-modal"'), `${p}: 옛 편집 모달이 남음`);
+    assert.ok(!/\[num\]\.astro_astro_type_script/.test(html), `${p}: 옛 페이지 스크립트가 남음`);
+  }
+});
