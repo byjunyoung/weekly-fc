@@ -172,7 +172,7 @@ body.wide .main { max-width: none; padding: var(--s-md); }
   gap: var(--s-md); margin-bottom: var(--s-xl); }
 .page-head .actions > .muted { font-size: var(--fs-sm); }
 .page-head h1 { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-display); line-height: 1.2; letter-spacing: 0; }
-.page-head h1 .muted { font-size: var(--fs-h-md); font-weight: var(--fw-body); }
+.page-head h1 .muted { font-family: var(--font); font-size: var(--fs-h-md); font-weight: var(--fw-body); }
 .page-head .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
 body.wide .page-head { margin-bottom: var(--s-md); }
 body.wide .page-head h1 { font-size: var(--fs-h-lg); }
@@ -279,7 +279,7 @@ a.card:hover { background: var(--charcoal); }
   transition: background var(--dur-micro) var(--ease-std); }
 .tile:hover { background: var(--charcoal); }
 .tile-label { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
-.tile-big { margin-top: auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-num); line-height: 1.1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.tile-big { margin-top: auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-num); font-synthesis: none; line-height: 1.1; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .tile-sub { margin-top: var(--s-xxs); font-size: var(--fs-xs); color: var(--muted); }
 /* 봉사 두 명 — 같은 크기로 나란히. 좁은 타일에서는 줄바꿈해도 크기는 같다. */
 .tile-duo { display: flex; flex-wrap: wrap; gap: 0 var(--s-sm); margin-top: auto; font-size: var(--fs-h-lg); font-weight: var(--fw-num); line-height: 1.25; }
@@ -303,7 +303,7 @@ a.card:hover { background: var(--charcoal); }
 .pcard-body { display: flex; flex-direction: column; width: 100%; padding: var(--s-md) var(--s-md) var(--s-lg); }
 .pcard-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-xs); width: 100%; min-height: 104px; }
 .pcard-ovr-block { display: flex; flex-direction: column; align-items: flex-start; align-self: flex-start; }
-.pcard-ovr { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-num); line-height: .9; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.pcard-ovr { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-num); font-synthesis: none; line-height: .9; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .pcard-pos { display: block; font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); line-height: 1.1; }
 .pcard-num { display: block; margin-top: var(--s-xxs); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
 .pcard-portrait { align-self: flex-end; margin: 0 -4px -6px 0; }
@@ -403,7 +403,7 @@ a.card:hover { background: var(--charcoal); }
 .bd-slot.is-selected { outline: 3px solid var(--link); outline-offset: 2px; }
 .bd-slot.is-oop { box-shadow: 0 0 0 2px var(--cond-mid); }
 .bd-slot.is-dragging { z-index: 5; opacity: .85; }
-.bd-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-heavy); line-height: 1; font-variant-numeric: tabular-nums; }
+.bd-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-heavy); font-synthesis: none; line-height: 1; font-variant-numeric: tabular-nums; }
 .bd-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); font-weight: var(--fw-strong); line-height: 1.2; }
 .bd-pos { font-size: 10px; font-weight: var(--fw-strong); color: var(--ink-soft); }
 .bd-hint { margin: 0; font-size: var(--fs-xs); text-align: center; }
@@ -415,7 +415,6 @@ a.card:hover { background: var(--charcoal); }
 @media (max-width: 899px) {
   .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); padding-bottom: calc(var(--strip-h) + var(--s-sm)); }
   .bd-slot { width: 62px; min-height: 50px; }
-  .bd-ovr { font-size: var(--fs-pixel-sm); }
   .bd-sheet-handle { display: flex; justify-content: center; width: 100%; min-height: 56px; border: 0; border-radius: 0; background: none; font-size: var(--fs-sm); }
   #list-body { max-height: none; }
   /* 벤치 줄 — 시트가 닫혀 있을 때 화면 아래 고정, 누르면 onPick 으로 같은 규칙을 탄다. 시트가 열리면(z-index 위) 이 줄을 덮는다. */

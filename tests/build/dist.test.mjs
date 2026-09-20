@@ -167,4 +167,5 @@ test('등급 카드 배경이 그라디언트에서 단색으로 바뀐다(1a단
   assert.ok(hit, '--metal-gold 를 담은 CSS 청크를 dist/_astro 에서 못 찾음');
   const css = readFileSync(hit, 'utf8');
   assert.ok(!css.includes('linear-gradient(160deg'), '옛 등급 그라디언트가 아직 남아 있음');
+  assert.ok(css.includes('--metal-gold:var(--gold)'), '--metal-gold 가 var(--gold) 를 참조하지 않음');
 });
