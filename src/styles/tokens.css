@@ -136,6 +136,7 @@ input:where(:not(.wfc, .wfc *)), select:where(:not(.wfc, .wfc *)), textarea:wher
 input:where(:not(.wfc, .wfc *)):focus, select:where(:not(.wfc, .wfc *)):focus, textarea:where(:not(.wfc, .wfc *)):focus { outline: 2px solid var(--link); outline-offset: 1px; border-color: var(--link); }
 :where(a, button, [tabindex]) { scroll-margin-top: calc(var(--header-h) + var(--s-sm)); }
 :where(a, button, [tabindex]):focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+a:focus-visible > .tile, a:focus-visible > .thumb { outline: 2px solid var(--fg); outline-offset: 2px; }
 a.inline { color: var(--link); }
 a.inline:hover { text-decoration: underline; }
 
@@ -239,7 +240,6 @@ a.card:hover { background: var(--charcoal); }
 .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-md); }
 .thumb { border-radius: var(--r-md); overflow: hidden; background: var(--card); }
 .thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--charcoal); }
-.thumb .body { padding: var(--s-sm) var(--s-md); font-size: var(--fs-sm); }
 /* antd Card 가 실제로 그리는 몸통 클래스는 .body 가 아니라 .ant-card-body 다. */
 .thumb .ant-card-body { padding: var(--s-sm) var(--s-md); font-size: var(--fs-sm); }
 .home-thumb { margin-top: var(--s-sm); width: 100%; aspect-ratio: 16 / 9; max-height: 230px; object-fit: cover; border-radius: var(--r-sm); }

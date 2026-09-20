@@ -3,7 +3,7 @@
 import { Card } from 'antd';
 import { useEffect, useState } from 'react';
 import { loadVideos } from '../../lib/api';
-import { esc, fmtDate, ytEmbed, ytThumb, ytWatch } from '../../lib/html';
+import { fmtDate, ytEmbed, ytThumb, ytWatch } from '../../lib/html';
 import { matchVideos } from '../../lib/match-videos';
 import type { MatchVideo } from '../../lib/match-videos';
 import { href } from '../../lib/url';
@@ -55,8 +55,8 @@ function App() {
               {list.map((m) => (
                 <a key={m.id} href={href(`/match/?v=${encodeURIComponent(m.id)}`)} style={{ display: 'contents' }}>
                   <Card className="thumb" variant="borderless" cover={<img src={ytThumb(m.id)} alt="" loading="lazy" />}>
-                    <b>{m.date ? esc(fmtDate(m.date)) : esc(m.title)}</b>
-                    <div className="muted">{videoMeta(m) || esc(m.title)}</div>
+                    <b>{m.date ? fmtDate(m.date) : m.title}</b>
+                    <div className="muted">{videoMeta(m) || m.title}</div>
                   </Card>
                 </a>
               ))}

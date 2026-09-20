@@ -3,7 +3,7 @@ import { Card } from 'antd';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { loadVideos } from '../../lib/api';
-import { esc, fmtDate, fmtWon, ytThumb, ytThumbBig } from '../../lib/html';
+import { fmtDate, fmtWon, ytThumb, ytThumbBig } from '../../lib/html';
 import { getMe } from '../../lib/me';
 import { LINKS } from '../../lib/rules';
 import type { Video } from '../../lib/types';
@@ -35,7 +35,11 @@ function EmptyMeTile({ onOpen }: { onOpen: () => void }) {
     </Card>
   );
 }
-const dutyBody = (d: DutyTile) => <><span className="tile-duo"><b>{esc(d.p1)}</b><b>{esc(d.p2)}</b></span><span className="tile-sub">{d.sub}</span></>;
+const dutyBody = (d: DutyTile) => <><span className="tile-duo"><b>{d.p1}</b><b>{d.p2}</b></span><span className="tile-sub">{d.sub}</span></>;
+function HeroImg({ id }: { id: string }) {
+  const [big, setBig] = useState(true);
+  return <img src={big ? ytThumbBig(id) : ytThumb(id)} alt="" onError={() => setBig(false)} />;
+}
 
 function App() {
   const { data } = useData();
@@ -61,10 +65,10 @@ function App() {
       <div className="page-head"><h1>홈</h1><div className="actions"><span className="muted" id="stamp">{s.stamp}</span></div></div>
       <div className="menu">
         <section className="art">
-          {s.recentMatch && <img src={ytThumbBig(s.recentMatch.id)} alt="" onError={(e) => { const img = e.currentTarget; img.onerror = null; img.src = ytThumb(s.recentMatch!.id); }} />}
+          {s.recentMatch && <HeroImg id={s.recentMatch.id} />}
           <span className="art-kicker">최근 매치</span>
-          <h2 className="art-title">{esc(s.recentMatch?.typeLabel ?? '') || '매치'}</h2>
-          <p className="art-sub">{s.recentMatch?.date ? esc(fmtDate(s.recentMatch.date)) : '날짜 미정'}{s.recentMatch?.location ? ` · ${esc(s.recentMatch.location)}` : ''}</p>
+          <h2 className="art-title">{(s.recentMatch?.typeLabel ?? '') || '매치'}</h2>
+          <p className="art-sub">{s.recentMatch?.date ? fmtDate(s.recentMatch.date) : '날짜 미정'}{s.recentMatch?.location ? ` · ${s.recentMatch.location}` : ''}</p>
           <div className="art-foot">
             <a className="chip" href={href('/match/')}>매치 전체 →</a>
             {s.recentMatch && <a className="chip" href={href(`/match/?v=${encodeURIComponent(s.recentMatch.id)}`)}>영상 보기 →</a>}
@@ -72,7 +76,7 @@ function App() {
         </section>
         <div className="rail">
           {s.meTile.kind === 'picked'
-            ? <LinkTile to={href(`/squad/${s.meTile.num}/`)}><span className="tile-label">내 선수</span><b className="tile-big">{s.meTile.ovr || '–'}</b><span className="tile-sub">{esc(s.meTile.name)} · {esc(s.meTile.pos)}</span></LinkTile>
+            ? <LinkTile to={href(`/squad/${s.meTile.num}/`)}><span className="tile-label">내 선수</span><b className="tile-big">{s.meTile.ovr || '–'}</b><span className="tile-sub">{s.meTile.name} · {s.meTile.pos}</span></LinkTile>
             : <EmptyMeTile onOpen={openMe} />}
           <LinkTile to={href('/squad/')}><span className="tile-label">스쿼드</span><b className="tile-big">{s.squadCount}</b><span className="tile-sub">{s.posSummary}</span></LinkTile>
           <LinkTile to={href('/match/')}><span className="tile-label">매치</span><b className="tile-big">{s.matchCount}</b><span className="tile-sub">채널 영상</span></LinkTile>
@@ -80,7 +84,7 @@ function App() {
           <LinkTile to={href('/rules/#duty')}><span className="tile-label">{s.duty.monthLabel} 봉사</span>{dutyBody(s.duty)}</LinkTile>
           <LinkTile to={href('/rules/#duty')}><span className="tile-label">다음 봉사</span>{dutyBody(s.dutyNext)}</LinkTile>
           <LinkTile to={href('/rules/#fees')}><span className="tile-label">미납 벌금</span><b className="tile-big">{fmtWon(s.unpaidAmount)}</b><span className="tile-sub">{s.unpaidCount}건 · 내역 보기</span></LinkTile>
-          <LinkTile to={LINKS.youtube} wide><span className="tile-label">최신 영상</span><b className="tile-big">{s.videoCount}</b><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span><div className="tile-thumbs">{thumbs}</div></LinkTile>
+          <LinkTile to={LINKS.youtube} wide><span className="tile-label">최신 영상</span><b className="tile-big">{s.videoCount}</b><div className="tile-thumbs">{thumbs}</div><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span></LinkTile>
         </div>
       </div>
     </>
