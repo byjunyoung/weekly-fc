@@ -6,6 +6,6 @@ const { num } = Astro.params;
 ---
 <Shell title={`선수 #${num}`}>
   <div class="stack" id="app">
-    <PlayerDetail num={Number(num)} isNew={Astro.url.searchParams.get('new') === '1'} client:load />
+    <PlayerDetail num={Number(num)} client:load />
   </div>
 </Shell>

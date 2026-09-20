@@ -234,6 +234,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   );
 }
 
-export default function PlayerDetail({ num, isNew }: { num: number; isNew: boolean }) {
+export default function PlayerDetail({ num }: { num: number }) {
+  const isNew = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('new') === '1';
   return <ThemeRoot><Detail num={num} isNew={isNew} /></ThemeRoot>;
 }
