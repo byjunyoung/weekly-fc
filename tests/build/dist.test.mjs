@@ -8,7 +8,6 @@ export const PAGES = [
   'squad/index.html',
   'squad/9/index.html',
   'squad/99/index.html',
-  'match/index.html',
   'rules/index.html',
   'record/index.html',
   'record/fines/index.html',
@@ -38,10 +37,10 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 홈·스쿼드·매치·운영 네 갈래', () => {
+test('상단 탭은 홈·스쿼드·운영 세 갈래', () => {
   const html = read('index.html');
-  for (const l of ['홈', '스쿼드', '매치', '운영']) assert.ok(html.includes(`<span>${l}</span>`), l);
-  for (const l of ['기록', '전술', '소개']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+  for (const l of ['홈', '스쿼드', '운영']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['기록', '전술', '소개', '매치']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
 test('검색 허용 페이지가 없으니 sitemap 도 없다', () => {
   assert.ok(!existsSync('dist/sitemap-index.xml'), 'sitemap-index.xml 이 남아 있다');
@@ -125,14 +124,6 @@ test('선수 상세 — 아바타 에디터는 antd 모달 틀 안에 있고, wa
   const html = read('squad/9/index.html');
   assert.ok(!html.includes('<wa-dialog'), 'squad/9/ 에 wa-dialog 가 남음');
 });
-test('매치 탭 — MatchApp 섬 하나, client:load, 제목·버튼 자리, 옛 페이지 스크립트 없음', () => {
-  const html = read('match/index.html');
-  const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/MatchApp\.[^"]+\.js"[^>]*>/);
-  assert.ok(island, 'MatchApp 섬 없음');
-  assert.ok(island[0].includes('client="load"'), 'client:load 아님');
-  assert.ok(html.includes('id="title"') && html.includes('id="actions"'), '제목·버튼 자리 없음');
-  assert.ok(!/match\/index\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
-});
 test('홈 — HomeApp 섬 하나, client:load, 옛 페이지 스크립트 없음', () => {
   const html = read('index.html');
   const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/HomeApp\.[^"]+\.js"[^>]*>/);
@@ -157,4 +148,12 @@ test('4단계 뒤 dist 전체에 webawesome 문자열이 없다(스펙 §7.3)', 
 });
 test('선수 사진 폴더가 정적 자산으로 그대로 배포된다(수동 배치 규약, 스펙 3·6절)', () => {
   assert.ok(existsSync('dist/players/README.md'), 'dist/players/README.md 없음 — public/players/ 가 빌드에 안 실렸다');
+});
+test('매치 탭이 완전히 삭제됐다(스펙 §7 · 2026-09-21 리프레시)', () => {
+  assert.ok(!existsSync('dist/match'), 'dist/match 디렉터리가 남음');
+  const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? walk(`${dir}/${e.name}`) : [`${dir}/${e.name}`]);
+  const files = walk('dist').filter((f) => /\.(html|js|css)$/.test(f));
+  const hit = files.find((f) => readFileSync(f, 'utf8').includes('MatchApp'));
+  assert.ok(!hit, `MatchApp 흔적이 남음: ${hit}`);
 });

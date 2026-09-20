@@ -8,7 +8,7 @@
   "scripts": {
     "predev": "node scripts/extract-antd-css.mjs",
     "dev": "astro dev",
-    "prebuild": "node scripts/fetch-videos.mjs && node scripts/extract-antd-css.mjs",
+    "prebuild": "node scripts/extract-antd-css.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",

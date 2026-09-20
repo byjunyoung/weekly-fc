@@ -1,7 +1,5 @@
 // src/lib/api.ts — Apps Script 호출은 여기 한 곳
-import type { Data, Fine, Lineup, Match, Player, RotationRow, Team, Video } from './types';
-
-import { VIDEOS as baked } from '../data/videos.ts';
+import type { Data, Fine, Lineup, Match, Player, RotationRow, Team } from './types';
 
 export const API_URL = 'https://script.google.com/macros/s/AKfycbyUDTkTHsKszkiOeJKmNDHDkVJobrVUjbRqufU251PNKmlyrvC0BZ3ir9x0vM_lCJkkmg/exec';
 const CACHE_KEY = 'wfc_cache_v2';
@@ -110,16 +108,6 @@ export function onData(render: (d: Data) => void): void {
   const c = cached(); if (c) render(c);
   window.addEventListener('wfc:data', (e) => render((e as CustomEvent<Data>).detail));
   refresh().catch(() => { if (!c) render(EMPTY); });
-}
-/** 영상 목록 — 빌드 때 scripts/fetch-videos.mjs 가 채널 페이지에서 긁어 박아둔 것을 먼저 쓴다.
- *  백엔드(getChannelVideos)는 고급 서비스·RSS 가 둘 다 막혀 빈 배열만 돌려주므로 폴백으로만 남긴다:
- *  나중에 그쪽이 되살아나면 더 최신인 목록을 받게 된다. */
-export async function loadVideos(): Promise<Video[]> {
-  if (baked.length) return baked as Video[];
-  try {
-    const j = await call('getChannelVideos');
-    return (Array.isArray(j.videos) ? (j.videos as Raw[]) : []).map((v) => ({ id: String(v.id ?? ''), title: String(v.title ?? ''), published: String(v.published ?? '') })).filter((v) => v.id);
-  } catch { return []; }
 }
 export function getPin(): string { try { return sessionStorage.getItem(PIN_KEY) ?? ''; } catch { return ''; } }
 export function isAdmin(): boolean { return getPin() !== ''; }
