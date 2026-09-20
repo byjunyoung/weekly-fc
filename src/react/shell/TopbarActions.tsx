@@ -1,5 +1,5 @@
 // 상단바 오른쪽 — 이름·관리자 버튼과 두 모달, 토스트(window.wfcToast).
-// 옛 화면(운영·선수 상세·스쿼드)이 듣는 wfc:admin 은 계속 보낸다. 홈 「내 선수」 타일은 #me-btn 을 대신 누른다.
+// 옛 화면(운영·선수 상세·스쿼드)이 듣는 wfc:admin 은 계속 보낸다. 홈 「내 선수」 타일은 wfc:open-me 이벤트로 이 모달을 연다.
 // Modal 이 맡는 것: 포커스 트랩, Esc 닫기, role="dialog"·aria-modal, 스크롤 잠금, 닫을 때 포커스 복귀.
 import { App, Button, Input, Modal } from 'antd';
 import type { InputRef } from 'antd';
@@ -25,6 +25,13 @@ function Actions() {
   const [busy, setBusy] = useState(false);
   const pinRef = useRef<InputRef>(null);
   const pinOpenRef = useRef(false); // submitPin이 await 중 취소/Esc로 닫혔는지 알아야 해서 state 대신 ref로 즉시 확인
+
+  // 홈 「내 선수」 빈 자리가 이 이벤트로 이름 고르기 모달을 연다(DOM 으로 #me-btn 을 대신 누르던 방식 대신).
+  useEffect(() => {
+    const open = () => setMeOpen(true);
+    window.addEventListener('wfc:open-me', open);
+    return () => window.removeEventListener('wfc:open-me', open);
+  }, []);
 
   // 옛 화면의 toast()(src/lib/html.ts)가 부르는 다리. 섬이 뜨기 전 알림은 없다 — 알림은 모두 사용자 조작 뒤에 난다.
   useEffect(() => {

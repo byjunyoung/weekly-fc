@@ -135,3 +135,10 @@ test('매치 탭 — 영상 목록은 antd Card 격자, 상세는 iframe 유지,
   assert.ok(html.includes('id="title"') && html.includes('id="actions"'), '제목·버튼 자리 없음');
   assert.ok(!/match\/index\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
 });
+test('홈 — 타일은 antd Card, HomeApp 섬 하나, 내 선수는 버튼 역할(키보드 가능)', () => {
+  const html = read('index.html');
+  const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/HomeApp\.[^"]+\.js"[^>]*>/);
+  assert.ok(island, 'HomeApp 섬 없음');
+  assert.ok(island[0].includes('client="load"'), 'client:load 아님');
+  assert.ok(!/index\.astro_astro_type_script/.test(html), '옛 페이지 스크립트가 남음');
+});
