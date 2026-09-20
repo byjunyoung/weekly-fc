@@ -501,6 +501,14 @@ wa-dialog::part(title) { font-size: var(--fs-h-lg); font-weight: var(--fw-displa
 wa-dialog::part(body) { padding-top: var(--s-sm); }
 wa-dialog .foot { display: flex; justify-content: flex-end; gap: var(--s-xs); }
 wa-select::part(combobox) { background: var(--elevated); border-color: var(--hairline-strong); border-radius: var(--r-sm); }
-/* 이름 고르기 격자 — 상단바 섬의 antd Modal 안에 든다. 칸이 좁아(104px) antd 버튼 좌우 여백만 줄인다. */
+/* 이름 고르기 격자(antd 버튼)와 아바타 부품 고르기(직접 만든 버튼)가 같이 쓴다.
+   후자는 antd 부품이 아니라서 .wfc 안에서 전역 button 규칙이 안 걸린다(0단계 :where(:not(.wfc, .wfc *))) — 여기서 되살린다. */
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s-xs); }
 .pick-list .ant-btn { padding-inline: var(--s-xxs); }
+.pick-list button:not(.ant-btn) {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-xs);
+  min-height: 36px; padding: var(--s-xs) var(--s-xxs); border: 1px solid var(--hairline-strong); border-radius: var(--r-full);
+  background: transparent; color: var(--fg); font-size: var(--fs-sm); font-weight: var(--fw-strong); cursor: pointer;
+}
+.pick-list button:not(.ant-btn):hover { background: rgba(255, 255, 255, .1); }
+.pick-list button:not(.ant-btn).primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }

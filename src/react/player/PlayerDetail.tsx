@@ -3,12 +3,15 @@ import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Popconfirm,
 import type { TableColumnsType } from 'antd';
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { fetchFull, serializePlayer, write } from '../../lib/api';
+import { fetchFull, serializePlayer, write, writeAvatar } from '../../lib/api';
 import { esc, fmtDate, fmtWon, monthLabel } from '../../lib/html';
 import { href } from '../../lib/url';
 import { nextDuty } from '../../lib/rotation';
 import { band, STAT_CUTS } from '../../lib/stats';
 import { CARD_STAT_ORDER, playerCard, STAT_KO, STAT_LABEL } from '../../components/player-card';
+import { avatarSvg } from '../../components/avatar';
+import { PARTS, avatarSpecFor, serializeAvatar } from '../../lib/avatar';
+import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
 import type { Fine, Player } from '../../lib/types';
 import ThemeRoot from '../ThemeRoot';
@@ -27,6 +30,27 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   const [saving, setSaving] = useState(false);
   const [opening, setOpening] = useState(false); // fetchFull 이 도는 동안(모달이 뜨기 전)
   const [deleting, setDeleting] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatarSpec, setAvatarSpec] = useState<AvatarSpec | null>(null);
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const openAvatar = (p: Player) => { setAvatarSpec(avatarSpecFor(p.num, p.avatar)); setAvatarOpen(true); };
+  const saveAvatar = async () => {
+    if (!player || !avatarSpec) return;
+    setAvatarSaving(true);
+    try { await writeAvatar(player.num, serializeAvatar(avatarSpec)); setAvatarOpen(false); message.success('아바타 저장됨'); }
+    catch (e) { message.error((e as Error).message); }
+    finally { setAvatarSaving(false); }
+  };
+  const pickGroup = (key: 'face' | 'hair' | 'skin' | 'eyes', title: string) => (
+    <div key={key}>
+      <div className="label label-gap">{title}</div>
+      <div className="pick-list">
+        {PARTS[key].map((opt, i) => (
+          <button type="button" key={opt.id} className={avatarSpec![key] === i ? 'primary' : ''} onClick={() => setAvatarSpec({ ...avatarSpec!, [key]: i })}>{opt.label}</button>
+        ))}
+      </div>
+    </div>
+  );
 
   const player = data?.players.find((p) => p.num === num);
 
@@ -150,13 +174,45 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     );
   }
 
+  function avatarModal() {
+    return (
+      <Modal title="아바타 편집" open={avatarOpen} destroyOnHidden onCancel={() => setAvatarOpen(false)}
+        cancelButtonProps={{ disabled: avatarSaving }} maskClosable={!avatarSaving} closable={!avatarSaving} keyboard={!avatarSaving}
+        footer={[
+          <Button key="cancel" disabled={avatarSaving} onClick={() => setAvatarOpen(false)}>취소</Button>,
+          <Button key="save" type="primary" loading={avatarSaving} onClick={saveAvatar}>저장</Button>,
+        ]}>
+        {avatarSpec && (
+          <div className="stack">
+            <div className="row" style={{ justifyContent: 'center', marginBottom: 'var(--s-md)' }} dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpec, 120) }} />
+            {pickGroup('face', '얼굴형')}
+            {pickGroup('hair', '헤어')}
+            {pickGroup('skin', '피부')}
+            {pickGroup('eyes', '눈')}
+            <div>
+              <div className="label label-gap">유니폼 색</div>
+              <div className="pick-list">
+                {PARTS.kit.map((hex) => (
+                  <button type="button" key={hex} className={avatarSpec.kit === hex ? 'primary' : ''} style={{ background: hex }} aria-label={hex} onClick={() => setAvatarSpec({ ...avatarSpec, kit: hex })}>&nbsp;</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+    );
+  }
+
   return (
     <>
       {pageHead}
       {player && (
         <>
           <div className="player-hero">
-            <div dangerouslySetInnerHTML={{ __html: playerCard(player) }} />
+            <div
+              dangerouslySetInnerHTML={{ __html: playerCard(player, `<button type="button" id="avatar-edit-btn" class="avatar-btn" title="아바타 편집">${avatarSvg(avatarSpecFor(player.num, player.avatar), 112, player.num, true)}</button>`) }}
+              onClick={(e) => { if ((e.target as HTMLElement).closest('#avatar-edit-btn')) openAvatar(player); }}
+            />
             <div className="player-side">
               <Descriptions bordered size="small" column={2}>
                 <Descriptions.Item label="미납 벌금"><b className={fineSummary!.unpaid ? 'warn' : ''}>{fmtWon(fineSummary!.unpaid)}</b> <span className="muted">누계 {fmtWon(fineSummary!.total)} ({fineSummary!.fines.length}건)</span></Descriptions.Item>
@@ -173,6 +229,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
         </>
       )}
       {editModal()}
+      {avatarModal()}
     </>
   );
 }

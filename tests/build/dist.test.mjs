@@ -121,3 +121,9 @@ test('선수 상세는 PlayerDetail 섬 하나, 옛 페이지 스크립트·편�
     assert.ok(!/\[num\]\.astro_astro_type_script/.test(html), `${p}: 옛 페이지 스크립트가 남음`);
   }
 });
+test('선수 상세 — 아바타 에디터는 antd 모달 틀 안에 있고, wa-dialog 는 스쿼드에만 남는다', () => {
+  const html = read('squad/9/index.html');
+  assert.ok(!html.includes('<wa-dialog'), 'squad/9/ 에 wa-dialog 가 남음');
+  const squad = read('squad/index.html');
+  assert.ok(squad.includes('<wa-dialog'), '스쿼드 목록의 wa-dialog 는 아직 있어야 한다(Shell 의 import 도 그래서 남는다)');
+});
