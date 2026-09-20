@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAvatar, serializeAvatar, randomAvatar, avatarSpecFor, isUnsetAvatar, PARTS, UNSET_AVATAR } from '../../src/lib/avatar.ts';
-import { avatarSvg, photoHtml } from '../../src/components/avatar.ts';
+import { avatarSvg } from '../../src/components/avatar.ts';
 
 // 서버 검증 정규식(server/weeklyfc-apps-script.js isValidAvatarCode)을 그대로 복사한다 —
 // 클라이언트가 만드는 코드가 서버에서 거부되지 않는다는 계약을 이 테스트가 지킨다.
@@ -106,17 +106,3 @@ test('avatarSvg: 부품이 다르면 출력도 달라진다 (30명이 뭉개지�
   assert.equal(svgs.size, 30);
 });
 
-test('photoHtml: 선수 번호·크기로 img 태그를 만들고, 파일이 없으면 지워지는 onerror가 붙는다', () => {
-  const html = photoHtml(9, 112);
-  assert.match(html, /<img[^>]*class="pcard-photo"/);
-  assert.match(html, /src="[^"]*\/players\/9\.jpg"/);
-  assert.match(html, /width="112"/);
-  assert.match(html, /height="112"/);
-  assert.match(html, /onerror="this\.remove\(\)"/);
-  assert.match(html, /alt=""/);
-});
-
-test('photoHtml: 선수 번호가 다르면 경로도 다르다(선수별로 서로 다른 파일을 가리킨다)', () => {
-  assert.notEqual(photoHtml(9, 112), photoHtml(99, 112));
-  assert.match(photoHtml(99, 28), /\/players\/99\.jpg/);
-});

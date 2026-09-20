@@ -4,7 +4,6 @@
 // 붙으면 실제 CSS 변수를, canvas용 Image src(data:image/svg+xml)처럼 문서 밖
 // 단독 SVG로 쓰이면 폴백 hex 값을 쓴다(짙은 바탕 기준, tokens.css 다크 값과 맞춰 둠).
 import { esc } from '../lib/html.ts';
-import { href } from '../lib/url.ts';
 import { PARTS, isUnsetAvatar, type AvatarSpec } from '../lib/avatar.ts';
 
 let uidSeq = 0;
@@ -84,13 +83,4 @@ export function avatarSvg(spec: AvatarSpec, size: number, fallbackLabel?: string
     `<rect x="40" y="60" width="20" height="3" rx="1.5" fill="${MUTED}"/>`,
   ].join('');
   return chip(nextUid(), size, inner, bare);
-}
-
-/** 실사 사진 오버레이 — avatarSvg() 출력 앞에 겹쳐 쓴다. 파일이 있으면 사진이
- * SVG를 가리고, 없으면(404) onerror가 이 <img>만 지워 밑에 이미 그려진 SVG가
- * 그대로 드러난다 — 매니페스트 없이 파일 존재 자체가 "사진 있음" 신호다
- * (스펙 4절 · docs/superpowers/specs/2026-09-20-player-photo-cards-design.md).
- * size는 avatarSvg()에 준 것과 같은 값을 넘겨 같은 박스에 겹치게 한다. */
-export function photoHtml(num: number, size: number): string {
-  return `<img class="pcard-photo" src="${href(`/players/${num}.jpg`)}" alt="" width="${size}" height="${size}" onerror="this.remove()" />`;
 }

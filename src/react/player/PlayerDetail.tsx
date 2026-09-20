@@ -9,7 +9,7 @@ import { href } from '../../lib/url';
 import { nextDuty } from '../../lib/rotation';
 import { band, STAT_CUTS } from '../../lib/stats';
 import { playerCard, STAT_KO, STAT_LABEL } from '../../components/player-card';
-import { avatarSvg, photoHtml } from '../../components/avatar';
+import { avatarSvg } from '../../components/avatar';
 import { PARTS, avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
@@ -234,7 +234,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
           <div className="player-hero">
             <div
               ref={cardRef}
-              dangerouslySetInnerHTML={{ __html: playerCard(player, `<button type="button" id="avatar-edit-btn" class="avatar-btn" title="아바타 편집">${photoHtml(player.num, 112)}${avatarSvg(avatarSpecFor(player.num, player.avatar), 112, player.num, true)}</button>`) }}
+              dangerouslySetInnerHTML={{ __html: playerCard(player, `<button type="button" id="avatar-edit-btn" class="avatar-btn" title="아바타 편집">${avatarSvg(avatarSpecFor(player.num, player.avatar), 112, player.num, true)}</button>`) }}
               onClick={(e) => { if ((e.target as HTMLElement).closest('#avatar-edit-btn')) openAvatar(player); }}
             />
             <div className="player-side">

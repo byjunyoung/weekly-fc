@@ -294,9 +294,7 @@ a.card:hover { background: var(--charcoal); }
 .pcard-ovr { display: block; font-size: var(--fs-ovr); font-weight: var(--fw-num); line-height: .9; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .pcard-pos { display: block; font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); line-height: 1.1; }
 .pcard-num { display: block; margin-top: var(--s-xxs); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
-.pcard-portrait { position: relative; align-self: flex-end; margin: 0 -4px -6px 0; }
-.pcard-photo { position: absolute; top: 0; left: 0; object-fit: cover; border-radius: 16%; aspect-ratio: 1 / 1; }
-.avatar-chip { position: relative; display: inline-block; line-height: 0; }
+.pcard-portrait { align-self: flex-end; margin: 0 -4px -6px 0; }
 .avatar-btn { display: block; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
 .avatar-btn:hover { background: none; }
 .pcard-name { margin-top: var(--s-sm); padding: var(--s-xs) 0; border-top: 1px solid var(--ink-line); border-bottom: 1px solid var(--ink-line);
@@ -320,7 +318,7 @@ a.card:hover { background: var(--charcoal); }
   .pcard-wall .pcard-ovr { font-size: 34px; }
   .pcard-wall .pcard-pos { font-size: var(--fs-h-md); }
   .pcard-wall .pcard-name { font-size: var(--fs-body); }
-  .pcard-wall .pcard-portrait svg, .pcard-wall .pcard-portrait img.pcard-photo { width: 68px; height: 68px; }
+  .pcard-wall .pcard-portrait svg { width: 68px; height: 68px; }
   .pcard-wall .pcard-stat-val { font-size: var(--fs-body); }
 }
 .pcard-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: var(--s-xxl); background: var(--card); border-radius: var(--r-md); }
