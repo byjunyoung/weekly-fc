@@ -84,5 +84,5 @@ export default function Pitch({ st, players, selected, tool, onTapSlot, onSwap, 
     attachDraw(pitch, st.pitch, tool, ink, onDraw);
   }, [st, players, selected, tool, onTapSlot, onSwap, onMoveSlot, onDraw, onDeselect]);
 
-  return <div ref={wrapRef} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div key={tool} ref={wrapRef} dangerouslySetInnerHTML={{ __html: html }} />;
 }
