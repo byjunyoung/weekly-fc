@@ -82,7 +82,13 @@ export default function Pitch({ st, players, selected, tool, onTapSlot, onSwap, 
       return () => pitch.removeEventListener('click', onBg);
     }
     attachDraw(pitch, st.pitch, tool, ink, onDraw);
+    return () => {
+      pitch.onpointerdown = null;
+      pitch.onpointermove = null;
+      pitch.onpointerup = null;
+      pitch.onpointercancel = null;
+    };
   }, [st, players, selected, tool, onTapSlot, onSwap, onMoveSlot, onDraw, onDeselect]);
 
-  return <div key={tool} ref={wrapRef} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div key={tool} id="pitch-slot" ref={wrapRef} dangerouslySetInnerHTML={{ __html: html }} />;
 }
