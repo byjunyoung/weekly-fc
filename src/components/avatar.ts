@@ -124,7 +124,7 @@ function hairShape(shape: (typeof PARTS.hair)[number]['shape'], fill: string): s
   return dbPath(DB_HAIR[shape], fill);
 }
 function eyesShape(shape: (typeof PARTS.eyes)[number]['shape'], fill: string): string {
-  return dbPath(DB_EYES[shape], fill);
+  return `<g transform="translate(4 5)">${dbPath(DB_EYES[shape], fill)}</g>`;
 }
 
 const chip = (uid: string, size: number, inner: string, bare = false): string =>
