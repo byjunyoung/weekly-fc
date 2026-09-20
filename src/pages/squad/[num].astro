@@ -5,7 +5,7 @@ export function getStaticPaths() { return Array.from({ length: 99 }, (_, i) => (
 const { num } = Astro.params;
 ---
 <Shell title={`선수 #${num}`}>
-  <div class="stack" id="app">
+  <div id="app">
     <PlayerDetail num={Number(num)} client:load />
   </div>
 </Shell>

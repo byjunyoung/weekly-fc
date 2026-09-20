@@ -348,10 +348,10 @@ a.card:hover { background: var(--charcoal); }
 
 /* ══ 능력치 막대(선수 페이지) ═══════════════════════════════ */
 .player-hero { display: grid; grid-template-columns: var(--pcard-w) minmax(0, 1fr); gap: var(--s-xl); align-items: start; }
-.player-hero > .pcard { margin: 0; }
+.player-hero .pcard { margin: 0; }
 .player-side { display: flex; flex-direction: column; gap: var(--s-md); min-width: 0; }
 .player-tiles { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-@media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero > .pcard { max-width: var(--pcard-w); } }
+@media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero .pcard { max-width: var(--pcard-w); } }
 .attr-list { display: flex; flex-direction: column; }
 .attr-row { display: grid; grid-template-columns: 4.2em 3em minmax(0, 1fr); align-items: center; gap: var(--s-sm);
   padding: var(--s-xs) 0; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); }
@@ -512,3 +512,6 @@ wa-select::part(combobox) { background: var(--elevated); border-color: var(--hai
 }
 .pick-list button:not(.ant-btn):hover { background: rgba(255, 255, 255, .1); }
 .pick-list button:not(.ant-btn).primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+
+/* 선수 편집 모달 — 삭제(위험)를 저장·취소와 반대쪽 끝으로 띄운다. antd 기본 footer 는 text-align:end 라 flex 스페이서가 안 먹는다. */
+.ant-modal-footer.modal-foot-split { display: flex; align-items: center; }

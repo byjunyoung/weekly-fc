@@ -1,19 +1,20 @@
 // 선수 상세 — 카드(FC 아이템)·요약(벌금·봉사)·능력치·벌금 내역·편집. 아바타 에디터는 Task 3 이 이 파일에 더한다.
 import { App, Button, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Select, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { fetchFull, serializePlayer, write, writeAvatar } from '../../lib/api';
-import { esc, fmtDate, fmtWon, monthLabel } from '../../lib/html';
+import { fmtDate, fmtWon, monthLabel } from '../../lib/html';
 import { href } from '../../lib/url';
 import { nextDuty } from '../../lib/rotation';
 import { band, STAT_CUTS } from '../../lib/stats';
-import { CARD_STAT_ORDER, playerCard, STAT_KO, STAT_LABEL } from '../../components/player-card';
+import { playerCard, STAT_KO, STAT_LABEL } from '../../components/player-card';
 import { avatarSvg } from '../../components/avatar';
 import { PARTS, avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
 import type { Fine, Player } from '../../lib/types';
+import { countUp } from '../../lib/motion';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
@@ -101,6 +102,24 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     if (isNew && admin && data && !player && editing === null && !open && !opening) openEdit(undefined);
   }, [isNew, admin, data, player, opening]);
 
+  // 벌금 요약 — 카운트업 이펙트(아래)가 참조해야 해서 이르게 return 하기 전에 계산해둔다.
+  const fineSummary = player ? playerFineSummary(data?.fines ?? [], player.name) : null;
+
+  // OVR 카운트업 — playerCard() 가 html 로 그린 [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
+  const cardRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!player || !cardRef.current) return;
+    const ovrEl = cardRef.current.querySelector<HTMLElement>('[data-ovr]');
+    if (ovrEl) { const target = Number(ovrEl.dataset.ovr); if (target > 0) countUp(ovrEl, target); }
+  }, [player]);
+
+  // 미납 벌금 합계 카운트업.
+  const fineBigRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!fineSummary || !fineBigRef.current) return;
+    countUp(fineBigRef.current, fineSummary.unpaid, fmtWon);
+  }, [fineSummary?.unpaid]);
+
   // 제목·편집 버튼 — Astro 쪽엔 자리가 없다(id 가 둘로 갈리지 않게 이 섬 하나가 다 그린다).
   // 데이터가 아직 없으면(SSR·빌드) admin·player 모두 falsy 라 제목만 "선수 #{num}", 버튼은 비어 있다 — 옛 화면의 초기 상태와 같다.
   const pageHead = (
@@ -114,13 +133,14 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     return (
       <>
         {pageHead}
-        <p className="muted">이 번호의 선수가 없습니다.{admin ? ' 편집으로 추가할 수 있습니다.' : ''}</p>
+        <div className="stack">
+          <p className="muted">이 번호의 선수가 없습니다.{admin ? ' 편집으로 추가할 수 있습니다.' : ''}</p>
+        </div>
         {editModal()}
       </>
     );
   }
 
-  const fineSummary = player ? playerFineSummary(data?.fines ?? [], player.name) : null;
   const duty = player && data ? nextDuty(data.players, data.rotation, player.name) : null;
   const attrRows = player ? STAT_KEYS.map((k) => {
     const v = player[k], b = band(v, STAT_CUTS);
@@ -144,13 +164,13 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     return (
       <Modal title="선수 편집" open={open} width={640} destroyOnHidden afterClose={() => setEditing(null)} onCancel={() => setOpen(false)}
         cancelButtonProps={{ disabled: saving }} maskClosable={!saving} closable={!saving} keyboard={!saving}
+        classNames={{ footer: 'modal-foot-split' }}
         footer={[
           editing && !editing.isNewPlayer && (
             <Popconfirm key="del" title="이 선수를 명단에서 지울까요?" okText="삭제" cancelText="취소" okButtonProps={{ danger: true, loading: deleting }} onConfirm={delPlayer}>
               <Button danger loading={deleting} disabled={saving}>삭제</Button>
             </Popconfirm>
           ),
-          <span key="spacer" style={{ flex: 1, display: 'inline-block' }} />,
           <Button key="cancel" disabled={saving} onClick={() => setOpen(false)}>취소</Button>,
           <Button key="save" type="primary" loading={saving} onClick={() => form.submit()}>저장</Button>,
         ]}>
@@ -163,7 +183,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
             <Form.Item name="foot" label="주발"><Input /></Form.Item>
             <Form.Item name="vest" label="조끼"><InputNumber style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="rot" label="봉사 순번 (빈칸=제외)"><InputNumber style={{ width: '100%' }} /></Form.Item>
-            <Form.Item name="phone" label="전화 (공개 안 됨)"><Input /></Form.Item>
+            <Form.Item name="phone" label="전화 (공개 안 됨)"><Input type="tel" /></Form.Item>
             {STAT_KEYS.map((k) => (
               <Form.Item key={k} name={k} label={STAT_KO[k]} rules={[{ required: true, message: '1~99' }]}><InputNumber min={1} max={99} style={{ width: '100%' }} /></Form.Item>
             ))}
@@ -183,21 +203,23 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
           <Button key="save" type="primary" loading={avatarSaving} onClick={saveAvatar}>저장</Button>,
         ]}>
         {avatarSpec && (
-          <div className="stack">
+          <>
             <div className="row" style={{ justifyContent: 'center', marginBottom: 'var(--s-md)' }} dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpec, 120) }} />
-            {pickGroup('face', '얼굴형')}
-            {pickGroup('hair', '헤어')}
-            {pickGroup('skin', '피부')}
-            {pickGroup('eyes', '눈')}
-            <div>
-              <div className="label label-gap">유니폼 색</div>
-              <div className="pick-list">
-                {PARTS.kit.map((hex) => (
-                  <button type="button" key={hex} className={avatarSpec.kit === hex ? 'primary' : ''} style={{ background: hex }} aria-label={hex} onClick={() => setAvatarSpec({ ...avatarSpec, kit: hex })}>&nbsp;</button>
-                ))}
+            <div className="stack">
+              {pickGroup('face', '얼굴형')}
+              {pickGroup('hair', '헤어')}
+              {pickGroup('skin', '피부')}
+              {pickGroup('eyes', '눈')}
+              <div>
+                <div className="label label-gap">유니폼 색</div>
+                <div className="pick-list">
+                  {PARTS.kit.map((hex) => (
+                    <button type="button" key={hex} className={avatarSpec.kit === hex ? 'primary' : ''} style={{ background: hex }} aria-label={hex} onClick={() => setAvatarSpec({ ...avatarSpec, kit: hex })}>&nbsp;</button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )}
       </Modal>
     );
@@ -207,15 +229,16 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     <>
       {pageHead}
       {player && (
-        <>
+        <div className="stack">
           <div className="player-hero">
             <div
+              ref={cardRef}
               dangerouslySetInnerHTML={{ __html: playerCard(player, `<button type="button" id="avatar-edit-btn" class="avatar-btn" title="아바타 편집">${avatarSvg(avatarSpecFor(player.num, player.avatar), 112, player.num, true)}</button>`) }}
               onClick={(e) => { if ((e.target as HTMLElement).closest('#avatar-edit-btn')) openAvatar(player); }}
             />
             <div className="player-side">
-              <Descriptions bordered size="small" column={2}>
-                <Descriptions.Item label="미납 벌금"><b className={fineSummary!.unpaid ? 'warn' : ''}>{fmtWon(fineSummary!.unpaid)}</b> <span className="muted">누계 {fmtWon(fineSummary!.total)} ({fineSummary!.fines.length}건)</span></Descriptions.Item>
+              <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
+                <Descriptions.Item label="미납 벌금"><b ref={fineBigRef} className={fineSummary!.unpaid ? 'warn' : ''}>{fmtWon(fineSummary!.unpaid)}</b> <span className="muted">누계 {fmtWon(fineSummary!.total)} ({fineSummary!.fines.length}건)</span></Descriptions.Item>
                 <Descriptions.Item label="봉사">{duty ? monthLabel(duty.year, duty.month) : '–'} <span className="muted">{player.rot ? `순번 ${player.rot} · 다음 차례` : '로테이션 제외'}</span></Descriptions.Item>
               </Descriptions>
               <div className="card"><h2>능력치</h2><div className="attr-list">{attrRows}</div></div>
@@ -223,10 +246,10 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
           </div>
           {fineSummary!.fines.length > 0 && (
             <div className="card"><h2>벌금 내역</h2>
-              <Table<Fine> size="small" rowKey="id" pagination={false} showSorterTooltip={false} columns={fineCols} dataSource={fineSummary!.fines} />
+              <Table<Fine> size="small" rowKey="id" pagination={false} showSorterTooltip={false} scroll={{ x: 'max-content' }} columns={fineCols} dataSource={fineSummary!.fines} />
             </div>
           )}
-        </>
+        </div>
       )}
       {editModal()}
       {avatarModal()}
