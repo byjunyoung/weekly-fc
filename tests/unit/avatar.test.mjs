@@ -106,3 +106,23 @@ test('avatarSvg: 부품이 다르면 출력도 달라진다 (30명이 뭉개지�
   assert.equal(svgs.size, 30);
 });
 
+test('avatarSvg: shape-rendering=crispEdges가 걸려 있다 (벡터 픽셀아트 앤티앨리어싱 방지)', () => {
+  const svg = avatarSvg(randomAvatar(1), 32);
+  assert.match(svg, /shape-rendering="crispEdges"/);
+});
+
+test('avatarSvg: 얼굴형 5종 전부 유효한 SVG를 낸다 (다이아몬드 포함, 깨지지 않음)', () => {
+  for (let face = 0; face < PARTS.face.length; face++) {
+    const svg = avatarSvg({ face, hair: 0, skin: 0, eyes: 0, kit: '#2980b9' }, 32);
+    assert.match(svg, /^<svg /);
+    assert.match(svg, /<\/svg>$/);
+  }
+});
+
+test('avatarSvg: 헤어 8종 전부(아프로 포함) 유효한 SVG를 낸다', () => {
+  for (let hair = 0; hair < PARTS.hair.length; hair++) {
+    const svg = avatarSvg({ face: 0, hair, skin: 0, eyes: 0, kit: '#2980b9' }, 32);
+    assert.match(svg, /^<svg /);
+  }
+});
+
