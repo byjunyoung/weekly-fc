@@ -97,3 +97,11 @@ test('연도 고르기는 지금 칩 모습 — 알약, 선택 = 흰 바탕·검
   assert.equal(s.borderRadiusSM, 9999);
   assert.equal(s.fontSize, px('fs-xs'));
 });
+
+test('선수 요약(Descriptions)은 지금 .card 모습 — 라벨 바탕 --elevated·글자 --muted, 값 글자 --fg', () => {
+  const d = themeConfig.components.Descriptions;
+  assert.equal(d.labelBg, tok('elevated'));
+  assert.equal(d.labelColor, tok('muted'));
+  assert.equal(d.contentColor, tok('fg'));
+  assert.equal(d.titleColor, tok('fg'));
+});

@@ -348,10 +348,10 @@ a.card:hover { background: var(--charcoal); }
 
 /* ══ 능력치 막대(선수 페이지) ═══════════════════════════════ */
 .player-hero { display: grid; grid-template-columns: var(--pcard-w) minmax(0, 1fr); gap: var(--s-xl); align-items: start; }
-.player-hero > .pcard { margin: 0; }
+.player-hero .pcard { margin: 0; }
 .player-side { display: flex; flex-direction: column; gap: var(--s-md); min-width: 0; }
 .player-tiles { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-@media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero > .pcard { max-width: var(--pcard-w); } }
+@media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero .pcard { max-width: var(--pcard-w); } }
 .attr-list { display: flex; flex-direction: column; }
 .attr-row { display: grid; grid-template-columns: 4.2em 3em minmax(0, 1fr); align-items: center; gap: var(--s-sm);
   padding: var(--s-xs) 0; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); }
@@ -501,6 +501,17 @@ wa-dialog::part(title) { font-size: var(--fs-h-lg); font-weight: var(--fw-displa
 wa-dialog::part(body) { padding-top: var(--s-sm); }
 wa-dialog .foot { display: flex; justify-content: flex-end; gap: var(--s-xs); }
 wa-select::part(combobox) { background: var(--elevated); border-color: var(--hairline-strong); border-radius: var(--r-sm); }
-/* 이름 고르기 격자 — 상단바 섬의 antd Modal 안에 든다. 칸이 좁아(104px) antd 버튼 좌우 여백만 줄인다. */
+/* 이름 고르기 격자(antd 버튼)와 아바타 부품 고르기(직접 만든 버튼)가 같이 쓴다.
+   후자는 antd 부품이 아니라서 .wfc 안에서 전역 button 규칙이 안 걸린다(0단계 :where(:not(.wfc, .wfc *))) — 여기서 되살린다. */
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s-xs); }
 .pick-list .ant-btn { padding-inline: var(--s-xxs); }
+.pick-list button:not(.ant-btn) {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-xs);
+  min-height: 36px; padding: var(--s-xs) var(--s-xxs); border: 1px solid var(--hairline-strong); border-radius: var(--r-full);
+  background: transparent; color: var(--fg); font-size: var(--fs-sm); font-weight: var(--fw-strong); cursor: pointer;
+}
+.pick-list button:not(.ant-btn):hover { background: rgba(255, 255, 255, .1); }
+.pick-list button:not(.ant-btn).primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+
+/* 선수 편집 모달 — 삭제(위험)를 저장·취소와 반대쪽 끝으로 띄운다. antd 기본 footer 는 text-align:end 라 flex 스페이서가 안 먹는다. */
+.ant-modal-footer.modal-foot-split { display: flex; align-items: center; }
