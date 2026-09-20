@@ -5,7 +5,7 @@ import { App, Button, Input, Modal } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { drawLineupImage } from '../../components/share-image';
 import { seoulToday } from '../../lib/html';
-import { defaultTitle, type Drawing, type LineupState, type Pt } from '../../lib/lineup';
+import { defaultTitle, type LineupState } from '../../lib/lineup';
 import { fallbackMethod, pickShareMethod, shareFileName, type ShareEnv, type ShareMethod } from '../../lib/share';
 import type { Player } from '../../lib/types';
 
