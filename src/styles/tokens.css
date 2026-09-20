@@ -45,13 +45,13 @@
   --cond-up: #3ecfc7; --cond-mid: #e0c23c; --cond-down: #e97267;
   /* 경고는 정본의 warning(#c81b3a)이 검정 위 3.67 로 미달이라 밝은 쪽을 쓴다. */
   --warn: #ff5c74; --warn-bg: #2a0f16; --ok: #59cf84;
-  /* 등급 — 골드는 정본의 PS Plus 티어 그라디언트를 그대로 쓴다(정본도 등급에 금속을 쓴다).
-     실버·브론즈는 같은 문법으로 맞춘 값. */
   --gold: #ffce21; --silver: #cfd6de; --bronze: #d69256;
-  --metal-gold: linear-gradient(160deg, #ffe27a 0%, #ffce21 38%, #f5a623 68%, #ee8e00 100%);
-  --metal-silver: linear-gradient(160deg, #ffffff 0%, #dfe5ec 38%, #b9c2cc 68%, #97a1ac 100%);
-  --metal-bronze: linear-gradient(160deg, #ffd9ad 0%, #e4a76a 38%, #cc9460 68%, #c78247 100%);
-  /* 브론즈 어두운 끝은 실측으로 올렸다 — #a96a34 에서는 먹글자 4.25, 보조 글자 3.51 로 미달이었다. */
+  /* 도트 톤에선 매끈한 그라디언트 대신 단색 블록을 쓴다(2026-09-21 리프레시 스펙 §3) —
+     위 solid 토큰에 그대로 연결한다. --ink(#121314) 대비 gold 12.49 · silver 12.69 ·
+     bronze 7.18로 옛 그라디언트의 가장 어두운 끝(브론즈 4.25/3.51)보다 오히려 낫다. */
+  --metal-gold: var(--gold);
+  --metal-silver: var(--silver);
+  --metal-bronze: var(--bronze);
   --ink: #121314;                          /* 금속 위 글자 = 정본의 ink-deep */
   --ink-soft: rgba(18, 19, 20, .82);
   --ink-line: rgba(18, 19, 20, .26);

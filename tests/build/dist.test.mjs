@@ -161,3 +161,10 @@ test('갈무리 도트 폰트가 제목·OVR·능력치 숫자에 적용된다(1
   const css = readFileSync(hit, 'utf8');
   assert.ok(css.includes('--font-pixel'), '--font-pixel 토큰이 빌드된 CSS에 없음');
 });
+test('등급 카드 배경이 그라디언트에서 단색으로 바뀐다(1a단계, 2026-09-21 리프레시 스펙 §3)', () => {
+  const files = readdirSync('dist/_astro', { withFileTypes: true }).filter((e) => e.name.endsWith('.css')).map((e) => `dist/_astro/${e.name}`);
+  const hit = files.find((f) => readFileSync(f, 'utf8').includes('--metal-gold'));
+  assert.ok(hit, '--metal-gold 를 담은 CSS 청크를 dist/_astro 에서 못 찾음');
+  const css = readFileSync(hit, 'utf8');
+  assert.ok(!css.includes('linear-gradient(160deg'), '옛 등급 그라디언트가 아직 남아 있음');
+});
