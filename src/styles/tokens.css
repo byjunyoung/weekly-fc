@@ -482,3 +482,6 @@ details.year[open] > summary::before { content: "▾ "; }
 .wfc .ant-table-tbody button:not(.ant-btn) {
   font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0;
 }
+/* 표 안 부가 정보(포지션 옆 "CB · 오른발" 등)는 작은 기본 글꼴로 — 20px 로 키우면
+   칸이 두 줄로 접혀 행 높이가 두 배가 된다(실측 91px → 65px). 카드의 .pcard-detail 과 같은 규칙. */
+.ant-table-tbody .muted { font-family: var(--font); font-size: var(--fs-xs); font-synthesis: auto; }
