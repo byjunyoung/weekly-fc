@@ -51,9 +51,10 @@ test('darkAlgorithm 뒤에도 주색·링크·경고·완료 색은 우리 값',
   assert.equal(EXACT_COLORS.colorPrimaryHover, tok('primary-pressed'));
 });
 
-test('버튼은 지금 button 규칙과 같은 알약 모양', () => {
+test('버튼은 지금 button 규칙과 같은 각진 모양', () => {
   const b = themeConfig.components.Button;
-  assert.equal(b.borderRadius, 9999);
+  // 각진 모서리(2026-09-21 3단계) — tokens.css --r-* 도 같이 0 이어야 한다, 안 그러면 CSS·antd 가 따로 논다
+  assert.equal(b.borderRadius, 0);
   assert.equal(b.controlHeight, 40);
   assert.equal(b.paddingInline, 22);
   assert.equal(b.contentFontSize, 14);
@@ -85,7 +86,7 @@ test('표 모서리·칸 여백·머리 굵기도 지금 .tbl 과 같다', () =>
   assert.equal(t.fontWeightStrong, Number(tok('fw-heavy')));
 });
 
-test('연도 고르기는 지금 칩 모습 — 알약, 선택 = 흰 바탕·검정 글자, 평소 글자 --body, hover --charcoal, 바탕 --elevated', () => {
+test('연도 고르기는 지금 칩 모습 — 각진 모서리, 선택 = 흰 바탕·검정 글자, 평소 글자 --body, hover --charcoal, 바탕 --elevated', () => {
   const s = themeConfig.components.Segmented;
   assert.equal(s.itemSelectedBg, tok('fg'));
   assert.equal(s.itemSelectedColor, tok('canvas'));
@@ -93,8 +94,8 @@ test('연도 고르기는 지금 칩 모습 — 알약, 선택 = 흰 바탕·검
   assert.equal(s.itemHoverBg, tok('charcoal'));
   assert.equal(s.itemHoverColor, tok('fg'));
   assert.equal(s.trackBg, tok('elevated'));
-  assert.equal(s.borderRadius, 9999);
-  assert.equal(s.borderRadiusSM, 9999);
+  assert.equal(s.borderRadius, 0);
+  assert.equal(s.borderRadiusSM, 0);
   assert.equal(s.fontSize, px('fs-xs'));
 });
 
