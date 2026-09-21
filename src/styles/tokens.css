@@ -154,8 +154,10 @@ a.inline { color: var(--link); }
 a.inline:hover { text-decoration: underline; }
 
 /* ══ 셸 ════════════════════════════════════════════════════ */
+/* 탑바 좌우 여백이 본문의 가운데 정렬 컨테이너를 따르도록 — 워드마크가 페이지 제목과 정렬된다.
+   좁은 화면에서는 max() 로 기존 32px 을 유지한다. */
 .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--s-lg);
-  height: var(--header-h); padding: 0 var(--s-xl); background: var(--canvas); border-bottom: 1px solid var(--hairline); }
+  height: var(--header-h); padding-block: 0; padding-inline: max(var(--s-xl), calc((100% - var(--max)) / 2 + var(--s-xl))); background: var(--canvas); border-bottom: 1px solid var(--hairline); }
 .mark { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; white-space: nowrap; }
 .mark b { font-weight: var(--fw-body); color: var(--muted); }
 .topnav { display: flex; align-items: center; gap: var(--s-xs); flex: 1; overflow-x: auto; scrollbar-width: none; }
