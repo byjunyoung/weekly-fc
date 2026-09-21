@@ -4,7 +4,7 @@
 import { Input, Segmented, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import type { MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { avatarSvg } from '../../components/avatar';
+import { avatarSvg, avatarFaceSvg } from '../../components/avatar';
 import { playerCard, STAT_LABEL } from '../../components/player-card';
 import { avatarSpecFor } from '../../lib/avatar';
 import { href } from '../../lib/url';
@@ -36,7 +36,7 @@ export default function RosterList({ view, onViewChange, pos, onPosChange, q, on
       render: (_, p) => { const on = isStarter(st, p.num);
         return <button type="button" className={on ? 'primary' : ''} onClick={() => onPick(p.num)} aria-pressed={on}>{on ? '선발' : '넣기'}</button>; } },
     { title: '', key: 'avatar', align: 'center', width: 44,
-      render: (_, p) => <span dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 32, p.num) }} /> },
+      render: (_, p) => <span dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 32, p.num) }} /> },
     { title: '#', dataIndex: 'num', key: 'num', align: 'right', sorter: (a, b) => a.num - b.num },
     { title: '이름', dataIndex: 'name', key: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'ko'),
       render: (_, p) => <a href={href(`/squad/${p.num}/`)}><b>{p.name}</b></a> },

@@ -330,7 +330,7 @@ a.card:hover { background: var(--charcoal); }
   .pcard-wall .pcard-ovr { font-size: var(--fs-pixel-md); }
   .pcard-wall .pcard-pos { font-size: var(--fs-h-md); }
   .pcard-wall .pcard-name { font-size: var(--fs-body); }
-  .pcard-wall .pcard-portrait svg { width: 64px; height: 64px; }
+  .pcard-wall .pcard-portrait svg { width: 48px; height: 64px; }
   .pcard-wall .pcard-stat-val { font-size: var(--fs-body); }
 }
 .pcard-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: var(--s-xxl); background: var(--card); border-radius: var(--r-md); }
