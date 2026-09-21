@@ -311,7 +311,7 @@ a.card:hover { background: var(--charcoal); }
 .pcard-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-xs); width: 100%; min-height: 104px; }
 .pcard-ovr-block { display: flex; flex-direction: column; align-items: flex-start; align-self: flex-start; }
 .pcard-ovr { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-num); font-synthesis: none; line-height: .9; letter-spacing: 0; font-variant-numeric: tabular-nums; }
-.pcard-pos { display: block; font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); line-height: 1.1; }
+.pcard-pos { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.1; }
 .pcard-num { display: block; margin-top: var(--s-xxs); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
 .pcard-portrait { align-self: flex-end; margin: 0 -4px -6px 0; }
 .avatar-btn { display: block; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
@@ -322,7 +322,7 @@ a.card:hover { background: var(--charcoal); }
 .pcard-stats { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s-md); width: 100%; margin-top: var(--s-sm); }
 .pcard-stat { display: flex; align-items: baseline; gap: var(--s-xs); padding: var(--s-xxs) 0; }
 .pcard-stat:nth-child(2n) { padding-left: var(--s-sm); border-left: 1px solid var(--ink-line); }
-.pcard-stat-val { font-size: var(--fs-h-md); font-weight: var(--fw-heavy); line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.7em; }
+.pcard-stat-val { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.7em; }
 .pcard-stat-label { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
 .pcard-note { margin: var(--s-sm) 0 0; font-size: var(--fs-xs); color: var(--ink-soft); text-align: center; }
 .pcard .muted { color: var(--ink-soft); }
@@ -335,10 +335,8 @@ a.card:hover { background: var(--charcoal); }
   .pcard-wall .pcard-body { padding: var(--s-sm) var(--s-sm) var(--s-md); }
   .pcard-wall .pcard-head { min-height: 74px; }
   .pcard-wall .pcard-ovr { font-size: var(--fs-pixel-md); }
-  .pcard-wall .pcard-pos { font-size: var(--fs-h-md); }
   .pcard-wall .pcard-name { font-size: var(--fs-body); }
   .pcard-wall .pcard-portrait svg { width: 48px; height: 64px; }
-  .pcard-wall .pcard-stat-val { font-size: var(--fs-body); }
 }
 .pcard-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: var(--s-xxl); background: var(--card); border-radius: var(--r-md); }
 
@@ -363,6 +361,8 @@ a.card:hover { background: var(--charcoal); }
 .attr-bar b { display: block; height: 100%; width: var(--fill, 0%); border-radius: var(--r-full); animation: attr-fill var(--dur-slow) var(--ease-in); }
 .attr-bar b.val-a { background: var(--val-a); } .attr-bar b.val-b { background: var(--val-b); }
 .attr-bar b.val-c { background: var(--val-c); } .attr-bar b.val-d { background: var(--val-d); }
+/* 능력치 목록의 값 뱃지만 갈무리로 — .val 은 스쿼드 표도 쓰므로 전역으로 키우지 않는다. */
+.attr-list .val { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 @keyframes attr-fill { from { width: 0; } to { width: var(--fill, 0%); } }
 
 /* ══ 스쿼드 한 화면(명단 + 피치) ═══════════════════════════ */
