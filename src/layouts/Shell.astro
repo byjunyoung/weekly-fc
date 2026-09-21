@@ -6,7 +6,8 @@ interface Props { title: string; index?: boolean; wide?: boolean; description?: 
 const { title, index = false, wide = false, description = 'WEEKLY FC — 매주 모이는 풋살 팀의 포탈' } = Astro.props;
 const nav = [
   { href: href('/'), label: '홈' },
-  { href: href('/squad/'), label: '스쿼드' },
+  { href: href('/squad/'), label: '명단' },
+  { href: href('/lineup/'), label: '라인업' },
   { href: href('/rules/'), label: '운영' },
 ];
 const path = Astro.url.pathname;

@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 export const PAGES = [
   'index.html',
   'squad/index.html',
+  'lineup/index.html',
   'squad/9/index.html',
   'squad/99/index.html',
   'rules/index.html',
@@ -37,10 +38,10 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 홈·스쿼드·운영 세 갈래', () => {
+test('상단 탭은 홈·명단·라인업·운영 네 갈래', () => {
   const html = read('index.html');
-  for (const l of ['홈', '스쿼드', '운영']) assert.ok(html.includes(`<span>${l}</span>`), l);
-  for (const l of ['기록', '전술', '소개', '매치']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+  for (const l of ['홈', '명단', '라인업', '운영']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['스쿼드', '기록', '전술', '소개', '매치']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
 test('검색 허용 페이지가 없으니 sitemap 도 없다', () => {
   assert.ok(!existsSync('dist/sitemap-index.xml'), 'sitemap-index.xml 이 남아 있다');
