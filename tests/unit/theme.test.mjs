@@ -57,12 +57,13 @@ test('버튼은 지금 button 규칙과 같은 각진 모양', () => {
   assert.equal(b.borderRadius, 0);
   assert.equal(b.controlHeight, 40);
   assert.equal(b.paddingInline, 22);
-  assert.equal(b.contentFontSize, 14);
+  // 글자 크기(4b단계) — 탑바·전역 버튼과 같은 20px(--fs-pixel-sm), 글꼴 자체는 tokens.css 의 .ant-btn 규칙이 정한다.
+  assert.equal(b.contentFontSize, px('fs-pixel-sm'));
   assert.equal(b.fontWeight, 500);
   assert.equal(b.primaryShadow, 'none');
-  assert.equal(b.controlHeightSM, 34);
+  assert.equal(b.controlHeightSM, 36); // 34→36, 20px 글자가 안 잘리게(4b단계)
   assert.equal(b.paddingInlineSM, 16);
-  assert.equal(b.contentFontSizeSM, 12);
+  assert.equal(b.contentFontSizeSM, px('fs-pixel-sm'));
 });
 
 test('표는 지금 .tbl 모습 — 머리 바탕·글자, 줄 경계, 글자 크기, 줄 hover, 정렬 열 바탕 없음', () => {
@@ -96,7 +97,8 @@ test('연도 고르기는 지금 칩 모습 — 각진 모서리, 선택 = 흰 �
   assert.equal(s.trackBg, tok('elevated'));
   assert.equal(s.borderRadius, 0);
   assert.equal(s.borderRadiusSM, 0);
-  assert.equal(s.fontSize, px('fs-xs'));
+  // 글자 크기(4b단계) — 다른 컨트롤과 같은 20px(--fs-pixel-sm)로 올림
+  assert.equal(s.fontSize, px('fs-pixel-sm'));
 });
 
 test('선수 요약(Descriptions)은 지금 .card 모습 — 라벨 바탕 --elevated·글자 --muted, 값 글자 --fg', () => {
