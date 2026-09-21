@@ -74,7 +74,7 @@ test('표는 지금 .tbl 모습 — 머리 바탕·글자, 줄 경계, 글자 �
   assert.equal(t.headerSortHoverBg, tok('elevated'));
   assert.equal(t.headerColor, tok('muted'));
   assert.equal(t.borderColor, tok('hairline'));
-  assert.equal(t.cellFontSizeSM, px('fs-sm'));
+  assert.equal(t.cellFontSizeSM, px('fs-pixel-sm')); // 표 본문도 갈무리 20px(2026-09-21 4c단계) — 더 이상 --fs-sm(14px) 이 아니다.
   assert.equal(t.rowHoverBg, 'rgba(255, 255, 255, .06)');
   assert.equal(t.bodySortBg, 'transparent');
   assert.equal(t.headerSplitColor, 'transparent');

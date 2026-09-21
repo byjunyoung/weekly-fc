@@ -469,11 +469,16 @@ details.year[open] > summary::before { content: "▾ "; }
 /* ══ antd 부품 위에 얹는 도트 톤(4b단계) ═══════════════════════
    antd 는 글꼴을 컴포넌트 토큰으로 안 정해 준다 — 크기는 theme.ts 가,
    글꼴은 여기가 정한다. 두 군데서 크기를 정하지 않는다. */
-.ant-btn, .ant-segmented-item-label, .ant-modal-title, .ant-descriptions-item-label, .ant-table-thead th {
+.ant-btn, .ant-segmented-item-label, .ant-modal-title, .ant-descriptions-item-label, .ant-table-thead th, .ant-table-tbody td {
   font-family: var(--font-pixel); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0;
 }
 /* 표 머리·요약 라벨은 antd 가 크기를 안 내려 주는 자리라 여기서 같이 정한다. */
-.ant-descriptions-item-label, .ant-table-thead th { font-size: var(--fs-pixel-sm); }
+.ant-descriptions-item-label, .ant-table-thead th, .ant-table-tbody td { font-size: var(--fs-pixel-sm); }
 /* antd 자체 .ant-descriptions .ant-descriptions-item-label 규칙(0,2,0)이 위 한 줄(0,1,0)을 이겨 16px 로 떨어진다 —
    Descriptions 뿌리가 .wfc 를 달고 나오므로 그걸 더해 특정도를 맞춰 올린다. */
 .wfc .ant-descriptions-item-label { font-size: var(--fs-pixel-sm); }
+
+/* 표 안의 「넣기/선발」 — .wfc 안이라 전역 button 규칙에서 제외돼 UA 기본 글꼴로 떨어진다. */
+.wfc .ant-table-tbody button:not(.ant-btn) {
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0;
+}

@@ -58,10 +58,13 @@ export const themeConfig: ThemeConfig = {
     Modal: { contentBg: '#181818', headerBg: '#181818', titleFontSize: 20, fontWeightStrong: 400, borderRadiusLG: 0 },
     // 지금 .tbl 규칙 — 머리 바탕 --elevated·글자 --muted, 줄 경계 --hairline, 14px, 줄 hover.
     // 정렬된 열에 바탕을 따로 깔지 않는다(.tbl th.sorted 는 글자색만 바꾼다).
-    // 모서리 0, 칸 좌우 여백 --s-md, 위아래는 14px 글자·줄높이(약 22px)에 13 씩 더해 줄 높이 --row-h(48px)에 맞춘다. 머리 글자 굵기는 tokens.css 의 .ant-table-thead th 가 --fw-body 로 이긴다(여긴 그와 맞춘 값).
+    // 모서리 0, 칸 좌우 여백 --s-md, 칸 위아래 여백은 13(cellPaddingBlockSM) — 표 본문이 갈무리 20px 로 바뀌면서(4c단계)
+    // 14px 시절의 "줄높이 약 22px + 13 씩 = --row-h(48px)" 계산은 더 이상 안 맞는다. 실측(스쿼드 표, 열이 좁아 포지션
+    // 칸의 뱃지+텍스트가 두 줄로 접히는 실제 행 기준) 줄 높이는 91px — --row-h 를 다시 맞추려는 값이 아니라 참고용 실측치다.
+    // 머리 글자 굵기는 tokens.css 의 .ant-table-thead th 가 --fw-body 로 이긴다(여긴 그와 맞춘 값).
     Table: {
       headerBg: '#121314', headerSortActiveBg: '#121314', headerSortHoverBg: '#121314', headerColor: 'rgba(229, 229, 229, .55)',
-      borderColor: 'rgba(229, 229, 229, .2)', headerSplitColor: 'transparent', cellFontSizeSM: 14,
+      borderColor: 'rgba(229, 229, 229, .2)', headerSplitColor: 'transparent', cellFontSizeSM: 20,
       rowHoverBg: 'rgba(255, 255, 255, .06)', bodySortBg: 'transparent',
       headerBorderRadius: 0, cellPaddingInlineSM: 16, cellPaddingBlockSM: 13, fontWeightStrong: 400,
     },
