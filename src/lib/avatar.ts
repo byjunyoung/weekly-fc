@@ -27,7 +27,7 @@ export const PARTS = {
     { id: 'f0', label: '동글', shape: 'circle' },
     { id: 'f1', label: '각짐', shape: 'square' },
     { id: 'f2', label: '육각', shape: 'hex' },
-    { id: 'f3', label: '다이아', shape: 'diamond' },
+    { id: 'f3', label: '넓적', shape: 'diamond' },
     { id: 'f4', label: '갸름', shape: 'pill' },
   ] as Shaped<'circle' | 'square' | 'hex' | 'diamond' | 'pill'>[],
   hair: [

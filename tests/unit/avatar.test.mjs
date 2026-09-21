@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAvatar, serializeAvatar, randomAvatar, avatarSpecFor, isUnsetAvatar, PARTS, UNSET_AVATAR } from '../../src/lib/avatar.ts';
-import { avatarSvg } from '../../src/components/avatar.ts';
+import { avatarSvg, avatarFaceSvg } from '../../src/components/avatar.ts';
 
 // 서버 검증 정규식(server/weeklyfc-apps-script.js isValidAvatarCode)을 그대로 복사한다 —
 // 클라이언트가 만드는 코드가 서버에서 거부되지 않는다는 계약을 이 테스트가 지킨다.
@@ -88,10 +88,10 @@ test('avatarSpecFor: 저장된 코드가 없으면 randomAvatar, 있으면 parse
   assert.deepEqual(avatarSpecFor(9, code), parseAvatar(code));
 });
 
-test('avatarSvg: 정상 스펙은 SVG 문자열을 요청한 크기로 낸다', () => {
-  const svg = avatarSvg(randomAvatar(9), 28);
+test('avatarSvg: size는 세로 길이이고 가로는 3:4로 따라온다', () => {
+  const svg = avatarSvg(randomAvatar(9), 32);
   assert.match(svg, /^<svg /);
-  assert.match(svg, /width="28" height="28"/);
+  assert.match(svg, /width="24" height="32"/);
 });
 
 test('avatarSvg: 미설정 스펙은 번호-원 폴백을 그린다', () => {
@@ -126,13 +126,39 @@ test('avatarSvg: 헤어 8종 전부(아프로 포함) 유효한 SVG를 낸다', 
   }
 });
 
-test('avatarSvg: 눈이 로컬 좌표(translate(4 5))에 배치된다 (회귀 — 이 transform이 빠지면 눈 위치가 틀어짐)', () => {
-  const svg = avatarSvg(randomAvatar(1), 32);
-  assert.match(svg, /translate\(4 5\)/);
+test('avatarFaceSvg: 얼굴 크롭은 정사각이고 머리 창만 본다', () => {
+  const svg = avatarFaceSvg(randomAvatar(9), 32);
+  assert.match(svg, /width="32" height="32"/);
+  assert.match(svg, /viewBox="4 0 16 16"/);
 });
 
-test('avatarSvg: 입 막대가 로컬 16단위 좌표(턱 부근)에 그려진다 (회귀 — 바깥 0~100 좌표로 되돌아가면 얼굴형과 안 맞음)', () => {
-  const svg = avatarSvg(randomAvatar(1), 32);
-  assert.match(svg, /<rect x="6\.5" y="10\.4" width="3" height="0\.6" rx="0\.3"/);
+test('avatarSvg: 같은 입력이면 항상 같은 문자열 (결정적 — dangerouslySetInnerHTML 계약)', () => {
+  const spec = randomAvatar(7);
+  assert.equal(avatarSvg(spec, 112), avatarSvg(spec, 112));
+  assert.equal(avatarFaceSvg(spec, 32), avatarFaceSvg(spec, 32));
+});
+
+test('avatarSvg: 좌표가 전부 정수다 (픽셀 격자가 깨지지 않는다)', () => {
+  const svg = avatarSvg(randomAvatar(3), 112);
+  for (const m of svg.matchAll(/(?:x|y|width|height)="([\d.]+)"/g)) {
+    assert.ok(!m[1].includes('.'), `소수 좌표가 있다: ${m[0]}`);
+  }
+});
+
+test('avatarSvg: 유니폼 색이 저장된 kit hex 그대로 칠해진다', () => {
+  const svg = avatarSvg({ face: 0, hair: 1, skin: 0, eyes: 0, kit: '#2980b9' }, 112);
+  assert.ok(svg.includes('fill="#2980b9"'), '유니폼 색이 안 들어갔다');
+});
+
+test('avatarSvg: 부품 조합 전수 — 5×8×3 전부 유효한 SVG를 낸다', () => {
+  for (let face = 0; face < PARTS.face.length; face++) {
+    for (let hair = 0; hair < PARTS.hair.length; hair++) {
+      for (let eyes = 0; eyes < PARTS.eyes.length; eyes++) {
+        const svg = avatarSvg({ face, hair, skin: 2, eyes, kit: '#2980b9' }, 112);
+        assert.match(svg, /^<svg /);
+        assert.match(svg, /<\/svg>$/);
+      }
+    }
+  }
 });
 
