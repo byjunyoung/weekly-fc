@@ -94,7 +94,7 @@ test('avatarSvg: size는 세로 길이이고 가로는 3:4로 따라온다', () 
   assert.match(svg, /width="24" height="32"/);
 });
 
-test('avatarSvg: 미설정 스펙은 번호-원 폴백을 그린다', () => {
+test('avatarSvg: 미설정 스펙은 번호만 든 칸으로 폴백한다', () => {
   const svg = avatarSvg(UNSET_AVATAR, 120, 9);
   assert.match(svg, /^<svg /);
   assert.match(svg, />9</);
@@ -157,6 +157,7 @@ test('avatarSvg: 부품 조합 전수 — 5×8×3 전부 유효한 SVG를 낸다
         const svg = avatarSvg({ face, hair, skin: 2, eyes, kit: '#2980b9' }, 112);
         assert.match(svg, /^<svg /);
         assert.match(svg, /<\/svg>$/);
+        assert.ok(!svg.includes('undefined'), `undefined 이 출력에 섞였다 (face=${face} hair=${hair} eyes=${eyes})`);
       }
     }
   }

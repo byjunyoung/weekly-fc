@@ -97,8 +97,8 @@
   --fs-pixel-sm: 20px; --fs-pixel-md: 30px; --fs-pixel-lg: 40px; --fs-pixel-xl: 60px;
 
   /* ── 옛 이름 별칭 ─────────────────────────────────────────
-     avatar.ts 는 토큰을 getComputedStyle 로 읽어 SVG 에
-     그리므로, 이름만 바꾸면 조용히 색이 빠진다. var() 참조 대신 같은 값을 그대로 둔다. */
+     avatar.ts 는 SVG 안에 var(--x, fallback) 형태로 이 토큰들을 직접 인라인하므로,
+     이름만 바꾸면 조용히 색이 빠진다. var() 참조 대신 같은 값을 그대로 둔다. */
   --bg: #000000; --bg-2: #121314; --surface: #181818; --tint: #1f2024;
   --line: rgba(229, 229, 229, .2); --line-hi: rgba(229, 229, 229, .38);
   --accent: #0070d1; --accent-ink: #ffffff;

@@ -60,11 +60,11 @@ const NECK = { 12: '..........SSSS..........' } as const;
 const FACE_LAYERS: Record<(typeof PARTS.face)[number]['shape'], Layer> = {
   circle: { ...HEAD_TOP, 6: '.......SSSSSSSSSS.......', 7: '.......SSSSSSSSSS.......', 8: '.......SSSSSSSSSS.......', 9: '.......SSSSSSSSSS.......', 10: '........SSSSSSSS........', 11: '.........SSSSSS.........', ...NECK },
   square: { ...HEAD_TOP, 6: '.......SSSSSSSSSS.......', 7: '.......SSSSSSSSSS.......', 8: '.......SSSSSSSSSS.......', 9: '.......SSSSSSSSSS.......', 10: '.......SSSSSSSSSS.......', 11: '.......SSSSSSSSSS.......', ...NECK },
-  hex: { ...HEAD_TOP, 6: '.......SSSSSSSSSS.......', 7: '.......SSSSSSSSSS.......', 8: '.......SSSSSSSSSS.......', 9: '........SSSSSSSS........', 10: '........SSSSSSSS........', 11: '.........SSSSSS.........', ...NECK },
+  hex: { ...HEAD_TOP, 6: '.......SSSSSSSSSS.......', 7: '.......SSSSSSSSSS.......', 8: '.......SSSSSSSSSS.......', 9: '........SSSSSSSS........', 10: '.........SSSSSS.........', 11: '..........SSSS..........', ...NECK },
   // diamond(옛 이름) = 광대가 넓고 턱이 좁은 얼굴
   diamond: { ...HEAD_TOP, 6: '......SSSSSSSSSSSS......', 7: '......SSSSSSSSSSSS......', 8: '......SSSSSSSSSSSS......', 9: '.......SSSSSSSSSS.......', 10: '........SSSSSSSS........', 11: '.........SSSSSS.........', ...NECK },
   // pill(옛 이름) = 갸름한 얼굴
-  pill: { ...HEAD_TOP, 6: '........SSSSSSSS........', 7: '........SSSSSSSS........', 8: '........SSSSSSSS........', 9: '........SSSSSSSS........', 10: '........SSSSSSSS........', 11: '........SSSSSSSS........', ...NECK },
+  pill: { ...HEAD_TOP, 6: '.......SSSSSSSSSS.......', 7: '........SSSSSSSS........', 8: '........SSSSSSSS........', 9: '........SSSSSSSS........', 10: '........SSSSSSSS........', 11: '........SSSSSSSS........', ...NECK },
 };
 
 // ── 헤어 8종 ─────────────────────────────────────────────────
@@ -76,7 +76,7 @@ const HAIR_LAYERS: Record<(typeof PARTS.hair)[number]['shape'], Layer> = {
   mohawk: { 0: '..........HHHH..........', 1: '..........HHHH..........', 2: '..........HHHH..........', 3: '..........HHHH..........', 4: '..........HHHH..........' },
   afro: { 0: '......HHHHHHHHHHHH......', 1: '.....HHHHHHHHHHHHHH.....', 2: '.....HHHHHHHHHHHHHH.....', 3: '.....HHHHHHHHHHHHHH.....', 4: '.....HH..........HH.....', 5: '.....HH..........HH.....', 6: '......H..........H......' },
   side: { 1: '.......HHHHHHHHHH.......', 2: '......HHHHHHHHHHHH......', 3: '......HHHHHHHH..HH......', 4: '......HHHHH......H......', 5: '......HH.........H......' },
-  curly: { 0: '.......H.HH.HH.H........', 1: '......HHHHHHHHHHHH......', 2: '......HHHHHHHHHHHH......', 3: '......HHHHHHHHHHHH......', 4: '......HH........HH......', 5: '.......H........H.......' },
+  curly: { 0: '.......H.HH..HH.H.......', 1: '......HHHHHHHHHHHH......', 2: '......HHHHHHHHHHHH......', 3: '......HHHHHHHHHHHH......', 4: '......HH........HH......', 5: '.......H........H.......' },
 };
 
 // ── 눈 3종 + 입(공통) ────────────────────────────────────────
@@ -90,8 +90,14 @@ const MOUTH: Layer = { 9: '...........MM...........' };
 /** #rrggbb 를 f 배 밝기로. 유니폼 그늘·입 색을 코드로 만들어 팔레트를 늘리지 않는다. */
 function shade(hex: string, f: number): string {
   const n = Number.parseInt(hex.slice(1), 16);
-  const part = (v: number) => Math.round(v * f).toString(16).padStart(2, '0');
+  const part = (v: number) => Math.min(255, Math.round(v * f)).toString(16).padStart(2, '0');
   return `#${part((n >> 16) & 255)}${part((n >> 8) & 255)}${part(n & 255)}`;
+}
+
+/** 0~1 근사 밝기 — 부품끼리 구분되는지만 보면 되므로 정확한 WCAG 공식은 쓰지 않는다. */
+function brightness(hex: string): number {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 }
 
 /** 레이어를 순서대로 겹쳐 24×32 문자맵으로. 뒤 레이어가 앞 레이어를 덮는다. */
@@ -140,10 +146,12 @@ function paletteOf(spec: AvatarSpec): Record<string, string> {
     S: skin.color,
     W: '#ffffff',
     E: eyes.color,
-    M: shade(skin.color, 0.45),
+    // 아주 어두운 피부에서는 입을 어둡게가 아니라 밝게 해야 보인다.
+    M: brightness(skin.color) < 0.3 ? shade(skin.color, 1.7) : shade(skin.color, 0.45),
     K: kit,
     D: shade(kit, 0.7),
-    P: '#e8e8e8',
+    // 거의 흰 유니폼을 고르면 흰 반바지와 한 덩어리가 되므로 반바지를 내린다.
+    P: brightness(kit) > 0.85 ? '#9aa0a8' : '#e8e8e8',
     O: kit,
     B: '#1a1a1a',
   };
