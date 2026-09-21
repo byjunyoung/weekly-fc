@@ -95,7 +95,8 @@
      도트를 쓰는 의미가 없어진다 — 그래서 본문용 --fs-* 사다리와 별도로 10의
      배수만 담은 세트를 둔다(2026-09-21 리프레시 스펙 §3). */
   --font-pixel: "Galmuri9", var(--font);
-  --fs-pixel-sm: 20px; --fs-pixel-md: 30px; --fs-pixel-lg: 40px; --fs-pixel-xl: 60px;
+  /* --fs-pixel-xs: 갈무리 원래 격자 크기(10px) — 20px가 안 들어가는 빠듯한 자리(벤치 칩·피치 카드 이름)에만 쓴다. */
+  --fs-pixel-xs: 10px; --fs-pixel-sm: 20px; --fs-pixel-md: 30px; --fs-pixel-lg: 40px; --fs-pixel-xl: 60px;
 
   /* ── 옛 이름 별칭 ─────────────────────────────────────────
      avatar.ts 는 SVG 안에 var(--x, fallback) 형태로 이 토큰들을 직접 인라인하므로,
@@ -172,7 +173,7 @@ body.wide .main { max-width: none; padding: var(--s-md); }
 .page-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
   gap: var(--s-md); margin-bottom: var(--s-xl); }
 .page-head .actions > .muted { font-size: var(--fs-sm); }
-.page-head h1 { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-display); line-height: 1.2; letter-spacing: 0; }
+.page-head h1 { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-display); font-synthesis: none; line-height: 1.2; letter-spacing: 0; }
 .page-head h1 .muted { font-family: var(--font); font-size: var(--fs-h-md); font-weight: var(--fw-body); }
 .page-head .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
 body.wide .page-head { margin-bottom: var(--s-md); }
@@ -378,11 +379,14 @@ a.card:hover { background: var(--charcoal); }
 .bd-row { display: flex; align-items: center; border-bottom: 1px solid var(--hairline); }
 .bd-row:last-child { border-bottom: 0; }
 .bd-row.is-on { background: rgba(255, 255, 255, .08); }
+/* 모바일 Drawer 안에서는 antd 제외 규칙(:not(.wfc, .wfc *))이 상속까지 벗겨 Arial로 떨어진다 —
+   이름은 도트를 유지하기로 했으므로(2026-09-21) 이 줄만 font-family를 직접 선언한다. */
 .bd-pick { flex: 1; display: grid; grid-template-columns: 2.8em minmax(0, 1fr) auto 3.4em; align-items: center; gap: var(--s-xs);
-  min-height: var(--row-h); padding: 0 var(--s-sm); border: 0; border-radius: 0; background: none; text-align: left; font-weight: var(--fw-body); }
-.bd-pick b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--fw-strong); }
+  min-height: var(--row-h); padding: 0 var(--s-sm); border: 0; border-radius: 0; background: none; text-align: left;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.bd-pick b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--fw-body); }
 .bd-row-ovr { font-weight: var(--fw-heavy); font-variant-numeric: tabular-nums; }
-.bd-on { justify-self: end; padding: 2px var(--s-xs); border-radius: var(--r-full); background: var(--fg); color: var(--canvas); font-size: var(--fs-xs); font-weight: var(--fw-heavy); }
+.bd-on { justify-self: end; padding: 2px var(--s-xs); border-radius: var(--r-full); background: var(--fg); color: var(--canvas); font-size: var(--fs-pixel-sm); font-weight: var(--fw-heavy); }
 .bd-row-link { display: flex; align-items: center; justify-content: center; width: 40px; min-height: var(--row-h); color: var(--muted); }
 .bd-row-link:hover { color: var(--fg); }
 .bd-cardcell { display: flex; flex-direction: column; gap: var(--s-xxs); }
@@ -405,12 +409,12 @@ a.card:hover { background: var(--charcoal); }
 .bd-card.pcard-gold, .bd-card.pcard-gold:hover { background: var(--metal-gold); }
 .bd-card.pcard-silver, .bd-card.pcard-silver:hover { background: var(--metal-silver); }
 .bd-card.pcard-bronze, .bd-card.pcard-bronze:hover { background: var(--metal-bronze); }
-.bd-empty { border: 1px dashed var(--hairline-strong); background: rgba(0, 0, 0, .25); color: var(--muted); font-size: var(--fs-xs); }
+.bd-empty { border: 1px dashed var(--hairline-strong); background: rgba(0, 0, 0, .25); color: var(--muted); font-size: var(--fs-pixel-sm); }
 .bd-slot.is-selected { outline: 3px solid var(--link); outline-offset: 2px; }
 .bd-slot.is-oop { box-shadow: 0 0 0 2px var(--cond-mid); }
 .bd-slot.is-dragging { z-index: 5; opacity: .85; }
-.bd-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-heavy); font-synthesis: none; line-height: 1; font-variant-numeric: tabular-nums; }
-.bd-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); font-weight: var(--fw-strong); line-height: 1.2; }
+.bd-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
+.bd-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-pixel-xs); font-weight: var(--fw-strong); line-height: 1.2; }
 .bd-pos { font-size: 10px; font-weight: var(--fw-strong); color: var(--ink-soft); }
 .bd-hint { margin: 0; font-size: var(--fs-xs); text-align: center; }
 .bd-share-row { display: flex; justify-content: center; }
@@ -429,12 +433,12 @@ a.card:hover { background: var(--charcoal); }
   .bd-strip-label { flex: 0 0 auto; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); white-space: nowrap; }
   .bd-strip-chips { display: flex; align-items: center; gap: var(--s-xs); flex: 1 1 auto; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .bd-chip { display: inline-flex; align-items: center; gap: var(--s-xxs); flex: 0 0 auto; min-height: 34px; padding: var(--s-xxs) var(--s-xs);
-    border: 1px solid var(--hairline); border-radius: var(--r-full); background: var(--card); color: var(--fg); font-size: var(--fs-xs); font-weight: var(--fw-strong); white-space: nowrap; }
+    border: 1px solid var(--hairline); border-radius: var(--r-full); background: var(--card); color: var(--fg); font-size: var(--fs-pixel-xs); font-weight: var(--fw-strong); white-space: nowrap; }
   .bd-chip b { overflow: hidden; text-overflow: ellipsis; max-width: 8em; font-weight: var(--fw-strong); }
   .bd-chip-ovr { color: var(--muted); font-variant-numeric: tabular-nums; }
   .bd-chip.is-on { opacity: .5; }
   .bd-chip-check { font-weight: var(--fw-heavy); }
-  .bd-strip-all { flex: 0 0 auto; min-height: 34px; padding: var(--s-xxs) var(--s-sm); font-size: var(--fs-xs); }
+  .bd-strip-all { flex: 0 0 auto; min-height: 34px; padding: var(--s-xxs) var(--s-sm); font-size: var(--fs-pixel-sm); }
 }
 
 /* ══ 기타 ══════════════════════════════════════════════════ */
@@ -470,3 +474,6 @@ details.year[open] > summary::before { content: "▾ "; }
 }
 /* 표 머리·요약 라벨은 antd 가 크기를 안 내려 주는 자리라 여기서 같이 정한다. */
 .ant-descriptions-item-label, .ant-table-thead th { font-size: var(--fs-pixel-sm); }
+/* antd 자체 .ant-descriptions .ant-descriptions-item-label 규칙(0,2,0)이 위 한 줄(0,1,0)을 이겨 16px 로 떨어진다 —
+   Descriptions 뿌리가 .wfc 를 달고 나오므로 그걸 더해 특정도를 맞춰 올린다. */
+.wfc .ant-descriptions-item-label { font-size: var(--fs-pixel-sm); }

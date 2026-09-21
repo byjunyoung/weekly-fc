@@ -44,12 +44,12 @@ export const themeConfig: ThemeConfig = {
     fontSize: 16,
   },
   components: {
-    // 지금 tokens.css 의 button 규칙(각진 모서리, 높이 40, 좌우 22, 20px·500)과 .topbar-act button(34, 좌우 16, 20px)을 옮긴다.
+    // 지금 tokens.css 의 button 규칙(각진 모서리, 높이 40, 좌우 22, 20px·400)과 .topbar-act button(34, 좌우 16, 20px)을 옮긴다.
     Button: {
       borderRadius: 0, borderRadiusSM: 0, borderRadiusLG: 0,
       controlHeight: 40, paddingInline: 22, contentFontSize: 20,
       controlHeightSM: 36, paddingInlineSM: 16, contentFontSizeSM: 20,
-      fontWeight: 500,
+      fontWeight: 400,
       defaultBg: 'transparent', defaultColor: '#ffffff', defaultBorderColor: 'rgba(229, 229, 229, .38)',
       defaultHoverBg: 'rgba(255, 255, 255, .1)', defaultHoverColor: '#ffffff', defaultHoverBorderColor: 'rgba(229, 229, 229, .38)',
       defaultShadow: 'none', primaryShadow: 'none', dangerShadow: 'none',
@@ -58,18 +58,18 @@ export const themeConfig: ThemeConfig = {
     Modal: { contentBg: '#181818', headerBg: '#181818', titleFontSize: 20, fontWeightStrong: 400, borderRadiusLG: 0 },
     // 지금 .tbl 규칙 — 머리 바탕 --elevated·글자 --muted, 줄 경계 --hairline, 14px, 줄 hover.
     // 정렬된 열에 바탕을 따로 깔지 않는다(.tbl th.sorted 는 글자색만 바꾼다).
-    // 모서리 0, 칸 좌우 여백 --s-md, 위아래는 14px 글자·줄높이(약 22px)에 13 씩 더해 줄 높이 --row-h(48px)에 맞춘다. 머리 글자 굵기 --fw-heavy.
+    // 모서리 0, 칸 좌우 여백 --s-md, 위아래는 14px 글자·줄높이(약 22px)에 13 씩 더해 줄 높이 --row-h(48px)에 맞춘다. 머리 글자 굵기는 tokens.css 의 .ant-table-thead th 가 --fw-body 로 이긴다(여긴 그와 맞춘 값).
     Table: {
       headerBg: '#121314', headerSortActiveBg: '#121314', headerSortHoverBg: '#121314', headerColor: 'rgba(229, 229, 229, .55)',
       borderColor: 'rgba(229, 229, 229, .2)', headerSplitColor: 'transparent', cellFontSizeSM: 14,
       rowHoverBg: 'rgba(255, 255, 255, .06)', bodySortBg: 'transparent',
-      headerBorderRadius: 0, cellPaddingInlineSM: 16, cellPaddingBlockSM: 13, fontWeightStrong: 600,
+      headerBorderRadius: 0, cellPaddingInlineSM: 16, cellPaddingBlockSM: 13, fontWeightStrong: 400,
     },
     // 봉사표 연도 고르기 — 지금 .chip / .chip.on(각진 모서리, 12px, 선택 = 흰 바탕·검정 글자, hover --charcoal).
     Segmented: {
       itemColor: 'rgba(255, 255, 255, .7)', itemHoverColor: '#ffffff', itemHoverBg: '#1f2024', itemActiveBg: '#1f2024',
       itemSelectedBg: '#ffffff', itemSelectedColor: '#000000', trackBg: '#121314',
-      borderRadius: 0, borderRadiusSM: 0, borderRadiusXS: 0, fontSize: 20,
+      borderRadius: 0, borderRadiusSM: 0, borderRadiusXS: 0, fontSize: 20, controlHeightSM: 28,
     },
     // 벌금·봉사 요약 — 지금 .card 모습(면 --card 는 Descriptions 바탕과 상관없이 antd 배경 기본값 그대로 두고,
     // 라벨·값 글자만 맞춘다). labelBg 는 bordered 모드의 라벨 칸 바탕.
