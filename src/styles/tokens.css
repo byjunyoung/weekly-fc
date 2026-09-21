@@ -69,7 +69,7 @@
   /* ── 치수 ─────────────────────────────────────────────────── */
   --header-h: 64px; --header-h-m: 102px; --hint-h: 0px;
   --max: 1280px; --prose-max: 680px; --pcard-w: 268px; --pitch-max: 400px;
-  --modal-xwide: 640px; --row-h: 48px; --ctrl-h: 48px; --strip-h: 76px;
+  --modal-xwide: 640px; --row-h: 48px; --ctrl-h: 48px; --bd-list-w: 360px;
   --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
 
   /* ── 글자 (DESIGN.md typography) ─────────────────────────── */
@@ -95,7 +95,7 @@
      도트를 쓰는 의미가 없어진다 — 그래서 본문용 --fs-* 사다리와 별도로 10의
      배수만 담은 세트를 둔다(2026-09-21 리프레시 스펙 §3). */
   --font-pixel: "Galmuri9", var(--font);
-  /* --fs-pixel-xs: 갈무리 원래 격자 크기(10px) — 20px가 안 들어가는 빠듯한 자리(벤치 칩·피치 카드 이름)에만 쓴다. */
+  /* --fs-pixel-xs: 갈무리 원래 격자 크기(10px) — 20px가 안 들어가는 빠듯한 자리(피치 카드 이름)에만 쓴다. */
   --fs-pixel-xs: 10px; --fs-pixel-sm: 20px; --fs-pixel-md: 30px; --fs-pixel-lg: 40px; --fs-pixel-xl: 60px;
 
   /* ── 옛 이름 별칭 ─────────────────────────────────────────
@@ -370,34 +370,19 @@ a.card:hover { background: var(--charcoal); }
 /* ══ 스쿼드 한 화면(명단 + 피치) ═══════════════════════════ */
 .bd-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-sm) var(--s-md); margin-bottom: var(--s-lg); }
 .bd-field { display: inline-flex; align-items: center; gap: var(--s-xs); }
-/* 라인업(/lineup/) 은 명단이 같은 화면에 없다 — 모든 폭에서 벤치 줄 + Drawer 로 고른다
-   (2026-09-22 명단/라인업 분리, 옛 모바일 전용 레이아웃을 그대로 기본값으로 승격). */
-.bd { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-md); align-items: start; padding-bottom: calc(var(--strip-h) + var(--s-sm)); }
-.bd-list { display: flex; flex-direction: column; gap: var(--s-sm); min-width: 0; }
+/* 라인업(/lineup/) 은 피치와 명단을 좌우로 나란히 둔다 — 자리를 누르고 바로 옆에서 선수를 고른다
+   (2026-09-22 하단 벤치 줄 + Drawer 를 걷어냈다). 좁은 폭에서는 아래로 쌓인다. */
+.bd { display: grid; grid-template-columns: minmax(0, 1fr) var(--bd-list-w); gap: var(--s-lg); align-items: start; }
+.bd-list { display: flex; flex-direction: column; gap: var(--s-sm); min-width: 0;
+  position: sticky; top: calc(var(--header-h) + var(--s-md)); }
+.bd-list-title { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
 .bd-list-head { display: flex; flex-wrap: wrap; gap: var(--s-xs); align-items: center; }
-.bd-sheet-handle { display: flex; justify-content: center; width: 100%; min-height: 56px; border: 0; border-radius: 0; background: none; font-size: var(--fs-sm); }
-/* 벤치 줄 — 시트가 닫혀 있을 때 화면 아래 고정, 누르면 onPick 으로 같은 규칙을 탄다. 시트가 열리면(z-index 위) 이 줄을 덮는다. */
-.bd-strip { display: flex; align-items: center; gap: var(--s-sm); position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  min-height: var(--strip-h); padding: 0 var(--s-md); background: var(--elevated); border-top: 1px solid var(--hairline); }
-.bd-strip-label { flex: 0 0 auto; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); white-space: nowrap; }
-.bd-strip-chips { display: flex; align-items: center; gap: var(--s-xs); flex: 1 1 auto; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.bd-chip { display: inline-flex; align-items: center; gap: var(--s-xxs); flex: 0 0 auto; min-height: 34px; padding: var(--s-xxs) var(--s-xs);
-  border: 1px solid var(--hairline); border-radius: var(--r-full); background: var(--card); color: var(--fg); font-size: var(--fs-pixel-xs); font-weight: var(--fw-strong); white-space: nowrap; }
-.bd-chip b { overflow: hidden; text-overflow: ellipsis; max-width: 8em; font-weight: var(--fw-strong); }
-.bd-chip-ovr { color: var(--muted); font-variant-numeric: tabular-nums; }
-.bd-chip.is-on { opacity: .5; }
-.bd-chip-check { font-weight: var(--fw-heavy); }
-.bd-strip-all { flex: 0 0 auto; min-height: 34px; padding: var(--s-xxs) var(--s-sm); font-size: var(--fs-pixel-sm); }
 #list-body { max-height: calc(100dvh - var(--header-h) - 220px); overflow-y: auto; }
-/* Drawer 안(라인업 페이지)에서는 Drawer 자신의 body 가 이미 overflowY:auto 라 여기 또 스크롤을 주면
-   스크롤바가 두 겹이 된다 — /squad/ 의 인라인 목록(위 규칙)에는 손대지 않고 Drawer 안만 없앤다. */
-.bd-list #list-body { max-height: none; }
-.bd-list .pcard-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-md) var(--s-xs); }
 .bd-rows { display: flex; flex-direction: column; background: var(--card); border-radius: var(--r-md); }
 .bd-row { display: flex; align-items: center; border-bottom: 1px solid var(--hairline); }
 .bd-row:last-child { border-bottom: 0; }
 .bd-row.is-on { background: rgba(255, 255, 255, .08); }
-/* 모바일 Drawer 안에서는 antd 제외 규칙(:not(.wfc, .wfc *))이 상속까지 벗겨 Arial로 떨어진다 —
+/* .wfc 안이라 전역 button 규칙(:where(:not(.wfc, .wfc *)))이 안 걸려 UA 기본 글꼴로 떨어진다 —
    이름은 도트를 유지하기로 했으므로(2026-09-21) 이 줄만 font-family를 직접 선언한다. */
 .bd-pick { flex: 1; display: grid; grid-template-columns: 2.8em minmax(0, 1fr) auto 3.4em; align-items: center; gap: var(--s-xs);
   min-height: var(--row-h); padding: 0 var(--s-sm); border: 0; border-radius: 0; background: none; text-align: left;
@@ -442,6 +427,9 @@ a.card:hover { background: var(--charcoal); }
 .bd-share-img { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r-md); background: var(--charcoal); }
 @media (max-width: 899px) {
   .bd-slot { width: 62px; min-height: 50px; }
+  /* 좌우로 세울 폭이 안 나온다 — 피치 아래 명단이 오고, 붙잡아 둘 옆 칸이 없으니 sticky 도 푼다. */
+  .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); }
+  .bd-list { position: static; }
 }
 
 /* ══ 기타 ══════════════════════════════════════════════════ */

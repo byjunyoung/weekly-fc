@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadView, saveView, byOvr, nextFreeNum } from '../../src/react/squad/model.ts';
+import { ALL_VIEWS, loadView, saveView, byOvr, nextFreeNum } from '../../src/react/squad/model.ts';
 
 const P = (num, name, over = {}) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '', ...over });
 
@@ -16,7 +16,7 @@ test('loadView: 저장된 값이 없으면 list', () => {
   store.clear();
   assert.equal(loadView(), 'list');
 });
-test('loadView: card·table 만 유효, 그 외 값은 list로 되돌아옴', () => {
+test('loadView: 기본 allowed 안의 값만 유효, 그 외 값은 allowed[0]', () => {
   store.set('wfc.squad.view', 'card');
   assert.equal(loadView(), 'card');
   store.set('wfc.squad.view', 'table');
@@ -27,6 +27,18 @@ test('loadView: card·table 만 유효, 그 외 값은 list로 되돌아옴', ()
 test('saveView → loadView 왕복', () => {
   saveView('table');
   assert.equal(loadView(), 'table');
+});
+// 화면마다 고를 수 있는 보기가 다르다 — /squad/ 는 표·카드, /lineup/ 은 목록 하나.
+// 저장값이 그 화면에 없는 보기면 첫 번째로 떨어져야 빈 화면이 안 나온다.
+test('loadView: allowed 밖의 저장값은 allowed 의 첫 번째로', () => {
+  saveView('list');
+  assert.equal(loadView(['table', 'card']), 'table');
+  assert.equal(loadView(['card', 'table']), 'card');
+  saveView('card');
+  assert.equal(loadView(['table', 'card']), 'card');
+});
+test('ALL_VIEWS 는 목록·카드·표 셋', () => {
+  assert.deepEqual(ALL_VIEWS, ['list', 'card', 'table']);
 });
 test('byOvr: OVR 내림차순, 같으면 번호 오름차순', () => {
   const rows = [P(9, '가', { pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70 }), P(3, '나', { pace: 90, dribble: 90, pass: 90, shoot: 90, defend: 90, stamina: 90 }), P(1, '다', { pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70 })];
