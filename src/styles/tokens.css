@@ -135,7 +135,7 @@ h2 { font-size: var(--fs-h-md); font-weight: var(--fw-heavy); line-height: 1.2; 
 button:where(:not(.wfc, .wfc *)), .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-xs);
   min-height: 40px; padding: 10px 22px; border: 1px solid var(--hairline-strong); border-radius: var(--r-full);
-  background: transparent; color: var(--fg); font-size: var(--fs-sm); font-weight: var(--fw-strong);
+  background: transparent; color: var(--fg); font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0;
   cursor: pointer; transition: background var(--dur-micro) var(--ease-std), border-color var(--dur-micro) var(--ease-std), color var(--dur-micro) var(--ease-std);
 }
 button:where(:not(.wfc, .wfc *)):hover { background: rgba(255, 255, 255, .1); }
@@ -155,12 +155,12 @@ a.inline:hover { text-decoration: underline; }
 /* ══ 셸 ════════════════════════════════════════════════════ */
 .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--s-lg);
   height: var(--header-h); padding: 0 var(--s-xl); background: var(--canvas); border-bottom: 1px solid var(--hairline); }
-.mark { font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); letter-spacing: .01em; white-space: nowrap; }
+.mark { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; white-space: nowrap; }
 .mark b { font-weight: var(--fw-heavy); color: var(--muted); }
 .topnav { display: flex; align-items: center; gap: var(--s-xs); flex: 1; overflow-x: auto; scrollbar-width: none; }
 .topnav::-webkit-scrollbar { display: none; }
 .topnav a { padding: var(--s-xs) var(--s-md); border-radius: var(--r-full); color: var(--muted);
-  font-size: var(--fs-sm); font-weight: var(--fw-strong); white-space: nowrap;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; white-space: nowrap;
   transition: color var(--dur-micro) var(--ease-std), background var(--dur-micro) var(--ease-std); }
 .topnav a:hover { color: var(--fg); background: rgba(255, 255, 255, .08); }
 .topnav a.active { color: var(--fg); background: rgba(255, 255, 255, .14); }
@@ -245,7 +245,8 @@ a.card:hover { background: var(--charcoal); }
 /* 정본 filter-pill: 알약, padding 8/16 */
 .chip { display: inline-flex; align-items: center; gap: var(--s-xs); min-height: 34px; padding: var(--s-xs) var(--s-md);
   border: 1px solid var(--hairline); border-radius: var(--r-full); background: var(--elevated);
-  color: var(--body); font-size: var(--fs-xs); font-weight: var(--fw-strong); cursor: pointer; }
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0;
+  color: var(--body); cursor: pointer; }
 .chip:hover { background: var(--charcoal); color: var(--fg); }
 .chip.on { background: var(--fg); border-color: var(--fg); color: var(--canvas); }
 .w-search { width: 150px; } .w-sort { width: 124px; }
@@ -462,3 +463,10 @@ details.year[open] > summary::before { content: "▾ "; }
 
 /* 선수 편집 모달 — 삭제(위험)를 저장·취소와 반대쪽 끝으로 띄운다. antd 기본 footer 는 text-align:end 라 flex 스페이서가 안 먹는다. */
 .ant-modal-footer.modal-foot-split { display: flex; align-items: center; }
+
+/* ══ antd 부품 위에 얹는 도트 톤(4b단계) ═══════════════════════
+   antd 는 글꼴을 컴포넌트 토큰으로 안 정해 준다 — 크기는 theme.ts 가,
+   글꼴은 여기가 정한다. 두 군데서 크기를 정하지 않는다. */
+.ant-btn, .ant-segmented-item-label {
+  font-family: var(--font-pixel); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0;
+}

@@ -47,8 +47,8 @@ export const themeConfig: ThemeConfig = {
     // 지금 tokens.css 의 button 규칙(각진 모서리, 높이 40, 좌우 22, 14px·500)과 .topbar-act button(34, 좌우 16, 12px)을 옮긴다.
     Button: {
       borderRadius: 0, borderRadiusSM: 0, borderRadiusLG: 0,
-      controlHeight: 40, paddingInline: 22, contentFontSize: 14,
-      controlHeightSM: 34, paddingInlineSM: 16, contentFontSizeSM: 12,
+      controlHeight: 40, paddingInline: 22, contentFontSize: 20,
+      controlHeightSM: 36, paddingInlineSM: 16, contentFontSizeSM: 20,
       fontWeight: 500,
       defaultBg: 'transparent', defaultColor: '#ffffff', defaultBorderColor: 'rgba(229, 229, 229, .38)',
       defaultHoverBg: 'rgba(255, 255, 255, .1)', defaultHoverColor: '#ffffff', defaultHoverBorderColor: 'rgba(229, 229, 229, .38)',
@@ -69,7 +69,7 @@ export const themeConfig: ThemeConfig = {
     Segmented: {
       itemColor: 'rgba(255, 255, 255, .7)', itemHoverColor: '#ffffff', itemHoverBg: '#1f2024', itemActiveBg: '#1f2024',
       itemSelectedBg: '#ffffff', itemSelectedColor: '#000000', trackBg: '#121314',
-      borderRadius: 0, borderRadiusSM: 0, borderRadiusXS: 0, fontSize: 12,
+      borderRadius: 0, borderRadiusSM: 0, borderRadiusXS: 0, fontSize: 20,
     },
     // 벌금·봉사 요약 — 지금 .card 모습(면 --card 는 Descriptions 바탕과 상관없이 antd 배경 기본값 그대로 두고,
     // 라벨·값 글자만 맞춘다). labelBg 는 bordered 모드의 라벨 칸 바탕.
