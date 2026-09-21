@@ -35,8 +35,10 @@ const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '
      행간은 klreq 7.4.1 의 비례 줄간격 예시 160%. w3.org/TR/WCAG22 · w3.org/TR/klreq */
   .prose section { max-width: var(--prose-max); }
   .prose p, .prose li { line-height: 1.6; }
-  .prose h2 { font-size: var(--fs-sm); letter-spacing: .06em; text-transform: uppercase; margin: 0 0 var(--m-md); }
-  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: var(--h-accent); background: var(--accent); margin-top: var(--m-sm); }
+  /* 소제목만 갈무리 — 본문(p·li)은 긴 한글이라 그대로 둔다(스펙 §3 폰트 절).
+     letter-spacing 은 반드시 0: 비트맵 폰트는 자간이 붙으면 픽셀 격자에서 밀려 흐려진다. */
+  .prose h2 { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; margin: 0 0 var(--m-md); }
+  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: 4px; background: var(--accent); margin-top: var(--m-sm); }
   .prose ul, .prose ol { padding-left: 1.2em; margin: 0; }
   .prose li { margin-bottom: var(--m-xs); }
   .prose p { margin: 0 0 var(--m-md); }
