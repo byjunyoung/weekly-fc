@@ -4,7 +4,7 @@ import { fineSummary, ovr } from '../../lib/stats.ts';
 import { monthLabel } from '../../lib/html.ts';
 import type { Data } from '../../lib/types.ts';
 
-export type MeTile = { kind: 'picked'; ovr: number; name: string; pos: string; num: number } | { kind: 'empty' };
+export type MeTile = { kind: 'picked'; ovr: number; name: string; pos: string; num: number; avatar: string } | { kind: 'empty' };
 export type DutyTile = { p1: string; p2: string; monthLabel: string; sub: string };
 export type HomeSummary = {
   meTile: MeTile; squadCount: number; posSummary: string;
@@ -22,7 +22,7 @@ export function computeHomeSummary(data: Data, me: number | null, now: Date): Ho
   const dutyNextRow = rotationFor(data.players, data.rotation, nm.y, nm.mo, now);
   const fs = fineSummary(data.fines);
   const p = data.players.find((x) => x.num === me);
-  const meTile: MeTile = p ? { kind: 'picked', ovr: ovr(p), name: p.name, pos: p.pos || '–', num: p.num } : { kind: 'empty' };
+  const meTile: MeTile = p ? { kind: 'picked', ovr: ovr(p), name: p.name, pos: p.pos || '–', num: p.num, avatar: p.avatar } : { kind: 'empty' };
   const posSummary = (['GK', 'DF', 'MF', 'FW'] as const).map((k) => `${k} ${data.players.filter((x) => x.pos === k).length}`).join(' · ');
   return {
     meTile, squadCount: data.players.length, posSummary,

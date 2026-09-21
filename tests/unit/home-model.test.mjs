@@ -19,7 +19,14 @@ test('nextMonthOf: 12월 다음은 다음 해 1월', () => {
 
 test('computeHomeSummary: 이름을 골랐으면 meTile 이 picked, OVR·포지션 포함', () => {
   const s = computeHomeSummary(data, 9, now);
-  assert.deepEqual(s.meTile, { kind: 'picked', ovr: 73, name: '박지훈', pos: 'FW', num: 9 }); // (85+80+88+70+40+75)/6 = 73
+  assert.deepEqual(s.meTile, { kind: 'picked', ovr: 73, name: '박지훈', pos: 'FW', num: 9, avatar: '' }); // (85+80+88+70+40+75)/6 = 73
+});
+test('computeHomeSummary: 저장된 아바타 코드가 meTile 로 그대로 넘어온다 (히어로가 실제 선수 그림을 그리려면 필요)', () => {
+  const code = 'f2:h5:s3:e1:k#2980b9';
+  const withAvatar = { ...data, players: players.map((p) => (p.num === 9 ? { ...p, avatar: code } : p)) };
+  const s = computeHomeSummary(withAvatar, 9, now);
+  assert.equal(s.meTile.kind, 'picked');
+  assert.equal(s.meTile.avatar, code);
 });
 test('computeHomeSummary: 이름 안 골랐으면 meTile 이 empty', () => {
   assert.deepEqual(computeHomeSummary(data, null, now).meTile, { kind: 'empty' });
