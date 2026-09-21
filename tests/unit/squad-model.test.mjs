@@ -16,7 +16,7 @@ test('loadView: 저장된 값이 없으면 list', () => {
   store.clear();
   assert.equal(loadView(), 'list');
 });
-test('loadView: card·table 만 유효, 그 외 값은 list로 되돌아옴', () => {
+test('loadView: 기본 allowed 안의 값만 유효, 그 외 값은 allowed[0]', () => {
   store.set('wfc.squad.view', 'card');
   assert.equal(loadView(), 'card');
   store.set('wfc.squad.view', 'table');

@@ -95,7 +95,7 @@
      도트를 쓰는 의미가 없어진다 — 그래서 본문용 --fs-* 사다리와 별도로 10의
      배수만 담은 세트를 둔다(2026-09-21 리프레시 스펙 §3). */
   --font-pixel: "Galmuri9", var(--font);
-  /* --fs-pixel-xs: 갈무리 원래 격자 크기(10px) — 20px가 안 들어가는 빠듯한 자리(벤치 칩·피치 카드 이름)에만 쓴다. */
+  /* --fs-pixel-xs: 갈무리 원래 격자 크기(10px) — 20px가 안 들어가는 빠듯한 자리(피치 카드 이름)에만 쓴다. */
   --fs-pixel-xs: 10px; --fs-pixel-sm: 20px; --fs-pixel-md: 30px; --fs-pixel-lg: 40px; --fs-pixel-xl: 60px;
 
   /* ── 옛 이름 별칭 ─────────────────────────────────────────
@@ -375,7 +375,7 @@ a.card:hover { background: var(--charcoal); }
 .bd { display: grid; grid-template-columns: minmax(0, 1fr) var(--bd-list-w); gap: var(--s-lg); align-items: start; }
 .bd-list { display: flex; flex-direction: column; gap: var(--s-sm); min-width: 0;
   position: sticky; top: calc(var(--header-h) + var(--s-md)); }
-.bd-list-title { margin: 0; font-size: var(--fs-xs); color: var(--muted); }
+.bd-list-title { margin: 0; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
 .bd-list-head { display: flex; flex-wrap: wrap; gap: var(--s-xs); align-items: center; }
 #list-body { max-height: calc(100dvh - var(--header-h) - 220px); overflow-y: auto; }
 .bd-rows { display: flex; flex-direction: column; background: var(--card); border-radius: var(--r-md); }

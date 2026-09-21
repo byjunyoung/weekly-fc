@@ -81,8 +81,8 @@ function Lineup() {
           <div className="bd-share-row"><Button type="primary" onClick={() => setShareOpen(true)}>이미지 공유</Button></div>
           <p className="muted bd-hint">{hint}</p>
         </section>
-        <aside className="bd-list" aria-label="명단">
-          <p className="bd-list-title">명단 {data.players.length}명 · 선발 {filled}/{st.count}</p>
+        <aside className="bd-list" aria-labelledby="bd-list-title">
+          <h2 className="bd-list-title" id="bd-list-title">명단 {data.players.length}명 · 선발 {filled}/{st.count}</h2>
           <RosterList view="list" onViewChange={() => {}} views={LINEUP_VIEWS} pos={pos} onPosChange={setPos}
             q={q} onQChange={setQ} rows={rows} st={st} onPick={onPick} />
         </aside>

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initial, setCount, setShape, place, tapPlayer, swap, moveSlot, autoFill, benchOf, stripOrder, positionOf, restore, serialize, defaultTitle } from '../../src/lib/lineup.ts';
+import { initial, setCount, setShape, place, tapPlayer, swap, moveSlot, autoFill, positionOf, restore, serialize, defaultTitle } from '../../src/lib/lineup.ts';
 import { slotsFor } from '../../src/lib/formation.ts';
 
 const P = (num, pos, s = 70) => ({ num, name: `p${num}`, pos, detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '' });
@@ -78,38 +78,11 @@ test('moveSlot: 0~1로 자르고 positionOf가 옮긴 위치를, 안 옮긴 자�
   assert.deepEqual(positionOf(s, 1), [slot.x, slot.y]);
 });
 
-test('autoFill: 자리 무리에 맞는 OVR 높은 사람부터, 벤치는 OVR 높은 순', () => {
+test('autoFill: 자리 무리에 맞는 OVR 높은 사람부터, 남는 사람은 슬롯 밖에', () => {
   const ps = [P(1, 'MF', 90), P(2, 'GK', 60), P(3, 'DF', 80), P(4, 'FW', 85), P(5, 'DF', 70), P(6, 'MF', 50), P(7, 'MF', 75)];
   const s = autoFill(initial(5), ps); // 1-2-1: GK · CB · CM · CM · ST
   assert.deepEqual(s.slots, [2, 3, 1, 7, 4]);
-  assert.deepEqual(benchOf(s, ps).map((p) => p.num), [5, 6]);
-});
-
-test('stripOrder: 벤치는 OVR 순으로 먼저, 선발은 슬롯 순서로 이어진다', () => {
-  const ps = [P(1, 'GK', 60), P(2, 'DF', 80), P(3, 'MF', 90), P(4, 'FW', 65), P(5, 'MF', 75), P(6, 'DF', 95)];
-  const s = place(place(initial(5), 0, 1), 1, 6); // 1-2-1: GK·CB·CM·CM·ST — GK=1, CB=6
-  const items = stripOrder(s, ps);
-  assert.deepEqual(items.map((i) => i.player.num), [3, 2, 5, 4, 1, 6]);
-});
-
-test('stripOrder: starter 값은 슬롯에 있는지를 그대로 따른다', () => {
-  const ps = [P(1, 'GK', 60), P(2, 'DF', 80)];
-  const s = place(initial(5), 0, 1);
-  const items = stripOrder(s, ps);
-  assert.deepEqual(items.map((i) => i.player.num), [2, 1]);
-  assert.deepEqual(items.map((i) => i.starter), [false, true]);
-});
-
-test('stripOrder: 명단에 없는 번호가 슬롯에 있으면 건너뛴다', () => {
-  const ps = [P(1, 'GK', 60)];
-  const s = place(initial(5), 1, 99); // 슬롯 1(CB)에 명단에 없는 99
-  const items = stripOrder(s, ps);
-  assert.deepEqual(items.map((i) => i.player.num), [1]);
-  assert.deepEqual(items.map((i) => i.starter), [false]);
-});
-
-test('stripOrder: 명단이 비어 있으면 빈 배열', () => {
-  assert.deepEqual(stripOrder(initial(5), []), []);
+  assert.deepEqual(ps.filter((p) => !s.slots.includes(p.num)).map((p) => p.num), [5, 6]);
 });
 
 test('restore: serialize 왕복은 같은 상태', () => {
