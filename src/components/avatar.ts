@@ -59,7 +59,7 @@ const DB_HAIR: Record<HairKey, DBPart[]> = {
   ],
   // short18 — 스포츠: 각진 플랫탑(높은 각).
   buzz: [
-    { d: 'M2 3h2v3H2zm10 3h2v3h-2z' },
+    { d: 'M2 3h2v3H2zm10 0h2v3h-2z' },
     { d: 'M12 3h2v3h-2z' },
   ],
   // long01 — 장발: 옆으로 어깨까지 내려오는 단발.
@@ -112,7 +112,7 @@ function dbPath(parts: DBPart[], fill: string): string {
 
 // 아프로만 예외 — DiceBear 세트엔 두상 자체를 덮는 둥근 볼륨(afro) 실루엣이 없어
 // (해당 세트는 플랫탑·모히칸·단발 계열뿐) 손그림을 그대로 유지한다(로컬 16단위 좌표로 이식).
-const AFRO = (fill: string): string => `<circle cx="8" cy="5" r="7" fill="${fill}"/>`;
+const AFRO = (fill: string): string => `<circle cx="8" cy="7" r="9" fill="${fill}"/>`;
 
 // 아프로만 얼굴형보다 먼저(뒤에) 그려 얼굴이 중앙을 덮게 한다 — 나머지는 DiceBear
 // 원본처럼 얼굴 위(앞)에 그린다(빌려온 path 자체가 그 순서로 디자인돼 있음).
@@ -143,7 +143,11 @@ function fallbackCircle(size: number, label: string | number | undefined, bare =
 
 /**
  * spec을 인라인 SVG 문자열로. size는 렌더 크기(px 단위, 표 칩 32 / 카드 초상 112 /
- * 편집 모달 미리보기 128 / 모바일 카드벽 64 — 전부 16의 배수, 스펙 §3 근거).
+ * 편집 모달 미리보기 128 / 모바일 카드벽 64). [2026-09-21 정정] "16의 배수라 안
+ * 흐려짐"은 스펙 §3/§8 원안의 잘못된 근거였다 — `shape-rendering="crispEdges"`가
+ * 앤티앨리어싱 자체를 막아 주므로 16이든 25든 정확한 배수일 필요가 없다(로컬 좌표는
+ * `scale(4)`라 정수배가 되려면 사실 25의 배수여야 하고, 32/64/112/128은 그것도 아니다
+ * — 다만 crispEdges 덕에 실무상 무관). 렌더 크기 값 자체는 바꾸지 않았다.
  * fallbackLabel은 spec이 미설정일 때만 쓰는 번호(선택) — randomAvatar로 시드를
  * 채우는 정상 경로에서는 이 분기를 타지 않는다.
  */
@@ -163,12 +167,14 @@ export function avatarSvg(spec: AvatarSpec, size: number, fallbackLabel?: string
     faceShape(face.shape, skin.color),
     behind ? '' : hairSvg,
     eyesShape(eyes.shape, eyes.color),
+    // 입 막대 — 로컬 16단위 좌표(얼굴형 5종의 턱 부근에 동시에 맞도록 계산됨).
+    // 예전엔 이 자리가 바깥(0~100) 좌표계에 있어서 로컬 좌표 얼굴형과 안 맞았다(최종 리뷰 지적).
+    `<rect x="6.5" y="10.4" width="3" height="0.6" rx="0.3" fill="${MUTED}"/>`,
   ].join('');
   const inner = [
     bare ? '' : `<rect x="2" y="2" width="96" height="96" rx="16" fill="${TINT}"/>`,
     `<path d="M10 100 L28 62 Q50 50 72 62 L90 100 Z" fill="${kit}"/>`,
     `<g transform="translate(18 8) scale(4)">${head}</g>`,
-    `<rect x="40" y="60" width="20" height="3" rx="1.5" fill="${MUTED}"/>`,
   ].join('');
   return chip(nextUid(), size, inner, bare);
 }

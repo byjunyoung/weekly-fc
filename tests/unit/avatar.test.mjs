@@ -126,3 +126,13 @@ test('avatarSvg: 헤어 8종 전부(아프로 포함) 유효한 SVG를 낸다', 
   }
 });
 
+test('avatarSvg: 눈이 로컬 좌표(translate(4 5))에 배치된다 (회귀 — 이 transform이 빠지면 눈 위치가 틀어짐)', () => {
+  const svg = avatarSvg(randomAvatar(1), 32);
+  assert.match(svg, /translate\(4 5\)/);
+});
+
+test('avatarSvg: 입 막대가 로컬 16단위 좌표(턱 부근)에 그려진다 (회귀 — 바깥 0~100 좌표로 되돌아가면 얼굴형과 안 맞음)', () => {
+  const svg = avatarSvg(randomAvatar(1), 32);
+  assert.match(svg, /<rect x="6\.5" y="10\.4" width="3" height="0\.6" rx="0\.3"/);
+});
+
