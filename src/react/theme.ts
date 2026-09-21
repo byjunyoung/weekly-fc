@@ -44,7 +44,7 @@ export const themeConfig: ThemeConfig = {
     fontSize: 16,
   },
   components: {
-    // 지금 tokens.css 의 button 규칙(각진 모서리, 높이 40, 좌우 22, 14px·500)과 .topbar-act button(34, 좌우 16, 12px)을 옮긴다.
+    // 지금 tokens.css 의 button 규칙(각진 모서리, 높이 40, 좌우 22, 20px·500)과 .topbar-act button(34, 좌우 16, 20px)을 옮긴다.
     Button: {
       borderRadius: 0, borderRadiusSM: 0, borderRadiusLG: 0,
       controlHeight: 40, paddingInline: 22, contentFontSize: 20,
@@ -55,7 +55,7 @@ export const themeConfig: ThemeConfig = {
       defaultShadow: 'none', primaryShadow: 'none', dangerShadow: 'none',
     },
     // 지금 wa-dialog::part(...) 규칙 — 카드 면, 모서리 0, 제목 22·굵기 400.
-    Modal: { contentBg: '#181818', headerBg: '#181818', titleFontSize: 22, fontWeightStrong: 400, borderRadiusLG: 0 },
+    Modal: { contentBg: '#181818', headerBg: '#181818', titleFontSize: 20, fontWeightStrong: 400, borderRadiusLG: 0 },
     // 지금 .tbl 규칙 — 머리 바탕 --elevated·글자 --muted, 줄 경계 --hairline, 14px, 줄 hover.
     // 정렬된 열에 바탕을 따로 깔지 않는다(.tbl th.sorted 는 글자색만 바꾼다).
     // 모서리 0, 칸 좌우 여백 --s-md, 위아래는 14px 글자·줄높이(약 22px)에 13 씩 더해 줄 높이 --row-h(48px)에 맞춘다. 머리 글자 굵기 --fw-heavy.

@@ -125,7 +125,7 @@ h1 { font-size: var(--fs-h-xl); font-weight: var(--fw-display); line-height: 1.2
 .modal h2, .pcard-stat-val { font-variant-numeric: tabular-nums; }
 h2 { font-size: var(--fs-h-md); font-weight: var(--fw-heavy); line-height: 1.2; }
 .muted { color: var(--muted); }
-.label { display: block; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); letter-spacing: .02em; }
+.label { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--muted); }
 .label-gap { margin-bottom: var(--s-xs); }
 .h2-tight { margin-bottom: var(--s-xs); }
 
@@ -156,7 +156,7 @@ a.inline:hover { text-decoration: underline; }
 .topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--s-lg);
   height: var(--header-h); padding: 0 var(--s-xl); background: var(--canvas); border-bottom: 1px solid var(--hairline); }
 .mark { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; white-space: nowrap; }
-.mark b { font-weight: var(--fw-heavy); color: var(--muted); }
+.mark b { font-weight: var(--fw-body); color: var(--muted); }
 .topnav { display: flex; align-items: center; gap: var(--s-xs); flex: 1; overflow-x: auto; scrollbar-width: none; }
 .topnav::-webkit-scrollbar { display: none; }
 .topnav a { padding: var(--s-xs) var(--s-md); border-radius: var(--r-full); color: var(--muted);
@@ -218,13 +218,13 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
 
 /* ══ 데이터 색 ══════════════════════════════════════════════ */
 .val { display: inline-block; min-width: 2.4em; padding: 2px var(--s-xs); border-radius: var(--r-sm);
-  text-align: center; font-variant-numeric: tabular-nums; font-weight: var(--fw-heavy); }
+  text-align: center; font-variant-numeric: tabular-nums; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .val-a { color: var(--val-a); background: var(--val-a-bg); }
 .val-b { color: var(--val-b); background: var(--val-b-bg); }
 .val-c { color: var(--val-c); background: var(--val-c-bg); }
 .val-d { color: var(--val-d); background: var(--val-d-bg); }
 .pos { display: inline-block; min-width: 2.6em; padding: 2px var(--s-xs); border-radius: var(--r-full);
-  text-align: center; color: #fff; font-size: var(--fs-xs); font-weight: var(--fw-heavy); }
+  text-align: center; color: #fff; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .pos-gk { background: var(--pos-gk); color: var(--ink); }
 .pos-df { background: var(--pos-df); } .pos-mf { background: var(--pos-mf); } .pos-fw { background: var(--pos-fw); }
 .grade-gold { color: var(--gold); } .grade-silver { color: var(--silver); } .grade-bronze { color: var(--bronze); }
@@ -362,8 +362,6 @@ a.card:hover { background: var(--charcoal); }
 .attr-bar b { display: block; height: 100%; width: var(--fill, 0%); border-radius: var(--r-full); animation: attr-fill var(--dur-slow) var(--ease-in); }
 .attr-bar b.val-a { background: var(--val-a); } .attr-bar b.val-b { background: var(--val-b); }
 .attr-bar b.val-c { background: var(--val-c); } .attr-bar b.val-d { background: var(--val-d); }
-/* 능력치 목록의 값 뱃지만 갈무리로 — .val 은 스쿼드 표도 쓰므로 전역으로 키우지 않는다. */
-.attr-list .val { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 @keyframes attr-fill { from { width: 0; } to { width: var(--fill, 0%); } }
 
 /* ══ 스쿼드 한 화면(명단 + 피치) ═══════════════════════════ */
@@ -467,6 +465,8 @@ details.year[open] > summary::before { content: "▾ "; }
 /* ══ antd 부품 위에 얹는 도트 톤(4b단계) ═══════════════════════
    antd 는 글꼴을 컴포넌트 토큰으로 안 정해 준다 — 크기는 theme.ts 가,
    글꼴은 여기가 정한다. 두 군데서 크기를 정하지 않는다. */
-.ant-btn, .ant-segmented-item-label {
+.ant-btn, .ant-segmented-item-label, .ant-modal-title, .ant-descriptions-item-label, .ant-table-thead th {
   font-family: var(--font-pixel); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0;
 }
+/* 표 머리·요약 라벨은 antd 가 크기를 안 내려 주는 자리라 여기서 같이 정한다. */
+.ant-descriptions-item-label, .ant-table-thead th { font-size: var(--fs-pixel-sm); }
