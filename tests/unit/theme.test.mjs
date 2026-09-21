@@ -59,7 +59,8 @@ test('버튼은 지금 button 규칙과 같은 각진 모양', () => {
   assert.equal(b.paddingInline, 22);
   // 글자 크기(4b단계) — 탑바·전역 버튼과 같은 20px(--fs-pixel-sm), 글꼴 자체는 tokens.css 의 .ant-btn 규칙이 정한다.
   assert.equal(b.contentFontSize, px('fs-pixel-sm'));
-  assert.equal(b.fontWeight, 500);
+  // 굵기(4b 최종 리뷰) — tokens.css 의 .ant-btn 규칙이 --fw-body 로 이미 정하므로 여기도 400 으로 맞춘다(단일 출처).
+  assert.equal(b.fontWeight, 400);
   assert.equal(b.primaryShadow, 'none');
   assert.equal(b.controlHeightSM, 36); // 34→36, 20px 글자가 안 잘리게(4b단계)
   assert.equal(b.paddingInlineSM, 16);
@@ -84,7 +85,8 @@ test('표 모서리·칸 여백·머리 굵기도 지금 .tbl 과 같다', () =>
   assert.equal(t.headerBorderRadius, px('r-md'));
   assert.equal(t.cellPaddingInlineSM, px('s-md'));
   assert.equal(t.cellPaddingBlockSM, 13); // 14px 글자·줄높이 약 22px + 위아래 13 = 줄 높이 약 48(--row-h)
-  assert.equal(t.fontWeightStrong, Number(tok('fw-heavy')));
+  // 굵기(4b 최종 리뷰) — tokens.css 의 .ant-table-thead th 규칙이 --fw-body 로 이미 정하므로 여기도 400 으로 맞춘다(단일 출처).
+  assert.equal(t.fontWeightStrong, Number(tok('fw-body')));
 });
 
 test('연도 고르기는 지금 칩 모습 — 각진 모서리, 선택 = 흰 바탕·검정 글자, 평소 글자 --body, hover --charcoal, 바탕 --elevated', () => {
@@ -99,6 +101,11 @@ test('연도 고르기는 지금 칩 모습 — 각진 모서리, 선택 = 흰 �
   assert.equal(s.borderRadiusSM, 0);
   // 글자 크기(4b단계) — 다른 컨트롤과 같은 20px(--fs-pixel-sm)로 올림
   assert.equal(s.fontSize, px('fs-pixel-sm'));
+});
+
+test('모달 제목 글자 크기는 여기 한 곳에서만 정한다 — 20px(--fs-pixel-sm)', () => {
+  const m = themeConfig.components.Modal;
+  assert.equal(m.titleFontSize, px('fs-pixel-sm'));
 });
 
 test('선수 요약(Descriptions)은 지금 .card 모습 — 라벨 바탕 --elevated·글자 --muted, 값 글자 --fg', () => {

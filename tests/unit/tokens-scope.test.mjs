@@ -13,3 +13,43 @@ test('맨 button·input·select·textarea 규칙은 .wfc 밖으로 한정돼 있
   const bare = selectors.filter((s) => /^(button|input|select|textarea)\b/.test(s) && !s.includes(':where(:not(.wfc, .wfc *))'));
   assert.deepEqual(bare, []);
 });
+
+// 중첩(@media)까지 정확히 짝지어 "선택자 → 그 규칙만의 선언부" 쌍을 뽑는다. 위 테스트의 얕은 매칭과 달리
+// 본문(body)이 필요해서 괄호 스택으로 직접 짝을 맞춘다 — @media 래퍼 자체는 버리고 그 안의 낱규칙만 남긴다.
+function ruleBlocks(css) {
+  const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const blocks = [];
+  const selectorStack = [];
+  let buf = '';
+  for (const ch of clean) {
+    if (ch === '{') { selectorStack.push(buf.trim()); buf = ''; }
+    else if (ch === '}') {
+      const selector = selectorStack.pop();
+      if (selector !== undefined && !selector.startsWith('@') && selector !== ':root') blocks.push({ selector, body: buf });
+      buf = '';
+    } else buf += ch;
+  }
+  return blocks;
+}
+
+// 이 프로젝트는 같은 함정(전역 button 이 갈무리가 되면서 상속된 후손이 10의 배수가 아닌 크기를 다시 선언해
+// 흐려지는 것)에 네 번 빠졌다 — font-family: var(--font-pixel) 을 직접 거는 규칙마다 합성 방지·자간·10의
+// 배수 크기를 다 갖췄는지 기계로 잡는다(2026-09-21 4b 최종 리뷰).
+test('갈무리(도트 폰트)를 직접 거는 규칙은 합성 방지·자간 0·10의 배수 크기를 다 갖췄다 — 상속 흐림 재발 방지', () => {
+  const css = readFileSync('src/styles/tokens.css', 'utf8');
+  const pixelSizeTokens = ['fs-pixel-xs', 'fs-pixel-sm', 'fs-pixel-md', 'fs-pixel-lg', 'fs-pixel-xl'];
+  const offenders = [];
+  for (const { selector, body } of ruleBlocks(css)) {
+    if (!/font-family:\s*var\(--font-pixel\)/.test(body)) continue;
+    const synthesisNone = /font-synthesis:\s*none\s*;/.test(body);
+    const letterSpacingZero = /letter-spacing:\s*0\s*;/.test(body);
+    const sizeDecls = [...body.matchAll(/font-size:\s*([^;]+);/g)];
+    const lastSize = sizeDecls.length ? sizeDecls[sizeDecls.length - 1][1].trim() : null;
+    const sizeMatch = lastSize && lastSize.match(/^var\(--([a-z0-9-]+)\)$/);
+    const sizeOk = lastSize === null || (sizeMatch !== null && pixelSizeTokens.includes(sizeMatch[1]));
+    if (!synthesisNone || !letterSpacingZero || !sizeOk) {
+      offenders.push({ selector, synthesisNone, letterSpacingZero, size: lastSize });
+    }
+  }
+  assert.deepEqual(offenders, []);
+});
