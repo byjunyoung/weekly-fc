@@ -1,4 +1,5 @@
 // src/react/squad/RosterList.tsx — 명단 목록·카드·표 + 포지션 필터·검색·보기 전환.
+// 어느 보기를 쓸지는 부르는 쪽이 정한다 — /squad/ 는 표·카드, /lineup/ 은 좁은 칸에 들어가는 목록 하나.
 // 목록·카드는 옛 문자열(dangerouslySetInnerHTML) 그대로, 표만 진짜 antd Table 로 바꾼다
 // (옛 표의 정렬 시 행 이동 애니메이션은 접는다 — antd Table 자체 동작을 받아들인다, 3단계와 같은 결).
 import { Input, Segmented, Table } from 'antd';
@@ -11,10 +12,14 @@ import { href } from '../../lib/url';
 import { isStarter, type LineupState } from '../../lib/lineup';
 import { band, grade, ovr, STAT_CUTS } from '../../lib/stats';
 import { STAT_KEYS, type Player } from '../../lib/types';
-import { byOvr, type View } from './model';
+import { ALL_VIEWS, byOvr, type View } from './model';
 
-export default function RosterList({ view, onViewChange, pos, onPosChange, q, onQChange, rows, st, onPick }: {
+const VIEW_LABEL: Record<View, string> = { list: '목록', card: '카드', table: '표' };
+
+export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick }: {
   view: View; onViewChange: (v: View) => void;
+  /** 이 화면이 고를 수 있는 보기. 하나뿐이면 전환 칩을 아예 그리지 않는다(라인업은 목록 고정). */
+  views?: View[];
   pos: string; onPosChange: (p: string) => void;
   q: string; onQChange: (q: string) => void;
   rows: Player[]; st: LineupState; onPick: (num: number) => void;
@@ -57,8 +62,10 @@ export default function RosterList({ view, onViewChange, pos, onPosChange, q, on
         <Segmented className="chips" value={pos} onChange={(v) => onPosChange(String(v))}
           options={[{ label: '전체', value: 'ALL' }, { label: 'GK', value: 'GK' }, { label: 'DF', value: 'DF' }, { label: 'MF', value: 'MF' }, { label: 'FW', value: 'FW' }]} />
         <Input className="w-search" placeholder="이름" allowClear value={q} onChange={(e) => onQChange(e.target.value)} />
-        <Segmented className="chips" value={view} onChange={(v) => onViewChange(v as View)}
-          options={[{ label: '목록', value: 'list' }, { label: '카드', value: 'card' }, { label: '표', value: 'table' }]} />
+        {views.length > 1 && (
+          <Segmented className="chips" value={view} onChange={(v) => onViewChange(v as View)}
+            options={views.map((v) => ({ label: VIEW_LABEL[v], value: v }))} />
+        )}
       </div>
       <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'pcard-wall' : ''}
         onClick={view !== 'table' ? onBodyClick : undefined} onKeyDown={view !== 'table' ? onBodyKeyDown : undefined}>

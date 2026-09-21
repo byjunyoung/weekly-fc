@@ -3,13 +3,15 @@ import { ovr } from '../../lib/stats.ts';
 import type { Player } from '../../lib/types.ts';
 
 export type View = 'list' | 'card' | 'table';
+export const ALL_VIEWS: View[] = ['list', 'card', 'table'];
 const VIEW_KEY = 'wfc.squad.view';
 
-export function loadView(): View {
+/** 저장된 보기. `allowed` 밖의 값(화면마다 고르는 뷰가 다르다)은 첫 번째로 되돌린다. */
+export function loadView(allowed: View[] = ALL_VIEWS): View {
   try {
-    const v = localStorage.getItem(VIEW_KEY);
-    return v === 'card' || v === 'table' ? v : 'list';
-  } catch { return 'list'; }
+    const v = localStorage.getItem(VIEW_KEY) as View | null;
+    return v && allowed.includes(v) ? v : allowed[0];
+  } catch { return allowed[0]; }
 }
 export function saveView(v: View): void {
   try { localStorage.setItem(VIEW_KEY, v); } catch { /* 저장 못 해도 화면은 돈다 */ }

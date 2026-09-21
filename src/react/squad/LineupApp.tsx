@@ -1,18 +1,20 @@
-// src/react/squad/LineupApp.tsx — 라인업 화면 오케스트레이터. 명단은 화면에 같이 두지 않고
-// 벤치 줄 + Drawer 로 고른다(모바일이 쓰던 방식을 모든 폭에서 쓴다 — 명단이 표 뷰일 때 380px
-// 칸에 갇히던 문제의 해법이자, 라인업 초안이 localStorage 에 있어 페이지를 나눠도 유지되는 전제).
-import { App, Button, Drawer, Segmented, Select } from 'antd';
+// src/react/squad/LineupApp.tsx — 라인업 화면 오케스트레이터. 피치와 명단을 좌우로 나란히 둔다
+// (왼쪽 포메이션, 오른쪽 명단 목록) — 자리를 누르고 바로 옆에서 선수를 고른다. 좁은 폭에서는
+// 아래로 쌓인다. 라인업 초안은 localStorage 에 있어 /squad/ 에서 찍은 선발도 그대로 보인다.
+import { App, Button, Segmented, Select } from 'antd';
 import { useEffect, useState } from 'react';
 import * as L from '../../lib/lineup';
 import { MAX_COUNT, MIN_COUNT, SHAPES, type PitchKind } from '../../lib/formation';
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
-import BenchStrip from './BenchStrip';
-import { loadView, saveView, type View } from './model';
+import type { View } from './model';
 import Pitch from './Pitch';
 import RosterList from './RosterList';
 import ShareModal from './ShareModal';
 import { useLineup } from './useLineup';
+
+// 좁은 칸이라 목록 하나로 고정한다 — /squad/ 에 저장된 보기(표·카드)를 따라가지 않는다.
+const LINEUP_VIEWS: View[] = ['list'];
 
 function Lineup() {
   const { message } = App.useApp();
@@ -22,8 +24,6 @@ function Lineup() {
   const [selected, setSelected] = useState<number | null>(null);
   const [pos, setPos] = useState('ALL');
   const [q, setQ] = useState('');
-  const [view, setView] = useState<View>(() => loadView());
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
@@ -51,15 +51,9 @@ function Lineup() {
     commit(L.swap(st, a, idx));
   }
   function onSwap(a: number, b: number): void { setSelected(null); commit(L.swap(st, a, b)); }
-  function onViewChange(v: View): void { setView(v); saveView(v); }
 
   const hint = selected !== null ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
     : '자리를 누르고 선수를 고르세요 · 카드를 끌면 옮기거나 맞바꿉니다';
-
-  const rosterList = (
-    <RosterList view={view} onViewChange={onViewChange} pos={pos} onPosChange={setPos} q={q} onQChange={setQ}
-      rows={rows} st={st} onPick={onPick} />
-  );
 
   return (
     <>
@@ -80,13 +74,6 @@ function Lineup() {
         <Button onClick={() => { setSelected(null); commit(L.autoFill(st, data.players)); }}>자동 배치</Button>
       </div>
       <div className="bd">
-        <Drawer placement="bottom" open={sheetOpen} onClose={() => setSheetOpen(false)} closable={false} height="70dvh"
-          styles={{ body: { padding: '0 var(--s-md) var(--s-md)', overflowY: 'auto' } }} classNames={{ body: 'bd-list' }}>
-          <button type="button" className="bd-sheet-handle" onClick={() => setSheetOpen(false)}>
-            <span>명단 {data.players.length}명 · 선발 {filled}/{st.count}</span>
-          </button>
-          {rosterList}
-        </Drawer>
         <section className="bd-stage" aria-label="피치">
           <Pitch st={st} players={data.players} selected={selected}
             onTapSlot={onTapSlot} onSwap={onSwap} onMoveSlot={(idx, pt) => commit(L.moveSlot(st, idx, pt))}
@@ -94,8 +81,12 @@ function Lineup() {
           <div className="bd-share-row"><Button type="primary" onClick={() => setShareOpen(true)}>이미지 공유</Button></div>
           <p className="muted bd-hint">{hint}</p>
         </section>
+        <aside className="bd-list" aria-label="명단">
+          <p className="bd-list-title">명단 {data.players.length}명 · 선발 {filled}/{st.count}</p>
+          <RosterList view="list" onViewChange={() => {}} views={LINEUP_VIEWS} pos={pos} onPosChange={setPos}
+            q={q} onQChange={setQ} rows={rows} st={st} onPick={onPick} />
+        </aside>
       </div>
-      <BenchStrip st={st} players={data.players} selected={selected} onPick={onPick} onOpenSheet={() => setSheetOpen(true)} />
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} st={st} players={data.players}
         onSetTitle={(t) => commit(L.setTitle(st, t))} />
     </>
