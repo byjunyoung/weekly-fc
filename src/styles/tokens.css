@@ -57,7 +57,8 @@
   --ink-line: rgba(18, 19, 20, .26);
 
   /* ── 모서리 (DESIGN.md rounded) ──────────────────────────── */
-  --r-sm: 4px; --r-md: 8px; --r-lg: 16px; --r-full: 9999px;
+  /* 도트 톤 — 모서리는 전부 0(2026-09-21 3단계). 토큰 이름은 유지해 되돌리기를 한 줄로 남긴다. */
+  --r-sm: 0; --r-md: 0; --r-lg: 0; --r-full: 0;
 
   /* ── 간격 (DESIGN.md spacing) ────────────────────────────── */
   --s-xxs: 4px; --s-xs: 8px; --s-sm: 12px; --s-md: 16px; --s-lg: 24px; --s-xl: 32px; --s-xxl: 48px; --s-section: 96px;

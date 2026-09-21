@@ -37,16 +37,16 @@ export const themeConfig: ThemeConfig = {
     colorLink: '#53b1ff',
     colorError: '#ff5c74',
     colorSuccess: '#59cf84',
-    borderRadiusSM: 4,
-    borderRadius: 8,
-    borderRadiusLG: 16,
+    borderRadiusSM: 0,
+    borderRadius: 0,
+    borderRadiusLG: 0,
     fontFamily: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
     fontSize: 16,
   },
   components: {
-    // 지금 tokens.css 의 button 규칙(알약, 높이 40, 좌우 22, 14px·500)과 .topbar-act button(34, 좌우 16, 12px)을 옮긴다.
+    // 지금 tokens.css 의 button 규칙(각진 모서리, 높이 40, 좌우 22, 14px·500)과 .topbar-act button(34, 좌우 16, 12px)을 옮긴다.
     Button: {
-      borderRadius: 9999, borderRadiusSM: 9999, borderRadiusLG: 9999,
+      borderRadius: 0, borderRadiusSM: 0, borderRadiusLG: 0,
       controlHeight: 40, paddingInline: 22, contentFontSize: 14,
       controlHeightSM: 34, paddingInlineSM: 16, contentFontSizeSM: 12,
       fontWeight: 500,
@@ -54,22 +54,22 @@ export const themeConfig: ThemeConfig = {
       defaultHoverBg: 'rgba(255, 255, 255, .1)', defaultHoverColor: '#ffffff', defaultHoverBorderColor: 'rgba(229, 229, 229, .38)',
       defaultShadow: 'none', primaryShadow: 'none', dangerShadow: 'none',
     },
-    // 지금 wa-dialog::part(...) 규칙 — 카드 면, 모서리 16, 제목 22·굵기 400.
-    Modal: { contentBg: '#181818', headerBg: '#181818', titleFontSize: 22, fontWeightStrong: 400, borderRadiusLG: 16 },
+    // 지금 wa-dialog::part(...) 규칙 — 카드 면, 모서리 0, 제목 22·굵기 400.
+    Modal: { contentBg: '#181818', headerBg: '#181818', titleFontSize: 22, fontWeightStrong: 400, borderRadiusLG: 0 },
     // 지금 .tbl 규칙 — 머리 바탕 --elevated·글자 --muted, 줄 경계 --hairline, 14px, 줄 hover.
     // 정렬된 열에 바탕을 따로 깔지 않는다(.tbl th.sorted 는 글자색만 바꾼다).
-    // 모서리 --r-md, 칸 좌우 여백 --s-md, 위아래는 14px 글자·줄높이(약 22px)에 13 씩 더해 줄 높이 --row-h(48px)에 맞춘다. 머리 글자 굵기 --fw-heavy.
+    // 모서리 0, 칸 좌우 여백 --s-md, 위아래는 14px 글자·줄높이(약 22px)에 13 씩 더해 줄 높이 --row-h(48px)에 맞춘다. 머리 글자 굵기 --fw-heavy.
     Table: {
       headerBg: '#121314', headerSortActiveBg: '#121314', headerSortHoverBg: '#121314', headerColor: 'rgba(229, 229, 229, .55)',
       borderColor: 'rgba(229, 229, 229, .2)', headerSplitColor: 'transparent', cellFontSizeSM: 14,
       rowHoverBg: 'rgba(255, 255, 255, .06)', bodySortBg: 'transparent',
-      headerBorderRadius: 8, cellPaddingInlineSM: 16, cellPaddingBlockSM: 13, fontWeightStrong: 600,
+      headerBorderRadius: 0, cellPaddingInlineSM: 16, cellPaddingBlockSM: 13, fontWeightStrong: 600,
     },
-    // 봉사표 연도 고르기 — 지금 .chip / .chip.on(알약, 12px, 선택 = 흰 바탕·검정 글자, hover --charcoal).
+    // 봉사표 연도 고르기 — 지금 .chip / .chip.on(각진 모서리, 12px, 선택 = 흰 바탕·검정 글자, hover --charcoal).
     Segmented: {
       itemColor: 'rgba(255, 255, 255, .7)', itemHoverColor: '#ffffff', itemHoverBg: '#1f2024', itemActiveBg: '#1f2024',
       itemSelectedBg: '#ffffff', itemSelectedColor: '#000000', trackBg: '#121314',
-      borderRadius: 9999, borderRadiusSM: 9999, borderRadiusXS: 9999, fontSize: 12,
+      borderRadius: 0, borderRadiusSM: 0, borderRadiusXS: 0, fontSize: 12,
     },
     // 벌금·봉사 요약 — 지금 .card 모습(면 --card 는 Descriptions 바탕과 상관없이 antd 배경 기본값 그대로 두고,
     // 라벨·값 글자만 맞춘다). labelBg 는 bordered 모드의 라벨 칸 바탕.
