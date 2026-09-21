@@ -485,3 +485,6 @@ details.year[open] > summary::before { content: "▾ "; }
 /* 표 안 부가 정보(포지션 옆 "CB · 오른발" 등)는 작은 기본 글꼴로 — 20px 로 키우면
    칸이 두 줄로 접혀 행 높이가 두 배가 된다(실측 91px → 65px). 카드의 .pcard-detail 과 같은 규칙. */
 .ant-table-tbody .muted { font-family: var(--font); font-size: var(--fs-xs); font-synthesis: auto; }
+/* 포지션 칸 — 뱃지와 부가 정보 사이 간격을 CSS 로 준다. 리터럴 공백을 두면 그 글자가
+   칸의 주변 글꼴(20px 도트)을 물려받아 칸을 밀어내고 일부 행만 두 줄로 접힌다. */
+.cell-pos { display: inline-flex; align-items: center; gap: var(--s-xs); white-space: nowrap; }

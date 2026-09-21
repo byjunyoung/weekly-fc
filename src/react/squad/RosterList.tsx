@@ -41,7 +41,7 @@ export default function RosterList({ view, onViewChange, pos, onPosChange, q, on
     { title: '이름', dataIndex: 'name', key: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'ko'),
       render: (_, p) => <a href={href(`/squad/${p.num}/`)}><b>{p.name}</b></a> },
     { title: '포지션', dataIndex: 'pos', key: 'pos', sorter: (a, b) => a.pos.localeCompare(b.pos, 'ko'),
-      render: (_, p) => <><span className={`pos pos-${p.pos.toLowerCase()}`}>{p.pos || '–'}</span> <span className="muted">{p.detail}</span></> },
+      render: (_, p) => <span className="cell-pos"><span className={`pos pos-${p.pos.toLowerCase()}`}>{p.pos || '–'}</span><span className="muted">{p.detail}</span></span> },
     ...STAT_KEYS.map((k) => ({
       title: STAT_LABEL[k], dataIndex: k, key: k, align: 'right' as const,
       sorter: (a: Player, b: Player) => a[k] - b[k],
