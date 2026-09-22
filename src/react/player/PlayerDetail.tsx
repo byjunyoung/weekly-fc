@@ -43,7 +43,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     catch (e) { message.error((e as Error).message); }
     finally { setAvatarSaving(false); }
   };
-  const pickGroup = (key: 'face' | 'hair' | 'skin' | 'eyes', title: string) => (
+  const pickGroup = (key: 'face' | 'hair' | 'skin' | 'eyes' | 'jersey' | 'socks' | 'gloves' | 'tape', title: string) => (
     <div key={key}>
       <div className="label label-gap">{title}</div>
       <div className="pick-list">
@@ -216,6 +216,13 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
                   ))}
                 </div>
               </div>
+              {/* 축구 테마 확장(2026-09-22) — 유니폼 무늬는 face·hair 처럼 도형 선택,
+                  양말·장갑·손목테이프는 색 목록이되 0번이 "없음/유니폼과 같음"인 텍스트 버튼이라
+                  kit 스와치(라벨 없는 색 칸)와 달리 pickGroup(라벨 버튼)을 그대로 쓴다. */}
+              {pickGroup('jersey', '유니폼 무늬')}
+              {pickGroup('socks', '양말')}
+              {pickGroup('gloves', '장갑')}
+              {pickGroup('tape', '손목테이프')}
             </div>
           </>
         )}

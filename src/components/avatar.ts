@@ -5,8 +5,13 @@
 // 그림은 "문자 격자"로 저작한다. 한 글자가 한 픽셀이고 '.'은 투명이다.
 // 글자는 색 슬롯을 가리킨다:
 //   H 머리 · S 피부 · W 흰자 · E 눈동자 · M 입(피부 어두운 톤)
-//   K 유니폼 · D 유니폼 그늘 · P 반바지 · O 축구양말 · B 축구화
+//   K 유니폼 · D 유니폼 그늘(무늬에도 재사용) · P 반바지 · O 축구양말 · B 축구화
+//   T 손목테이프 · G 장갑                                   (2026-09-22 축구 테마 확장)
 // 색은 렌더 시점에 팔레트로 주입한다(K 는 선수마다 다른 자유 hex).
+//
+// 팔 부위 3행은 각자 독립된 커스텀 자리다 — BODY 가 그리는 기본 모양(반팔+맨손)
+// 위에 겹쳐 칠하는 순서로만 바뀐다: 16~17행 소매(유니폼 무늬 '긴팔'만), 18행 손목
+// (테이프), 19행 손(장갑). 서로 다른 행이라 세 커스텀이 동시에 켜져도 안 부딪힌다.
 import { esc } from '../lib/html.ts';
 import { PARTS, isUnsetAvatar, type AvatarSpec } from '../lib/avatar.ts';
 
@@ -87,6 +92,32 @@ const EYE_LAYERS: Record<(typeof PARTS.eyes)[number]['shape'], Layer> = {
 };
 const MOUTH: Layer = { 9: '...........MM...........' };
 
+// ── 유니폼 무늬 4종 ──────────────────────────────────────────
+// 색은 새 팔레트 슬롯 없이 D(유니폼 그늘)를 재사용한다 — BODY 가 이미 14행 칼라
+// 트림(11·12번째 열)에 D를 쓰고 있어(collar), 같은 색으로 무늬를 더하는 게 자연스럽다.
+// 아래 세 레이어가 칠하는 행·열은 전부 BODY 의 몸통·소매와 같은 폭이다 — 몸통은
+// 13~15행에서 5~18번째 열(14칸, 중심 11.5), 소매는 16~17행에서 5·6번째와 17·18번째 열.
+const JERSEY_LAYERS: Record<(typeof PARTS.jersey)[number]['shape'], Layer> = {
+  solid: {},
+  // 세로 스트라이프 4줄 — 7·10·13·16번째 열(중심 11.5로 대칭, 칼라의 11~12와는 안 겹친다).
+  stripes: { 13: '.......D..D..D..D.......', 14: '.......D..D..D..D.......', 15: '.......D..D..D..D.......' },
+  // 가슴 아래 가로 밴드(후프) — 몸통 폭 그대로 한 줄만 D로.
+  hoops: { 15: '.....DDDDDDDDDDDDDD.....' },
+  // 긴팔 — 위팔(16~17행)의 맨살(S)만 유니폼 색으로 덮는다(3부 소매, 손목·손은 그대로 맨살).
+  sleeves: { 16: '.....DD..........DD.....', 17: '.....DD..........DD.....' },
+};
+
+// ── 손목테이프·장갑 ──────────────────────────────────────────
+// 각각 18행(손목)·19행(손)만 건드린다 — BODY 의 그 위치(S)를 그대로 덮어쓴다.
+const TAPE_LAYERS: Record<'off' | 'on', Layer> = {
+  off: {},
+  on: { 18: '.....TT..........TT.....' },
+};
+const GLOVE_LAYERS: Record<'off' | 'on', Layer> = {
+  off: {},
+  on: { 19: '......G..........G......' },
+};
+
 /** #rrggbb 를 f 배 밝기로. 유니폼 그늘·입 색을 코드로 만들어 팔레트를 늘리지 않는다. */
 function shade(hex: string, f: number): string {
   const n = Number.parseInt(hex.slice(1), 16);
@@ -141,6 +172,10 @@ function paletteOf(spec: AvatarSpec): Record<string, string> {
   const skin = PARTS.skin[spec.skin] ?? PARTS.skin[0];
   const eyes = PARTS.eyes[spec.eyes] ?? PARTS.eyes[0];
   const kit = /^#[0-9a-fA-F]{6}$/.test(spec.kit) ? spec.kit : '#333a45';
+  // 2026-09-22 에 늘린 네 부품 — spec 에 없으면(옛 스펙) ?? 0 으로 "없음"/기본값.
+  const socks = PARTS.socks[spec.socks ?? 0] ?? PARTS.socks[0];
+  const gloves = PARTS.gloves[spec.gloves ?? 0] ?? PARTS.gloves[0];
+  const tape = PARTS.tape[spec.tape ?? 0] ?? PARTS.tape[0];
   return {
     H: hair.color || skin.color,
     S: skin.color,
@@ -152,8 +187,13 @@ function paletteOf(spec: AvatarSpec): Record<string, string> {
     D: shade(kit, 0.7),
     // 거의 흰 유니폼을 고르면 흰 반바지와 한 덩어리가 되므로 반바지를 내린다.
     P: brightness(kit) > 0.85 ? '#9aa0a8' : '#e8e8e8',
-    O: kit,
+    // 양말은 "유니폼과 같음"(color:'')이면 kit 를 그대로 따라간다 — 옛 동작과 동일.
+    O: socks.color || kit,
     B: '#1a1a1a',
+    // 장갑·테이프가 "없음"이어도 팔레트엔 안전한 색을 채워 둔다 — 해당 글자는
+    // GLOVE_LAYERS.off/TAPE_LAYERS.off 가 비어 있어 어차피 안 쓰인다.
+    G: gloves.color || skin.color,
+    T: tape.color || skin.color,
   };
 }
 
@@ -161,7 +201,17 @@ function mapOf(spec: AvatarSpec): string[] {
   const face = PARTS.face[spec.face] ?? PARTS.face[0];
   const hair = PARTS.hair[spec.hair] ?? PARTS.hair[0];
   const eyes = PARTS.eyes[spec.eyes] ?? PARTS.eyes[0];
-  return compose([BODY, FACE_LAYERS[face.shape], HAIR_LAYERS[hair.shape], EYE_LAYERS[eyes.shape], MOUTH]);
+  const jersey = PARTS.jersey[spec.jersey ?? 0] ?? PARTS.jersey[0];
+  const gloveOpt = PARTS.gloves[spec.gloves ?? 0] ?? PARTS.gloves[0];
+  const tapeOpt = PARTS.tape[spec.tape ?? 0] ?? PARTS.tape[0];
+  // "없음"은 색 문자열(color === '')로만 판정한다 — paletteOf 도 같은 필드로 판정하므로
+  // (인덱스 0 = 없음이라는 별도 규칙을 여기 또 두지 않는다) 둘이 어긋날 여지가 없다.
+  const glove = gloveOpt.color ? 'on' : 'off';
+  const tape = tapeOpt.color ? 'on' : 'off';
+  return compose([
+    BODY, JERSEY_LAYERS[jersey.shape], TAPE_LAYERS[tape], GLOVE_LAYERS[glove],
+    FACE_LAYERS[face.shape], HAIR_LAYERS[hair.shape], EYE_LAYERS[eyes.shape], MOUTH,
+  ]);
 }
 
 /** 파싱 실패·미설정 스펙일 때의 폴백: 번호만 든 칸. */

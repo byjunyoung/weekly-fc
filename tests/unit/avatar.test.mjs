@@ -10,12 +10,38 @@ const SERVER_CODE_RE = /^([a-z]\d{1,2}:){1,8}k#[0-9a-fA-F]{3,6}$/;
 test('serializeAvatar ↔ parseAvatar 왕복: 각 부품 인덱스가 그대로 돌아온다', () => {
   for (let face = 0; face < PARTS.face.length; face++) {
     for (let hair = 0; hair < PARTS.hair.length; hair++) {
-      const spec = { face, hair, skin: 2, eyes: 1, kit: '#1a2b3c' };
+      const spec = { face, hair, skin: 2, eyes: 1, jersey: 0, socks: 0, gloves: 0, tape: 0, kit: '#1a2b3c' };
       const code = serializeAvatar(spec);
       assert.deepEqual(parseAvatar(code), spec);
       assert.equal(serializeAvatar(parseAvatar(code)), code);
     }
   }
+});
+
+// 2026-09-22 축구 테마 확장 — 유니폼 무늬·양말·장갑·손목테이프 네 필드도 같은 왕복이 성립해야 한다.
+test('serializeAvatar ↔ parseAvatar 왕복: 축구 테마 네 필드도 그대로 돌아온다', () => {
+  for (let jersey = 0; jersey < PARTS.jersey.length; jersey++) {
+    for (let socks = 0; socks < PARTS.socks.length; socks++) {
+      for (let gloves = 0; gloves < PARTS.gloves.length; gloves++) {
+        for (let tape = 0; tape < PARTS.tape.length; tape++) {
+          const spec = { face: 0, hair: 0, skin: 0, eyes: 0, jersey, socks, gloves, tape, kit: '#1a2b3c' };
+          const code = serializeAvatar(spec);
+          assert.deepEqual(parseAvatar(code), spec);
+          assert.equal(serializeAvatar(parseAvatar(code)), code);
+        }
+      }
+    }
+  }
+});
+
+test('parseAvatar: 옛 4세그먼트 코드(축구 테마 확장 이전)도 하위 호환 — 새 필드는 기본값 0', () => {
+  const spec = parseAvatar('f2:h3:s1:e0:k#2980b9');
+  assert.equal(isUnsetAvatar(spec), false);
+  assert.deepEqual(spec, { face: 2, hair: 3, skin: 1, eyes: 0, kit: '#2980b9', jersey: 0, socks: 0, gloves: 0, tape: 0 });
+  // 다시 저장하면 8세그먼트(j/o/g/t 포함) 코드가 되지만, 서버 정규식은 여전히 통과한다.
+  const resaved = serializeAvatar(spec);
+  assert.equal(resaved, 'f2:h3:s1:e0:j0:o0:g0:t0:k#2980b9');
+  assert.match(resaved, SERVER_CODE_RE);
 });
 
 test('parseAvatar: 빈 문자열·null·undefined는 미설정(UNSET_AVATAR)', () => {
@@ -44,6 +70,15 @@ test('parseAvatar: 모양은 맞지만 범위 밖 인덱스·모르는 글자는
   assert.equal(spec.kit, '#123456');
   // 같은 입력은 같은 결과 — 관용적 보정도 결정적이어야 한다.
   assert.deepEqual(parseAvatar('f99:h50:z9:s30:e10:k#123456'), spec);
+});
+
+test('parseAvatar: 축구 테마 네 필드도 범위 밖 인덱스를 조용히 보정한다', () => {
+  const spec = parseAvatar('f0:h0:s0:e0:j99:o99:g99:t99:k#123456');
+  assert.equal(isUnsetAvatar(spec), false);
+  assert.ok(spec.jersey >= 0 && spec.jersey < PARTS.jersey.length);
+  assert.ok(spec.socks >= 0 && spec.socks < PARTS.socks.length);
+  assert.ok(spec.gloves >= 0 && spec.gloves < PARTS.gloves.length);
+  assert.ok(spec.tape >= 0 && spec.tape < PARTS.tape.length);
 });
 
 test('parseAvatar: 3~5자리 hex도 유효한 6자리 hex로 정규화한다', () => {
@@ -75,6 +110,11 @@ test('serializeAvatar 출력은 항상 서버 정규식을 통과한다 (계약)
   const idx = (len) => [0, len - 1];
   for (const face of idx(PARTS.face.length)) for (const hair of idx(PARTS.hair.length)) for (const skin of idx(PARTS.skin.length)) for (const eyes of idx(PARTS.eyes.length)) {
     const code = serializeAvatar({ face, hair, skin, eyes, kit: '#ffffff' });
+    assert.match(code, SERVER_CODE_RE);
+  }
+  // 축구 테마 네 필드의 극단값도 — 8세그먼트를 다 채워도 여전히 정규식(최대 8개)을 통과해야 한다.
+  for (const jersey of idx(PARTS.jersey.length)) for (const socks of idx(PARTS.socks.length)) for (const gloves of idx(PARTS.gloves.length)) for (const tape of idx(PARTS.tape.length)) {
+    const code = serializeAvatar({ face: 0, hair: 0, skin: 0, eyes: 0, jersey, socks, gloves, tape, kit: '#ffffff' });
     assert.match(code, SERVER_CODE_RE);
   }
   // UNSET_AVATAR는 빈 문자열 — 서버 계약상 빈 값은 "기본으로 되돌리기"로 허용된다(정규식 밖이 맞음).
@@ -161,5 +201,137 @@ test('avatarSvg: 부품 조합 전수 — 5×8×3 전부 유효한 SVG를 낸다
       }
     }
   }
+});
+
+// ── 2026-09-22 축구 테마 확장(유니폼 무늬·양말·장갑·손목테이프) ──────────────
+
+test('avatarSvg: 유니폼 무늬 4종(솔리드·스트라이프·후프·긴팔) 전부 유효한 SVG를 낸다', () => {
+  for (let jersey = 0; jersey < PARTS.jersey.length; jersey++) {
+    const svg = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, jersey, kit: '#2980b9' }, 112);
+    assert.match(svg, /^<svg /);
+    assert.match(svg, /<\/svg>$/);
+    assert.ok(!svg.includes('undefined'), `undefined 이 출력에 섞였다 (jersey=${jersey})`);
+  }
+});
+
+test('avatarSvg: 유니폼 무늬가 다르면(솔리드 vs 나머지) 출력도 달라진다', () => {
+  const solid = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, jersey: 0, kit: '#2980b9' }, 112);
+  for (let jersey = 1; jersey < PARTS.jersey.length; jersey++) {
+    const svg = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, jersey, kit: '#2980b9' }, 112);
+    assert.notEqual(svg, solid, `jersey=${jersey} 가 솔리드와 같은 출력을 냈다`);
+  }
+});
+
+test('avatarSvg: 스트라이프(j1)는 몸통 중심(열 11.5)에 대칭이고 옷깃과 안 겹친다 (회귀 방지)', () => {
+  // 첫 구현은 열 8·12·16(비대칭 + 옷깃 D 와 12에서 겹침)이었다가, opus 리뷰가 실측으로
+  // 잡아 7·10·13·16으로 고쳤다. 13행(옷깃이 없는 순수 몸통 줄)에서 D 가 그 네 열에만
+  // 찍히는지 좌표로 확인한다 — 이후 다시 밀려도 이 테스트가 잡는다.
+  const kit = '#2980b9';
+  const svg = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, jersey: 1, kit }, 112);
+  const dark = shade07(kit);
+  for (const x of [7, 10, 13, 16]) assert.equal(rectAt(svg, x, 13), dark, `13행 x=${x} 가 스트라이프 색이 아니다`);
+  // 대칭 확인 — 몸통 열 5~18의 미러(23-x)도 같은 집합이어야 한다.
+  assert.deepEqual([7, 10, 13, 16].map((x) => 23 - x).sort((a, b) => a - b), [7, 10, 13, 16]);
+  // 스트라이프 사이(열 8·9·11·12·14·15)는 여전히 kit 색 — 8은 병합된 kit rect 안에 있다.
+  assert.equal(rectAt(svg, 8, 13), kit, '스트라이프 사이가 kit 색이 아니다');
+});
+
+// 아래 세 테스트는 색 문자열이 출력 어딘가에 있는지가 아니라, **그 부위의 실제 좌표에
+// 찍힌 rect의 fill**을 확인한다 — 장갑 블랙(#1a1a1a)이 축구화(B) 색과 같은 것처럼, 이
+// 팔레트엔 우연히 같은 색을 쓰는 슬롯이 있어 "색이 출력에 있다"만으론 그 부위가 실제로
+// 그려졌는지 증명하지 못한다(opus 리뷰가 잡은 공허한 단언).
+const rectAt = (svg, x, y) => new RegExp(`<rect x="${x}" y="${y}" width="\\d+" height="1" fill="([^"]+)"/>`).exec(svg)?.[1];
+// components/avatar.ts의 shade()를 그대로 복사한다 — SERVER_CODE_RE와 같은 이유로,
+// 계약(D = kit의 0.7배 밝기)을 이 테스트가 직접 들고 있어야 구현이 갈라져도 잡힌다.
+const shade07 = (hex) => {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const part = (v) => Math.min(255, Math.round(v * 0.7)).toString(16).padStart(2, '0');
+  return `#${part((n >> 16) & 255)}${part((n >> 8) & 255)}${part(n & 255)}`;
+};
+
+test('avatarSvg: 양말은 "유니폼과 같음"(o0)이면 kit 색, 아니면 지정 색으로 칠해진다 (26행 좌표로 확인)', () => {
+  const auto = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, socks: 0, kit: '#2980b9' }, 112);
+  assert.equal(rectAt(auto, 8, 26), '#2980b9', '유니폼과 같음인데 26행 양말 rect 색이 kit 이 아니다');
+  const white = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, socks: 1, kit: '#2980b9' }, 112);
+  assert.equal(rectAt(white, 8, 26), PARTS.socks[1].color, '지정한 양말 색이 26행 rect 에 없다');
+});
+
+test('avatarSvg: 장갑이 없으면(g0) 19행 손 rect가 피부색, 있으면 지정 색이다 (좌표로 확인)', () => {
+  const skin = PARTS.skin[0].color;
+  const none = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, gloves: 0, kit: '#2980b9' }, 112);
+  assert.equal(rectAt(none, 6, 19), skin, '장갑 없음인데 19행 손 rect가 피부색이 아니다');
+  const black = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, gloves: 1, kit: '#2980b9' }, 112);
+  assert.equal(rectAt(black, 6, 19), PARTS.gloves[1].color, '장갑 색이 19행 손 rect에 없다(좌우 중 왼쪽)');
+  assert.equal(rectAt(black, 17, 19), PARTS.gloves[1].color, '장갑 색이 19행 손 rect에 없다(오른쪽)');
+});
+
+test('avatarSvg: 손목테이프가 없으면(t0) 18행 손목 rect가 피부색, 있으면 지정 색이다 (좌표로 확인)', () => {
+  const skin = PARTS.skin[0].color;
+  const none = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, tape: 0, kit: '#2980b9' }, 112);
+  assert.equal(rectAt(none, 5, 18), skin, '테이프 없음인데 18행 손목 rect가 피부색이 아니다');
+  const white = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, tape: 1, kit: '#2980b9' }, 112);
+  assert.equal(rectAt(white, 5, 18), PARTS.tape[1].color, '테이프 색이 18행 손목 rect(왼쪽)에 없다');
+  assert.equal(rectAt(white, 17, 18), PARTS.tape[1].color, '테이프 색이 18행 손목 rect(오른쪽)에 없다');
+});
+
+test('avatarSvg: 유니폼 무늬·양말·장갑·손목테이프 조합 전수 — undefined 안 섞이고 좌표는 정수', () => {
+  for (let jersey = 0; jersey < PARTS.jersey.length; jersey++) {
+    for (let socks = 0; socks < PARTS.socks.length; socks++) {
+      for (let gloves = 0; gloves < PARTS.gloves.length; gloves++) {
+        for (let tape = 0; tape < PARTS.tape.length; tape++) {
+          const svg = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, jersey, socks, gloves, tape, kit: '#2980b9' }, 112);
+          assert.match(svg, /^<svg /);
+          assert.ok(!svg.includes('undefined'), `undefined 섞임 (j=${jersey} o=${socks} g=${gloves} t=${tape})`);
+          for (const m of svg.matchAll(/(?:x|y|width|height)="([\d.]+)"/g)) {
+            assert.ok(!m[1].includes('.'), `소수 좌표: ${m[0]} (j=${jersey} o=${socks} g=${gloves} t=${tape})`);
+          }
+        }
+      }
+    }
+  }
+});
+
+test('randomAvatar: 장갑·손목테이프는 대부분 "없음"에 치우쳐 뽑히되, 가끔은 뽑힌다', () => {
+  const gloves = []; const tape = [];
+  for (let num = 1; num <= 300; num++) { const a = randomAvatar(num); gloves.push(a.gloves); tape.push(a.tape); }
+  const noneRatio = (xs) => xs.filter((x) => x === 0).length / xs.length;
+  // 진짜 비율은 설계상 0.85 근처지만, 구현 상수가 바뀌어도 이 테스트가 안 깨지게 넉넉히 잡는다.
+  assert.ok(noneRatio(gloves) > 0.5, `장갑 "없음" 비율이 너무 낮다: ${noneRatio(gloves)}`);
+  assert.ok(noneRatio(tape) > 0.5, `손목테이프 "없음" 비율이 너무 낮다: ${noneRatio(tape)}`);
+  assert.ok(gloves.some((g) => g !== 0), '300명 중 장갑을 낀 사람이 한 명도 없다');
+  assert.ok(tape.some((t) => t !== 0), '300명 중 손목테이프를 한 사람이 한 명도 없다');
+});
+
+test('avatarFaceSvg: 얼굴 크롭(0~15행)에도 축구 테마 필드가 섞여도 깨지지 않는다', () => {
+  // 크롭 창이 13~15행(유니폼 무늬 자리)까지 걸치므로 이 필드들도 얼굴 칩에서 렌더될 수 있다.
+  const svg = avatarFaceSvg({ face: 0, hair: 0, skin: 0, eyes: 0, jersey: 2, socks: 3, gloves: 1, tape: 1, kit: '#2980b9' }, 32);
+  assert.match(svg, /^<svg /);
+  assert.match(svg, /<\/svg>$/);
+  assert.ok(!svg.includes('undefined'));
+});
+
+test('randomAvatar: 축구 테마 네 필드를 추가하면서도 face·hair·skin·eyes·kit 은 그대로다 (회귀 방지)', () => {
+  // 2026-09-22 축구 테마 확장 때 새 네 픽을 hue 추첨보다 앞에 끼워 넣는 바람에 난수
+  // 스트림이 밀려, 아바타를 한 번도 저장하지 않은 기존 선수 전원의 유니폼 색이 바뀔
+  // 뻔했다(opus 리뷰가 실측으로 잡음). 이 값들은 그 사고 이전 알고리즘(face→hair→skin→
+  // eyes→hue 순, 새 필드는 그 뒤)으로 직접 계산한 고정값이다 — 앞으로 다시 순서가
+  // 밀리면 이 테스트가 바로 깨진다.
+  const fixed = {
+    1: { face: 3, hair: 0, skin: 3, eyes: 5, kit: '#a63048' },
+    7: { face: 0, hair: 0, skin: 5, eyes: 4, kit: '#3098a6' },
+    9: { face: 0, hair: 6, skin: 0, eyes: 4, kit: '#5730a6' },
+    30: { face: 4, hair: 6, skin: 2, eyes: 1, kit: '#a6a030' },
+  };
+  for (const [seed, expected] of Object.entries(fixed)) {
+    const a = randomAvatar(Number(seed));
+    assert.deepEqual({ face: a.face, hair: a.hair, skin: a.skin, eyes: a.eyes, kit: a.kit }, expected, `seed ${seed}`);
+  }
+});
+
+test('randomAvatar: 유니폼 무늬·양말은 골고루 뽑힌다(0번에 안 쏠림)', () => {
+  const jerseys = new Set(); const socks = new Set();
+  for (let num = 1; num <= 30; num++) { const a = randomAvatar(num); jerseys.add(a.jersey); socks.add(a.socks); }
+  assert.ok(jerseys.size > 1, '30명이 전부 같은 유니폼 무늬를 받았다');
+  assert.ok(socks.size > 1, '30명이 전부 같은 양말 색을 받았다');
 });
 
