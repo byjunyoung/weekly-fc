@@ -134,7 +134,7 @@ img, video, canvas { display: block; max-width: 100%; height: auto; }
 [hidden] { display: none !important; }
 h1, h2, h3 { margin: 0; }
 h1 { font-size: var(--fs-h-xl); font-weight: var(--fw-display); line-height: 1.25; }
-.modal h2, .pcard-stat-val { font-variant-numeric: tabular-nums; }
+.modal h2 { font-variant-numeric: tabular-nums; }
 h2 { font-size: var(--fs-h-md); font-weight: var(--fw-heavy); line-height: 1.2; }
 .muted { color: var(--muted); }
 .label { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--muted); }
@@ -364,7 +364,6 @@ a.card:hover { background: var(--charcoal); }
 .tile-go { color: var(--link); }
 .home-me { padding: var(--s-lg); margin-bottom: var(--s-xl); background: var(--card); border-radius: var(--r-md); }
 .home-me-body { display: flex; flex-wrap: wrap; gap: var(--s-xl); align-items: flex-start; }
-.home-me-body > .pcard { flex: 0 0 var(--pcard-w); }
 .home-me-stats { flex: 1 1 240px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s-md); align-content: start; }
 .home-me-cta { display: block; width: 100%; min-height: 0; text-align: left; padding: var(--s-lg); margin-bottom: var(--s-xl);
   border: 0; border-radius: var(--r-md); background: var(--card); font-size: var(--fs-body); font-weight: var(--fw-body); }
@@ -372,45 +371,30 @@ a.card:hover { background: var(--charcoal); }
 /* ══ 선수 아이템 카드 ═══════════════════════════════════════ */
 /* 등급은 데이터이므로 색을 갖는다 — 정본도 PS Plus 티어를 금속 그라디언트로 쓴다.
    다만 광택 쓸기·발광은 "장식하지 않는다"에 걸려 쓰지 않는다. */
-.pcard { position: relative; width: 100%; max-width: var(--pcard-w); margin: 0 auto; padding: 0;
-  border: 0; border-radius: var(--r-md); overflow: hidden; color: var(--ink); perspective: 1200px;
-  transition: transform var(--dur-fast) var(--ease-std); }
-.pcard-gold { background: var(--metal-gold); }
-.pcard-silver { background: var(--metal-silver); }
-.pcard-bronze { background: var(--metal-bronze); }
-.pcard:hover { transform: translateY(-4px); }
-.pcard-body { display: flex; flex-direction: column; width: 100%; padding: var(--s-md); }
-.pcard-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-xs); width: 100%; }
-.pcard-ovr-block { display: flex; flex-direction: column; align-items: flex-start; align-self: flex-start; }
-.pcard-ovr { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-num); font-synthesis: none; line-height: .9; letter-spacing: 0; font-variant-numeric: tabular-nums; }
-.pcard-pos { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.1; }
-.pcard-num { display: block; margin-top: var(--s-xxs); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
-.pcard-portrait { align-self: flex-end; margin: 0 -4px -2px 0; }
+/* ── 아바타 타일 — 명단 "아바타" 보기 ────────────────────────────
+   FC 카드(금속 면·큰 OVR·능력치 여섯 칸)를 걷어내고 아바타를 크게 세운다
+   (2026-09-22 사용자 결정). 숫자는 표 보기와 선수 페이지가 이미 다 보여 준다. */
+.atile-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--s-lg) var(--s-md); }
+.atile { display: flex; flex-direction: column; align-items: center; gap: var(--s-xxs);
+  padding: var(--s-md) var(--s-xs); border-radius: var(--r-md); background: var(--card);
+  color: inherit; text-decoration: none; transition: transform var(--dur-fast) var(--ease-std); }
+.atile:hover { transform: translateY(-4px); }
+.atile:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+.atile-sprite { display: flex; }
+.atile-sprite svg { width: 96px; height: 128px; }
+.atile-name { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
+.atile-meta { display: flex; align-items: center; gap: var(--s-xs); }
+
+/* 선수 페이지 머리 — 같은 아바타를 더 크게. 아바타를 누르면 꾸미기가 열린다. */
+.phero { display: flex; flex-direction: column; align-items: center; gap: var(--s-xs);
+  padding: var(--s-lg) var(--s-md); border-radius: var(--r-md); background: var(--card); }
+.phero .avatar-svg { width: 168px; height: 224px; }
+.phero-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
+.phero-meta { display: flex; align-items: center; gap: var(--s-xs); }
+.phero-sub { margin: 0; font-size: var(--fs-xs); color: var(--muted); text-align: center; }
 .avatar-btn { display: block; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
 .avatar-btn:hover { background: none; }
-.pcard-name { margin-top: var(--s-xs); padding: var(--s-xs) 0 0; border-top: 1px solid var(--ink-line);
-  text-align: center; font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); line-height: 1.2; }
-.pcard-detail { text-align: center; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
-.pcard-stats { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s-sm); width: 100%;
-  margin-top: var(--s-sm); padding-top: var(--s-xs); border-top: 1px solid var(--ink-line); }
-.pcard-stat { display: flex; align-items: baseline; gap: var(--s-xs); padding: 2px 0; }
-.pcard-stat:nth-child(2n) { padding-left: var(--s-sm); }
-.pcard-stat-val { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.7em; }
-.pcard-stat-label { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
-.pcard-note { margin: var(--s-sm) 0 0; font-size: var(--fs-xs); color: var(--ink-soft); text-align: center; }
-.pcard .muted { color: var(--ink-soft); }
-.pcard-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: var(--s-lg) var(--s-md); }
-.pcard-wall .pcard { max-width: none; }
-.pcard-wall-sm { grid-template-columns: repeat(5, 1fr); }
-@media (max-width: 1023px) { .pcard-wall-sm { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 639px) {
-  .pcard-wall, .pcard-wall-sm { grid-template-columns: repeat(2, 1fr); gap: var(--s-md) var(--s-xs); }
-  .pcard-wall .pcard-body { padding: var(--s-sm) var(--s-sm) var(--s-md); }
-  .pcard-wall .pcard-head { min-height: 74px; }
-  .pcard-wall .pcard-ovr { font-size: var(--fs-pixel-md); }
-  .pcard-wall .pcard-portrait svg { width: 48px; height: 64px; }
-}
-.pcard-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: var(--s-xxl); background: var(--card); border-radius: var(--r-md); }
+.list-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: var(--s-xxl); background: var(--card); border-radius: var(--r-md); }
 
 /* ══ 운영 규칙 ══════════════════════════════════════════════ */
 .rules-live { display: flex; flex-direction: column; gap: var(--s-sm); margin-top: var(--s-lg); }
@@ -420,10 +404,9 @@ a.card:hover { background: var(--charcoal); }
 
 /* ══ 능력치 막대(선수 페이지) ═══════════════════════════════ */
 .player-hero { display: grid; grid-template-columns: var(--pcard-w) minmax(0, 1fr); gap: var(--s-xl); align-items: start; }
-.player-hero .pcard { margin: 0; }
 .player-side { display: flex; flex-direction: column; gap: var(--s-md); min-width: 0; }
 .player-tiles { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-@media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero .pcard { max-width: var(--pcard-w); } }
+@media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero .phero { max-width: var(--pcard-w); margin: 0 auto; } }
 .attr-list { display: flex; flex-direction: column; }
 .attr-row { display: grid; grid-template-columns: 4.2em 3em minmax(0, 1fr); align-items: center; gap: var(--s-sm);
   padding: var(--s-xs) 0; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); }
@@ -613,7 +596,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .wfc .ant-descriptions-item-label { font-size: var(--fs-pixel-sm); }
 
 /* 표 안 부가 정보(포지션 옆 "CB · 오른발" 등)는 작은 기본 글꼴로 — 20px 로 키우면
-   칸이 두 줄로 접혀 행 높이가 두 배가 된다(실측 91px → 65px). 카드의 .pcard-detail 과 같은 규칙. */
+   칸이 두 줄로 접혀 행 높이가 두 배가 된다(실측 91px → 65px). 아바타 타일의 .phero-sub 와 같은 결. */
 .ant-table-tbody .muted { font-family: var(--font); font-size: var(--fs-xs); font-synthesis: none; }
 /* 포지션 칸 — 뱃지와 부가 정보 사이 간격을 CSS 로 준다. 리터럴 공백을 두면 그 글자가
    칸의 주변 글꼴(20px 도트)을 물려받아 칸을 밀어내고 일부 행만 두 줄로 접힌다. */

@@ -1,4 +1,4 @@
-// 선수 상세 — 카드(FC 아이템)·능력치·벌금 내역·편집·아바타 에디터.
+// 선수 상세 — 아바타·능력치·벌금 내역·편집·아바타 에디터.
 // 미납 벌금·봉사 요약은 2026-09-22 에 뺐다 — 운영 탭에 같은 내용이 있고, 홈 라커룸에서 들어오는
 // 이 화면은 "내 선수를 보고 꾸미는" 자리라 재정 정보가 끼어들 이유가 없다(사용자 지시).
 import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Table } from 'antd';
@@ -8,8 +8,7 @@ import type { CSSProperties } from 'react';
 import { fetchFull, serializePlayer, write, writeAvatar } from '../../lib/api';
 import { fmtDate, fmtWon } from '../../lib/html';
 import { href } from '../../lib/url';
-import { band, STAT_CUTS } from '../../lib/stats';
-import { playerCard, STAT_KO, STAT_LABEL } from '../../components/player-card';
+import { band, ovr, STAT_CUTS, STAT_KO, STAT_LABEL } from '../../lib/stats';
 import { avatarSvg } from '../../components/avatar';
 import { PARTS, avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import type { AvatarSpec } from '../../lib/avatar';
@@ -105,7 +104,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
 
   const fines = player ? playerFines(data?.fines ?? [], player.name) : [];
 
-  // OVR 카운트업 — playerCard() 가 html 로 그린 [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
+  // OVR 카운트업 — [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
   const cardRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!player || !cardRef.current) return;
@@ -235,12 +234,23 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
       {pageHead}
       {player && (
         <div className="stack">
+          {/* FC 카드를 걷어내고 아바타를 크게 세운다(2026-09-22 사용자 결정). 카드가 겹쳐 보여
+              주던 능력치 여섯 칸은 바로 오른쪽 칸이 막대까지 붙여 이미 하고 있었다. */}
           <div className="player-hero">
-            <div
-              ref={cardRef}
-              dangerouslySetInnerHTML={{ __html: playerCard(player, `<button type="button" id="avatar-edit-btn" class="avatar-btn" title="아바타 편집">${avatarSvg(avatarSpecFor(player.num, player.avatar), 112, player.num, true)}</button>`) }}
-              onClick={(e) => { if ((e.target as HTMLElement).closest('#avatar-edit-btn')) openAvatar(player); }}
-            />
+            <div className="phero" ref={cardRef}>
+              <button type="button" id="avatar-edit-btn" className="avatar-btn" title="아바타 편집"
+                onClick={() => openAvatar(player)}
+                dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(player.num, player.avatar), 224, player.num, true) }} />
+              <b className="phero-ovr" data-ovr={ovr(player)}>{ovr(player) || '–'}</b>
+              <div className="phero-meta">
+                <span className={`pos pos-${player.pos.toLowerCase()}`}>{player.pos || '–'}</span>
+                <span className="muted">#{player.num}{player.vest ? ` · 조끼 ${player.vest}` : ''}</span>
+              </div>
+              {(player.detail || player.foot) && (
+                <p className="phero-sub">{[player.detail, player.foot].filter(Boolean).join(' · ')}</p>
+              )}
+              {player.note && <p className="phero-sub">{player.note}</p>}
+            </div>
             <div className="player-side">
               <div className="card"><h2>능력치</h2><div className="attr-list">{attrRows}</div></div>
             </div>

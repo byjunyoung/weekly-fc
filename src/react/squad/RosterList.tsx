@@ -8,15 +8,16 @@ import { Input, Segmented, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import type { MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { avatarSvg, avatarFaceSvg } from '../../components/avatar';
-import { playerCard, STAT_LABEL } from '../../components/player-card';
 import { avatarSpecFor } from '../../lib/avatar';
 import { href } from '../../lib/url';
 import { isStarter, type LineupState } from '../../lib/lineup';
-import { band, grade, ovr, STAT_CUTS } from '../../lib/stats';
+import { band, grade, ovr, STAT_CUTS, STAT_LABEL } from '../../lib/stats';
 import { STAT_KEYS, type Player } from '../../lib/types';
 import { ALL_VIEWS, byOvr, type View } from './model';
 
-const VIEW_LABEL: Record<View, string> = { list: '목록', card: '카드', table: '표' };
+// 보기 이름만 '아바타'로 바꾸고 키(card)는 그대로 둔다 — 기기에 저장된 보기 설정이
+// 키로 남아 있어, 키를 바꾸면 쓰던 사람들이 표로 튕긴다.
+const VIEW_LABEL: Record<View, string> = { list: '목록', card: '아바타', table: '표' };
 
 /** 포지션 칩·이름 검색·보기 전환. **본문과 떼어 낸 건** 라인업 화면이 이 줄을 위 조작줄
  *  (인원·포메이션·자동 배치)과 같은 높이에 놓기 때문이다 — 그래야 피치 윗변과 명단 첫 줄이
@@ -84,20 +85,29 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
   return (
     <>
       {!bodyOnly && <RosterFilters view={view} onViewChange={onViewChange} views={views} pos={pos} onPosChange={onPosChange} q={q} onQChange={onQChange} />}
-      <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'pcard-wall' : ''}
+      <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'atile-wall' : ''}
         onClick={view === 'list' ? onBodyClick : undefined} onKeyDown={view === 'list' ? onBodyKeyDown : undefined}>
         {view === 'table' ? (
           <Table<Player> size="small" rowKey="num" pagination={false} columns={columns} dataSource={rows}
             locale={{ emptyText: '명단이 비어 있습니다' }} />
         ) : view === 'card' ? (
           rows.length ? byOvr(rows).map((p) => {
-            // 카드 전체가 선수 페이지로 가는 링크다 — 찍기가 빠지고 나니 카드에 남은 동작이
-            // 이것뿐이라, 아래에 회색 링크 줄을 따로 띄울 이유가 없다.
+            // FC 카드(금속 면·큰 OVR·능력치 여섯 칸)를 걷어내고 아바타를 크게 세운다
+            // (2026-09-22 사용자: "카드 자체를 없애자 그냥 다 아바타 뷰로"). 카드가 보여 주던
+            // 숫자는 표 보기와 선수 페이지에 그대로 있다.
+            const o = ovr(p);
             return (
-              <a className="bd-cardcell" key={p.num} href={href(`/squad/${p.num}/`)} aria-label={`${p.name} 선수 페이지`}
-                dangerouslySetInnerHTML={{ __html: playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 112, p.num, true)) }} />
+              <a className="atile" key={p.num} href={href(`/squad/${p.num}/`)}>
+                <span className="atile-sprite" aria-hidden="true"
+                  dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 128, p.num, true) }} />
+                <b className="atile-name">{p.name}</b>
+                <span className="atile-meta">
+                  <span className={`pos pos-${p.pos.toLowerCase()}`}>{p.pos || '–'}</span>
+                  <b className={`val val-${band(o, STAT_CUTS)}`}>{o || '–'}</b>
+                </span>
+              </a>
             );
-          }) : <p className="pcard-empty">명단이 비어 있습니다</p>
+          }) : <p className="list-empty">명단이 비어 있습니다</p>
         ) : rows.length ? (
           <div className="bd-rows">
             {byOvr(rows).map((p) => {
@@ -114,7 +124,7 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
               );
             })}
           </div>
-        ) : <p className="pcard-empty">명단이 비어 있습니다</p>}
+        ) : <p className="list-empty">명단이 비어 있습니다</p>}
       </div>
     </>
   );

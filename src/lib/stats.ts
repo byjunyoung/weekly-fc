@@ -1,5 +1,5 @@
 // src/lib/stats.ts
-import { STAT_KEYS, type Fine, type FineType, type Player } from './types.ts';
+import { STAT_KEYS, type Fine, type FineType, type Player, type StatKey } from './types.ts';
 
 export const STAT_CUTS: [number, number, number] = [84, 69, 55];
 export function ovr(p: Player): number {
@@ -21,3 +21,8 @@ export function fineSummary(fines: Fine[]) {
   }
   return { total, unpaid, unpaidCount, byType, byPlayer };
 }
+
+/** 능력치 약어·한글 이름. 예전엔 components/player-card.ts 에 있었는데 그 카드를 걷어내면서
+ *  (2026-09-22) 표·편집 폼·선수 페이지가 쓰는 이 표만 남아 능력치 정의 옆으로 옮겼다. */
+export const STAT_LABEL: Record<StatKey, string> = { pace: 'PAC', dribble: 'DRI', pass: 'PAS', shoot: 'SHO', defend: 'DEF', stamina: 'PHY' };
+export const STAT_KO: Record<StatKey, string> = { pace: '페이스', dribble: '드리블', pass: '패스', shoot: '슈팅', defend: '수비', stamina: '체력' };
