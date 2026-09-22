@@ -9,7 +9,7 @@ import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 import type { View } from './model';
 import Pitch from './Pitch';
-import RosterList from './RosterList';
+import RosterList, { RosterFilters } from './RosterList';
 import ShareModal from './ShareModal';
 import { useLineup } from './useLineup';
 
@@ -73,6 +73,9 @@ function Lineup() {
       <div className="page-head">
         <h1>라인업 <span className="muted">선발 {filled}/{st.count}</span></h1>
       </div>
+      {/* 위 줄은 아래 .bd 와 같은 격자다 — 왼쪽은 라인업 설정, 오른쪽은 명단 필터. 필터를 여기
+          올려야 피치 윗변과 명단 첫 줄이 같은 선에서 시작한다(사용자 지적 2026-09-22). */}
+      <div className="bd-toprow">
       <div className="bd-controls" role="group" aria-label="라인업 설정">
         <div className="bd-field"><span className="label">인원</span>
           <Segmented value={st.count} onChange={(v) => { setSelected(null); commit(L.setCount(st, Number(v))); }}
@@ -86,6 +89,9 @@ function Lineup() {
           options={[{ label: '풋살', value: 'futsal' }, { label: '축구', value: 'soccer' }]} />
         <Button onClick={() => { setSelected(null); commit(L.autoFill(st, data.players)); }}>자동 배치</Button>
       </div>
+        <RosterFilters view="list" onViewChange={() => {}} views={LINEUP_VIEWS}
+          pos={pos} onPosChange={setPos} q={q} onQChange={setQ} />
+      </div>
       <div className="bd">
         <section className="bd-stage" aria-label="피치">
           <Pitch st={st} players={data.players} selected={selected} land={land}
@@ -97,7 +103,7 @@ function Lineup() {
         <aside className="bd-list" aria-labelledby="bd-list-title">
           <h2 className="bd-list-title" id="bd-list-title">명단 {data.players.length}명 · 선발 {filled}/{st.count}</h2>
           <RosterList view="list" onViewChange={() => {}} views={LINEUP_VIEWS} pos={pos} onPosChange={setPos}
-            q={q} onQChange={setQ} rows={rows} st={st} onPick={onPick} />
+            q={q} onQChange={setQ} rows={rows} st={st} onPick={onPick} bodyOnly />
         </aside>
       </div>
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} st={st} players={data.players}

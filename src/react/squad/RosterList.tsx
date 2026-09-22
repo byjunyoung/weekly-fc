@@ -16,13 +16,36 @@ import { ALL_VIEWS, byOvr, type View } from './model';
 
 const VIEW_LABEL: Record<View, string> = { list: '목록', card: '카드', table: '표' };
 
-export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick }: {
+/** 포지션 칩·이름 검색·보기 전환. **본문과 떼어 낸 건** 라인업 화면이 이 줄을 위 조작줄
+ *  (인원·포메이션·자동 배치)과 같은 높이에 놓기 때문이다 — 그래야 피치 윗변과 명단 첫 줄이
+ *  같은 선에서 시작한다(사용자 지적 2026-09-22). /squad/ 는 예전처럼 본문 바로 위에 둔다. */
+export function RosterFilters({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange }: {
+  view: View; onViewChange: (v: View) => void; views?: View[];
+  pos: string; onPosChange: (p: string) => void;
+  q: string; onQChange: (q: string) => void;
+}) {
+  return (
+    <div className="bd-list-head">
+      <Segmented className="chips" value={pos} onChange={(v) => onPosChange(String(v))}
+        options={[{ label: '전체', value: 'ALL' }, { label: 'GK', value: 'GK' }, { label: 'DF', value: 'DF' }, { label: 'MF', value: 'MF' }, { label: 'FW', value: 'FW' }]} />
+      <Input className="w-search" placeholder="이름" allowClear value={q} onChange={(e) => onQChange(e.target.value)} />
+      {views.length > 1 && (
+        <Segmented className="chips" value={view} onChange={(v) => onViewChange(v as View)}
+          options={views.map((v) => ({ label: VIEW_LABEL[v], value: v }))} />
+      )}
+    </div>
+  );
+}
+
+export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick, bodyOnly = false }: {
   view: View; onViewChange: (v: View) => void;
   /** 이 화면이 고를 수 있는 보기. 하나뿐이면 전환 칩을 아예 그리지 않는다(라인업은 목록 고정). */
   views?: View[];
   pos: string; onPosChange: (p: string) => void;
   q: string; onQChange: (q: string) => void;
   rows: Player[]; st: LineupState; onPick: (num: number) => void;
+  /** 필터 줄을 여기서 안 그린다 — 라인업처럼 그 줄을 다른 자리에 이미 놓은 화면용. */
+  bodyOnly?: boolean;
 }) {
   // 목록·카드 뷰의 「선발/넣기」 버튼은 옛 문자열 템플릿 안 data-pick 속성으로 남아 있다 — 행마다
   // 리스너를 안 붙이고 바깥 한 곳에서 위임으로 받는다(옛 코드와 같은 이유: 다시 그릴 때마다 innerHTML 이
@@ -58,15 +81,7 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
 
   return (
     <>
-      <div className="bd-list-head">
-        <Segmented className="chips" value={pos} onChange={(v) => onPosChange(String(v))}
-          options={[{ label: '전체', value: 'ALL' }, { label: 'GK', value: 'GK' }, { label: 'DF', value: 'DF' }, { label: 'MF', value: 'MF' }, { label: 'FW', value: 'FW' }]} />
-        <Input className="w-search" placeholder="이름" allowClear value={q} onChange={(e) => onQChange(e.target.value)} />
-        {views.length > 1 && (
-          <Segmented className="chips" value={view} onChange={(v) => onViewChange(v as View)}
-            options={views.map((v) => ({ label: VIEW_LABEL[v], value: v }))} />
-        )}
-      </div>
+      {!bodyOnly && <RosterFilters view={view} onViewChange={onViewChange} views={views} pos={pos} onPosChange={onPosChange} q={q} onQChange={onQChange} />}
       <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'pcard-wall' : ''}
         onClick={view !== 'table' ? onBodyClick : undefined} onKeyDown={view !== 'table' ? onBodyKeyDown : undefined}>
         {view === 'table' ? (
