@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   VESTS, MIN_TEAMS, MAX_TEAMS, initialTeams, setTeams, togglePicked, addGuest, removeGuest, moveTo,
   membersOf, autoBalance, teamViews, unassigned, shortName, shareText, restore, serialize, playerKey, guestKey,
+  avgSpread, SPREAD_WARN,
 } from '../../src/lib/teams.ts';
 
 const P = (num, name, s) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '',
@@ -49,15 +50,48 @@ test('membersOf — 명단 선수 다음에 용병, 용병은 능력치가 없�
   assert.equal(ms[0].ovr, 90);
 });
 
-test('자동 배치 — 뱀 드래프트라 팀 평균이 고르게 모인다', () => {
+test('자동 배치 — 인원이 고르고 상위권이 한 팀에 안 몰린다', () => {
+  // 처음엔 이 테스트가 "뱀 드래프트의 핵심"을 지킨다고 적어 놨는데, 순차 배분으로 바꿔도
+  // 통과했다(2026-09-22 리뷰의 뮤테이션 M1) — 상위 셋을 흩는 건 순차도 하고, 평균은 뒤따르는
+  // 다듬기가 맞춘다. 그래서 **실제로 지키는 것**만 적는다: 인원 균형과 상위권 분산.
   const st = autoBalance(setTeams(pickAll(12), 3), ROSTER);
   const views = teamViews(st, ROSTER);
   assert.deepEqual(views.map((v) => v.members.length), [4, 4, 4], '인원이 고르지 않다');
   const avgs = views.map((v) => v.avg);
   assert.ok(Math.max(...avgs) - Math.min(...avgs) <= 2, `팀 평균이 벌어졌다: ${avgs}`);
-  // 1·2·3순위가 서로 다른 팀으로 갈린다 — 뱀 드래프트의 핵심.
   const top3 = [1, 2, 3].map((n) => st.assign[playerKey(n)]);
   assert.equal(new Set(top3).size, 3, `상위 셋이 같은 팀에 몰렸다: ${top3}`);
+});
+
+test('자동 배치 — 고른 순서가 달라도 같은 결과다 (동점 타이브레이커)', () => {
+  // 실제 명단엔 동점이 많다(70점 7명 등). 정렬 타이브레이커가 없으면 고른 순서에 따라
+  // 결과가 갈린다 — 뮤테이션 M14 가 이걸 안 잡았다.
+  const tied = Array.from({ length: 8 }, (_, i) => P(i + 1, `동점${i + 1}`, 70));
+  const fwd = [1, 2, 3, 4, 5, 6, 7, 8].reduce((st, n) => togglePicked(st, n), setTeams(initialTeams(), 3));
+  const rev = [8, 7, 6, 5, 4, 3, 2, 1].reduce((st, n) => togglePicked(st, n), setTeams(initialTeams(), 3));
+  assert.deepEqual(autoBalance(fwd, tied).assign, autoBalance(rev, tied).assign);
+});
+
+test('moveTo — 범위 밖 팀 번호는 배정을 푼다', () => {
+  const st = moveTo(pickAll(2), playerKey(1), 0);
+  assert.equal(moveTo(st, playerKey(1), 99).assign[playerKey(1)], undefined);
+  assert.equal(moveTo(st, playerKey(1), -1).assign[playerKey(1)], undefined);
+  assert.equal(moveTo(st, playerKey(1), null).assign[playerKey(1)], undefined);
+});
+
+test('평균 벌어짐 — 용병만 있는 팀은 빼고 잰다 (0 으로 치면 늘 그 팀이 최솟값)', () => {
+  let st = setTeams(togglePicked(initialTeams(), 1), 2);   // OVR 90 한 명
+  st = addGuest(st, 'g1', '용병');
+  st = moveTo(moveTo(st, playerKey(1), 0), guestKey('g1'), 1);
+  assert.equal(avgSpread(st, ROSTER), 0, '용병만 있는 팀을 0 으로 쳤다');
+});
+
+test('스탯이 전부 빈 선수는 용병과 같은 취급 — 평균을 무너뜨리지 않는다', () => {
+  const rookie = P(20, '신입', 0);
+  let st = setTeams(initialTeams(), 2);
+  for (const n of [1, 2, 20]) st = togglePicked(st, n);
+  const ms = membersOf(st, [...ROSTER, rookie]);
+  assert.equal(ms.find((m) => m.num === 20).ovr, null, 'OVR 0 이 평균에 섞인다');
 });
 
 test('자동 배치 — 인원이 안 맞아떨어져도 팀 평균이 2 이내로 모인다 (밸붕 방지)', () => {
@@ -121,8 +155,20 @@ test('shareText — 카톡에 손으로 적던 모양 그대로', () => {
   st = moveTo(st, playerKey(3), 1);
   st = moveTo(st, guestKey('g1'), 0);
   assert.equal(shareText(st, ROSTER), [
-    '[노란조끼팀]', '수1 / 오준 용병+2', '', '[주황조끼팀]', '수2 / 수3',
+    '[노조끼팀]', '수1 / 오준 용병+2', '', '[주황조끼팀]', '수2 / 수3',
   ].join('\n'));
+});
+
+test('shareText — 짧은 이름이 겹치면 그 사람만 성을 붙인다', () => {
+  // 실제 명단에 강준영·김준영, 곽민제·장민제가 있다 — 둘 다 오면 "준영"이 두 팀에 나와
+  // 카톡만 보고 누가 어느 팀인지 알 수 없다(2026-09-22 리뷰).
+  const dup = [P(1, '강준영', 80), P(2, '김준영', 70), P(3, '이동훈', 75)];
+  let st = setTeams(initialTeams(), 2);
+  for (const n of [1, 2, 3]) st = togglePicked(st, n);
+  st = moveTo(moveTo(moveTo(st, playerKey(1), 0), playerKey(2), 1), playerKey(3), 0);
+  const text = shareText(st, dup);
+  assert.ok(text.includes('강준영') && text.includes('김준영'), `겹치는 이름에 성이 안 붙었다:\n${text}`);
+  assert.ok(text.includes('동훈'), `안 겹치는 이름까지 성이 붙었다:\n${text}`);
 });
 
 test('shareText — 빈 팀은 빼고 낸다', () => {
@@ -131,28 +177,46 @@ test('shareText — 빈 팀은 빼고 낸다', () => {
   assert.equal(shareText(st, ROSTER), '[야광조끼팀]\n수1');
 });
 
-test('조끼 이름은 팀 수만큼 있다', () => {
+test('조끼 이름은 팀 수만큼 있고, 첫 팀은 사용자가 쓰던 "노조끼"(조끼 안 입는 팀)다', () => {
   assert.equal(VESTS.length, MAX_TEAMS);
   assert.equal(new Set(VESTS.map((v) => v.label)).size, VESTS.length, '같은 이름이 둘');
+  // 처음엔 "노란조끼"로 적었다가 사용자 확인으로 바로잡았다(2026-09-22) — 노란색이 아니라
+  // 조끼를 안 입는 팀이다. 카톡 원문이 "[노조끼팀]" 이라 텍스트도 그대로 나와야 한다.
+  assert.equal(VESTS[0].label, '노조끼');
+  assert.deepEqual(VESTS.slice(0, 3).map((v) => v.label), ['노조끼', '주황조끼', '야광조끼']);
 });
 
-test('restore — 왕복이 되고, 명단에서 빠진 번호·범위 밖 팀은 조용히 버린다', () => {
+test('restore — 왕복이 되고, 모양이 깨진 값·범위 밖 팀·모르는 키는 버린다', () => {
   let st = setTeams(pickAll(3), 2);
   st = addGuest(st, 'g1', '용병');
   st = moveTo(moveTo(st, playerKey(1), 0), guestKey('g1'), 1);
-  assert.deepEqual(restore(serialize(st), ROSTER), st);
+  assert.deepEqual(restore(serialize(st)), st);
 
-  // 명단에 없는 99번, 없는 팀 5, 깨진 용병
-  const dirty = JSON.stringify({ teams: 2, picked: [1, 99], guests: [{ id: 'g1', name: '용병' }, { nope: 1 }],
-    assign: { p1: 0, p99: 1, g1: 5, zz: 0 } });
-  const got = restore(dirty, ROSTER);
-  assert.deepEqual(got.picked, [1]);
+  const dirty = JSON.stringify({ teams: 2, picked: [1, 'x', null], guests: [{ id: 'g1', name: '용병' }, { nope: 1 }],
+    assign: { p1: 0, g1: 5, zz: 0 } });
+  const got = restore(dirty);
+  assert.deepEqual(got.picked, [1], '숫자가 아닌 번호가 남았다');
   assert.deepEqual(got.guests, [{ id: 'g1', name: '용병' }]);
-  assert.deepEqual(got.assign, { p1: 0 }, '버려야 할 배정이 남았다');
+  assert.deepEqual(got.assign, { p1: 0 }, '범위 밖 팀·모르는 키가 남았다');
+});
+
+test('restore — **명단과 대조해 거르지 않는다** (초안이 조용히 지워지던 경로)', () => {
+  // useData 가 캐시 → 네트워크로 두 번 값을 준다. 예전엔 첫 값으로 걸러서, 명단이 비었거나
+  // 낡으면 초안이 잘린 채 저장됐다(2026-09-22 리뷰가 브라우저에서 재현). 안 온 사람을 거르는
+  // 건 화면(membersOf)이 한다 — 저장은 적힌 그대로 보존한다.
+  const saved = JSON.stringify({ teams: 3, picked: [2, 7, 99], guests: [{ id: 'g1', name: '용병' }],
+    assign: { p2: 0, p7: 1, p99: 2, g1: 2 } });
+  const got = restore(saved);
+  assert.deepEqual(got.picked, [2, 7, 99], '명단에 없다고 버렸다');
+  assert.equal(got.assign.p99, 2, '명단에 없다고 배정을 버렸다');
+  // 명단이 비어 있어도 화면에는 안 나온다 — 거르는 자리는 여기다.
+  assert.deepEqual(membersOf(got, []).map((m) => m.name), ['용병']);
+  // 명단이 오면 그대로 살아난다.
+  assert.deepEqual(membersOf(got, ROSTER).map((m) => m.num), [2, 7, null]);
 });
 
 test('restore — 빈 값·깨진 JSON 은 기본 상태', () => {
-  assert.deepEqual(restore(null, ROSTER), initialTeams());
-  assert.deepEqual(restore('{{{', ROSTER), initialTeams());
-  assert.deepEqual(restore('"문자열"', ROSTER), initialTeams());
+  assert.deepEqual(restore(null), initialTeams());
+  assert.deepEqual(restore('{{{'), initialTeams());
+  assert.deepEqual(restore('"문자열"'), initialTeams());
 });

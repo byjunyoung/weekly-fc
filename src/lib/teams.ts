@@ -8,9 +8,11 @@
 import { ovr } from './stats.ts';
 import type { Player } from './types.ts';
 
-/** 그날 입는 조끼 색 = 팀 이름. 팀을 늘리면 이 순서대로 쓴다. */
+/** 그날 입는 조끼 = 팀 이름. 카톡에 적던 순서 그대로다(노조끼 → 주황 → 야광).
+ *  **"노조끼"는 노란조끼가 아니라 조끼를 안 입는 팀이다**(사용자 확인 2026-09-22) — 자기 옷을
+ *  그대로 입으므로 점도 색 대신 밝은 회색이다. 네 팀으로 가를 때만 쓰는 검정조끼가 맨 뒤. */
 export const VESTS = [
-  { key: 'yellow', label: '노란조끼', color: '#f1c40f' },
+  { key: 'none', label: '노조끼', color: '#e5e5e5' },
   { key: 'orange', label: '주황조끼', color: '#e67e22' },
   { key: 'neon', label: '야광조끼', color: '#c8ff3d' },
   { key: 'black', label: '검정조끼', color: '#34495e' },
@@ -83,7 +85,9 @@ export function membersOf(st: TeamsState, players: Player[]): Member[] {
   const roster = st.picked
     .map((num) => byNum.get(num))
     .filter((p): p is Player => !!p)
-    .map((p) => ({ key: playerKey(p.num), name: p.name, ovr: ovr(p), num: p.num }));
+    // 스탯이 전부 비면 ovr() 는 null 이 아니라 0 을 준다 — 그대로 두면 평균이 무너지므로
+    // 용병과 같은 취급(머릿수만 맞춤)으로 돌린다(2026-09-22 리뷰).
+    .map((p) => ({ key: playerKey(p.num), name: p.name, ovr: ovr(p) || null, num: p.num }));
   const guests = st.guests.map((g) => ({ key: guestKey(g.id), name: g.name, ovr: null, num: null }));
   return [...roster, ...guests];
 }
@@ -177,46 +181,78 @@ export const unassigned = (st: TeamsState, players: Player[]): Member[] =>
  *  드물기도 하고 잘못 떼는 것보다 한 글자 남는 편이 알아보기 쉽다.
  *  **용병에는 안 쓴다** — "오준 용병+2" 처럼 성+이름이 아닌 자유 문구라 첫 글자를 떼면 망가진다. */
 export const shortName = (name: string): string => (name.length >= 3 ? name.slice(1) : name);
-const listName = (m: Member): string => (m.num == null ? m.name : shortName(m.name));
+/** 그날 나온 사람들 안에서 짧은 이름이 겹치면(준영: 강준영·김준영) 그 사람만 성을 붙여 낸다 —
+ *  안 그러면 카톡만 보고 누가 어느 팀인지 알 수 없다(2026-09-22 리뷰가 실제 명단에서 두 쌍 발견). */
+function nameMap(members: Member[]): Map<string, string> {
+  const count = new Map<string, number>();
+  for (const m of members) {
+    if (m.num == null) continue;
+    const s = shortName(m.name);
+    count.set(s, (count.get(s) ?? 0) + 1);
+  }
+  const out = new Map<string, string>();
+  for (const m of members) {
+    if (m.num == null) { out.set(m.key, m.name); continue; }
+    const s = shortName(m.name);
+    out.set(m.key, (count.get(s) ?? 0) > 1 ? m.name : s);
+  }
+  return out;
+}
 
 /** 카톡에 그대로 붙여넣을 텍스트. 사용자가 손으로 적던 모양을 그대로 따른다. */
 export function shareText(st: TeamsState, players: Player[]): string {
+  const names = nameMap(membersOf(st, players));
   return teamViews(st, players)
     .filter((t) => t.members.length > 0)
-    .map((t) => `[${t.vest.label}팀]\n${t.members.map(listName).join(' / ')}`)
+    .map((t) => `[${t.vest.label}팀]\n${t.members.map((m) => names.get(m.key) ?? m.name).join(' / ')}`)
     .join('\n\n');
+}
+
+/** 팀 평균이 이만큼 넘게 벌어지면 화면이 알려 준다 — 인원이 적거나 팀이 많으면 알고리즘으로
+ *  못 맞추는 구간이 있다(5명 4팀은 브루트포스도 17 차이). 사용자가 "배치됐으니 됐다"고
+ *  믿는 걸 막는다(2026-09-22 리뷰). */
+export const SPREAD_WARN = 5;
+export function avgSpread(st: TeamsState, players: Player[]): number {
+  const avgs = teamViews(st, players).map((t) => t.avg).filter((v): v is number => v != null);
+  return avgs.length < 2 ? 0 : Math.max(...avgs) - Math.min(...avgs);
 }
 
 const KEY = 'wfc.teams.draft';
 
 export const serialize = (st: TeamsState): string => JSON.stringify(st);
 
-/** 저장된 초안 복원 — 모양이 깨졌거나 명단에 없는 번호는 조용히 버린다. */
-export function restore(raw: string | null, players: Player[]): TeamsState {
+/**
+ * 저장된 초안 복원 — 모양이 깨진 값만 버린다.
+ *
+ * **명단과 대조해 거르지 않는다.** 예전엔 `players` 에 없는 번호를 버렸는데, `useData` 가
+ * 캐시 → 네트워크로 두 번 값을 주므로 **첫 값이 비었거나 낡으면 초안이 그 자리에서 잘리고**
+ * 다음 조작 한 번에 그대로 저장돼 영구 소실됐다(2026-09-22 리뷰가 재현). 안 온 사람을 거르는
+ * 건 화면을 그리는 `membersOf` 가 이미 하므로, 저장 단계의 필터는 중복이고 손해만 낸다.
+ */
+export function restore(raw: string | null): TeamsState {
   const base = initialTeams();
   if (!raw) return base;
   try {
     const o = JSON.parse(raw) as Partial<TeamsState>;
-    const live = new Set(players.map((p) => p.num));
-    const picked = Array.isArray(o.picked) ? o.picked.filter((n) => typeof n === 'number' && live.has(n)) : [];
+    const picked = Array.isArray(o.picked) ? o.picked.filter((n) => typeof n === 'number' && Number.isFinite(n)) : [];
     const guests = Array.isArray(o.guests)
       ? o.guests.filter((g): g is Guest => !!g && typeof g.id === 'string' && typeof g.name === 'string')
       : [];
     // teams 가 숫자가 아니면(문자열 JSON 등) 기본값을 쓴다 — clampTeams 에 NaN 을 넣으면
     // 최솟값 2 로 떨어져 기본 3 과 달라진다(테스트가 잡았다).
     const teams = Number.isFinite(Number(o.teams)) ? clampTeams(Number(o.teams)) : base.teams;
-    const st: TeamsState = { ...base, teams, picked, guests, assign: {} };
-    const keys = new Set(membersOf(st, players).map((m) => m.key));
+    // 배정은 **이 초안이 아는 사람**에게만 남긴다(명단이 아니라 초안 자신을 기준으로).
+    const keys = new Set([...picked.map(playerKey), ...guests.map((g) => guestKey(g.id))]);
     const assign: Record<string, number> = {};
     for (const [k, t] of Object.entries(o.assign ?? {})) {
-      if (keys.has(k) && typeof t === 'number' && t >= 0 && t < st.teams) assign[k] = t;
+      if (keys.has(k) && typeof t === 'number' && t >= 0 && t < teams) assign[k] = t;
     }
-    return { ...st, assign };
+    return { teams, picked, guests, assign };
   } catch { return base; }
 }
 
-export function load(players: Player[]): TeamsState {
-  try { return restore(localStorage.getItem(KEY), players); } catch { return initialTeams(); }
+export function load(): TeamsState {
+  try { return restore(localStorage.getItem(KEY)); } catch { return initialTeams(); }
 }
 export function save(st: TeamsState): void {
   try { localStorage.setItem(KEY, serialize(st)); } catch { /* 저장 못 해도 화면은 돈다 */ }
