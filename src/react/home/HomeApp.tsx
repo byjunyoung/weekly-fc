@@ -1,4 +1,4 @@
-// 홈 대시보드 — 타일 그리드(antd Card).
+// 홈 대시보드 — 왼쪽 절반이 라커룸(내 아바타), 오른쪽에 타일 격자(antd Card).
 import { Card } from 'antd';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -18,21 +18,33 @@ import type { DutyTile } from './model';
 // style 로 줘서 캐스케이드 순서에 기대지 않는다(2단계에서 자식 결합자가 깨졌던 교훈).
 const TILE_STYLE = { background: 'var(--elevated)', display: 'flex', flexDirection: 'column' as const, textAlign: 'left' as const, padding: 'var(--s-md)', cursor: 'pointer' };
 const TILE_BODY = { body: { padding: 0, display: 'contents' as const } };
-// 히어로는 가로 배치라 flex 방향·정렬·gap 을 인라인으로 준다 — TILE_STYLE 과 같은 이유로
-// 캐스케이드 순서에 기대지 않는다(antd Card 가 자기 규칙을 얹는다).
-const HERO_STYLE = { ...TILE_STYLE, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 'var(--s-lg)' };
+// 라커룸은 세로로 길게 서는 칸이라 gap 만 더한다 — TILE_STYLE 과 같은 이유로 캐스케이드
+// 순서에 기대지 않는다(antd Card 가 자기 규칙을 얹는다).
+const LOCKER_STYLE = { ...TILE_STYLE, gap: 'var(--s-sm)' };
 // 이름을 고르기 전 자리지킴 — 회색 유니폼의 일반 선수. 상수라 렌더마다 같은 그림이 나온다.
 const PLACEHOLDER_SPEC = { face: 0, hair: 1, skin: 2, eyes: 0, kit: '#565f6f' };
-const HERO_SPRITE_H = 120;
+const LOCKER_SPRITE_H = 300;
 
-function LinkTile({ to, hero, children }: { to: string; hero?: boolean; children: ReactNode }) {
+/** 라커룸 무대 — 사물함 벽·바닥 띠는 순수 CSS 라 스프라이트 하나만 넣는다. */
+function LockerStage({ svg, plate }: { svg: string; plate: ReactNode }) {
+  return (
+    <div className="locker-stage">
+      <div className="locker-wall" aria-hidden="true" />
+      <div className="locker-floor" aria-hidden="true" />
+      <div className="locker-sprite" dangerouslySetInnerHTML={{ __html: svg }} />
+      {plate}
+    </div>
+  );
+}
+
+function LinkTile({ to, locker, children }: { to: string; locker?: boolean; children: ReactNode }) {
   const isExternal = to.startsWith('http');
   // 부모 <a> 는 display:contents 라 포커스를 받을 수 없다(CSS 스펙 — 박스 없는 요소는 포커스 대상이 될 수 없다).
   // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 빈 「내 선수」 타일과 같은 패턴.
   const go = () => { if (isExternal) window.open(to, '_blank', 'noopener'); else location.assign(to); };
   return (
     <a href={to} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined} style={{ display: 'contents' }}>
-      <Card className={hero ? 'tile tile-hero' : 'tile'} variant="borderless" style={hero ? HERO_STYLE : TILE_STYLE} styles={TILE_BODY}
+      <Card className={locker ? 'tile tile-locker' : 'tile'} variant="borderless" style={locker ? LOCKER_STYLE : TILE_STYLE} styles={TILE_BODY}
         role="link" tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
         {children}
@@ -42,15 +54,13 @@ function LinkTile({ to, hero, children }: { to: string; hero?: boolean; children
 }
 function EmptyMeTile({ onOpen }: { onOpen: () => void }) {
   return (
-    <Card className="tile tile-hero" variant="borderless" style={HERO_STYLE} styles={TILE_BODY}
+    <Card className="tile tile-locker" variant="borderless" style={LOCKER_STYLE} styles={TILE_BODY}
       role="button" tabIndex={0} onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
-      <div className="tile-hero-sprite" dangerouslySetInnerHTML={{ __html: avatarSvg(PLACEHOLDER_SPEC, HERO_SPRITE_H, undefined, true) }} />
-      <div className="tile-hero-text">
-        <span className="tile-label">내 선수</span>
-        <b className="tile-big">?</b>
-        <span className="tile-sub">이름을 고르면 내 카드가 뜹니다</span>
-      </div>
+      <span className="tile-label">라커룸</span>
+      <LockerStage svg={avatarSvg(PLACEHOLDER_SPEC, LOCKER_SPRITE_H, undefined, true)}
+        plate={<span className="locker-plate locker-plate-empty">이름을 고르면 내 선수가 섭니다</span>} />
+      <span className="tile-sub tile-go">눌러서 이름 고르기 ›</span>
     </Card>
   );
 }
@@ -78,13 +88,17 @@ function App() {
       <div className="rail">
         {s.meTile.kind === 'picked'
           ? (
-            <LinkTile to={href(`/squad/${s.meTile.num}/`)} hero>
-              <div className="tile-hero-sprite" dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(s.meTile.num, s.meTile.avatar), HERO_SPRITE_H, s.meTile.num, true) }} />
-              <div className="tile-hero-text">
-                <span className="tile-label">내 선수</span>
-                <b className="tile-big">{s.meTile.ovr || '–'}</b>
-                <span className="tile-sub">{s.meTile.name} · {s.meTile.pos} · #{s.meTile.num}</span>
-              </div>
+            <LinkTile to={href(`/squad/${s.meTile.num}/`)} locker>
+              <span className="tile-label">라커룸</span>
+              <LockerStage svg={avatarSvg(avatarSpecFor(s.meTile.num, s.meTile.avatar), LOCKER_SPRITE_H, s.meTile.num, true)}
+                plate={(
+                  <span className="locker-plate">
+                    <b>{s.meTile.ovr || '–'}</b>
+                    <span>{s.meTile.name}</span>
+                    <i>{s.meTile.pos} · #{s.meTile.num}</i>
+                  </span>
+                )} />
+              <span className="tile-sub tile-go">눌러서 내 선수 보기 · 꾸미기 ›</span>
             </LinkTile>
           )
           : <EmptyMeTile onOpen={openMe} />}

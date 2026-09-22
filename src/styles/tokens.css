@@ -276,8 +276,15 @@ a.card:hover { background: var(--charcoal); }
 .stack { display: flex; flex-direction: column; gap: var(--s-xl); }
 
 /* ══ 메인 메뉴(홈) ══════════════════════════════════════════ */
-.rail { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(128px, 1fr); gap: var(--s-sm); }
-@media (max-width: 639px) { .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* 왼쪽 한 칸이 라커룸(세로 3행), 나머지 타일이 오른쪽 2열로 선다. 라커룸 칸을 조금 넓게 잡아
+   사람이 서 있을 자리를 만든다(2026-09-22). */
+.rail { display: grid; grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: repeat(3, minmax(150px, 1fr)); gap: var(--s-sm); }
+.tile-locker { grid-row: 1 / span 3; }
+/* 좌우로 세울 폭이 안 나오면 라커룸이 위에 가로로 눕고 타일은 2열로 내려간다. */
+@media (max-width: 899px) {
+  .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(148px, auto); }
+  .tile-locker { grid-column: 1 / -1; grid-row: auto; min-height: 340px; }
+}
 /* game-tile: 면 #121314, 각진 2px 테두리. hover 는 테두리가 켜진다(2단계 도트 톤). */
 .tile { display: flex; flex-direction: column; text-align: left; padding: var(--s-md); border: 2px solid var(--line); border-radius: 0;
   background: var(--elevated); color: inherit; font-weight: var(--fw-body); cursor: pointer;
@@ -290,10 +297,23 @@ a.card:hover { background: var(--charcoal); }
 .tile-duo { display: flex; flex-wrap: wrap; gap: 0 var(--s-sm); margin-top: auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-num); font-synthesis: none; letter-spacing: 0; line-height: 1.25; }
 /* 「내 선수」 히어로 — 전체 폭 한 칸을 차지하고 왼쪽에 전신 도트 선수를 세운다.
    flex 방향·gap 은 HomeApp 이 인라인으로 준다(antd Card 라 캐스케이드에 기대지 않는다). */
-.tile-hero { grid-column: 1 / -1; min-height: 168px; }
-.tile-hero-sprite { flex: 0 0 auto; display: flex; }
-.tile-hero-text { display: flex; flex-direction: column; min-width: 0; }
-.tile-hero .tile-big { margin-top: var(--s-xxs); font-size: var(--fs-pixel-xl); }
+/* ── 라커룸(홈) ── 사물함 벽·나무 바닥은 순수 CSS 격자·띠로 그린다(그림 파일 없음).
+   무대는 타일 안에서 남는 높이를 전부 먹고, 스프라이트는 바닥 띠 위에 선다. */
+.tile-locker .locker-stage { position: relative; flex: 1; display: flex; align-items: flex-end; justify-content: center;
+  overflow: hidden; background: var(--canvas); border: 2px solid var(--line); }
+.locker-wall { position: absolute; inset: 0 0 16% 0;
+  background: repeating-linear-gradient(90deg, #16181c 0 54px, #0e1013 54px 58px), linear-gradient(180deg, rgba(255, 255, 255, .05), transparent 45%); }
+.locker-wall::after { content: ""; position: absolute; left: 0; right: 0; top: 24%; height: 4px; background: #0e1013; }
+.locker-floor { position: absolute; left: 0; right: 0; bottom: 0; height: 16%; background: #26160f; box-shadow: inset 0 4px 0 #3a2216; }
+.locker-sprite { position: relative; display: flex; margin-bottom: calc(16% - 8px); }
+/* 이름표 — 무대 왼쪽 아래에 박아 둔다. 도트 규약(10의 배수·합성 없음)은 각 줄에서 선언한다. */
+.locker-plate { position: absolute; left: var(--s-sm); bottom: var(--s-sm); display: flex; flex-direction: column;
+  padding: var(--s-xs) var(--s-sm); background: rgba(0, 0, 0, .72); border: 2px solid var(--line); }
+.locker-plate b { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
+.locker-plate span { margin-top: 2px; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.locker-plate i { margin-top: 2px; font-style: normal; font-size: var(--fs-xs); color: var(--muted); }
+.locker-plate-empty { padding: var(--s-xs) var(--s-sm); font-size: var(--fs-xs); color: var(--muted); }
+.tile-go { color: var(--link); }
 .home-me { padding: var(--s-lg); margin-bottom: var(--s-xl); background: var(--card); border-radius: var(--r-md); }
 .home-me-body { display: flex; flex-wrap: wrap; gap: var(--s-xl); align-items: flex-start; }
 .home-me-body > .pcard { flex: 0 0 var(--pcard-w); }
