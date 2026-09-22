@@ -172,7 +172,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
       {/* 꾸미기는 관리자 전용이 아니다(아바타 에디터엔 PIN 이 없다) — 홈 라커룸에서 "꾸미기"로
           들어오는 자리라, 카드 속 작은 아바타를 눌러야만 열리던 것을 겉으로 꺼내 둔다. */}
       <span className="actions" id="actions">
-        {player && <Button onClick={() => openAvatar(player)}>꾸미기</Button>}
+        {player && !avatarOpen && <Button onClick={() => openAvatar(player)}>꾸미기</Button>}
         {admin && data && <Button onClick={() => openEdit(player)} loading={opening}>편집</Button>}
       </span>
     </div>
@@ -245,41 +245,41 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     );
   }
 
-  function avatarModal() {
+  /** 꾸미기 패널 — 모달이 아니라 오른쪽 칸(능력치 자리)에 펼친다("모달 말고 페이지 내로",
+   *  2026-09-22). 왼쪽 아바타가 곧 미리보기라 모달 안에 두던 작은 미리보기는 뺐다. */
+  function avatarPanel() {
+    if (!player || !avatarSpec) return null;
     return (
-      <Modal title="아바타 편집" open={avatarOpen} destroyOnHidden onCancel={() => setAvatarOpen(false)}
-        cancelButtonProps={{ disabled: avatarSaving }} maskClosable={!avatarSaving} closable={!avatarSaving} keyboard={!avatarSaving}
-        footer={[
-          <Button key="cancel" disabled={avatarSaving} onClick={() => setAvatarOpen(false)}>취소</Button>,
-          <Button key="save" type="primary" loading={avatarSaving} onClick={saveAvatar}>저장</Button>,
-        ]}>
-        {avatarSpec && (
-          <>
-            <div className="row" style={{ justifyContent: 'center', marginBottom: 'var(--s-md)' }} dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpec, 128) }} />
-            <div className="stack">
-              {pickGroup('face', '얼굴형')}
-              {pickGroup('hair', '헤어')}
-              {pickGroup('skin', '피부')}
-              {pickGroup('eyes', '눈')}
-              <div>
-                <div className="label label-gap">유니폼 색</div>
-                <div className="pick-list">
-                  {PARTS.kit.map((hex) => (
-                    <button type="button" key={hex} className={avatarSpec.kit === hex ? 'primary' : ''} style={{ background: hex }} aria-label={hex} onClick={() => setAvatarSpec({ ...avatarSpec, kit: hex })}>&nbsp;</button>
-                  ))}
-                </div>
-              </div>
-              {/* 축구 테마 확장(2026-09-22) — 유니폼 무늬는 face·hair 처럼 도형 선택,
-                  양말·장갑·손목테이프는 색 목록이되 0번이 "없음/유니폼과 같음"인 텍스트 버튼이라
-                  kit 스와치(라벨 없는 색 칸)와 달리 pickGroup(라벨 버튼)을 그대로 쓴다. */}
-              {pickGroup('jersey', '유니폼 무늬')}
-              {pickGroup('socks', '양말')}
-              {pickGroup('gloves', '장갑')}
-              {pickGroup('tape', '손목테이프')}
+      <div className="card">
+        <div className="card-head">
+          <h2>꾸미기</h2>
+          <span className="card-head-act">
+            <Button size="small" disabled={avatarSaving} onClick={() => setAvatarOpen(false)}>취소</Button>
+            <Button size="small" type="primary" loading={avatarSaving} onClick={saveAvatar}>저장</Button>
+          </span>
+        </div>
+        <div className="stack">
+          {pickGroup('face', '얼굴형')}
+          {pickGroup('hair', '헤어')}
+          {pickGroup('skin', '피부')}
+          {pickGroup('eyes', '눈')}
+          <div>
+            <div className="label label-gap">유니폼 색</div>
+            <div className="pick-list">
+              {PARTS.kit.map((hex) => (
+                <button type="button" key={hex} className={avatarSpec.kit === hex ? 'primary' : ''} style={{ background: hex }} aria-label={hex} onClick={() => setAvatarSpec({ ...avatarSpec, kit: hex })}>&nbsp;</button>
+              ))}
             </div>
-          </>
-        )}
-      </Modal>
+          </div>
+          {/* 축구 테마 확장(2026-09-22) — 유니폼 무늬는 face·hair 처럼 도형 선택,
+              양말·장갑·손목테이프는 색 목록이되 0번이 "없음/유니폼과 같음"인 텍스트 버튼이라
+              kit 스와치(라벨 없는 색 칸)와 달리 pickGroup(라벨 버튼)을 그대로 쓴다. */}
+          {pickGroup('jersey', '유니폼 무늬')}
+          {pickGroup('socks', '양말')}
+          {pickGroup('gloves', '장갑')}
+          {pickGroup('tape', '손목테이프')}
+        </div>
+      </div>
     );
   }
 
@@ -294,7 +294,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
             <div className="phero" ref={cardRef}>
               <button type="button" id="avatar-edit-btn" className="avatar-btn" title="아바타 편집"
                 onClick={() => openAvatar(player)}
-                dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(player.num, player.avatar), 224, player.num, true) }} />
+                dangerouslySetInnerHTML={{ __html: avatarSvg(avatarOpen && avatarSpec ? avatarSpec : avatarSpecFor(player.num, player.avatar), 224, player.num, true) }} />
               <b className="phero-ovr" data-ovr={ovr(player)}>{ovr(player) || '–'}</b>
               <div className="phero-meta">
                 <span className={`pos pos-${player.pos.toLowerCase()}`}>{player.pos || '–'}</span>
@@ -306,6 +306,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
               {player.note && <p className="phero-sub">{player.note}</p>}
             </div>
             <div className="player-side">
+              {avatarOpen ? avatarPanel() : (
               <div className="card">
                 <div className="card-head"><h2>능력치</h2>
                   <span className="muted attr-state" aria-live="polite">{statBusy ? '저장 중…' : '＋ − 로 바로 고칩니다'}</span>
@@ -327,6 +328,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
                   </>
                 )}
               </div>
+              )}
             </div>
           </div>
           {fines.length > 0 && (
@@ -337,7 +339,6 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
         </div>
       )}
       {editModal()}
-      {avatarModal()}
     </>
   );
 }

@@ -408,6 +408,7 @@ a.card:hover { background: var(--charcoal); }
 /* 능력치 칸 머리 — 제목과 '고치기' 버튼을 한 줄에. */
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-sm); margin-bottom: var(--s-sm); }
 .card-head h2 { margin: 0; }
+.card-head-act { display: flex; gap: var(--s-xs); }
 .card-sub { margin-top: var(--s-lg); }
 /* 능력치를 누가 고쳤는지 — 막는 장치가 없으니 이 줄이 유일한 제동이다(2026-09-22). */
 .statlog { list-style: none; margin: var(--s-sm) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-xs); }
