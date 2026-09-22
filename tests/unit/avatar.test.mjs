@@ -222,11 +222,32 @@ test('avatarSvg: 유니폼 무늬가 다르면(솔리드 vs 나머지) 출력도
   }
 });
 
+test('avatarSvg: 스트라이프(j1)는 몸통 중심(열 11.5)에 대칭이고 옷깃과 안 겹친다 (회귀 방지)', () => {
+  // 첫 구현은 열 8·12·16(비대칭 + 옷깃 D 와 12에서 겹침)이었다가, opus 리뷰가 실측으로
+  // 잡아 7·10·13·16으로 고쳤다. 13행(옷깃이 없는 순수 몸통 줄)에서 D 가 그 네 열에만
+  // 찍히는지 좌표로 확인한다 — 이후 다시 밀려도 이 테스트가 잡는다.
+  const kit = '#2980b9';
+  const svg = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, jersey: 1, kit }, 112);
+  const dark = shade07(kit);
+  for (const x of [7, 10, 13, 16]) assert.equal(rectAt(svg, x, 13), dark, `13행 x=${x} 가 스트라이프 색이 아니다`);
+  // 대칭 확인 — 몸통 열 5~18의 미러(23-x)도 같은 집합이어야 한다.
+  assert.deepEqual([7, 10, 13, 16].map((x) => 23 - x).sort((a, b) => a - b), [7, 10, 13, 16]);
+  // 스트라이프 사이(열 8·9·11·12·14·15)는 여전히 kit 색 — 8은 병합된 kit rect 안에 있다.
+  assert.equal(rectAt(svg, 8, 13), kit, '스트라이프 사이가 kit 색이 아니다');
+});
+
 // 아래 세 테스트는 색 문자열이 출력 어딘가에 있는지가 아니라, **그 부위의 실제 좌표에
 // 찍힌 rect의 fill**을 확인한다 — 장갑 블랙(#1a1a1a)이 축구화(B) 색과 같은 것처럼, 이
 // 팔레트엔 우연히 같은 색을 쓰는 슬롯이 있어 "색이 출력에 있다"만으론 그 부위가 실제로
 // 그려졌는지 증명하지 못한다(opus 리뷰가 잡은 공허한 단언).
 const rectAt = (svg, x, y) => new RegExp(`<rect x="${x}" y="${y}" width="\\d+" height="1" fill="([^"]+)"/>`).exec(svg)?.[1];
+// components/avatar.ts의 shade()를 그대로 복사한다 — SERVER_CODE_RE와 같은 이유로,
+// 계약(D = kit의 0.7배 밝기)을 이 테스트가 직접 들고 있어야 구현이 갈라져도 잡힌다.
+const shade07 = (hex) => {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const part = (v) => Math.min(255, Math.round(v * 0.7)).toString(16).padStart(2, '0');
+  return `#${part((n >> 16) & 255)}${part((n >> 8) & 255)}${part(n & 255)}`;
+};
 
 test('avatarSvg: 양말은 "유니폼과 같음"(o0)이면 kit 색, 아니면 지정 색으로 칠해진다 (26행 좌표로 확인)', () => {
   const auto = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, socks: 0, kit: '#2980b9' }, 112);
@@ -289,7 +310,7 @@ test('avatarFaceSvg: 얼굴 크롭(0~15행)에도 축구 테마 필드가 섞여
   assert.ok(!svg.includes('undefined'));
 });
 
-test('randomAvatar: 축구 테마 네 필드을 추가하면서도 face·hair·skin·eyes·kit 은 그대로다 (회귀 방지)', () => {
+test('randomAvatar: 축구 테마 네 필드를 추가하면서도 face·hair·skin·eyes·kit 은 그대로다 (회귀 방지)', () => {
   // 2026-09-22 축구 테마 확장 때 새 네 픽을 hue 추첨보다 앞에 끼워 넣는 바람에 난수
   // 스트림이 밀려, 아바타를 한 번도 저장하지 않은 기존 선수 전원의 유니폼 색이 바뀔
   // 뻔했다(opus 리뷰가 실측으로 잡음). 이 값들은 그 사고 이전 알고리즘(face→hair→skin→

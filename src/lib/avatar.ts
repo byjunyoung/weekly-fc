@@ -196,7 +196,7 @@ export function randomAvatar(seed: number): AvatarSpec {
   // 장갑·손목테이프는 실제로 안 쓰는 사람이 대다수라, 균등 추첨하면 "다들 장갑 낀 채로
   // 등장"해 어색하다 — 0번("없음")에 크게 치우친 추첨으로 뽑는다. 유니폼 무늬·양말은
   // 그런 편향 없이 고르게 뽑아 "다들 다르게 보인다"는 원 취지를 그대로 지킨다.
-  const pickMostlyNone = (len: number) => (rnd() < 0.85 ? 0 : 1 + (len > 1 ? Math.floor(rnd() * (len - 1)) : 0));
+  const pickMostlyNone = (len: number) => (len <= 1 ? 0 : rnd() < 0.85 ? 0 : 1 + Math.floor(rnd() * (len - 1)));
   const jersey = pick(PARTS.jersey.length);
   const socks = pick(PARTS.socks.length);
   const gloves = pickMostlyNone(PARTS.gloves.length);
