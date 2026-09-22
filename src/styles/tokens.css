@@ -453,7 +453,10 @@ a.card:hover { background: var(--charcoal); }
 .bd-card.pcard-silver, .bd-card.pcard-silver:hover { background: var(--metal-silver); }
 .bd-card.pcard-bronze, .bd-card.pcard-bronze:hover { background: var(--metal-bronze); }
 .bd-empty { border: 1px dashed var(--hairline-strong); background: rgba(0, 0, 0, .25); color: var(--muted); font-size: var(--fs-pixel-sm); }
-.bd-slot.is-selected { outline: 3px solid var(--link); outline-offset: 2px; }
+/* 선택 표시는 카드 **안쪽** 그림자다 — 바깥 outline 은 피치의 overflow:hidden 에 잘려
+   좁은 화면에서 맨 아래 GK 자리의 아랫변이 사라졌고(2026-09-22 실측), 카드 바깥 5px 를
+   차지해 자리 간격 조건까지 빡빡하게 만들었다. */
+.bd-slot.is-selected { box-shadow: inset 0 0 0 3px var(--link); }
 .bd-slot.is-oop { box-shadow: 0 0 0 2px var(--cond-mid); }
 .bd-slot.is-dragging { z-index: 5; opacity: .85; }
 /* 카드 한 장 = 윗줄(OVR·자리 라벨) · 아바타 · 이름 · 선수 포지션. 도트 글꼴을 거는 줄은
@@ -496,7 +499,9 @@ a.card:hover { background: var(--charcoal); }
    `카드높이 / 2 < (1 - 0.93) × 피치높이`. 73px 카드는 피치가 521px 아래(≈뷰포트 370px)로
    내려가면 잘리므로 좁은 폭에서 두 단계로 줄인다(2026-09-22 리뷰가 360·320px 에서 실측). */
 @media (max-width: 420px) {
-  .bd-slot { width: 62px; min-height: 62px; }
+  /* 폭 56px 은 11인 3-5-2 가 들어갈 수 있는 값이다 — 이 구간의 가장 좁은 피치(309px)에서
+     가운데 다섯 명이 0.20 간격이라 62px 면 겹친다(tests/unit/formation-fit 이 지킨다). */
+  .bd-slot { width: 56px; min-height: 62px; }
   .bd-ovr { font-size: var(--fs-pixel-xs); line-height: 1.2; }
   .bd-sprite { margin: 0; }
 }
