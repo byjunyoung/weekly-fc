@@ -1,4 +1,4 @@
-// src/react/teams/TeamsApp.tsx — 자체전 팀 나누기. 온 사람을 고르고, 조끼 색 팀으로 갈라,
+// src/react/teams/TeamsApp.tsx — 팀짜기(자체전). 온 사람을 고르고, 조끼 색 팀으로 갈라,
 // 카톡에 붙여넣을 텍스트로 낸다. 계산은 전부 lib/teams.ts(순수), 여기는 배선과 화면만.
 //
 // 옮기기는 **눌러서 고르고 팀을 누르는** 방식이다(끌기 아님) — 폰에서 쓰는 기능이고,
@@ -31,7 +31,7 @@ function Teams() {
   // 갱신은 항상 **직전 상태**에서 계산한다(렌더 시점의 st 를 클로저로 잡으면 연타가 날아간다).
   const commit = (fn: (prev: T.TeamsState) => T.TeamsState): void => { setSt(fn); };
 
-  if (!data) return <Loading title="자체전" />;
+  if (!data) return <Loading title="팀짜기" />;
 
   const players = data.players;
   const views = T.teamViews(st, players);
@@ -78,7 +78,7 @@ function Teams() {
   return (
     <>
       <div className="page-head">
-        <h1>자체전 <span className="muted">{total}명</span></h1>
+        <h1>팀짜기 <span className="muted">{total}명</span></h1>
         <div className="actions"><Button type="primary" onClick={onCopy}>텍스트 복사</Button></div>
       </div>
 

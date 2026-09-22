@@ -8,8 +8,8 @@ const nav = [
   { href: href('/'), label: '홈' },
   { href: href('/squad/'), label: '명단' },
   { href: href('/lineup/'), label: '라인업' },
-  { href: href('/teams/'), label: '자체전' },
-  { href: href('/rules/'), label: '운영' },
+  { href: href('/teams/'), label: '팀짜기' },
+  { href: href('/rules/'), label: '운영 규칙' },
 ];
 const path = Astro.url.pathname;
 const isActive = (h: string) => (h === href('/') ? path === href('/') : path.startsWith(h));

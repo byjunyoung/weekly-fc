@@ -91,11 +91,11 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
             locale={{ emptyText: '명단이 비어 있습니다' }} />
         ) : view === 'card' ? (
           rows.length ? byOvr(rows).map((p) => {
+            // 카드 전체가 선수 페이지로 가는 링크다 — 찍기가 빠지고 나니 카드에 남은 동작이
+            // 이것뿐이라, 아래에 회색 링크 줄을 따로 띄울 이유가 없다.
             return (
-              <div className="bd-cardcell" key={p.num}>
-                <div dangerouslySetInnerHTML={{ __html: playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 112, p.num, true)) }} />
-                <a className="bd-card-link" href={href(`/squad/${p.num}/`)}>선수 페이지 ›</a>
-              </div>
+              <a className="bd-cardcell" key={p.num} href={href(`/squad/${p.num}/`)} aria-label={`${p.name} 선수 페이지`}
+                dangerouslySetInnerHTML={{ __html: playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 112, p.num, true)) }} />
             );
           }) : <p className="pcard-empty">명단이 비어 있습니다</p>
         ) : rows.length ? (

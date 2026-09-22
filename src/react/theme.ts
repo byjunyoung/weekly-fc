@@ -40,8 +40,8 @@ export const themeConfig: ThemeConfig = {
     borderRadiusSM: 0,
     borderRadius: 0,
     borderRadiusLG: 0,
-    fontFamily: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
-    fontSize: 16,
+    fontFamily: '"Galmuri14", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif',
+    fontSize: 14,
   },
   components: {
     // 지금 tokens.css 의 button 규칙(각진 모서리, 높이 40, 좌우 22, 20px·400)과 .topbar-act button(34, 좌우 16, 20px)을 옮긴다.

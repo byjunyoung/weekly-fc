@@ -4,6 +4,16 @@
   src: url("https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri9.woff2") format("woff2");
   font-display: swap;
 }
+/* 본문·라벨용 도트 글꼴. 갈무리14 는 14px 격자라 14·28·42·56 에서만 또렷하다 — 그래서
+   아래 --fs-* 사다리 전체가 14 의 배수다. 갈무리9(10px 격자)는 숫자·제목 같은 도트 강조에
+   그대로 남는다(--font-pixel). 두 글꼴 다 굵기가 400 하나뿐이라 500·600 을 부르면 브라우저가
+   가짜 볼드를 만들어 도트가 뭉갠다 — 굵기 토큰을 전부 400 으로 두고 html 에서 합성을 끈다. */
+@font-face {
+  font-family: "Galmuri14";
+  src: url("https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri14.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
 /* 정본은 레포 루트의 DESIGN.md (getdesign.md 의 PlayStation DESIGN.md). 이 파일은 그 문서를
    코드로 옮긴 것이고, 여기서 값을 새로 만들지 않는다. 정본 문구 중 이 화면을 지배하는 것:
      "게이밍 브랜드치고 유난히 조용한 크롬 … 이 시스템은 장식하지 않는다 —
@@ -76,21 +86,21 @@
   /* 정본 서체는 PlayStation SST(비공개)라 Pretendard 로 대체한다. 중요한 건 이름이 아니라
      "디스플레이를 굵기 300 으로 가볍게" 라는 규칙이고, Pretendard 는 가변이라 그대로 된다.
      콘덴스드 대문자 디스플레이(Archivo)는 걷어냈다 — 촌스러움의 주범이었다. */
-  --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  --fs-display-xl: 54px; --fs-display-md: 35px;
-  --fs-h-xl: 28px; --fs-h-lg: 22px; --fs-h-md: 18px;
-  --fs-body: 16px; --fs-sm: 14px; --fs-xs: 12px;
+  --font: "Galmuri14", "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --fs-display-xl: 56px; --fs-display-md: 42px;
+  --fs-h-xl: 42px; --fs-h-lg: 28px; --fs-h-md: 28px;
+  --fs-body: 14px; --fs-sm: 14px; --fs-xs: 14px;
   /* 굵기 — 정본은 디스플레이를 300 으로 쓰지만 그건 라틴(PlayStation SST) 기준이다.
      한글은 같은 크기에서 획 밀도가 높아 Light 가 눈에 띄게 얇아 보이고, 한두 글자짜리
      화면 제목("홈"·"기록")에서 특히 힘이 빠진다. 그래서 디스플레이를 400 으로 올리고,
      정본의 "airy" 는 굵기가 아니라 크기·행간·여백으로 낸다.
      데이터 숫자(OVR·타일 값)는 읽히는 게 목적이라 500~600 을 쓴다. */
-  --fw-display: 400; --fw-body: 400; --fw-strong: 500; --fw-heavy: 600; --fw-num: 600;
+  --fw-display: 400; --fw-body: 400; --fw-strong: 400; --fw-heavy: 400; --fw-num: 400;
   /* 옛 이름 매핑 */
   --fs-md: var(--fs-body); --fs-lg: var(--fs-h-lg); --fs-xl: var(--fs-h-xl);
   --fs-xxl: var(--fs-display-md); --fs-hero: var(--fs-display-md);
 
-  /* ── 도트 폰트(갈무리) — 제목·OVR·능력치 숫자 전용, 본문(--font)은 그대로 ─────
+  /* ── 도트 폰트(갈무리9) — 제목·OVR·능력치 숫자용. 본문은 위 --font(갈무리14) ─────
      갈무리9 권장 렌더 크기는 10px다. 그 배수가 아닌 크기로 쓰면 비트맵이 흐려져
      도트를 쓰는 의미가 없어진다 — 그래서 본문용 --fs-* 사다리와 별도로 10의
      배수만 담은 세트를 둔다(2026-09-21 리프레시 스펙 §3). */
@@ -115,7 +125,7 @@
 
 /* ══ 기본 ══════════════════════════════════════════════════ */
 * { box-sizing: border-box; }
-html { background: var(--canvas); color: var(--fg); font-family: var(--font); font-size: var(--fs-body);
+html { background: var(--canvas); color: var(--fg); font-family: var(--font); font-size: var(--fs-body); font-synthesis: none; letter-spacing: 0;
   font-weight: var(--fw-body); line-height: 1.5; -webkit-font-smoothing: antialiased; word-break: keep-all; }
 body { margin: 0; min-height: 100vh; }
 a { color: inherit; text-decoration: none; }
@@ -178,11 +188,20 @@ a.inline:hover { text-decoration: underline; }
 /* 320px 급에선 워드마크를 줄여도 한 줄에 다섯이 안 들어간다(필요 308px, 남는 폭 288px).
    가로로 밀어 보게 두면 활성 탭이 화면 밖에서 시작하므로 **탭을 제 줄로 내린다** — 두 줄이
    되는 대신 다섯이 다 보인다. 360px 부터는 한 줄에 들어가므로 손대지 않는다(실측). */
-@media (max-width: 359px) {
+/* 좁은 화면에선 탭을 제 줄로 내리고 좌우 여백을 줄인다. 경계는 가장 긴 라벨이 정한다 —
+   「운영 규칙」까지 다섯 탭이 한 줄에 들어가려면 388px 이 필요했다(실측 2026-09-22, 그 전
+   「운영」 시절엔 360px 이면 됐다). 라벨을 또 늘리면 여기도 다시 재야 한다. */
+@media (max-width: 389px) {
   .topbar { height: auto; min-height: var(--header-h); flex-wrap: wrap; padding-block: var(--s-xs); row-gap: var(--s-xs); }
   .topnav { flex: 1 0 100%; order: 3; overflow: visible; justify-content: space-between; }
   .topnav a { padding: var(--s-xxs) var(--s-xxs); }
   .mark { flex: 1 1 auto; }
+}
+/* 더 좁아지면 여백을 줄여도 다섯 탭이 한 줄에 안 들어간다(실측 348px 필요). 그대로 두면
+   브라우저가 페이지를 0.92배로 축소해 맞추는데, 비정수 배율은 도트 글꼴을 통째로 뭉갠다 —
+   차라리 탭을 두 줄로 접는다. */
+@media (max-width: 347px) {
+  .topnav { flex-wrap: wrap; justify-content: center; row-gap: var(--s-xxs); }
 }
 .topnav a:hover { color: var(--fg); background: rgba(255, 255, 255, .08); }
 .topnav a.active { color: var(--fg); background: rgba(255, 255, 255, .14); }
@@ -260,7 +279,7 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s-md); }
 .card { padding: var(--s-lg); background: var(--card); border-radius: var(--r-md); }
 .card h2 { margin-bottom: var(--s-sm); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
-.card .big { font-size: var(--fs-h-xl); font-weight: var(--fw-num); line-height: 1.15; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.card .big { font-size: var(--fs-h-xl); font-weight: var(--fw-num); line-height: 1.15; font-variant-numeric: tabular-nums; }
 a.card { transition: background var(--dur-micro) var(--ease-std); }
 a.card:hover { background: var(--charcoal); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--s-xs); }
@@ -360,21 +379,22 @@ a.card:hover { background: var(--charcoal); }
 .pcard-silver { background: var(--metal-silver); }
 .pcard-bronze { background: var(--metal-bronze); }
 .pcard:hover { transform: translateY(-4px); }
-.pcard-body { display: flex; flex-direction: column; width: 100%; padding: var(--s-md) var(--s-md) var(--s-lg); }
-.pcard-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-xs); width: 100%; min-height: 104px; }
+.pcard-body { display: flex; flex-direction: column; width: 100%; padding: var(--s-md); }
+.pcard-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-xs); width: 100%; }
 .pcard-ovr-block { display: flex; flex-direction: column; align-items: flex-start; align-self: flex-start; }
 .pcard-ovr { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-num); font-synthesis: none; line-height: .9; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .pcard-pos { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.1; }
 .pcard-num { display: block; margin-top: var(--s-xxs); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
-.pcard-portrait { align-self: flex-end; margin: 0 -4px -6px 0; }
+.pcard-portrait { align-self: flex-end; margin: 0 -4px -2px 0; }
 .avatar-btn { display: block; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
 .avatar-btn:hover { background: none; }
-.pcard-name { margin-top: var(--s-sm); padding: var(--s-xs) 0; border-top: 1px solid var(--ink-line); border-bottom: 1px solid var(--ink-line);
+.pcard-name { margin-top: var(--s-xs); padding: var(--s-xs) 0 0; border-top: 1px solid var(--ink-line);
   text-align: center; font-size: var(--fs-h-lg); font-weight: var(--fw-heavy); line-height: 1.2; }
-.pcard-detail { margin-top: var(--s-xs); text-align: center; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
-.pcard-stats { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s-md); width: 100%; margin-top: var(--s-sm); }
-.pcard-stat { display: flex; align-items: baseline; gap: var(--s-xs); padding: var(--s-xxs) 0; }
-.pcard-stat:nth-child(2n) { padding-left: var(--s-sm); border-left: 1px solid var(--ink-line); }
+.pcard-detail { text-align: center; font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
+.pcard-stats { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s-sm); width: 100%;
+  margin-top: var(--s-sm); padding-top: var(--s-xs); border-top: 1px solid var(--ink-line); }
+.pcard-stat { display: flex; align-items: baseline; gap: var(--s-xs); padding: 2px 0; }
+.pcard-stat:nth-child(2n) { padding-left: var(--s-sm); }
 .pcard-stat-val { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.7em; }
 .pcard-stat-label { font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--ink-soft); }
 .pcard-note { margin: var(--s-sm) 0 0; font-size: var(--fs-xs); color: var(--ink-soft); text-align: center; }
@@ -388,7 +408,6 @@ a.card:hover { background: var(--charcoal); }
   .pcard-wall .pcard-body { padding: var(--s-sm) var(--s-sm) var(--s-md); }
   .pcard-wall .pcard-head { min-height: 74px; }
   .pcard-wall .pcard-ovr { font-size: var(--fs-pixel-md); }
-  .pcard-wall .pcard-name { font-size: var(--fs-body); }
   .pcard-wall .pcard-portrait svg { width: 48px; height: 64px; }
 }
 .pcard-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: var(--s-xxl); background: var(--card); border-radius: var(--r-md); }
@@ -455,8 +474,8 @@ a.card:hover { background: var(--charcoal); }
 .bd-on { justify-self: end; padding: 2px var(--s-xs); border-radius: var(--r-full); background: var(--fg); color: var(--canvas); font-size: var(--fs-pixel-sm); font-weight: var(--fw-heavy); }
 .bd-row-link { display: flex; align-items: center; justify-content: center; width: 40px; min-height: var(--row-h); color: var(--muted); }
 .bd-row-link:hover { color: var(--fg); }
-.bd-cardcell { display: flex; flex-direction: column; gap: var(--s-xxs); }
-.bd-card-link { font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+.bd-cardcell { display: block; color: inherit; text-decoration: none; border-radius: var(--r-md); }
+.bd-cardcell:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
 .bd-stage { display: flex; flex-direction: column; align-items: center; gap: var(--s-sm); min-width: 0; }
 #pitch-slot { display: flex; justify-content: center; width: 100%; }
 /* 피치 바탕색은 옛 .sq-pitch 값을 그대로 가져왔다. */
@@ -597,7 +616,7 @@ details.year[open] > summary::before { content: "▾ "; }
 
 /* 표 안 부가 정보(포지션 옆 "CB · 오른발" 등)는 작은 기본 글꼴로 — 20px 로 키우면
    칸이 두 줄로 접혀 행 높이가 두 배가 된다(실측 91px → 65px). 카드의 .pcard-detail 과 같은 규칙. */
-.ant-table-tbody .muted { font-family: var(--font); font-size: var(--fs-xs); font-synthesis: auto; }
+.ant-table-tbody .muted { font-family: var(--font); font-size: var(--fs-xs); font-synthesis: none; }
 /* 포지션 칸 — 뱃지와 부가 정보 사이 간격을 CSS 로 준다. 리터럴 공백을 두면 그 글자가
    칸의 주변 글꼴(20px 도트)을 물려받아 칸을 밀어내고 일부 행만 두 줄로 접힌다. */
 .cell-pos { display: inline-flex; align-items: center; gap: var(--s-xs); white-space: nowrap; }
