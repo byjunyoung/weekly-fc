@@ -290,7 +290,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
         <div className="stack">
           {/* FC 카드를 걷어내고 아바타를 크게 세운다(2026-09-22 사용자 결정). 카드가 겹쳐 보여
               주던 능력치 여섯 칸은 바로 오른쪽 칸이 막대까지 붙여 이미 하고 있었다. */}
-          <div className="player-hero">
+          <div className={`player-hero${avatarOpen ? ' is-dressing' : ''}`}>
             <div className="phero" ref={cardRef}>
               <button type="button" id="avatar-edit-btn" className="avatar-btn" title="아바타 편집"
                 onClick={() => openAvatar(player)}
