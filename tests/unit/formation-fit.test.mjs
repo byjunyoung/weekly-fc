@@ -40,15 +40,17 @@ function pitchWidth(vw, kind) {
 
 /** 화면 구간: [이름, 그 구간에서 가장 좁은 뷰포트, 카드폭, 카드높이, 폭을 정하는 미디어 쿼리].
  *  카드 **높이**는 내용이 정하므로 헤드리스로 잰 값을 적는다 — 카드 크기를 바꾸면 다시 잰다.
+ *  (2026-09-22 자리를 아바타+이름으로 바꾸며 다시 쟀다. ≥1120 세로는 `.bd-land` 가 명시도로
+ *   이겨 실제로는 안 나오는 구간이라, 여는 여백+아바타+이름으로 계산한 값을 적는다.)
  *  **가로 피치(≥1100px)는 따로 잰다** — 아래 LAND_BANDS. 같은 폭에서 높이가 세로의 42% 라
  *  구속 조건의 축이 뒤바뀐다(세로 규격의 가로 간격이 화면에선 세로 간격이 된다). */
 const BANDS = [
-  ['≥1120px', 1120, 104, 108, /@media \(min-width: 1120px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
-  ['900~1119px', 900, 72, 73, /\n\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
-  ['421~899px', 421, 66, 73, /@media \(max-width: 899px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
-  ['350~420px', 350, 62, 63, /@media \(max-width: 420px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
-  ['341~349px', 341, 56, 63, /@media \(max-width: 349px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
-  ['≤340px', 320, 56, 48, /@media \(max-width: 349px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['≥1120px', 1120, 104, 104, /@media \(min-width: 1120px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['900~1119px', 900, 72, 72, /\n\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['421~899px', 421, 66, 70, /@media \(max-width: 899px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['350~420px', 350, 62, 65, /@media \(max-width: 420px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['341~349px', 341, 56, 65, /@media \(max-width: 349px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['≤340px', 320, 56, 53, /@media \(max-width: 349px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
 ];
 /** 가로 피치 구간 — `.bd-land .bd-slot` 이 미디어 쿼리보다 명시도가 높아 한 벌뿐이다.
  *  가장 좁은 뷰포트는 LineupApp 의 LAND_QUERY(1100px). */

@@ -4,7 +4,7 @@
 // 캔버스가 좌표를 직접 그리거나, OVR 을 변수에 담아 찍거나, 카드 폭을 키워도 안 걸렸다.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { drawLineupImage, ensureShareFonts, PIXEL_SIZES, IMG_W, IMG_H } from '../../src/components/share-image.ts';
+import { drawLineupImage, ensureShareFonts, lineupLayout, NAME_PILL, PIXEL_SIZES, IMG_W, IMG_H } from '../../src/components/share-image.ts';
 import { SHAPES, MIN_COUNT, MAX_COUNT } from '../../src/lib/formation.ts';
 import { initial, setCount, setShape, setPitch, place } from '../../src/lib/lineup.ts';
 import { ovr } from '../../src/lib/stats.ts';
@@ -89,27 +89,45 @@ test('아바타는 24×32 격자의 정수배로만 그린다 (배수가 아니�
   for (const r of small) assert.ok(Number.isInteger(r.h), `아바타 칸 높이가 정수가 아니다: ${r.h}`);
 });
 
-test('선수 카드가 서로 겹치지도, 피치 밖으로 나가지도 않는다 — 모든 인원 × 모든 모양 × 두 코트', () => {
+test('자리 네모가 서로 겹치지도, 피치 밖으로 나가지도 않는다 — 모든 인원 × 모든 모양 × 두 코트', () => {
   // 화면 쪽은 formation-fit 이 지키지만 캔버스는 크기 계산이 따로다(피치 높이 972 고정, 폭만 코트별).
   for (let n = MIN_COUNT; n <= MAX_COUNT; n++) {
     for (const shape of SHAPES[n]) {
       for (const kind of ['soccer', 'futsal']) {
-        const { rects } = drawAll(filled(n, shape, kind));
-        // 카드 바탕 = 등급 금속색 사각형. 잔디·아바타 칸과 섞이지 않게 색으로 고른다
-        // (getComputedStyle 스텁이 빈 값을 주므로 share-image 의 폴백 hex 가 그대로 나온다).
-        const METAL = new Set(['#d4af37', '#b8b8c0', '#b08050']);
-        const cards = rects.filter((r) => !r.stroke && METAL.has(r.fill));
-        assert.equal(cards.length, n, `${kind} ${n}인 ${shape}: 카드가 ${cards.length}장`);
-        for (let i = 0; i < cards.length; i++) {
-          for (let j = i + 1; j < cards.length; j++) {
-            const a = cards[i], b = cards[j];
+        const { pw, ph, boxes } = lineupLayout(filled(n, shape, kind));
+        assert.equal(boxes.length, n, `${kind} ${n}인 ${shape}: 자리가 ${boxes.length}개`);
+        for (const b of boxes) {
+          assert.ok(b.y >= 0, `${kind} ${n}인 ${shape}: 자리가 피치 위로 ${(-b.y).toFixed(1)}px 튀어나간다`);
+          assert.ok(b.y + b.h <= ph, `${kind} ${n}인 ${shape}: 자리가 피치 아래로 ${(b.y + b.h - ph).toFixed(1)}px 튀어나간다`);
+          assert.ok(b.x >= 0, `${kind} ${n}인 ${shape}: 자리가 피치 왼쪽으로 ${(-b.x).toFixed(1)}px 잘린다`);
+          assert.ok(b.x + b.w <= pw, `${kind} ${n}인 ${shape}: 자리가 피치 오른쪽으로 ${(b.x + b.w - pw).toFixed(1)}px 잘린다`);
+          // 네모는 폭 기준으로만 겹침을 보므로, 아바타가 제 네모보다 넓으면 검사가 통째로 헛돈다.
+          assert.ok(b.cell * 24 <= b.w, `${kind} ${n}인 ${shape}: 아바타(${b.cell * 24}px)가 제 자리(${b.w}px)보다 넓다`);
+        }
+        for (let i = 0; i < boxes.length; i++) {
+          for (let j = i + 1; j < boxes.length; j++) {
+            const a = boxes[i], b = boxes[j];
             const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
             const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
-            assert.ok(ox <= 0 || oy <= 0, `${kind} ${n}인 ${shape}: 카드가 ${ox.toFixed(1)}×${oy.toFixed(1)}px 겹친다`);
+            assert.ok(ox <= 0 || oy <= 0, `${kind} ${n}인 ${shape}: 자리가 ${ox.toFixed(1)}×${oy.toFixed(1)}px 겹친다`);
           }
         }
       }
     }
+  }
+});
+
+test('실제로 그린 이름표가 선수 수만큼이고, 저마다 제 자리 네모 안에 있다', () => {
+  // 위 계약이 계산만 맞고 그리는 쪽이 딴 데 찍으면 소용없다 — 그린 결과를 자리 네모와 맞춰 본다.
+  const st = filled(11, '4-3-3', 'soccer');
+  const { rects } = drawAll(st);
+  const pills = rects.filter((r) => r.fill === NAME_PILL);
+  assert.equal(pills.length, 11, `이름표를 ${pills.length}개 그렸다`);
+  const { boxes } = lineupLayout(st);
+  for (const pill of pills) {
+    const cx = pill.x + pill.w / 2;
+    const hit = boxes.some((b) => Math.abs(b.x + b.w / 2 - cx) < 1 && pill.y >= b.y && pill.y + pill.h <= b.y + b.h + 1);
+    assert.ok(hit, `이름표(x=${cx.toFixed(1)}, y=${pill.y.toFixed(1)})가 어느 자리 네모에도 안 들어간다`);
   }
 });
 

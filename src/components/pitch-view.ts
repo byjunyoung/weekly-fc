@@ -7,7 +7,6 @@
 // 440×105/68 = 679.41px 로 정해진다) 사각형이
 // 정사각 픽셀로 떨어진다 — `preserveAspectRatio="none"` 이어도 늘어나지 않는다.
 import { esc } from '../lib/html.ts';
-import { grade, ovr } from '../lib/stats.ts';
 import { slotsOf, positionOf, type LineupState } from '../lib/lineup.ts';
 import { avatarSvg } from './avatar.ts';
 import { avatarSpecFor } from '../lib/avatar.ts';
@@ -157,17 +156,16 @@ export function pitchHtml(s: LineupState, players: Player[], selected: number | 
     const sel = selected === i ? ' is-selected' : '';
     const label = esc(slot.label);
     if (!p) return `<button type="button" class="bd-slot bd-empty${sel}" style="${at}" data-slot="${i}" aria-label="${label} 빈 자리">${label}</button>`;
-    const o = ovr(p);
     const oop = p.pos && p.pos !== slot.group ? ' is-oop' : '';
-    // 카드 한 장 = 윗줄(OVR·자리 라벨) · 아바타 · 아랫줄(이름·선수 포지션). 자리 라벨과 포지션이
-    // 다를 수 있어서(is-oop) 둘을 같이 보여준다 — 그게 이 카드의 정보값이다. 이름·포지션을 한 줄에
-    // 붙인 건 좁은 화면에서 피치가 낮아질 때(390px 에서 553px) 카드가 GK 자리에서 잘리지 않게
-    // 높이를 73px 로 눌러 두려는 것이다(2026-09-22 실측).
+    // 자리 하나 = 아바타 + 이름. 예전엔 OVR·자리 라벨·선수 포지션까지 얹은 금속 카드였는데,
+    // 72px 짜리 칸에 네 가지를 우겨넣느라 정작 아바타가 32px 로 쪼그라들어 있었다
+    // (2026-09-22 사용자: "카드 말고 그냥 아바타 차라리 크게 쓰자"). 뺀 정보는 오른쪽 명단과
+    // title/aria-label 에 그대로 있고, 자리에 안 맞는 선수는 테두리(is-oop)가 계속 알려 준다.
     const sprite = avatarSvg(avatarSpecFor(p.num, p.avatar), SPRITE_H, p.num, true);
-    return `<button type="button" class="bd-slot bd-card pcard-${grade(o)}${sel}${oop}" style="${at}" data-slot="${i}" aria-label="${label} ${esc(p.name)}">`
-      + `<span class="bd-top"><b class="bd-ovr">${o || '–'}</b><span class="bd-slotlabel">${label}</span></span>`
+    const who = `${label} · ${esc(p.name)} (${esc(p.pos || '–')})`;
+    return `<button type="button" class="bd-slot bd-card${sel}${oop}" style="${at}" data-slot="${i}" title="${who}" aria-label="${who}">`
       + `<span class="bd-sprite" aria-hidden="true">${sprite}</span>`
-      + `<span class="bd-foot"><span class="bd-name">${esc(p.name)}</span><span class="bd-pos">${esc(p.pos || '–')}</span></span></button>`;
+      + `<span class="bd-foot"><span class="bd-name">${esc(p.name)}</span></span></button>`;
   }).join('');
   const { w, h } = pitchBox(s.pitch, land);
   return `<div class="bd-pitch bd-${s.pitch}${land ? ' bd-land' : ''}" style="aspect-ratio:${w} / ${h}" data-pitch>${pitchLines(s.pitch, land)}${cards}</div>`;

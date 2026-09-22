@@ -13,13 +13,13 @@ test('슬롯마다 버튼 하나, 빈 자리는 라벨을 보여준다', () => {
   assert.ok(html.includes('>GK</button>'));
 });
 
-test('선수가 선 자리는 이름·자리 라벨을 넣고 이름은 이스케이프한다', () => {
+test('선수가 선 자리는 이름을 넣고 이스케이프한다 — title 속성까지', () => {
   const s = place(initial(5), 0, 1);
   const html = pitchHtml(s, [P(1, '<김>', 'GK', 80)], null);
   assert.ok(html.includes('&lt;김&gt;'));
-  assert.ok(!html.includes('<김>'));
+  assert.ok(!html.includes('<김>'), '이름이 날것으로 새면 title 속성이 깨져 마크업이 무너진다');
   assert.equal(count(html, 'bd-card'), 1);
-  assert.ok(html.includes('pcard-silver'));
+  assert.ok(!/pcard-(gold|silver|bronze)/.test(html), '등급 금속 면은 뺐다 — 자리엔 아바타와 이름만 둔다');
 });
 
 test('고른 자리에 is-selected, 포지션이 다른 자리에 선 선수는 is-oop', () => {
@@ -139,16 +139,19 @@ test('센터서클 블록 원은 상하·좌우 대칭이다', () => {
   }
 });
 
-test('선수 카드에 아바타·OVR·자리 라벨·이름·포지션이 다 들어간다', () => {
+test('자리엔 아바타와 이름만 — 나머지 정보는 title·aria-label 로 남긴다', () => {
+  // 2026-09-22: 72px 칸에 OVR·자리 라벨·포지션까지 우겨넣느라 아바타가 32px 로 쪼그라들어
+  // 있었다. 화면에서 뺀 정보를 아예 버리면 스크린리더와 마우스 사용자가 잃는다.
   const s = place(initial(5), 0, 1);
-  const html = pitchHtml(s, [P(1, '김현서', 'GK', 80)], null);
+  const html = pitchHtml(s, [P(1, '김현서', 'FW', 80)], null);
   const btn = html.match(/<button[^>]*data-slot="0"[^>]*>[\s\S]*?<\/button>/)[0];
   assert.ok(btn.includes('class="bd-sprite"'), '아바타 자리가 없다');
-  assert.ok(/<svg[^>]*height="32"/.test(btn), '아바타가 32px(도트 정렬)로 안 들어갔다');
-  assert.ok(btn.includes('class="bd-ovr">80<'), 'OVR 이 없다');
-  assert.ok(btn.includes('class="bd-slotlabel">GK<'), '자리 라벨이 없다');
   assert.ok(btn.includes('class="bd-name">김현서<'), '이름이 없다');
-  assert.ok(btn.includes('class="bd-pos">GK<'), '선수 포지션이 없다');
+  assert.ok(!btn.includes('bd-ovr'), 'OVR 은 이제 안 그린다');
+  assert.ok(!btn.includes('bd-slotlabel'), '자리 라벨은 이제 안 그린다');
+  assert.ok(!btn.includes('bd-pos'), '선수 포지션은 이제 안 그린다');
+  assert.ok(btn.includes('title="GK · 김현서 (FW)"'), `자리·이름·포지션이 title 에 없다: ${btn.slice(0, 160)}`);
+  assert.ok(btn.includes('aria-label="GK · 김현서 (FW)"'), 'aria-label 이 없다');
 });
 
 test('빈 자리에는 아바타를 넣지 않는다', () => {

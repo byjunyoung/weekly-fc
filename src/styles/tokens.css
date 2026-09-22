@@ -496,11 +496,9 @@ a.card:hover { background: var(--charcoal); }
 /* 카드 폭을 묶는 건 **한 줄에 선 사람들 사이 간격**이고, 가장 좁은 건 다섯 명 줄의 0.20 이다
    (3-5-2·4-5-1·5-3-1 등 — 기본값 4-3-3 의 0.22 가 아니다).
    어느 구간에서 어떤 폭이 들어가는지는 tests/unit/formation-fit.test.mjs 가 전수로 지킨다. */
-.bd-card { border: 0; color: var(--ink); }
-/* 버튼 기본 :hover 배경이 금속 면을 덮지 않게 등급 면을 다시 박는다. */
-.bd-card.pcard-gold, .bd-card.pcard-gold:hover { background: var(--metal-gold); }
-.bd-card.pcard-silver, .bd-card.pcard-silver:hover { background: var(--metal-silver); }
-.bd-card.pcard-bronze, .bd-card.pcard-bronze:hover { background: var(--metal-bronze); }
+.bd-card { border: 0; color: var(--fg); }
+/* 면이 없다 — 선수가 잔디 위에 그냥 서 있는 그림이다. 전역 button 의 :hover 배경만 눌러 둔다. */
+.bd-card, .bd-card:hover { background: transparent; }
 .bd-empty { border: 1px dashed var(--hairline-strong); background: rgba(0, 0, 0, .25); color: var(--muted); font-size: var(--fs-pixel-sm); }
 /* 선택 표시는 카드 **안쪽** 그림자다 — 바깥 outline 은 피치의 overflow:hidden 에 잘려
    좁은 화면에서 맨 아래 GK 자리의 아랫변이 사라졌고(2026-09-22 실측), 카드 바깥 5px 를
@@ -509,7 +507,7 @@ a.card:hover { background: var(--charcoal); }
    잘리고(좁은 화면에서 맨 아래 GK 자리), 카드 바깥 여백까지 차지해 자리 간격 조건을 빡빡하게
    만든다. 둘은 같은 속성이라 한쪽이 다른 쪽을 덮으므로 **겹칠 때의 규칙을 따로 둔다** —
    안 그러면 자리 밖 선수를 고를 때 선택 표시가 아예 안 보인다(2026-09-22 리뷰가 잡음). */
-.bd-slot.is-selected { box-shadow: inset 0 0 0 3px var(--link); }
+.bd-slot.is-selected { box-shadow: inset 0 0 0 3px var(--link); background: rgba(0, 0, 0, .35); }
 .bd-slot.is-oop { box-shadow: inset 0 0 0 2px var(--cond-mid); }
 .bd-slot.is-selected.is-oop { box-shadow: inset 0 0 0 3px var(--link), inset 0 0 0 5px var(--cond-mid); }
 /* 포커스 링도 안쪽으로 — 바깥 2px + 오프셋 2px 이면 좁은 화면 가장자리 자리에서 잘린다. */
@@ -519,16 +517,15 @@ a.card:hover { background: var(--charcoal); }
   .bd-slot.is-selected { outline: 3px solid Highlight; outline-offset: -3px; }
 }
 .bd-slot.is-dragging { z-index: 5; opacity: .85; }
-/* 카드 한 장 = 윗줄(OVR·자리 라벨) · 아바타 · 이름 · 선수 포지션. 도트 글꼴을 거는 줄은
-   전부 합성 방지·자간 0·10의 배수 크기를 같이 선언한다(tokens-scope 테스트가 지키는 규약). */
-.bd-top { display: flex; align-items: baseline; justify-content: space-between; width: 100%; line-height: 1; }
-.bd-sprite { display: flex; margin: 1px 0; }
-.bd-foot { display: flex; align-items: baseline; justify-content: center; gap: 3px; width: 100%; min-width: 0; }
-.bd-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
-.bd-slotlabel { font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--ink-soft); }
-.bd-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+/* 자리 하나 = 아바타 + 이름. 도트 글꼴을 거는 줄은 전부 합성 방지·자간 0·10의 배수 크기를
+   같이 선언한다(tokens-scope 테스트가 지키는 규약). 이름은 잔디 위에 바로 놓이므로 어두운
+   알약을 깔아 밝은 줄무늬 위에서도 읽히게 한다. */
+.bd-sprite { display: flex; margin: 0; }
+.bd-sprite svg { width: 36px; height: 48px; }
+.bd-foot { display: flex; align-items: baseline; justify-content: center; width: 100%; min-width: 0; }
+.bd-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 1px 4px; border-radius: var(--r-full); background: rgba(0, 0, 0, .62); color: var(--fg);
   font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
-.bd-pos { flex: 0 0 auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; color: var(--ink-soft); }
 .bd-hint { margin: 0; font-size: var(--fs-xs); text-align: center; }
 .bd-share-row { display: flex; justify-content: center; }
 @media (max-width: 899px) { .bd-share-row { width: 100%; } .bd-share-row button { width: 100%; } }
@@ -543,15 +540,13 @@ a.card:hover { background: var(--charcoal); }
    4자 이름이 오히려 말줄임된다(카드 안쪽 96px 중 포지션·여백을 빼면 69px 뿐). */
 @media (min-width: 1120px) {
   .bd-slot { width: 104px; min-height: 104px; padding: var(--s-xxs) var(--s-xxs) 6px; }
-  .bd-sprite svg { width: 48px; height: 64px; }
-  .bd-slotlabel { font-size: var(--fs-pixel-sm); }
+  .bd-sprite svg { width: 60px; height: 80px; }
 }
 /* 가로 피치는 같은 폭에서 높이가 세로의 42% 뿐이라(832×539 vs 832×1285) 카드도 작게 쓴다 —
    1120px 이상의 큰 카드(104×108)를 그대로 두면 다섯 명 줄이 세로로 겹친다. `.bd-land` 가
    미디어 쿼리보다 명시도가 높아(0,2,0) 순서와 무관하게 이긴다. */
 .bd-land .bd-slot { width: 72px; min-height: 72px; padding: 3px 3px var(--s-xxs); }
-.bd-land .bd-sprite svg { width: 24px; height: 32px; }
-.bd-land .bd-slotlabel { font-size: var(--fs-pixel-xs); }
+.bd-land .bd-sprite svg { width: 36px; height: 48px; }
 @media (max-width: 899px) {
   .bd-slot { width: 66px; min-height: 70px; }
   /* 좌우로 세울 폭이 안 나온다 — 피치 아래 명단이 오고, 붙잡아 둘 옆 칸이 없으니 sticky 도 푼다. */
@@ -564,17 +559,17 @@ a.card:hover { background: var(--charcoal); }
    내려가면 잘리므로 좁은 폭에서 단계로 줄인다. 전수 검사는 formation-fit 테스트가 한다. */
 @media (max-width: 420px) {
   .bd-slot { width: 62px; min-height: 62px; }
-  .bd-ovr { font-size: var(--fs-pixel-xs); line-height: 1.2; }
-  .bd-sprite { margin: 0; }
+  .bd-sprite svg { width: 33px; height: 44px; }
 }
 /* 11인 다섯 명 줄(3-5-2·4-5-1·5-3-1…)은 자리 간격이 0.20 이라, 피치가 310px 아래로 내려가면
    62px 카드가 겹친다. 349px 이하에서만 56px 로 줄인다 — 360·390·414px 같은 흔한 폰은 62px 을
    지켜 네 글자 이름이 안 잘린다(2026-09-22 리뷰가 잡은 맞바꿈). */
 @media (max-width: 349px) { .bd-slot { width: 56px; } }
 @media (max-width: 340px) {
-  /* 여기선 11장을 세울 세로가 아예 안 나온다 — 아바타를 접고 글자 카드로 돌아간다. */
+  /* 세로가 가장 빠듯한 구간. 예전엔 아바타를 접고 글자만 남겼는데, 윗줄(OVR·자리 라벨)이
+     빠진 지금은 48px 안에 아바타 원래 크기(32px)와 이름이 같이 들어간다. */
   .bd-slot { min-height: 48px; }
-  .bd-sprite { display: none; }
+  .bd-sprite svg { width: 24px; height: 32px; }
 }
 
 /* ══ 기타 ══════════════════════════════════════════════════ */

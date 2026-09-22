@@ -8,7 +8,6 @@
 // 쓰고 크기는 10의 배수로만 둔다(그래야 도트가 안 뭉갠다).
 import { slotsOf, positionOf, type LineupState } from '../lib/lineup.ts';
 import { avatarSpecFor } from '../lib/avatar.ts';
-import { grade, ovr } from '../lib/stats.ts';
 import type { PitchKind } from '../lib/formation.ts';
 import type { Player } from '../lib/types.ts';
 import { avatarPixels } from './avatar.ts';
@@ -87,6 +86,28 @@ function drawAvatar(ctx: CanvasRenderingContext2D, spec: ReturnType<typeof avata
   }
 }
 
+/** 이름표 바탕색 — 테스트가 "선수 몇 명을 그렸나"를 이 색으로 센다. 화면의 .bd-name 과 같은 값. */
+export const NAME_PILL = 'rgba(0, 0, 0, .62)';
+
+/** 자리 하나가 차지하는 네모. 그리는 쪽과 검사하는 쪽이 같은 계산을 보게 밖으로 뺀다 —
+ *  캔버스엔 CSS 가 안 닿아 화면 쪽 formation-fit 계약이 여기까지 오지 못한다.
+ *  폭 계수는 **자리 간격**이 정한다: 프리셋의 가장 좁은 가로 간격이 0.20 이라 그보다 작아야
+ *  겹치지 않고, 끝 자리(x=0.10)가 안 잘리려면 폭의 절반이 0.10×pw 안에 들어와야 한다. */
+export function lineupLayout(s: LineupState): { pw: number; ph: number; boxes: Array<{ x: number; y: number; w: number; h: number; cell: number }> } {
+  const { w, h } = PITCH_DIM[s.pitch];
+  const ph = PITCH_BOTTOM - PITCH_TOP;
+  const pw = Math.min(IMG_W - M * 2, ph * (w / h));
+  const cw = Math.round(pw * (s.pitch === 'soccer' ? 0.17 : 0.19));
+  const cell = Math.round((cw * 0.78) / 24);   // 아바타는 가로 24칸 — 자리 폭의 78% 를 쓴다
+  // 이름표 띠는 40 — 44 로 두면 GK 자리(y 0.93)의 네모가 골라인 밖으로 2px 나간다.
+  const ch = cell * 32 + 40;
+  const boxes = slotsOf(s).map((_slot, i) => {
+    const [nx, ny] = positionOf(s, i);
+    return { x: nx * pw - cw / 2, y: ny * ph - ch / 2, w: cw, h: ch, cell };
+  });
+  return { pw, ph, boxes };
+}
+
 export function drawLineupImage(c: HTMLCanvasElement, s: LineupState, players: Player[], title: string): void {
   c.width = IMG_W;
   c.height = IMG_H;
@@ -94,10 +115,6 @@ export function drawLineupImage(c: HTMLCanvasElement, s: LineupState, players: P
   const fg = tok('--fg', '#ffffff');
   const muted = tok('--muted', 'rgba(229, 229, 229, .55)');
   const hairline = tok('--hairline-strong', 'rgba(229, 229, 229, .38)');
-  const ink = tok('--ink', '#1a1a1a');
-  const metal: Record<string, string> = {
-    gold: tok('--metal-gold', '#d4af37'), silver: tok('--metal-silver', '#b8b8c0'), bronze: tok('--metal-bronze', '#b08050'),
-  };
 
   ctx.fillStyle = tok('--canvas', '#000000');
   ctx.fillRect(0, 0, IMG_W, IMG_H);
@@ -121,43 +138,36 @@ export function drawLineupImage(c: HTMLCanvasElement, s: LineupState, players: P
   drawGrain(ctx, s.pitch, w, h, sx, sy);
   fillRects(ctx, markRects(s.pitch), sx, sy);
 
-  // 선수 카드 — 화면과 같은 구성에서 OVR 만 뺀다(아바타 · 이름 · 자리 라벨).
+  // 자리 하나 = 아바타 + 이름표. 화면(pitch-view)과 같은 구성이다 — 금속 카드·OVR·포지션은
+  // 2026-09-22 에 화면에서 뺐고, 카톡에 나가는 그림만 옛 모습으로 남겨 두면 둘이 갈린다.
   const byNum = new Map(players.map((p) => [p.num, p]));
-  // 카드 폭 계수는 **자리 간격**이 정한다 — 프리셋의 가장 좁은 가로 간격이 0.20 이라 그보다
-  // 작아야 겹치지 않고, 끝 자리(x=0.10)가 안 잘리려면 폭의 절반이 0.10×pw 안에 들어야 한다.
-  // 풋살은 0.23 이었는데 그 조건을 둘 다 어겨 카드가 겹치고 잘렸다(2026-09-22 리뷰가 전수로 잡음).
-  const cw = Math.round(pw * (s.pitch === 'soccer' ? 0.17 : 0.19));
-  const cell = Math.round((cw * 0.5) / 24);  // 아바타 한 칸 — 24×32 격자라 정수여야 안 뭉갠다
-  const spriteH = cell * 32, spriteW = cell * 24;
-  const ch = spriteH + 70;
+  const { boxes } = lineupLayout(s);
   ctx.textAlign = 'center';
   slotsOf(s).forEach((slot, i) => {
-    const [nx, ny] = positionOf(s, i);
-    const cx = nx * pw, cy = ny * ph;
-    const left = cx - cw / 2, top = cy - ch / 2;
+    const b = boxes[i];
+    const cx = b.x + b.w / 2;
+    const spriteW = b.cell * 24, spriteH = b.cell * 32;
     const num = s.slots[i];
     const p = num != null ? byNum.get(num) : undefined;
     if (!p) {
       // 화면 `.bd-empty` 와 같게 — 어두운 바탕 + 또렷한 점선(--line 은 너무 흐리다).
-      ctx.fillStyle = 'rgba(0, 0, 0, .25)'; ctx.fillRect(left, top, cw, ch);
+      ctx.fillStyle = 'rgba(0, 0, 0, .25)'; ctx.fillRect(b.x, b.y, b.w, b.h);
       ctx.setLineDash([8, 6]); ctx.strokeStyle = hairline; ctx.lineWidth = 2;
-      ctx.strokeRect(left, top, cw, ch); ctx.setLineDash([]);
-      ctx.fillStyle = muted; ctx.font = pixelFont(20); ctx.fillText(slot.label, cx, cy + 8);
+      ctx.strokeRect(b.x, b.y, b.w, b.h); ctx.setLineDash([]);
+      ctx.fillStyle = muted; ctx.font = pixelFont(20); ctx.fillText(slot.label, cx, b.y + b.h / 2 + 8);
       return;
     }
-    // 카드 바탕은 화면과 같은 등급 금속색 — 다만 등급 계산(OVR)은 안 보여 주고 색으로만 남긴다.
-    ctx.fillStyle = metal[grade(ovr(p))];
-    ctx.fillRect(left, top, cw, ch);
-    drawAvatar(ctx, avatarPixels(avatarSpecFor(p.num, p.avatar)), cx - spriteW / 2, top + 8, cell, p.num);
-    // 이름은 30px 가 기본이고, 안 들어가면 20px 로 한 단계 줄인다 — 네 글자 이름이 공유
-    // 이미지에서만 말줄임되던 것(화면은 10px 라 멀쩡했다). 둘 다 PIXEL_SIZES 안이라 미리 불러온다.
-    ctx.fillStyle = ink; ctx.font = pixelFont(30);
-    if (ctx.measureText(p.name).width > cw - 12) ctx.font = pixelFont(20);
-    ctx.fillText(fit(ctx, p.name, cw - 12), cx, top + spriteH + 40);
-    // 자리 라벨과 선수 포지션이 같으면(GK 등) 한 번만 — "GK · GK" 는 읽을 게 없다.
-    const pos = p.pos || '–';
-    ctx.fillStyle = ink; ctx.font = pixelFont(20);
-    ctx.fillText(slot.label === pos ? pos : `${slot.label} · ${pos}`, cx, top + spriteH + 62);
+    drawAvatar(ctx, avatarPixels(avatarSpecFor(p.num, p.avatar)), cx - spriteW / 2, b.y, b.cell, p.num);
+    // 이름은 잔디 위에 바로 놓이므로 어두운 이름표를 깔아 밝은 줄무늬에서도 읽히게 한다.
+    // 30px 가 기본이고 안 들어가면 20px 로 한 단계 줄인다 — 둘 다 PIXEL_SIZES 안이라 미리 불러온다.
+    ctx.font = pixelFont(30);
+    if (ctx.measureText(p.name).width > b.w - 8) ctx.font = pixelFont(20);
+    const text = fit(ctx, p.name, b.w - 8);
+    const tw = ctx.measureText(text).width;
+    ctx.fillStyle = NAME_PILL;
+    ctx.fillRect(cx - tw / 2 - 8, b.y + spriteH + 2, tw + 16, 38);
+    ctx.fillStyle = fg;
+    ctx.fillText(text, cx, b.y + spriteH + 30);
   });
   ctx.restore();
 
