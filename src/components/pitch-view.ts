@@ -18,7 +18,8 @@ import type { Player } from '../lib/types.ts';
 export const PITCH_DIM: Record<PitchKind, { w: number; h: number }> = { futsal: { w: 20, h: 40 }, soccer: { w: 68, h: 105 } };
 
 /** 피치 위 카드 안에 들어가는 아바타 높이(px). 격자가 24×32 라 **32의 배수**로 둔다 —
- *  그래야 도트 하나가 화면 픽셀 하나로 정확히 떨어진다(가로는 24px 로 따라온다). */
+ *  그래야 도트 하나가 화면 픽셀 하나로 정확히 떨어진다(가로는 24px 로 따라온다).
+ *  넓은 화면(≥1120px)에서는 tokens.css 가 CSS 로 정확히 2배(48×64)로 덮어쓴다. */
 const SPRITE_H = 32;
 
 const MARK = 'rgba(255, 255, 255, .30)';

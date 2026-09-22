@@ -95,7 +95,8 @@
      도트를 쓰는 의미가 없어진다 — 그래서 본문용 --fs-* 사다리와 별도로 10의
      배수만 담은 세트를 둔다(2026-09-21 리프레시 스펙 §3). */
   --font-pixel: "Galmuri9", var(--font);
-  /* --fs-pixel-xs: 갈무리 원래 격자 크기(10px) — 20px가 안 들어가는 빠듯한 자리(피치 카드 이름)에만 쓴다. */
+  /* --fs-pixel-xs: 갈무리 원래 격자 크기(10px) — 20px가 안 들어가는 빠듯한 자리에만 쓴다
+     (피치 카드의 이름·포지션은 카드를 키운 뒤에도 여기 남는다 — 20px 면 4자 이름이 말줄임된다). */
   --fs-pixel-xs: 10px; --fs-pixel-sm: 20px; --fs-pixel-md: 30px; --fs-pixel-lg: 40px; --fs-pixel-xl: 60px;
 
   /* ── 옛 이름 별칭 ─────────────────────────────────────────
@@ -443,8 +444,9 @@ a.card:hover { background: var(--charcoal); }
    11인 배치에서 GK·CB 가 겹쳤다(2026-09-22 실측). */
 .bd-slot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 0; width: 72px; min-height: 72px; padding: 3px 3px var(--s-xxs); border-radius: var(--r-sm); touch-action: none; }
-/* 폭 72px 은 옛 카드와 같은 값이다 — 11인을 풋살 코트(340px)로 바꾼 조합에서 가운데 두 CM 의
-   간격이 0.22×340 = 74.8px 라, 76px 로 넓히면 1px 스친다(2026-09-22 실측). */
+/* 폭 72px 은 옛 카드와 같은 값이다. 카드 폭을 묶는 건 **가운데 미드필더 사이 간격**인데,
+   가장 좁은 건 기본값 4-3-3(0.22)이 아니라 `3-5-2` 의 0.17 이다 — 피치가 440px 로 묶여
+   있던 시절엔 0.17×440 = 74.8px 라 72px 이 겨우 들어갔다(2026-09-22 실측). */
 .bd-card { border: 0; color: var(--ink); }
 /* 버튼 기본 :hover 배경이 금속 면을 덮지 않게 등급 면을 다시 박는다. */
 .bd-card.pcard-gold, .bd-card.pcard-gold:hover { background: var(--metal-gold); }
@@ -471,12 +473,17 @@ a.card:hover { background: var(--charcoal); }
 .bd-share-title input { flex: 1; }
 .bd-share-img { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r-md); background: var(--charcoal); }
 /* 피치가 넉넉해지는 폭부터 카드도 키운다 — 아바타는 정확히 2배(64px)라 도트가 안 뭉갠다.
-   1000px 아래로 내리면 안 된다: 900px 에서 피치는 452×698 이라 104px 카드가 GK 자리에서
-   다시 잘린다(조건은 `카드높이/2 < 0.07×피치높이`, 2026-09-22 실측). */
-@media (min-width: 1000px) {
+   **분기를 1120px 아래로 내리면 안 된다.** 가장 빡빡한 배치는 기본값 4-3-3 이 아니라
+   `3-5-2` 이고, 거기서 카드를 구속하는 조건은 두 개다(2026-09-22 리뷰가 실측으로 잡음):
+     · GK(y .93) ↔ 가운데 CB(y .81)  →  0.12 × 피치높이 ≥ 카드높이 + 아웃라인 5px
+     · CM(x .33) ↔ CM(.50) ↔ CM(.67) →  0.17 × 피치폭  ≥ 카드폭
+   1000px 에서는 둘 다 깨져 카드가 겹치고 선택 아웃라인 아랫변이 잘렸다.
+   이름은 10px 그대로 둔다 — 20px 로 키우면 카드가 커진 것보다 글자가 더 빨리 늘어
+   4자 이름이 오히려 말줄임된다(카드 안쪽 96px 중 포지션·여백을 빼면 69px 뿐). */
+@media (min-width: 1120px) {
   .bd-slot { width: 104px; min-height: 104px; padding: var(--s-xxs) var(--s-xxs) 6px; }
   .bd-sprite svg { width: 48px; height: 64px; }
-  .bd-slotlabel, .bd-name, .bd-pos { font-size: var(--fs-pixel-sm); }
+  .bd-slotlabel { font-size: var(--fs-pixel-sm); }
 }
 @media (max-width: 899px) {
   .bd-slot { width: 66px; min-height: 70px; }
