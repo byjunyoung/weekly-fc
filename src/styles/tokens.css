@@ -497,6 +497,12 @@ a.card:hover { background: var(--charcoal); }
   .bd-sprite svg { width: 48px; height: 64px; }
   .bd-slotlabel { font-size: var(--fs-pixel-sm); }
 }
+/* 가로 피치는 같은 폭에서 높이가 세로의 42% 뿐이라(832×539 vs 832×1285) 카드도 작게 쓴다 —
+   1120px 이상의 큰 카드(104×108)를 그대로 두면 다섯 명 줄이 세로로 겹친다. `.bd-land` 가
+   미디어 쿼리보다 명시도가 높아(0,2,0) 순서와 무관하게 이긴다. */
+.bd-land .bd-slot { width: 72px; min-height: 72px; padding: 3px 3px var(--s-xxs); }
+.bd-land .bd-sprite svg { width: 24px; height: 32px; }
+.bd-land .bd-slotlabel { font-size: var(--fs-pixel-xs); }
 @media (max-width: 899px) {
   .bd-slot { width: 66px; min-height: 70px; }
   /* 좌우로 세울 폭이 안 나온다 — 피치 아래 명단이 오고, 붙잡아 둘 옆 칸이 없으니 sticky 도 푼다. */

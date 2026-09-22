@@ -39,7 +39,9 @@ function pitchWidth(vw, kind) {
 }
 
 /** 화면 구간: [이름, 그 구간에서 가장 좁은 뷰포트, 카드폭, 카드높이, 폭을 정하는 미디어 쿼리].
- *  카드 **높이**는 내용이 정하므로 헤드리스로 잰 값을 적는다 — 카드 크기를 바꾸면 다시 잰다. */
+ *  카드 **높이**는 내용이 정하므로 헤드리스로 잰 값을 적는다 — 카드 크기를 바꾸면 다시 잰다.
+ *  **가로 피치(≥1100px)는 따로 잰다** — 아래 LAND_BANDS. 같은 폭에서 높이가 세로의 42% 라
+ *  구속 조건의 축이 뒤바뀐다(세로 규격의 가로 간격이 화면에선 세로 간격이 된다). */
 const BANDS = [
   ['≥1120px', 1120, 104, 108, /@media \(min-width: 1120px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
   ['900~1119px', 900, 72, 73, /\n\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
@@ -48,6 +50,12 @@ const BANDS = [
   ['341~349px', 341, 56, 63, /@media \(max-width: 349px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
   ['≤340px', 320, 56, 48, /@media \(max-width: 349px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
 ];
+/** 가로 피치 구간 — `.bd-land .bd-slot` 이 미디어 쿼리보다 명시도가 높아 한 벌뿐이다.
+ *  가장 좁은 뷰포트는 LineupApp 의 LAND_QUERY(1100px). */
+const LAND_BANDS = [
+  ['가로 ≥1100px', 1100, 72, 72, /\.bd-land \.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+];
+
 /** 0.2 같은 값이 좌표 뺄셈에서 0.19999999999999998 로 나온다 — 그만큼은 겹침이 아니다. */
 const EPS = 1e-9;
 
@@ -56,7 +64,7 @@ const RATIO = { 축구: 105 / 68, 풋살: 2 };
 test('BANDS 의 카드 폭이 tokens.css 의 **그 구간 선언**과 같다 (CSS 를 바꾸면 이 표도 바꿔야 한다)', () => {
   // 처음엔 "선언된 폭 어딘가에 이 숫자가 있으면 통과"로 짰는데, 한 구간을 되돌려도 같은 숫자가
   // 다른 구간에 남아 있어 통과해 버렸다(2026-09-22 리뷰의 뮤테이션 M2). 구간별로 짚어 본다.
-  for (const [name, , w, , re] of BANDS) {
+  for (const [name, , w, , re] of [...BANDS, ...LAND_BANDS]) {
     const m = css.match(re);
     assert.ok(m, `${name} 의 .bd-slot width 선언을 tokens.css 에서 못 찾았다`);
     assert.equal(Number(m[1]), w, `${name} 의 카드 폭이 tokens.css 에서는 ${m[1]}px 인데 표에는 ${w}px 로 적혀 있다`);
@@ -130,5 +138,43 @@ test('모양 문자열과 실제 자리 수가 맞는다', () => {
 test('같은 인원 안에서 모양 이름이 겹치지 않는다', () => {
   for (let n = MIN_COUNT; n <= MAX_COUNT; n++) {
     assert.equal(new Set(SHAPES[n]).size, SHAPES[n].length, `${n}인에 같은 이름이 두 번 있다`);
+  }
+});
+
+// ── 가로 피치(≥1100px) ──────────────────────────────────────
+// 피치를 눕히면 세로 규격 좌표 (x, y) 가 화면에서 (1−y, x) 로 간다 — 즉 **세로 규격의 가로
+// 간격이 화면의 세로 간격**이 된다. 세로 피치용 표를 그대로 쓰면 이 뒤바뀜을 못 잡는다.
+const landPitch = (vw) => { const pw = Math.min(MAX, vw) - 2 * S_XL - LIST_W - S_LG; return { w: pw, h: pw * (68 / 105) }; };
+
+test('가로 피치에서도 카드끼리 안 겹친다 (구속 축이 뒤바뀐다)', () => {
+  for (const [name, vw, w, h] of LAND_BANDS) {
+    const box = landPitch(vw);
+    for (let n = MIN_COUNT; n <= MAX_COUNT; n++) {
+      for (const shape of SHAPES[n]) {
+        const slots = slotsFor(n, shape).map((s2) => ({ label: s2.label, x: 1 - s2.y, y: s2.x }));
+        const hit = worstPair(slots, w / box.w, h / box.h);
+        assert.equal(hit, null, hit && `${name} ${n}인 ${shape}: ${hit.a}↔${hit.b} 가 겹친다`
+          + ` (dx ${hit.dx.toFixed(3)} · dy ${hit.dy.toFixed(3)})`);
+      }
+    }
+  }
+});
+
+test('가로 피치에서도 카드가 피치 밖으로 안 나간다', () => {
+  for (const [name, vw, w, h] of LAND_BANDS) {
+    const box = landPitch(vw);
+    for (let n = MIN_COUNT; n <= MAX_COUNT; n++) {
+      for (const shape of SHAPES[n]) {
+        for (const s2 of slotsFor(n, shape)) {
+          const x = 1 - s2.y, y = s2.x;
+          const room = [x * box.w, (1 - x) * box.w, y * box.h, (1 - y) * box.h];
+          const need = [w / 2, w / 2, h / 2, h / 2];
+          for (let k = 0; k < 4; k++) {
+            assert.ok(room[k] >= need[k], `${name} ${n}인 ${shape} ${s2.label}: `
+              + `${['왼', '오른', '위', '아래'][k]}쪽으로 ${(need[k] - room[k]).toFixed(1)}px 잘린다`);
+          }
+        }
+      }
+    }
   }
 });

@@ -2,7 +2,7 @@
 // (왼쪽 포메이션, 오른쪽 명단 목록) — 자리를 누르고 바로 옆에서 선수를 고른다. 좁은 폭에서는
 // 아래로 쌓인다. 라인업 초안은 localStorage 에 있어 /squad/ 에서 찍은 선발도 그대로 보인다.
 import { App, Button, Segmented, Select } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import * as L from '../../lib/lineup';
 import { MAX_COUNT, MIN_COUNT, SHAPES, type PitchKind } from '../../lib/formation';
 import ThemeRoot from '../ThemeRoot';
@@ -16,6 +16,18 @@ import { useLineup } from './useLineup';
 // 좁은 칸이라 목록 하나로 고정한다 — /squad/ 에 저장된 보기(표·카드)를 따라가지 않는다.
 const LINEUP_VIEWS: View[] = ['list'];
 
+// 피치를 가로로 눕히는 건 **넓은 화면에서만**이다. 세로 피치는 폭에 비례해 길어져 한 화면에
+// 안 들어오고(832px 폭이면 1285px), 가로로 눕히면 539px 로 들어온다. 반대로 좁은 화면에서는 가로
+// 피치의 높이가 모자라 카드가 겹친다 — 900px 에서는 293px 뿐이라 일곱 쌍이 겹쳤다(실측).
+// 1100px 부터 켠다: 피치 652×422 이고, 가로에서 세로 간격을 정하는 건 **세로 규격의 가로 간격**
+// (최소 0.20)이라 0.20×422 = 84px > 카드 73px 로 여유가 남는다(2026-09-22 사용자 요청).
+const LAND_QUERY = '(min-width: 1100px)';
+const subscribeLand = (cb: () => void) => {
+  const m = window.matchMedia(LAND_QUERY);
+  m.addEventListener('change', cb);
+  return () => m.removeEventListener('change', cb);
+};
+
 function Lineup() {
   const { message } = App.useApp();
   const { data } = useData();
@@ -25,6 +37,7 @@ function Lineup() {
   const [pos, setPos] = useState('ALL');
   const [q, setQ] = useState('');
   const [shareOpen, setShareOpen] = useState(false);
+  const land = useSyncExternalStore(subscribeLand, () => window.matchMedia(LAND_QUERY).matches, () => false);
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape' && selected !== null) setSelected(null); };
@@ -75,7 +88,7 @@ function Lineup() {
       </div>
       <div className="bd">
         <section className="bd-stage" aria-label="피치">
-          <Pitch st={st} players={data.players} selected={selected}
+          <Pitch st={st} players={data.players} selected={selected} land={land}
             onTapSlot={onTapSlot} onSwap={onSwap} onMoveSlot={(idx, pt) => commit(L.moveSlot(st, idx, pt))}
             onDeselect={() => setSelected(null)} />
           <div className="bd-share-row"><Button type="primary" onClick={() => setShareOpen(true)}>이미지 공유</Button></div>
