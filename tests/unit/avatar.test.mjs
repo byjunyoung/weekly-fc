@@ -222,25 +222,35 @@ test('avatarSvg: 유니폼 무늬가 다르면(솔리드 vs 나머지) 출력도
   }
 });
 
-test('avatarSvg: 양말은 "유니폼과 같음"(o0)이면 kit 색, 아니면 지정 색으로 칠해진다', () => {
+// 아래 세 테스트는 색 문자열이 출력 어딘가에 있는지가 아니라, **그 부위의 실제 좌표에
+// 찍힌 rect의 fill**을 확인한다 — 장갑 블랙(#1a1a1a)이 축구화(B) 색과 같은 것처럼, 이
+// 팔레트엔 우연히 같은 색을 쓰는 슬롯이 있어 "색이 출력에 있다"만으론 그 부위가 실제로
+// 그려졌는지 증명하지 못한다(opus 리뷰가 잡은 공허한 단언).
+const rectAt = (svg, x, y) => new RegExp(`<rect x="${x}" y="${y}" width="\\d+" height="1" fill="([^"]+)"/>`).exec(svg)?.[1];
+
+test('avatarSvg: 양말은 "유니폼과 같음"(o0)이면 kit 색, 아니면 지정 색으로 칠해진다 (26행 좌표로 확인)', () => {
   const auto = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, socks: 0, kit: '#2980b9' }, 112);
-  assert.ok(auto.includes('fill="#2980b9"'), '유니폼과 같음인데 kit 색이 안 들어갔다');
+  assert.equal(rectAt(auto, 8, 26), '#2980b9', '유니폼과 같음인데 26행 양말 rect 색이 kit 이 아니다');
   const white = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, socks: 1, kit: '#2980b9' }, 112);
-  assert.ok(white.includes(`fill="${PARTS.socks[1].color}"`), '지정한 양말 색이 안 들어갔다');
+  assert.equal(rectAt(white, 8, 26), PARTS.socks[1].color, '지정한 양말 색이 26행 rect 에 없다');
 });
 
-test('avatarSvg: 장갑이 없으면(g0) 손이 피부색, 있으면 지정 색이 섞인다', () => {
+test('avatarSvg: 장갑이 없으면(g0) 19행 손 rect가 피부색, 있으면 지정 색이다 (좌표로 확인)', () => {
+  const skin = PARTS.skin[0].color;
   const none = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, gloves: 0, kit: '#2980b9' }, 112);
+  assert.equal(rectAt(none, 6, 19), skin, '장갑 없음인데 19행 손 rect가 피부색이 아니다');
   const black = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, gloves: 1, kit: '#2980b9' }, 112);
-  assert.notEqual(none, black, '장갑 유무가 출력에 반영되지 않았다');
-  assert.ok(black.includes(`fill="${PARTS.gloves[1].color}"`), '장갑 색이 안 들어갔다');
+  assert.equal(rectAt(black, 6, 19), PARTS.gloves[1].color, '장갑 색이 19행 손 rect에 없다(좌우 중 왼쪽)');
+  assert.equal(rectAt(black, 17, 19), PARTS.gloves[1].color, '장갑 색이 19행 손 rect에 없다(오른쪽)');
 });
 
-test('avatarSvg: 손목테이프가 없으면(t0) 팔이 피부색, 있으면 지정 색이 섞인다', () => {
+test('avatarSvg: 손목테이프가 없으면(t0) 18행 손목 rect가 피부색, 있으면 지정 색이다 (좌표로 확인)', () => {
+  const skin = PARTS.skin[0].color;
   const none = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, tape: 0, kit: '#2980b9' }, 112);
+  assert.equal(rectAt(none, 5, 18), skin, '테이프 없음인데 18행 손목 rect가 피부색이 아니다');
   const white = avatarSvg({ face: 0, hair: 0, skin: 0, eyes: 0, tape: 1, kit: '#2980b9' }, 112);
-  assert.notEqual(none, white, '손목테이프 유무가 출력에 반영되지 않았다');
-  assert.ok(white.includes(`fill="${PARTS.tape[1].color}"`), '손목테이프 색이 안 들어갔다');
+  assert.equal(rectAt(white, 5, 18), PARTS.tape[1].color, '테이프 색이 18행 손목 rect(왼쪽)에 없다');
+  assert.equal(rectAt(white, 17, 18), PARTS.tape[1].color, '테이프 색이 18행 손목 rect(오른쪽)에 없다');
 });
 
 test('avatarSvg: 유니폼 무늬·양말·장갑·손목테이프 조합 전수 — undefined 안 섞이고 좌표는 정수', () => {
@@ -277,6 +287,24 @@ test('avatarFaceSvg: 얼굴 크롭(0~15행)에도 축구 테마 필드가 섞여
   assert.match(svg, /^<svg /);
   assert.match(svg, /<\/svg>$/);
   assert.ok(!svg.includes('undefined'));
+});
+
+test('randomAvatar: 축구 테마 네 필드을 추가하면서도 face·hair·skin·eyes·kit 은 그대로다 (회귀 방지)', () => {
+  // 2026-09-22 축구 테마 확장 때 새 네 픽을 hue 추첨보다 앞에 끼워 넣는 바람에 난수
+  // 스트림이 밀려, 아바타를 한 번도 저장하지 않은 기존 선수 전원의 유니폼 색이 바뀔
+  // 뻔했다(opus 리뷰가 실측으로 잡음). 이 값들은 그 사고 이전 알고리즘(face→hair→skin→
+  // eyes→hue 순, 새 필드는 그 뒤)으로 직접 계산한 고정값이다 — 앞으로 다시 순서가
+  // 밀리면 이 테스트가 바로 깨진다.
+  const fixed = {
+    1: { face: 3, hair: 0, skin: 3, eyes: 5, kit: '#a63048' },
+    7: { face: 0, hair: 0, skin: 5, eyes: 4, kit: '#3098a6' },
+    9: { face: 0, hair: 6, skin: 0, eyes: 4, kit: '#5730a6' },
+    30: { face: 4, hair: 6, skin: 2, eyes: 1, kit: '#a6a030' },
+  };
+  for (const [seed, expected] of Object.entries(fixed)) {
+    const a = randomAvatar(Number(seed));
+    assert.deepEqual({ face: a.face, hair: a.hair, skin: a.skin, eyes: a.eyes, kit: a.kit }, expected, `seed ${seed}`);
+  }
 });
 
 test('randomAvatar: 유니폼 무늬·양말은 골고루 뽑힌다(0번에 안 쏠림)', () => {

@@ -94,15 +94,16 @@ const MOUTH: Layer = { 9: '...........MM...........' };
 
 // ── 유니폼 무늬 4종 ──────────────────────────────────────────
 // 색은 새 팔레트 슬롯 없이 D(유니폼 그늘)를 재사용한다 — BODY 가 이미 14행 칼라
-// 트림에 D를 쓰고 있어(collar), 같은 색으로 무늬를 더하는 게 자연스럽다.
-// 몸통 폭(5~18행 · 13~15행)·팔 폭(5~6·17~18행 · 16~17행)은 BODY 와 정확히 맞춘다.
+// 트림(11·12번째 열)에 D를 쓰고 있어(collar), 같은 색으로 무늬를 더하는 게 자연스럽다.
+// 아래 세 레이어가 칠하는 행·열은 전부 BODY 의 몸통·소매와 같은 폭이다 — 몸통은
+// 13~15행에서 5~18번째 열(14칸, 중심 11.5), 소매는 16~17행에서 5·6번째와 17·18번째 열.
 const JERSEY_LAYERS: Record<(typeof PARTS.jersey)[number]['shape'], Layer> = {
   solid: {},
-  // 세로 스트라이프 — 몸통 폭(5~18행) 안에서 3줄.
-  stripes: { 13: '........D...D...D.......', 14: '........D...D...D.......', 15: '........D...D...D.......' },
+  // 세로 스트라이프 4줄 — 7·10·13·16번째 열(중심 11.5로 대칭, 칼라의 11~12와는 안 겹친다).
+  stripes: { 13: '.......D..D..D..D.......', 14: '.......D..D..D..D.......', 15: '.......D..D..D..D.......' },
   // 가슴 아래 가로 밴드(후프) — 몸통 폭 그대로 한 줄만 D로.
   hoops: { 15: '.....DDDDDDDDDDDDDD.....' },
-  // 긴팔 — 위팔(16~17행)의 맨살(S)을 유니폼 색으로 덮는다(소매가 손목까지 내려온 모양).
+  // 긴팔 — 위팔(16~17행)의 맨살(S)만 유니폼 색으로 덮는다(3부 소매, 손목·손은 그대로 맨살).
   sleeves: { 16: '.....DD..........DD.....', 17: '.....DD..........DD.....' },
 };
 
@@ -201,8 +202,12 @@ function mapOf(spec: AvatarSpec): string[] {
   const hair = PARTS.hair[spec.hair] ?? PARTS.hair[0];
   const eyes = PARTS.eyes[spec.eyes] ?? PARTS.eyes[0];
   const jersey = PARTS.jersey[spec.jersey ?? 0] ?? PARTS.jersey[0];
-  const glove = (spec.gloves ?? 0) > 0 ? 'on' : 'off';
-  const tape = (spec.tape ?? 0) > 0 ? 'on' : 'off';
+  const gloveOpt = PARTS.gloves[spec.gloves ?? 0] ?? PARTS.gloves[0];
+  const tapeOpt = PARTS.tape[spec.tape ?? 0] ?? PARTS.tape[0];
+  // "없음"은 색 문자열(color === '')로만 판정한다 — paletteOf 도 같은 필드로 판정하므로
+  // (인덱스 0 = 없음이라는 별도 규칙을 여기 또 두지 않는다) 둘이 어긋날 여지가 없다.
+  const glove = gloveOpt.color ? 'on' : 'off';
+  const tape = tapeOpt.color ? 'on' : 'off';
   return compose([
     BODY, JERSEY_LAYERS[jersey.shape], TAPE_LAYERS[tape], GLOVE_LAYERS[glove],
     FACE_LAYERS[face.shape], HAIR_LAYERS[hair.shape], EYE_LAYERS[eyes.shape], MOUTH,
