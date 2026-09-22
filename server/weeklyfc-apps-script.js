@@ -124,16 +124,22 @@ function recentStatLog(ss) {
 function handleWriteStats(p) {
   const num = String(p && p.num || '');
   if (!num) return { error: '번호가 없습니다' };
+  // **보낸 칸만** 손댄다. 여섯 칸을 통째로 받으면, 값이 0 인 선수(아직 안 매긴 능력치)를
+  // 한 칸만 고치려 해도 나머지가 검증에 걸리거나 엉뚱한 값으로 덮인다.
   const stats = (p && p.stats) || {};
   const next = {};
+  const keys = [];
   for (let i = 0; i < STAT_FIELDS.length; i++) {
     const k = STAT_FIELDS[i];
+    if (!Object.prototype.hasOwnProperty.call(stats, k)) continue;
     const v = Number(stats[k]);
     if (!isFinite(v) || Math.floor(v) !== v || v < 1 || v > 99) {
       return { error: k + ' 값이 1~99 정수가 아닙니다' };
     }
     next[k] = v;
+    keys.push(k);
   }
+  if (keys.length === 0) return { error: '고칠 값이 없습니다' };
 
   const ss = getSpreadsheet();
   const sheet = getOrCreateSheet(ss, SHEET_PLAYERS, PLAYER_COLS);
@@ -148,8 +154,8 @@ function handleWriteStats(p) {
   const log = getOrCreateSheet(ss, SHEET_STATLOG, STATLOG_COLS);
   const ts = new Date().toISOString();
   let changed = 0;
-  for (let i = 0; i < STAT_FIELDS.length; i++) {
-    const k = STAT_FIELDS[i];
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
     const col = PLAYER_COLS.indexOf(k) + 1;
     const before = Number(cell(data[rowIdx][col - 1])) || 0;
     if (before === next[k]) continue;                 // 안 바뀐 칸은 적지도 쓰지도 않는다

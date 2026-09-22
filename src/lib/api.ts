@@ -169,8 +169,9 @@ export async function fetchFull(): Promise<Data> { return normalizeData(await ca
  * 호출부가 toast()로 실패를 보여줘야 한다(성공을 가장하지 않는다). */
 /** 능력치 전용 쓰기. writeAvatar 와 같은 이유로 write() 와 나눠 둔다 — 이쪽은 PIN 을
  *  요구하지 않으므로, 한 함수에 얹으면 PIN 없는 경로가 다른 액션으로 새어나갈 여지가 생긴다.
- *  by 는 홈에서 고른 내 번호(자칭)다. 서버가 값을 1~99 로 검사하고, 바뀐 칸마다 기록을 남긴다. */
-export async function writeStats(num: number, stats: Record<StatKey, number>, by: number | null): Promise<Raw> {
+ *  by 는 홈에서 고른 내 번호(자칭)다. 서버가 값을 1~99 로 검사하고, 바뀐 칸마다 기록을 남긴다.
+ *  **바꾼 칸만 보낸다** — 여섯 칸을 통째로 보내면 아직 값이 0 인 칸까지 덮어쓴다. */
+export async function writeStats(num: number, stats: Partial<Record<StatKey, number>>, by: number | null): Promise<Raw> {
   const r = await call('writeStats', { payload: { num, stats, by: by ?? '' } });
   if (inflight) await inflight.catch(() => {});
   await refresh();

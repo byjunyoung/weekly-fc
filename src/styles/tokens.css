@@ -427,8 +427,15 @@ a.card:hover { background: var(--charcoal); }
 .player-tiles { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 @media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero .phero { max-width: var(--pcard-w); margin: 0 auto; } }
 .attr-list { display: flex; flex-direction: column; }
-.attr-row { display: grid; grid-template-columns: 4.2em 3em minmax(0, 1fr); align-items: center; gap: var(--s-sm);
+/* 라벨 · − · 값 · ＋ · 막대. 스텝퍼는 누구나 눌러 고칠 수 있다(2026-09-22) — 버튼을 따로
+   숨겨 두지 않고 값 옆에 바로 둔다. */
+.attr-row { display: grid; grid-template-columns: 4.2em 1.8em 3em 1.8em minmax(0, 1fr); align-items: center; gap: var(--s-xs);
   padding: var(--s-xs) 0; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); }
+.attr-step { min-height: 0; padding: 0; width: 1.8em; height: 1.8em; line-height: 1; border-radius: var(--r-sm);
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+/* 아직 안 보낸 값 — 곧 저장된다는 표시. 저장되면 평범한 값으로 돌아온다. */
+.val.is-draft { box-shadow: inset 0 0 0 2px var(--link); }
+.attr-state { font-size: var(--fs-xs); }
 .attr-row:last-child { border-bottom: 0; }
 .attr-row > .attr-key { color: var(--muted); font-size: var(--fs-xs); font-weight: var(--fw-strong); }
 .attr-bar { display: block; height: 6px; border-radius: var(--r-full); background: var(--charcoal); overflow: hidden; }

@@ -32,10 +32,12 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   const [saving, setSaving] = useState(false);
   const [opening, setOpening] = useState(false); // fetchFull 이 도는 동안(모달이 뜨기 전)
   const [deleting, setDeleting] = useState(false);
+  const [draft, setDraft] = useState<Partial<Record<StatKey, number>>>({});
+  const [statBusy, setStatBusy] = useState(false);
+  const draftRef = useRef<Partial<Record<StatKey, number>>>({});
+  const statTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushRef = useRef<() => void>(() => {});
   const [avatarOpen, setAvatarOpen] = useState(false);
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [statsSaving, setStatsSaving] = useState(false);
-  const [statsForm] = Form.useForm();
   const [avatarSpec, setAvatarSpec] = useState<AvatarSpec | null>(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
   const openAvatar = (p: Player) => { setAvatarSpec(avatarSpecFor(p.num, p.avatar)); setAvatarOpen(true); };
@@ -46,25 +48,6 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     catch (e) { message.error((e as Error).message); }
     finally { setAvatarSaving(false); }
   };
-  /** 능력치 고치기 — PIN 없이 누구나. 막는 대신 누가 고쳤는지 기록이 남는다
-   *  (2026-09-22 사용자 결정). 고친 사람은 홈에서 고른 내 번호이고, 안 골랐으면 빈칸이다. */
-  const openStats = (p: Player) => {
-    statsForm.setFieldsValue(Object.fromEntries(STAT_KEYS.map((k) => [k, p[k] || 50])));
-    setStatsOpen(true);
-  };
-  const saveStats = async () => {
-    if (!player) return;
-    let v: Record<StatKey, number>;
-    try { v = await statsForm.validateFields(); } catch { return; }
-    setStatsSaving(true);
-    try {
-      const r = await writeStats(player.num, v, getMe());
-      setStatsOpen(false);
-      message.success(Number(r.changed) > 0 ? `능력치 ${r.changed}개 고쳤습니다` : '바뀐 값이 없습니다');
-    } catch (e) { message.error((e as Error).message); }
-    finally { setStatsSaving(false); }
-  };
-
   const pickGroup = (key: 'face' | 'hair' | 'skin' | 'eyes' | 'jersey' | 'socks' | 'gloves' | 'tape', title: string) => (
     <div key={key}>
       <div className="label label-gap">{title}</div>
@@ -125,9 +108,50 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     if (isNew && admin && data && !player && editing === null && !open && !opening) openEdit(undefined);
   }, [isNew, admin, data, player, opening]);
 
+  const STAT_SAVE_DELAY = 1500;
+  const flushStats = async (): Promise<void> => {
+    if (statTimer.current) { clearTimeout(statTimer.current); statTimer.current = null; }
+    const d = draftRef.current;
+    if (!player || Object.keys(d).length === 0) return;
+    try {
+      await writeStats(player.num, d, getMe());
+      draftRef.current = {};
+      setDraft({});
+    } catch (e) { message.error((e as Error).message); }
+    finally { setStatBusy(false); }
+  };
+  flushRef.current = () => { void flushStats(); };
+  // 화면을 떠나거나 탭을 접을 때 남은 편집을 먼저 보낸다.
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flushRef.current(); };
+    document.addEventListener('visibilitychange', onHide);
+    return () => { document.removeEventListener('visibilitychange', onHide); flushRef.current(); };
+  }, []);
+
   const fines = player ? playerFines(data?.fines ?? [], player.name) : [];
   // 이 선수 기록만, 최신 여덟 줄. 전체 목록은 두지 않았다 — 숫자가 이상하면 그 선수 자리에서 보면 된다.
   const myLog = player ? (data?.statLog ?? []).filter((r) => r.num === player.num).slice(0, 8) : [];
+
+  // ── 능력치 스텝퍼 ──────────────────────────────────────────────
+  // 누를 때마다 서버로 보내면 기록이 누른 횟수만큼 쌓인다(84→85, 85→86…). 손을 뗀 뒤
+  // 잠깐 기다렸다 바뀐 칸만 한 번에 보내 84→87 한 줄로 남긴다. 기다리는 사이에 화면을
+  // 떠나면 그 편집이 날아가므로, 언마운트와 탭 전환에서 남은 걸 먼저 흘려보낸다.
+  const shownStat = (k: StatKey): number => draft[k] ?? (player ? player[k] : 0);
+  const bump = (k: StatKey, by: number): void => {
+    if (!player) return;
+    const now = shownStat(k);
+    const val = Math.max(1, Math.min(99, now + by));
+    if (val === now) return;
+    const next = { ...draft };
+    if (val === player[k]) delete next[k];              // 되돌아왔으면 보낼 게 없다
+    else next[k] = val;
+    draftRef.current = next;
+    setDraft(next);
+    if (statTimer.current) clearTimeout(statTimer.current);
+    if (Object.keys(next).length === 0) { setStatBusy(false); return; }
+    setStatBusy(true);
+    statTimer.current = setTimeout(() => { void flushRef.current(); }, STAT_SAVE_DELAY);
+  };
 
   // OVR 카운트업 — [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
   const cardRef = useRef<HTMLDivElement>(null);
@@ -164,11 +188,13 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   }
 
   const attrRows = player ? STAT_KEYS.map((k) => {
-    const v = player[k], b = band(v, STAT_CUTS);
+    const v = shownStat(k), b = band(v, STAT_CUTS);
     return (
       <div className="attr-row" key={k}>
         <span className="attr-key">{STAT_KO[k]}</span>
-        <b className={`val val-${b}`}>{v || '–'}</b>
+        <button type="button" className="attr-step" aria-label={`${STAT_KO[k]} 낮추기`} disabled={v <= 1} onClick={() => bump(k, -1)}>−</button>
+        <b className={`val val-${b}${draft[k] != null ? ' is-draft' : ''}`}>{v || '–'}</b>
+        <button type="button" className="attr-step" aria-label={`${STAT_KO[k]} 올리기`} disabled={v >= 99} onClick={() => bump(k, 1)}>+</button>
         <i className="attr-bar"><b className={`val-${b}`} style={{ '--fill': `${Math.max(0, Math.min(100, v))}%` } as CSSProperties} /></i>
       </div>
     );
@@ -212,26 +238,6 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
             <Form.Item name="note" label="메모" className="full"><Input /></Form.Item>
           </Form>
         )}
-      </Modal>
-    );
-  }
-
-  function statsModal() {
-    return (
-      <Modal title="능력치 고치기" open={statsOpen} destroyOnHidden width={420} onCancel={() => setStatsOpen(false)}
-        maskClosable={!statsSaving} closable={!statsSaving} keyboard={!statsSaving}
-        footer={[
-          <Button key="cancel" disabled={statsSaving} onClick={() => setStatsOpen(false)}>취소</Button>,
-          <Button key="save" type="primary" loading={statsSaving} onClick={saveStats}>저장</Button>,
-        ]}>
-        <p className="muted">누구나 고칠 수 있습니다. 고치면 누가 바꿨는지 아래에 남습니다.</p>
-        <Form form={statsForm} layout="vertical">
-          {STAT_KEYS.map((k) => (
-            <Form.Item key={k} name={k} label={STAT_KO[k]} rules={[{ required: true, message: '1~99' }]}>
-              <InputNumber min={1} max={99} precision={0} style={{ width: '100%' }} />
-            </Form.Item>
-          ))}
-        </Form>
       </Modal>
     );
   }
@@ -298,7 +304,9 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
             </div>
             <div className="player-side">
               <div className="card">
-                <div className="card-head"><h2>능력치</h2><Button size="small" onClick={() => openStats(player)}>고치기</Button></div>
+                <div className="card-head"><h2>능력치</h2>
+                  <span className="muted attr-state" aria-live="polite">{statBusy ? '저장 중…' : '＋ − 로 바로 고칩니다'}</span>
+                </div>
                 <div className="attr-list">{attrRows}</div>
                 {myLog.length > 0 && (
                   <>
@@ -326,7 +334,6 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
         </div>
       )}
       {editModal()}
-      {statsModal()}
       {avatarModal()}
     </>
   );
