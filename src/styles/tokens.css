@@ -432,6 +432,10 @@ a.card:hover { background: var(--charcoal); }
 .bd-pitch { position: relative; width: min(100%, 440px); background: #0b1a13; border-radius: var(--r-md); overflow: hidden;
   touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .bd-futsal { width: min(100%, 340px); }
+/* 2컬럼(≥900px)에서는 피치가 자기 칸을 꽉 채운다 — 440px 로 묶어 두면 칸 가운데에 떠서
+   제목·조작줄의 왼쪽 끝과 안 맞는다(사용자 지적 2026-09-22). 세로로 쌓이는 좁은 폭은
+   그대로 둔다 — 거기선 이미 폭을 다 쓰고 있고, 태블릿에서 피치만 과하게 길어진다. */
+@media (min-width: 900px) { .bd-pitch, .bd-futsal { width: 100%; } }
 /* 2026-09-22: 피치 그림을 채운 사각형(도트)으로 바꿨다 — stroke·vector-effect 규칙은 그래서 없앴다.
    잔디 줄무늬·잔디 알갱이·블록 선은 전부 pitch-view.ts 가 fill 로 낸다. */
 .bd-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -466,6 +470,14 @@ a.card:hover { background: var(--charcoal); }
 .bd-share-title { display: flex; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
 .bd-share-title input { flex: 1; }
 .bd-share-img { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r-md); background: var(--charcoal); }
+/* 피치가 넉넉해지는 폭부터 카드도 키운다 — 아바타는 정확히 2배(64px)라 도트가 안 뭉갠다.
+   1000px 아래로 내리면 안 된다: 900px 에서 피치는 452×698 이라 104px 카드가 GK 자리에서
+   다시 잘린다(조건은 `카드높이/2 < 0.07×피치높이`, 2026-09-22 실측). */
+@media (min-width: 1000px) {
+  .bd-slot { width: 104px; min-height: 104px; padding: var(--s-xxs) var(--s-xxs) 6px; }
+  .bd-sprite svg { width: 48px; height: 64px; }
+  .bd-slotlabel, .bd-name, .bd-pos { font-size: var(--fs-pixel-sm); }
+}
 @media (max-width: 899px) {
   .bd-slot { width: 66px; min-height: 70px; }
   /* 좌우로 세울 폭이 안 나온다 — 피치 아래 명단이 오고, 붙잡아 둘 옆 칸이 없으니 sticky 도 푼다. */
