@@ -14,21 +14,52 @@ const css = readFileSync(new URL('../../src/styles/tokens.css', import.meta.url)
 /** 화면 구간별 카드 크기와, **그 구간에서 가장 좁을 때의** 피치 폭(px).
  *  폭은 tokens.css 선언에서 읽고(아래에서 대조), 높이는 내용이 정하므로 헤드리스로 잰 값이다.
  *  카드 크기를 바꾸면 높이는 다시 재서 여기 적어야 한다 — 폭이 어긋나면 이 파일이 먼저 깨진다. */
+/** tokens.css 에서 숫자를 꺼낸다 — 피치 폭을 손으로 적어 두면 틀려도 아무도 안 잡는다
+ *  (2026-09-22 리뷰의 뮤테이션 M5: 표의 피치 폭을 부풀려도 테스트가 통과했다). */
+const tok = (name) => {
+  const m = css.match(new RegExp(`--${name}:\\s*(\\d+)px`));
+  assert.ok(m, `tokens.css 에 --${name} 가 없다`);
+  return Number(m[1]);
+};
+const MAX = tok('max'), LIST_W = tok('bd-list-w'), S_MD = tok('s-md'), S_LG = tok('s-lg'), S_XL = tok('s-xl');
+const cap = (sel) => {
+  const m = css.match(new RegExp(`\\${sel}\\s*\\{[^}]*?width:\\s*min\\(100%,\\s*(\\d+)px\\)`));
+  assert.ok(m, `tokens.css 에서 ${sel} 의 최대 폭을 못 찾았다`);
+  return Number(m[1]);
+};
+const SOCCER_CAP = cap('.bd-pitch'), FUTSAL_CAP = cap('.bd-futsal');
+
+/** 뷰포트 폭 → 그 폭에서의 피치 폭. CSS 와 같은 식으로 계산한다.
+ *  ≥900px 은 2컬럼이라 본문에서 명단·간격을 뺀 나머지를 피치가 다 쓰고,
+ *  그 아래는 세로로 쌓이며 축구 440 · 풋살 340 으로 묶인다. */
+function pitchWidth(vw, kind) {
+  if (vw >= 900) return Math.min(MAX, vw) - 2 * S_XL - LIST_W - S_LG;
+  const content = vw - 2 * S_MD;
+  return Math.min(content, kind === '축구' ? SOCCER_CAP : FUTSAL_CAP);
+}
+
+/** 화면 구간: [이름, 그 구간에서 가장 좁은 뷰포트, 카드폭, 카드높이, 폭을 정하는 미디어 쿼리].
+ *  카드 **높이**는 내용이 정하므로 헤드리스로 잰 값을 적는다 — 카드 크기를 바꾸면 다시 잰다. */
 const BANDS = [
-  // [이름, 카드폭, 카드높이, 축구 피치폭, 풋살 피치폭]
-  ['≥1120px', 104, 108, 672, 672],   // 1120px 에서 본문 1056 − 명단 360 − 간격 24
-  ['900~1119px', 72, 73, 452, 452],  // 900px 에서 본문 836 − 384
-  ['421~899px', 66, 73, 389, 340],   // 세로로 쌓임: 축구는 min(100%,440), 풋살은 min(100%,340)
-  ['341~420px', 56, 63, 309, 309],
-  ['≤340px', 56, 48, 288, 288],
+  ['≥1120px', 1120, 104, 108, /@media \(min-width: 1120px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['900~1119px', 900, 72, 73, /\n\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['421~899px', 421, 66, 73, /@media \(max-width: 899px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['350~420px', 350, 62, 63, /@media \(max-width: 420px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['341~349px', 341, 56, 63, /@media \(max-width: 349px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
+  ['≤340px', 320, 56, 48, /@media \(max-width: 349px\)[^@]*?\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/],
 ];
+/** 0.2 같은 값이 좌표 뺄셈에서 0.19999999999999998 로 나온다 — 그만큼은 겹침이 아니다. */
+const EPS = 1e-9;
+
 const RATIO = { 축구: 105 / 68, 풋살: 2 };
 
-test('BANDS 의 카드 폭이 tokens.css 선언과 같다 (CSS 를 바꾸면 이 표도 바꿔야 한다)', () => {
-  const declared = [...css.matchAll(/\.bd-slot\s*\{[^}]*?width:\s*(\d+)px/g)].map((m) => Number(m[1]));
-  assert.ok(declared.length >= 4, `.bd-slot 의 width 선언을 못 찾았다: ${declared}`);
-  for (const [name, w] of BANDS) {
-    assert.ok(declared.includes(w), `${name} 의 카드 폭 ${w}px 가 tokens.css 에 없다 (선언된 값: ${declared})`);
+test('BANDS 의 카드 폭이 tokens.css 의 **그 구간 선언**과 같다 (CSS 를 바꾸면 이 표도 바꿔야 한다)', () => {
+  // 처음엔 "선언된 폭 어딘가에 이 숫자가 있으면 통과"로 짰는데, 한 구간을 되돌려도 같은 숫자가
+  // 다른 구간에 남아 있어 통과해 버렸다(2026-09-22 리뷰의 뮤테이션 M2). 구간별로 짚어 본다.
+  for (const [name, , w, , re] of BANDS) {
+    const m = css.match(re);
+    assert.ok(m, `${name} 의 .bd-slot width 선언을 tokens.css 에서 못 찾았다`);
+    assert.equal(Number(m[1]), w, `${name} 의 카드 폭이 tokens.css 에서는 ${m[1]}px 인데 표에는 ${w}px 로 적혀 있다`);
   }
 });
 
@@ -45,8 +76,9 @@ function worstPair(slots, dxMax, dyMax) {
 }
 
 test('모든 인원 × 모든 모양에서 카드끼리 안 겹친다', () => {
-  for (const [name, w, h, ps, pf] of BANDS) {
-    for (const [kind, pw] of [['축구', ps], ['풋살', pf]]) {
+  for (const [name, vw, w, h] of BANDS) {
+    for (const kind of ['축구', '풋살']) {
+      const pw = pitchWidth(vw, kind);
       const dxMax = w / pw;
       const dyMax = h / (pw * RATIO[kind]);
       for (let n = MIN_COUNT; n <= MAX_COUNT; n++) {
@@ -63,8 +95,9 @@ test('모든 인원 × 모든 모양에서 카드끼리 안 겹친다', () => {
 test('모든 인원 × 모든 모양에서 카드가 피치 밖으로 안 나간다', () => {
   // 카드는 자리 좌표를 중심으로 translate(-50%,-50%) 된다 — 가장자리 자리는 반쪽이 밖으로 나가기 쉽다.
   // 피치는 overflow:hidden 이라 나간 만큼 잘린다(맨 아래 GK 자리가 늘 첫 희생자였다).
-  for (const [name, w, h, ps, pf] of BANDS) {
-    for (const [kind, pw] of [['축구', ps], ['풋살', pf]]) {
+  for (const [name, vw, w, h] of BANDS) {
+    for (const kind of ['축구', '풋살']) {
+      const pw = pitchWidth(vw, kind);
       const ph = pw * RATIO[kind];
       for (let n = MIN_COUNT; n <= MAX_COUNT; n++) {
         for (const shape of SHAPES[n]) {
