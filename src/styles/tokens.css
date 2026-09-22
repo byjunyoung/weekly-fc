@@ -472,6 +472,20 @@ a.card:hover { background: var(--charcoal); }
   .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); }
   .bd-list { position: static; }
 }
+/* 피치 높이는 폭에 딱 비례한다(aspect-ratio) — 화면이 좁아지면 피치가 낮아지는데 카드 높이는
+   px 고정이라 맨 아래 GK 자리(y 0.93)가 피치 밖으로 밀려난다. 성립 조건은
+   `카드높이 / 2 < (1 - 0.93) × 피치높이`. 73px 카드는 피치가 521px 아래(≈뷰포트 370px)로
+   내려가면 잘리므로 좁은 폭에서 두 단계로 줄인다(2026-09-22 리뷰가 360·320px 에서 실측). */
+@media (max-width: 420px) {
+  .bd-slot { width: 62px; min-height: 62px; }
+  .bd-ovr { font-size: var(--fs-pixel-xs); line-height: 1.2; }
+  .bd-sprite { margin: 0; }
+}
+@media (max-width: 340px) {
+  /* 여기선 11장을 세울 세로가 아예 안 나온다 — 아바타를 접고 글자 카드로 돌아간다. */
+  .bd-slot { width: 56px; min-height: 48px; }
+  .bd-sprite { display: none; }
+}
 
 /* ══ 기타 ══════════════════════════════════════════════════ */
 details.year > summary { cursor: pointer; padding: var(--s-sm) 0; font-weight: var(--fw-strong); list-style: none; }

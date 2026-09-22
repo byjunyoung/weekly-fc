@@ -3,7 +3,8 @@
 // HTML 로 올려 브라우저가 크기를 맡게 한다(2026-09-13 스펙 §4.4).
 //
 // 2026-09-22: 선을 stroke 에서 **채운 사각형**으로 바꿨다(도트 게임 톤). 뷰박스 단위가 미터이고
-// CSS `aspect-ratio` 가 같은 비율이라 가로·세로 배율이 언제나 같아서(440/68 = 679/105) 사각형이
+// CSS `aspect-ratio` 가 같은 비율이라 가로·세로 배율이 언제나 같아서(폭 440px 이면 높이가
+// 440×105/68 = 679.41px 로 정해진다) 사각형이
 // 정사각 픽셀로 떨어진다 — `preserveAspectRatio="none"` 이어도 늘어나지 않는다.
 import { esc } from '../lib/html.ts';
 import { grade, ovr } from '../lib/stats.ts';
@@ -28,13 +29,18 @@ const T = 0.9;
 const rect = (x: number, y: number, w: number, h: number, fill = MARK): string =>
   `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>`;
 
-/** 테두리만 있는 사각형 — 네 변을 각각 채운 사각형으로 낸다(stroke 안 씀). */
-const frame = (x: number, y: number, w: number, h: number): string =>
-  rect(x, y, w, T) + rect(x, y + h - T, w, T) + rect(x, y, T, h) + rect(x + w - T, y, T, h);
+/** 테두리 사각형 — 세로 변을 T 만큼 안으로 넣어 **모서리가 두 번 칠해지지 않게** 한다.
+ *  마킹 색이 반투명(α .30)이라 겹치면 그 자리만 밝아진다(2026-09-22 리뷰가 실측으로 잡음).
+ *  `skip` 으로 한 변을 뺄 수 있다 — 페널티 박스·골 에어리어의 골라인 쪽 변은 바깥 테두리와
+ *  같은 자리라, 빼지 않으면 골라인이 구간마다 2~3겹으로 밝기가 갈린다. */
+const frame = (x: number, y: number, w: number, h: number, skip?: 'top' | 'bottom'): string =>
+  (skip === 'top' ? '' : rect(x, y, w, T))
+  + (skip === 'bottom' ? '' : rect(x, y + h - T, w, T))
+  + rect(x, y + T, T, h - 2 * T) + rect(x + w - T, y + T, T, h - 2 * T);
 
 /** 블록 원 — 격자 칸 중심이 반지름 띠 안에 들면 그 칸을 칠한다. 각도를 훑어 중복을 지우는
  *  방식은 칸이 빠져 들쭉날쭉해지므로 칸을 훑는다(결정적이고 좌우·상하 대칭이 보장된다). */
-function blockRing(cx: number, cy: number, r: number, step: number): string {
+function blockRing(cx: number, cy: number, r: number, step: number, clip?: { minY?: number; maxY?: number }): string {
   const out: string[] = [];
   const n = Math.ceil((r + step) / step);
   for (let gy = -n; gy <= n; gy++) {
@@ -42,13 +48,19 @@ function blockRing(cx: number, cy: number, r: number, step: number): string {
       const x = gx * step, y = gy * step;
       const d = Math.hypot(x, y);
       if (d < r - step / 2 || d > r + step / 2) continue;
-      out.push(rect(Number((cx + x - step / 2).toFixed(2)), Number((cy + y - step / 2).toFixed(2)), step, step));
+      // 칸의 위·아래 끝이 clip 범위를 벗어나면 버린다 — 풋살 사분원은 골라인 밖이 잘려야 한다.
+      const left = cx + x - step / 2, top = cy + y - step / 2;
+      if (clip?.minY != null && top < clip.minY - 1e-9) continue;
+      if (clip?.maxY != null && top + step > clip.maxY + 1e-9) continue;
+      out.push(rect(Number(left.toFixed(2)), Number(top.toFixed(2)), step, step));
     }
   }
   return out.join('');
 }
 
-/** 깎아 놓은 잔디 줄무늬 + 도트 texture. 줄 수는 짝수여야 위아래가 대칭이다. */
+/** 깎아 놓은 잔디 줄무늬 + 잔디 알갱이. 줄 수를 짝수로 두는 건 **하프라인이 줄 경계에
+ *  정확히 떨어지게** 하려는 것이다(축구 105/10 → 5줄째가 52.5, 풋살 40/8 → 4줄째가 20).
+ *  위아래 미러 대칭은 홀수여야 성립하므로 첫 줄과 마지막 줄 색은 다르다 — 의도된 상태다. */
 function turf(w: number, h: number, bands: number): string {
   const bh = h / bands;
   const stripes = Array.from({ length: bands }, (_, i) =>
@@ -70,9 +82,9 @@ export function pitchLines(kind: PitchKind): string {
       + rect(2, 52.5 - T / 2, 64, T)                       // 하프라인
       + blockRing(34, 52.5, 9.15, 1.5)                      // 센터서클
       + rect(33.25, 51.75, 1.5, 1.5)                        // 센터 스폿
-      + frame(13.2, 2, 41.6, 16.5) + frame(24.8, 2, 18.4, 5.5)
-      + frame(13.2, 86.5, 41.6, 16.5) + frame(24.8, 97.5, 18.4, 5.5)
-      + rect(33.25, 10.25, 1.5, 1.5) + rect(33.25, 93.25, 1.5, 1.5) // 페널티 스폿
+      + frame(13.2, 2, 41.6, 16.5, 'top') + frame(24.8, 2, 18.4, 5.5, 'top')
+      + frame(13.2, 86.5, 41.6, 16.5, 'bottom') + frame(24.8, 97.5, 18.4, 5.5, 'bottom')
+      + rect(33.25, 12.25, 1.5, 1.5) + rect(33.25, 91.25, 1.5, 1.5) // 페널티 스폿 — 골라인(y=2·103)에서 11m
       + rect(30, 0, 8, 2, GOAL) + rect(30, 103, 8, 2, GOAL)          // 골대
       + `</svg>`;
   }
@@ -82,8 +94,8 @@ export function pitchLines(kind: PitchKind): string {
     + rect(1, 20 - T / 2, 18, T)
     + blockRing(10, 20, 3, 1)
     + rect(9.5, 19.5, 1, 1)
-    + blockRing(10, 1, 6, 1) + blockRing(10, 39, 6, 1)
-    + rect(7, 0, 6, 1, GOAL) + rect(7, 39, 6, 1, GOAL)
+    + blockRing(10, 1, 6, 1, { minY: 1 }) + blockRing(10, 39, 6, 1, { maxY: 39 })
+    + rect(8.5, 0, 3, 1, GOAL) + rect(8.5, 39, 3, 1, GOAL)  // 풋살 골대는 3m
     + `</svg>`;
 }
 
