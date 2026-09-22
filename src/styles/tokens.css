@@ -395,7 +395,7 @@ a.card:hover { background: var(--charcoal); }
 .atile-meta { display: flex; align-items: center; gap: var(--s-xs); }
 
 /* 선수 페이지 머리 — 같은 아바타를 더 크게. 아바타를 누르면 꾸미기가 열린다. */
-.phero { display: flex; flex-direction: column; align-items: center; gap: var(--s-xs);
+.phero { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-xs);
   padding: var(--s-lg) var(--s-md); border-radius: var(--r-md); background: var(--card); }
 .phero .avatar-svg { width: 168px; height: 224px; }
 .phero-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -422,17 +422,27 @@ a.card:hover { background: var(--charcoal); }
 .duty-pair b { min-width: 4em; font-weight: var(--fw-strong); }
 
 /* ══ 능력치 막대(선수 페이지) ═══════════════════════════════ */
-.player-hero { display: grid; grid-template-columns: var(--pcard-w) minmax(0, 1fr); gap: var(--s-xl); align-items: start; }
+/* 좌우 높이를 맞춘다 — align-items: start 면 내용이 짧은 쪽만 짧아 두 칸이 어긋나 보인다
+   (2026-09-22 사용자 지적). 늘어난 쪽의 내용은 가운데에 둔다. */
+.player-hero { display: grid; grid-template-columns: var(--pcard-w) minmax(0, 1fr); gap: var(--s-xl); align-items: stretch; }
+.player-side > .card { flex: 1; }
 .player-side { display: flex; flex-direction: column; gap: var(--s-md); min-width: 0; }
 .player-tiles { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 @media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero .phero { max-width: var(--pcard-w); margin: 0 auto; } }
 .attr-list { display: flex; flex-direction: column; }
 /* 라벨 · − · 값 · ＋ · 막대. 스텝퍼는 누구나 눌러 고칠 수 있다(2026-09-22) — 버튼을 따로
    숨겨 두지 않고 값 옆에 바로 둔다. */
-.attr-row { display: grid; grid-template-columns: 4.2em 1.8em 3em 1.8em minmax(0, 1fr); align-items: center; gap: var(--s-xs);
+/* 칸 너비를 px 로 못 박고 버튼·격자가 **같은 변수**를 본다. 처음엔 둘 다 1.8em 이었는데,
+   버튼 안의 em 은 버튼 글꼴(20px)을 기준으로 36px 이 되고 격자의 em 은 줄 글꼴(14px)을
+   기준으로 25px 이 돼, 버튼이 칸을 11px 씩 삐져나와 막대와 겹쳤다(2026-09-22 사용자 지적).
+   값 칸(48px)도 같은 이유로 3em(42px)에서 넘치고 있었다. */
+.attr-row { --step: 36px; --valw: 48px;
+  display: grid; grid-template-columns: 4.2em var(--step) var(--valw) var(--step) minmax(0, 1fr);
+  align-items: center; gap: var(--s-xs);
   padding: var(--s-xs) 0; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); }
-.attr-step { min-height: 0; padding: 0; width: 1.8em; height: 1.8em; line-height: 1; border-radius: var(--r-sm);
+.attr-step { min-height: 0; padding: 0; width: var(--step); height: var(--step); line-height: 1; border-radius: var(--r-sm);
   font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.attr-row > .val { width: var(--valw); min-width: 0; padding-inline: 0; }
 /* 아직 안 보낸 값 — 곧 저장된다는 표시. 저장되면 평범한 값으로 돌아온다. */
 .val.is-draft { box-shadow: inset 0 0 0 2px var(--link); }
 .attr-state { font-size: var(--fs-xs); }
