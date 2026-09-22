@@ -4,14 +4,14 @@
 // React 가 style.translate 를 소유하지 않는다. 드래그 중 DOM 을 직접 만져도 다음 렌더(문자열 전체 교체)가
 // 늘 새 노드를 만들어 그 흔적을 지운다.
 import { useEffect, useRef } from 'react';
-import { pitchHtml } from '../../components/pitch-view';
+import { fromLandscape, pitchHtml } from '../../components/pitch-view';
 import type { LineupState, Pt } from '../../lib/lineup';
 import type { Player } from '../../lib/types';
 
 const DRAG_PX = 6;
 
-export default function Pitch({ st, players, selected, onTapSlot, onSwap, onMoveSlot, onDeselect }: {
-  st: LineupState; players: Player[]; selected: number | null;
+export default function Pitch({ st, players, selected, land, onTapSlot, onSwap, onMoveSlot, onDeselect }: {
+  st: LineupState; players: Player[]; selected: number | null; land: boolean;
   onTapSlot: (idx: number) => void;
   onSwap: (a: number, b: number) => void;
   onMoveSlot: (idx: number, pt: Pt) => void;
@@ -21,7 +21,7 @@ export default function Pitch({ st, players, selected, onTapSlot, onSwap, onMove
   // tapSlotKeepFocus 대신 — 키보드로 고른 자리 번호를 적어 두고, DOM 이 실제로 바뀐 뒤(useEffect)에 포커스한다.
   const pendingFocusRef = useRef<number | null>(null);
 
-  const html = pitchHtml(st, players, selected);
+  const html = pitchHtml(st, players, selected, land);
 
   useEffect(() => {
     const pitch = wrapRef.current?.querySelector<HTMLElement>('[data-pitch]');
@@ -56,7 +56,11 @@ export default function Pitch({ st, players, selected, onTapSlot, onSwap, onMove
         if (under && under !== el) { onSwap(idx, Number(under.dataset.slot)); return; }
         const r = pitch!.getBoundingClientRect();
         const inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
-        if (inside) onMoveSlot(idx, [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height]);
+        // 끌어다 놓은 자리는 화면 좌표라, 가로 피치면 세로 규격 좌표로 되돌려 저장한다.
+        if (inside) {
+          const nx = (ev.clientX - r.left) / r.width, ny = (ev.clientY - r.top) / r.height;
+          onMoveSlot(idx, land ? fromLandscape(nx, ny) : [nx, ny]);
+        }
         else { el.classList.remove('is-dragging'); el.style.translate = ''; }
       };
       el.addEventListener('pointermove', move);
@@ -74,7 +78,7 @@ export default function Pitch({ st, players, selected, onTapSlot, onSwap, onMove
     const onBg = (e: MouseEvent) => { if (!(e.target as Element).closest('[data-slot]') && selected !== null) onDeselect(); };
     pitch.addEventListener('click', onBg);
     return () => pitch.removeEventListener('click', onBg);
-  }, [st, players, selected, onTapSlot, onSwap, onMoveSlot, onDeselect]);
+  }, [st, players, selected, land, onTapSlot, onSwap, onMoveSlot, onDeselect]);
 
   return <div id="pitch-slot" ref={wrapRef} dangerouslySetInnerHTML={{ __html: html }} />;
 }

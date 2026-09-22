@@ -110,11 +110,29 @@ export function markRects(kind: PitchKind): PitchRect[] {
   ];
 }
 
+/** 규격 좌표(세로)를 가로로 눕힌다 — 시계 반대 방향 90°. 왼쪽이 우리 골대, 오른쪽이 상대 골대.
+ *  **좌표계는 세로 하나만 둔다**(포메이션·공유 이미지가 그걸 쓴다) — 눕히는 건 화면 렌더 한 곳뿐이다. */
+const rotRect = (t: PitchRect, portraitH: number): PitchRect =>
+  ({ x: Number((portraitH - t.y - t.h).toFixed(2)), y: t.x, w: t.h, h: t.w, fill: t.fill });
+
+/** 세로 정규 좌표 → 가로 정규 좌표. */
+export const toLandscape = (x: number, y: number): [number, number] => [1 - y, x];
+/** 가로 정규 좌표 → 세로 정규 좌표(끌어다 놓은 자리를 되돌릴 때). */
+export const fromLandscape = (lx: number, ly: number): [number, number] => [ly, 1 - lx];
+
+/** 화면에 실제로 그려지는 상자 비율 — 가로면 규격의 가로·세로가 뒤집힌다. */
+export const pitchBox = (kind: PitchKind, land: boolean): { w: number; h: number } => {
+  const { w, h } = PITCH_DIM[kind];
+  return land ? { w: h, h: w } : { w, h };
+};
+
 const svgRect = (t: PitchRect): string => `<rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" fill="${t.fill}"/>`;
 
-export function pitchLines(kind: PitchKind): string {
-  const { w, h } = PITCH_DIM[kind];
+export function pitchLines(kind: PitchKind, land = false): string {
+  const { h: portraitH } = PITCH_DIM[kind];
+  const { w, h } = pitchBox(kind, land);
   const g = turfGrain(kind);
+  const put = (t: PitchRect): string => svgRect(land ? rotRect(t, portraitH) : t);
   // 패턴 id 는 한 화면에 피치가 하나라 고정값으로 둔다(아바타에서 uid 를 없앤 것과 같은 이유 —
   // 출력이 결정적이어야 한다).
   const grain = `<defs><pattern id="wfc-turf" width="${g.tile}" height="${g.tile}" patternUnits="userSpaceOnUse">`
@@ -122,16 +140,17 @@ export function pitchLines(kind: PitchKind): string {
     + `</pattern></defs>`;
   return `<svg class="bd-lines" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" shape-rendering="crispEdges" aria-hidden="true">`
     + grain
-    + turfRects(kind).map(svgRect).join('')
+    + turfRects(kind).map(put).join('')
     + svgRect(r(0, 0, w, h, 'url(#wfc-turf)'))
-    + markRects(kind).map(svgRect).join('')
+    + markRects(kind).map(put).join('')
     + `</svg>`;
 }
 
-export function pitchHtml(s: LineupState, players: Player[], selected: number | null): string {
+export function pitchHtml(s: LineupState, players: Player[], selected: number | null, land = false): string {
   const byNum = new Map(players.map((p) => [p.num, p]));
   const cards = slotsOf(s).map((slot, i) => {
-    const [x, y] = positionOf(s, i);
+    const [px, py] = positionOf(s, i);
+    const [x, y] = land ? toLandscape(px, py) : [px, py];
     const at = `left:${(x * 100).toFixed(1)}%;top:${(y * 100).toFixed(1)}%`;
     const num = s.slots[i];
     const p = num != null ? byNum.get(num) : undefined;
@@ -150,6 +169,6 @@ export function pitchHtml(s: LineupState, players: Player[], selected: number | 
       + `<span class="bd-sprite" aria-hidden="true">${sprite}</span>`
       + `<span class="bd-foot"><span class="bd-name">${esc(p.name)}</span><span class="bd-pos">${esc(p.pos || '–')}</span></span></button>`;
   }).join('');
-  const { w, h } = PITCH_DIM[s.pitch];
-  return `<div class="bd-pitch bd-${s.pitch}" style="aspect-ratio:${w} / ${h}" data-pitch>${pitchLines(s.pitch)}${cards}</div>`;
+  const { w, h } = pitchBox(s.pitch, land);
+  return `<div class="bd-pitch bd-${s.pitch}${land ? ' bd-land' : ''}" style="aspect-ratio:${w} / ${h}" data-pitch>${pitchLines(s.pitch, land)}${cards}</div>`;
 }
