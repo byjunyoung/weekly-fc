@@ -5,7 +5,7 @@ import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Table
 import type { TableColumnsType } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { fetchFull, serializePlayer, write, writeAvatar, writeStats } from '../../lib/api';
+import { fetchFull, refresh, serializePlayer, write, writeAvatar, writeStats } from '../../lib/api';
 import { fmtDate, fmtWon } from '../../lib/html';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
@@ -117,6 +117,9 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
       await writeStats(player.num, d, getMe());
       draftRef.current = {};
       setDraft({});
+      // 값은 바로 갱신되는데 방금 덧붙인 기록 줄은 한 박자 늦게 읽힌다(시트 덧붙이기 직후의
+      // 읽기가 못 따라온다). 기록이 이 기능의 되먹임이라 잠시 뒤 한 번 더 받아온다.
+      setTimeout(() => { void refresh().catch(() => {}); }, 1200);
     } catch (e) { message.error((e as Error).message); }
     finally { setStatBusy(false); }
   };
