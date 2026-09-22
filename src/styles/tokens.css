@@ -432,11 +432,15 @@ a.card:hover { background: var(--charcoal); }
 .bd-pitch { position: relative; width: min(100%, 440px); background: #0b1a13; border-radius: var(--r-md); overflow: hidden;
   touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .bd-futsal { width: min(100%, 340px); }
+/* 2026-09-22: 피치 그림을 채운 사각형(도트)으로 바꿨다 — stroke·vector-effect 규칙은 그래서 없앴다.
+   잔디 줄무늬·잔디 알갱이·블록 선은 전부 pitch-view.ts 가 fill 로 낸다. */
 .bd-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
-.bd-lines { fill: none; stroke: rgba(255, 255, 255, .22); stroke-width: 1.5px; }
-.bd-lines * { vector-effect: non-scaling-stroke; }
+/* gap 은 반드시 직접 선언한다 — 맨 button 규칙의 gap(8px)이 상속돼 카드가 112px 로 부풀고
+   11인 배치에서 GK·CB 가 겹쳤다(2026-09-22 실측). */
 .bd-slot { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1px; width: 72px; min-height: 58px; padding: var(--s-xxs); border-radius: var(--r-sm); touch-action: none; }
+  gap: 0; width: 72px; min-height: 72px; padding: 3px 3px var(--s-xxs); border-radius: var(--r-sm); touch-action: none; }
+/* 폭 72px 은 옛 카드와 같은 값이다 — 11인을 풋살 코트(340px)로 바꾼 조합에서 가운데 두 CM 의
+   간격이 0.22×340 = 74.8px 라, 76px 로 넓히면 1px 스친다(2026-09-22 실측). */
 .bd-card { border: 0; color: var(--ink); }
 /* 버튼 기본 :hover 배경이 금속 면을 덮지 않게 등급 면을 다시 박는다. */
 .bd-card.pcard-gold, .bd-card.pcard-gold:hover { background: var(--metal-gold); }
@@ -446,9 +450,16 @@ a.card:hover { background: var(--charcoal); }
 .bd-slot.is-selected { outline: 3px solid var(--link); outline-offset: 2px; }
 .bd-slot.is-oop { box-shadow: 0 0 0 2px var(--cond-mid); }
 .bd-slot.is-dragging { z-index: 5; opacity: .85; }
+/* 카드 한 장 = 윗줄(OVR·자리 라벨) · 아바타 · 이름 · 선수 포지션. 도트 글꼴을 거는 줄은
+   전부 합성 방지·자간 0·10의 배수 크기를 같이 선언한다(tokens-scope 테스트가 지키는 규약). */
+.bd-top { display: flex; align-items: baseline; justify-content: space-between; width: 100%; line-height: 1; }
+.bd-sprite { display: flex; margin: 1px 0; }
+.bd-foot { display: flex; align-items: baseline; justify-content: center; gap: 3px; width: 100%; min-width: 0; }
 .bd-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
-.bd-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-pixel-xs); font-weight: var(--fw-strong); line-height: 1.2; }
-.bd-pos { font-size: 10px; font-weight: var(--fw-strong); color: var(--ink-soft); }
+.bd-slotlabel { font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--ink-soft); }
+.bd-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
+.bd-pos { flex: 0 0 auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; color: var(--ink-soft); }
 .bd-hint { margin: 0; font-size: var(--fs-xs); text-align: center; }
 .bd-share-row { display: flex; justify-content: center; }
 @media (max-width: 899px) { .bd-share-row { width: 100%; } .bd-share-row button { width: 100%; } }
@@ -456,7 +467,7 @@ a.card:hover { background: var(--charcoal); }
 .bd-share-title input { flex: 1; }
 .bd-share-img { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r-md); background: var(--charcoal); }
 @media (max-width: 899px) {
-  .bd-slot { width: 62px; min-height: 50px; }
+  .bd-slot { width: 66px; min-height: 70px; }
   /* 좌우로 세울 폭이 안 나온다 — 피치 아래 명단이 오고, 붙잡아 둘 옆 칸이 없으니 sticky 도 푼다. */
   .bd { grid-template-columns: minmax(0, 1fr); gap: var(--s-md); }
   .bd-list { position: static; }
