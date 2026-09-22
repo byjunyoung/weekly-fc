@@ -3,7 +3,7 @@
 // 동기라야 사용자 제스처가 안 끊긴다.
 import { App, Button, Input, Modal } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import { drawLineupImage } from '../../components/share-image';
+import { drawLineupImage, ensureShareFonts } from '../../components/share-image';
 import { seoulToday } from '../../lib/html';
 import { defaultTitle, type LineupState } from '../../lib/lineup';
 import { fallbackMethod, pickShareMethod, shareFileName, type ShareEnv, type ShareMethod } from '../../lib/share';
@@ -52,7 +52,9 @@ export default function ShareModal({ open, onClose, st, players, onSetTitle }: {
     setTitle(st.title || defaultTitle(seoulToday()));
     (async () => {
       try {
-        await document.fonts.ready; // Pretendard 가 늦게 오면 캔버스가 대체 글꼴로 굳는다 — 처음 열 때만 기다린다
+        // 캔버스가 대체 글꼴로 굳지 않게 **쓸 크기마다** 갈무리를 불러 둔다(처음 열 때만).
+        // document.fonts.ready 만으로는 부족하다 — 그건 이미 불러오는 중인 글꼴만 기다린다.
+        await ensureShareFonts();
         const f = redraw();
         fileRef.current = f;
         setMethod(pickShareMethod(shareEnv(f)));
