@@ -11,7 +11,7 @@ import { avatarSvg, avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
 import { href } from '../../lib/url';
 import { isStarter, type LineupState } from '../../lib/lineup';
-import { band, grade, ovr, STAT_CUTS, STAT_LABEL } from '../../lib/stats';
+import { band, grade, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { STAT_KEYS, type Player } from '../../lib/types';
 import { ALL_VIEWS, byOvr, type View } from './model';
 
@@ -74,7 +74,7 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
     { title: '포지션', dataIndex: 'pos', key: 'pos', sorter: (a, b) => a.pos.localeCompare(b.pos, 'ko'),
       render: (_, p) => <span className="cell-pos"><span className={`pos pos-${p.pos.toLowerCase()}`}>{p.pos || '–'}</span><span className="muted">{p.detail}</span></span> },
     ...STAT_KEYS.map((k) => ({
-      title: STAT_LABEL[k], dataIndex: k, key: k, align: 'right' as const,
+      title: STAT_KO[k], dataIndex: k, key: k, align: 'right' as const,
       sorter: (a: Player, b: Player) => a[k] - b[k],
       render: (_: unknown, p: Player) => <span className={`val val-${band(p[k], STAT_CUTS)}`}>{p[k] || '–'}</span>,
     })),

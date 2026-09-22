@@ -93,3 +93,40 @@ test2('서버가 보낸 오류 문구는 제한시간 문구로 덮어쓰지 않
     await assert2.rejects(fetchData(), (e) => e.message === 'PIN이 올바르지 않습니다');
   } finally { globalThis.fetch = orig; }
 });
+
+// ── 능력치 기록 ────────────────────────────────────────────────────────
+// 능력치를 PIN 없이 누구나 고치게 열면서(2026-09-22) 유일한 제동이 "누가 고쳤나" 기록이다.
+// 기록이 조용히 비거나 엉뚱한 칸으로 들어오면 그 제동이 사라지므로 정규화를 못 박는다.
+import test3 from 'node:test';
+import assert3 from 'node:assert/strict';
+import { normalizeStatLog, normalizeData } from '../../src/lib/api.ts';
+
+test3('기록 한 줄을 화면이 쓰는 모양으로 바꾼다', () => {
+  const r = normalizeStatLog({ ts: '2026-09-22T10:00:00.000Z', by: '7', by_name: '이찬우', num: '2', field: 'pace', before: '70', after: '84' });
+  assert3.deepEqual(r, { ts: '2026-09-22T10:00:00.000Z', by: 7, byName: '이찬우', num: 2, field: 'pace', before: 70, after: 84 });
+});
+
+test3('모르는 칸·번호 없는 줄은 버린다 — 화면이 이름을 못 붙인다', () => {
+  assert3.equal(normalizeStatLog({ num: '2', field: 'height', before: 1, after: 2 }), null);
+  assert3.equal(normalizeStatLog({ num: '', field: 'pace', before: 1, after: 2 }), null);
+  assert3.equal(normalizeStatLog({ num: '0', field: 'pace' }), null);
+});
+
+test3('이름 없이 고친 줄도 버리지 않는다 — 이름을 안 고른 사람도 고칠 수 있다', () => {
+  const r = normalizeStatLog({ ts: 't', by: '', by_name: '', num: '5', field: 'defend', before: '50', after: '60' });
+  assert3.equal(r.by, null);
+  assert3.equal(r.byName, '');
+  assert3.equal(r.num, 5);
+});
+
+test3('기록은 최신이 위로 온다 — 시트는 덧붙인 순서라 뒤집어야 한다', () => {
+  const d = normalizeData({ statLog: [
+    { ts: '2026-09-01', num: '2', field: 'pace', before: 1, after: 2 },
+    { ts: '2026-09-22', num: '2', field: 'pace', before: 2, after: 3 },
+  ] });
+  assert3.deepEqual(d.statLog.map((r) => r.ts), ['2026-09-22', '2026-09-01']);
+});
+
+test3('기록이 아예 없어도 빈 배열이다 (서버가 옛 버전이어도 화면이 안 깨진다)', () => {
+  assert3.deepEqual(normalizeData({}).statLog, []);
+});

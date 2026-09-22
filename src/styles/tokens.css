@@ -405,6 +405,16 @@ a.card:hover { background: var(--charcoal); }
 .avatar-btn:hover { background: none; }
 .list-empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: var(--s-xxl); background: var(--card); border-radius: var(--r-md); }
 
+/* 능력치 칸 머리 — 제목과 '고치기' 버튼을 한 줄에. */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-sm); margin-bottom: var(--s-sm); }
+.card-head h2 { margin: 0; }
+.card-sub { margin-top: var(--s-lg); }
+/* 능력치를 누가 고쳤는지 — 막는 장치가 없으니 이 줄이 유일한 제동이다(2026-09-22). */
+.statlog { list-style: none; margin: var(--s-sm) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-xs); }
+.statlog li { display: flex; align-items: baseline; gap: var(--s-xs); font-size: var(--fs-xs); }
+.statlog li b { font-weight: var(--fw-body); }
+.statlog-move { margin-left: auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--muted); }
+
 /* ══ 운영 규칙 ══════════════════════════════════════════════ */
 .rules-live { display: flex; flex-direction: column; gap: var(--s-sm); margin-top: var(--s-lg); }
 .rules-live-head { justify-content: space-between; }

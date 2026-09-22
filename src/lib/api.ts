@@ -1,10 +1,10 @@
 // src/lib/api.ts — Apps Script 호출은 여기 한 곳
-import type { Data, Fine, Lineup, Match, Player, RotationRow, Team } from './types';
+import { STAT_KEYS, type Data, type Fine, type Lineup, type Match, type Player, type RotationRow, type StatKey, type StatLogRow, type Team } from './types.ts';
 
 export const API_URL = 'https://script.google.com/macros/s/AKfycbyUDTkTHsKszkiOeJKmNDHDkVJobrVUjbRqufU251PNKmlyrvC0BZ3ir9x0vM_lCJkkmg/exec';
 const CACHE_KEY = 'wfc_cache_v2';
 const PIN_KEY = 'wfc_pin';
-export const EMPTY: Data = { players: [], matches: [], rotation: [], fines: [], lineups: [] };
+export const EMPTY: Data = { players: [], matches: [], rotation: [], fines: [], lineups: [], statLog: [] };
 
 type Raw = Record<string, unknown>;
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -48,11 +48,22 @@ export function normalizeRotation(r: Raw): RotationRow {
 export function normalizeLineup(r: Raw): Lineup {
   return { id: String(r.id ?? ''), match_id: String(r.match_id ?? ''), name: String(r.name ?? ''), formation: String(r.formation ?? ''), assignments: typeof r.assignments === 'string' ? r.assignments : JSON.stringify(r.assignments ?? '') };
 }
+export function normalizeStatLog(r: Raw): StatLogRow | null {
+  const field = String(r.field ?? '') as StatKey;
+  if (!STAT_KEYS.includes(field)) return null;        // 모르는 칸은 버린다 — 화면이 이름을 못 붙인다
+  const who = num(r.num);
+  if (who <= 0) return null;
+  return { ts: String(r.ts ?? ''), by: numOrNull(r.by), byName: String(r.by_name ?? '').trim(),
+    num: who, field, before: num(r.before), after: num(r.after) };
+}
+
 export function normalizeData(d: Raw): Data {
   const arr = (v: unknown): Raw[] => (Array.isArray(v) ? (v as Raw[]) : []);
   return { players: arr(d.players).map(normalizePlayer).filter((p) => p.num > 0),
     matches: arr(d.matches).map(normalizeMatch).filter((m) => m.id).sort((a, b) => b.date.localeCompare(a.date)),
-    rotation: arr(d.rotation).map(normalizeRotation), fines: arr(d.fines).map(normalizeFine).filter((f) => f.id), lineups: arr(d.lineups).map(normalizeLineup) };
+    rotation: arr(d.rotation).map(normalizeRotation), fines: arr(d.fines).map(normalizeFine).filter((f) => f.id), lineups: arr(d.lineups).map(normalizeLineup),
+    // 최신이 위로 — 시트는 덧붙인 순서(오래된 것부터)라 뒤집는다.
+    statLog: arr(d.statLog).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null).reverse() };
 }
 
 export const serializePlayer = (p: Player): Raw => ({ ...p, vest: p.vest ?? '', rot: p.rot ?? '', avatar: p.avatar ?? '' });
@@ -156,6 +167,16 @@ export async function fetchFull(): Promise<Data> { return normalizeData(await ca
  * 서버의 writeAvatar 액션(아바타 칸 하나만 setValue)에만 좁게 대응한다.
  * 서버가 형식 위반·없는 번호를 {error}로 돌려주면 call()이 그대로 throw한다 —
  * 호출부가 toast()로 실패를 보여줘야 한다(성공을 가장하지 않는다). */
+/** 능력치 전용 쓰기. writeAvatar 와 같은 이유로 write() 와 나눠 둔다 — 이쪽은 PIN 을
+ *  요구하지 않으므로, 한 함수에 얹으면 PIN 없는 경로가 다른 액션으로 새어나갈 여지가 생긴다.
+ *  by 는 홈에서 고른 내 번호(자칭)다. 서버가 값을 1~99 로 검사하고, 바뀐 칸마다 기록을 남긴다. */
+export async function writeStats(num: number, stats: Record<StatKey, number>, by: number | null): Promise<Raw> {
+  const r = await call('writeStats', { payload: { num, stats, by: by ?? '' } });
+  if (inflight) await inflight.catch(() => {});
+  await refresh();
+  return r;
+}
+
 export async function writeAvatar(num: number, avatar: string): Promise<Raw> {
   const r = await call('writeAvatar', { payload: { num, avatar } });
   if (inflight) await inflight.catch(() => {});

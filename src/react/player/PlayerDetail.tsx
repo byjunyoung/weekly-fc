@@ -5,15 +5,16 @@ import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Table
 import type { TableColumnsType } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { fetchFull, serializePlayer, write, writeAvatar } from '../../lib/api';
+import { fetchFull, serializePlayer, write, writeAvatar, writeStats } from '../../lib/api';
 import { fmtDate, fmtWon } from '../../lib/html';
 import { href } from '../../lib/url';
-import { band, ovr, STAT_CUTS, STAT_KO, STAT_LABEL } from '../../lib/stats';
+import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
+import { getMe } from '../../lib/me';
 import { avatarSvg } from '../../components/avatar';
 import { PARTS, avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
-import type { Fine, Player } from '../../lib/types';
+import type { Fine, Player, StatKey } from '../../lib/types';
 import { countUp } from '../../lib/motion';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
@@ -32,6 +33,9 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   const [opening, setOpening] = useState(false); // fetchFull 이 도는 동안(모달이 뜨기 전)
   const [deleting, setDeleting] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [statsSaving, setStatsSaving] = useState(false);
+  const [statsForm] = Form.useForm();
   const [avatarSpec, setAvatarSpec] = useState<AvatarSpec | null>(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
   const openAvatar = (p: Player) => { setAvatarSpec(avatarSpecFor(p.num, p.avatar)); setAvatarOpen(true); };
@@ -42,6 +46,25 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     catch (e) { message.error((e as Error).message); }
     finally { setAvatarSaving(false); }
   };
+  /** 능력치 고치기 — PIN 없이 누구나. 막는 대신 누가 고쳤는지 기록이 남는다
+   *  (2026-09-22 사용자 결정). 고친 사람은 홈에서 고른 내 번호이고, 안 골랐으면 빈칸이다. */
+  const openStats = (p: Player) => {
+    statsForm.setFieldsValue(Object.fromEntries(STAT_KEYS.map((k) => [k, p[k] || 50])));
+    setStatsOpen(true);
+  };
+  const saveStats = async () => {
+    if (!player) return;
+    let v: Record<StatKey, number>;
+    try { v = await statsForm.validateFields(); } catch { return; }
+    setStatsSaving(true);
+    try {
+      const r = await writeStats(player.num, v, getMe());
+      setStatsOpen(false);
+      message.success(Number(r.changed) > 0 ? `능력치 ${r.changed}개 고쳤습니다` : '바뀐 값이 없습니다');
+    } catch (e) { message.error((e as Error).message); }
+    finally { setStatsSaving(false); }
+  };
+
   const pickGroup = (key: 'face' | 'hair' | 'skin' | 'eyes' | 'jersey' | 'socks' | 'gloves' | 'tape', title: string) => (
     <div key={key}>
       <div className="label label-gap">{title}</div>
@@ -103,6 +126,8 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   }, [isNew, admin, data, player, opening]);
 
   const fines = player ? playerFines(data?.fines ?? [], player.name) : [];
+  // 이 선수 기록만, 최신 여덟 줄. 전체 목록은 두지 않았다 — 숫자가 이상하면 그 선수 자리에서 보면 된다.
+  const myLog = player ? (data?.statLog ?? []).filter((r) => r.num === player.num).slice(0, 8) : [];
 
   // OVR 카운트업 — [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
   const cardRef = useRef<HTMLDivElement>(null);
@@ -142,7 +167,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     const v = player[k], b = band(v, STAT_CUTS);
     return (
       <div className="attr-row" key={k}>
-        <span className="attr-key">{STAT_LABEL[k]}</span>
+        <span className="attr-key">{STAT_KO[k]}</span>
         <b className={`val val-${b}`}>{v || '–'}</b>
         <i className="attr-bar"><b className={`val-${b}`} style={{ '--fill': `${Math.max(0, Math.min(100, v))}%` } as CSSProperties} /></i>
       </div>
@@ -187,6 +212,26 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
             <Form.Item name="note" label="메모" className="full"><Input /></Form.Item>
           </Form>
         )}
+      </Modal>
+    );
+  }
+
+  function statsModal() {
+    return (
+      <Modal title="능력치 고치기" open={statsOpen} destroyOnHidden width={420} onCancel={() => setStatsOpen(false)}
+        maskClosable={!statsSaving} closable={!statsSaving} keyboard={!statsSaving}
+        footer={[
+          <Button key="cancel" disabled={statsSaving} onClick={() => setStatsOpen(false)}>취소</Button>,
+          <Button key="save" type="primary" loading={statsSaving} onClick={saveStats}>저장</Button>,
+        ]}>
+        <p className="muted">누구나 고칠 수 있습니다. 고치면 누가 바꿨는지 아래에 남습니다.</p>
+        <Form form={statsForm} layout="vertical">
+          {STAT_KEYS.map((k) => (
+            <Form.Item key={k} name={k} label={STAT_KO[k]} rules={[{ required: true, message: '1~99' }]}>
+              <InputNumber min={1} max={99} precision={0} style={{ width: '100%' }} />
+            </Form.Item>
+          ))}
+        </Form>
       </Modal>
     );
   }
@@ -252,7 +297,25 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
               {player.note && <p className="phero-sub">{player.note}</p>}
             </div>
             <div className="player-side">
-              <div className="card"><h2>능력치</h2><div className="attr-list">{attrRows}</div></div>
+              <div className="card">
+                <div className="card-head"><h2>능력치</h2><Button size="small" onClick={() => openStats(player)}>고치기</Button></div>
+                <div className="attr-list">{attrRows}</div>
+                {myLog.length > 0 && (
+                  <>
+                    <h2 className="card-sub">고친 기록</h2>
+                    <ul className="statlog">
+                      {myLog.map((r, i) => (
+                        <li key={`${r.ts}-${r.field}-${i}`}>
+                          <span className="muted">{fmtDate(r.ts.slice(0, 10))}</span>
+                          <b>{r.byName || '누군지 모름'}</b>
+                          <span>{STAT_KO[r.field]}</span>
+                          <span className="statlog-move">{r.before} → {r.after}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           {fines.length > 0 && (
@@ -263,6 +326,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
         </div>
       )}
       {editModal()}
+      {statsModal()}
       {avatarModal()}
     </>
   );

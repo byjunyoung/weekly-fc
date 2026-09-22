@@ -7,12 +7,18 @@ const SHEET_MATCHES  = '매치기록';
 const SHEET_ROTATION = '봉사로테이션';
 const SHEET_FINES    = '벌금';
 const SHEET_LINEUPS  = '라인업';
+const SHEET_STATLOG  = '능력치기록';
 
 const PLAYER_COLS  = ['num','pos','detail','foot','name','phone','vest','note','pace','dribble','pass','shoot','defend','stamina','rot','avatar'];
 const MATCH_COLS   = ['id','date','location','youtube','type','attendees','teams','winner'];
 const ROT_COLS     = ['year','month','p1','p2','done'];
 const FINE_COLS    = ['id','date','match_id','player','type','amount','paid'];
 const LINEUP_COLS  = ['id','match_id','name','formation','assignments'];
+const STATLOG_COLS = ['ts','by','by_name','num','field','before','after'];
+const STAT_FIELDS  = ['pace','dribble','pass','shoot','defend','stamina'];
+/** 화면에 돌려주는 기록 수. 전부 보내면 시즌이 갈수록 응답이 무거워진다 —
+ *  시트엔 다 남고, 화면은 선수별로 몇 줄만 보여 주므로 최근 것만 실어 보낸다. */
+const STATLOG_KEEP = 300;
 
 function doGet(e) {
   try {
@@ -28,8 +34,12 @@ function doGet(e) {
     } else if (action === 'getChannelVideos') {
       result = handleGetChannelVideos(e.parameter.nocache === '1');
     } else if (action === 'writeAvatar') {
-      // PIN 없이 동작하는 유일한 쓰기. 아바타 칸 하나만 건드린다 — 아래 핸들러 주석 참고.
+      // PIN 없이 동작하는 쓰기 그 하나. 아바타 칸 하나만 건드린다 — 아래 핸들러 주석 참고.
       result = handleWriteAvatar(payload);
+    } else if (action === 'writeStats') {
+      // PIN 없이 동작하는 쓰기 둘. 능력치 여섯 칸만 건드리고 누가 고쳤는지 기록을 남긴다
+      // (2026-09-22 사용자 결정: 아무나 아무 선수나 고치되 기록으로 받친다).
+      result = handleWriteStats(payload);
     } else if (action === 'verifyPin') {
       verifyPin(pin);
       result = { ok: true };
@@ -96,7 +106,58 @@ function handleGetAll(includePhone) {
     rotation: sheetToObjects(ss, SHEET_ROTATION, ROT_COLS),
     fines:    sheetToObjects(ss, SHEET_FINES,    FINE_COLS),
     lineups:  sheetToObjects(ss, SHEET_LINEUPS,  LINEUP_COLS),
+    statLog:  recentStatLog(ss),
   };
+}
+
+/** 능력치 기록은 최근 것부터 STATLOG_KEEP 개만. 시트에는 전부 남는다. */
+function recentStatLog(ss) {
+  const rows = sheetToObjects(ss, SHEET_STATLOG, STATLOG_COLS);
+  return rows.length > STATLOG_KEEP ? rows.slice(rows.length - STATLOG_KEEP) : rows;
+}
+
+// ── 능력치 (PIN 없는 쓰기) ────────────────────────
+/** 아바타와 같은 결의 좁은 경로다. writePlayer 와 나눠 둔 이유도 같다 — 이쪽은 PIN 을
+ *  요구하지 않으므로, 한 핸들러에 얹으면 이름·전화번호 같은 다른 칸까지 PIN 없이
+ *  새어나갈 여지가 생긴다. 여기서 만지는 칸은 STAT_FIELDS 여섯 개뿐이다.
+ *  고친 사람(by)은 홈에서 고른 번호라 자칭이다 — 잠금이 아니라 기록용이다. */
+function handleWriteStats(p) {
+  const num = String(p && p.num || '');
+  if (!num) return { error: '번호가 없습니다' };
+  const stats = (p && p.stats) || {};
+  const next = {};
+  for (let i = 0; i < STAT_FIELDS.length; i++) {
+    const k = STAT_FIELDS[i];
+    const v = Number(stats[k]);
+    if (!isFinite(v) || Math.floor(v) !== v || v < 1 || v > 99) {
+      return { error: k + ' 값이 1~99 정수가 아닙니다' };
+    }
+    next[k] = v;
+  }
+
+  const ss = getSpreadsheet();
+  const sheet = getOrCreateSheet(ss, SHEET_PLAYERS, PLAYER_COLS);
+  const data = sheet.getDataRange().getValues();
+  const rowIdx = findRowByField(data, 0, num);
+  if (rowIdx < 1) return { error: '그 번호의 선수가 없습니다' };
+
+  const byNum = String(p && p.by || '');
+  const byRow = byNum ? findRowByField(data, 0, byNum) : -1;
+  const byName = byRow > 0 ? String(cell(data[byRow][PLAYER_COLS.indexOf('name')])) : '';
+
+  const log = getOrCreateSheet(ss, SHEET_STATLOG, STATLOG_COLS);
+  const ts = new Date().toISOString();
+  let changed = 0;
+  for (let i = 0; i < STAT_FIELDS.length; i++) {
+    const k = STAT_FIELDS[i];
+    const col = PLAYER_COLS.indexOf(k) + 1;
+    const before = Number(cell(data[rowIdx][col - 1])) || 0;
+    if (before === next[k]) continue;                 // 안 바뀐 칸은 적지도 쓰지도 않는다
+    sheet.getRange(rowIdx + 1, col).setValue(next[k]);
+    log.appendRow([ts, byNum, byName, num, k, before, next[k]]);
+    changed++;
+  }
+  return { ok: true, changed: changed };
 }
 
 // ── 선수 ─────────────────────────────────────────
