@@ -26,7 +26,9 @@ function box(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: 
   if (typeof ctx.roundRect === 'function') ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h);
 }
 
-/** 피치 선 — pitch-view.ts 의 SVG 와 같은 도형을 같은 단위(m)로 그린다. */
+/** 피치 선 — `PITCH_DIM` 의 미터 단위는 화면(pitch-view.ts)과 같지만 **그림은 다르다**:
+ *  화면은 2026-09-22 에 도트(채운 사각형·잔디 줄무늬·블록 원)로 갔고 여기는 아직 옛 선이다.
+ *  둘을 맞추는 건 큐 5번(공유 이미지 도트화)에서 한다. */
 function pitchLines(ctx: CanvasRenderingContext2D, kind: PitchKind, sx: number, sy: number): void {
   const R = (x: number, y: number, w: number, h: number) => ctx.strokeRect(x * sx, y * sy, w * sx, h * sy);
   const Lx = (x1: number, y1: number, x2: number, y2: number) => { ctx.beginPath(); ctx.moveTo(x1 * sx, y1 * sy); ctx.lineTo(x2 * sx, y2 * sy); ctx.stroke(); };

@@ -44,3 +44,121 @@ test('경기장별 viewBox 와 비율', () => {
   assert.ok(pitchHtml(s, [], null).includes('aspect-ratio:68 / 105'));
 });
 
+
+// ── 2026-09-22 도트 피치 + 아바타 카드 ──────────────────────
+
+test('피치 그림은 stroke 가 아니라 채운 사각형이다 (도트 톤)', () => {
+  for (const kind of ['soccer', 'futsal']) {
+    const svg = pitchLines(kind);
+    assert.ok(!svg.includes('stroke'), `${kind}: stroke 가 남아 있다`);
+    assert.ok(!svg.includes('<line') && !svg.includes('<circle') && !svg.includes('<path'),
+      `${kind}: 선·원·경로 요소가 남아 있다 — 전부 rect 여야 한다`);
+    assert.ok(svg.includes('shape-rendering="crispEdges"'), `${kind}: crispEdges 가 없다`);
+    assert.ok(svg.includes('<rect'), `${kind}: rect 가 없다`);
+  }
+});
+
+test('피치에 잔디 줄무늬와 잔디 알갱이 패턴이 깔린다 (줄 수는 하프라인이 경계에 떨어지게)', () => {
+  // 줄 수를 세는 단언이 없으면 홀수로 바꿔도 테스트가 통과한다(2026-09-22 리뷰의 뮤테이션).
+  for (const [kind, bands, half] of [['soccer', 10, 52.5], ['futsal', 8, 20]]) {
+    const svg = pitchLines(kind);
+    assert.ok(svg.includes('id="wfc-turf"'), `${kind}: 잔디 패턴이 없다`);
+    assert.ok(svg.includes('fill="url(#wfc-turf)"'), `${kind}: 잔디 패턴을 안 쓴다`);
+    const stripes = [...svg.matchAll(/<rect x="0" y="([\d.]+)" width="\d+" height="([\d.]+)" fill="#(?:173a23|0f2617)"/g)];
+    assert.equal(stripes.length, bands, `${kind}: 줄 수가 ${bands} 가 아니다`);
+    const bh = Number(stripes[0][2]);
+    assert.ok(Number.isInteger(half / bh), `${kind}: 하프라인 ${half} 이 줄 높이 ${bh} 의 배수가 아니다`);
+  }
+});
+
+test('센터서클 블록 원은 한 겹·한 덩어리다 (각도 훑기로 되돌리면 조각난다)', () => {
+  // 대칭만 보면 각도 훑기 방식(칸이 빠져 들쭉날쭉)도 통과한다 — 연결성과 빈 행까지 본다.
+  const svg = pitchLines('soccer');
+  const step = 1.5, cx = 34, cy = 52.5, r = 9.15;
+  const cells = [...svg.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="1.5" height="1.5"/g)]
+    .map((m) => [Number(m[1]) + step / 2, Number(m[2]) + step / 2])
+    .filter(([x, y]) => Math.abs(Math.hypot(x - cx, y - cy) - r) <= step); // 스폿(1.5칸)은 걸러낸다
+  assert.ok(cells.length >= 32, `블록이 너무 적다: ${cells.length}`);
+  // 행마다 칸이 있어야 한다(빈 행 = 고리가 끊긴 것).
+  const rows = new Set(cells.map(([, y]) => y.toFixed(2)));
+  const ys = [...rows].map(Number).sort((a, b) => a - b);
+  for (let i = 1; i < ys.length; i++) {
+    assert.ok(ys[i] - ys[i - 1] <= step + 1e-6, `빈 행이 있다: ${ys[i - 1]} → ${ys[i]}`);
+  }
+  // 8-연결 성분이 하나여야 한다.
+  const key = ([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`;
+  const all = new Map(cells.map((c) => [key(c), c]));
+  const seen = new Set([key(cells[0])]);
+  const stack = [cells[0]];
+  while (stack.length) {
+    const [x, y] = stack.pop();
+    for (const dx of [-step, 0, step]) for (const dy of [-step, 0, step]) {
+      const k = key([x + dx, y + dy]);
+      if (all.has(k) && !seen.has(k)) { seen.add(k); stack.push(all.get(k)); }
+    }
+  }
+  assert.equal(seen.size, cells.length, `고리가 ${cells.length - seen.size}칸만큼 끊겨 있다`);
+});
+
+test('피치 마킹 좌표가 규격과 맞는다 (손으로 세다 어긋나는 자리)', () => {
+  const svg = pitchLines('soccer');
+  // 페널티 스폿은 골라인(y=2·103)에서 11m — 중심 13·92, 1.5 칸이라 좌상단은 12.25·91.25.
+  assert.ok(svg.includes('<rect x="33.25" y="12.25" width="1.5" height="1.5"'), '위쪽 페널티 스폿이 11m 가 아니다');
+  assert.ok(svg.includes('<rect x="33.25" y="91.25" width="1.5" height="1.5"'), '아래쪽 페널티 스폿이 11m 가 아니다');
+  // 하프라인 — 없어져도 다른 단언이 안 잡는다.
+  assert.ok(svg.includes('<rect x="2" y="52.05" width="64" height="0.9"'), '하프라인이 없다');
+  // 골대 폭(축구 8m·풋살 3m) — 넓혀도 안 잡히던 자리.
+  assert.ok(svg.includes('<rect x="30" y="0" width="8" height="2"'), '축구 골대 폭이 8m 가 아니다');
+  const f = pitchLines('futsal');
+  assert.ok(f.includes('<rect x="8.5" y="0" width="3" height="1"'), '풋살 골대 폭이 3m 가 아니다');
+});
+
+test('테두리 모서리가 두 번 칠해지지 않는다 (반투명이 겹치면 그 자리만 밝아진다)', () => {
+  const svg = pitchLines('soccer');
+  // 바깥 테두리: 가로 변은 x=2 에서 폭 64, 세로 변은 y 가 T 만큼 안으로 들어가야 한다.
+  assert.ok(svg.includes('<rect x="2" y="2" width="64" height="0.9"'), '위 변이 없다');
+  assert.ok(svg.includes('<rect x="2" y="2.9" width="0.9" height="99.2"'), '왼 변이 모서리를 비켜 있지 않다');
+  // 페널티 박스·골 에어리어의 골라인 쪽 변은 아예 안 그린다(3겹 방지).
+  assert.ok(!svg.includes('<rect x="13.2" y="2" width="41.6" height="0.9"'), '페널티 박스가 골라인 위에 한 겹 더 그려진다');
+  assert.ok(!svg.includes('<rect x="24.8" y="2" width="18.4" height="0.9"'), '골 에어리어가 골라인 위에 한 겹 더 그려진다');
+});
+
+test('센터서클 블록 원은 상하·좌우 대칭이다', () => {
+  // 축구 피치 중앙(34, 52.5) 기준으로 블록 좌표를 모아 미러가 같은 집합인지 본다.
+  // 스폿도 1.5 칸이라 같이 걸리는데, 셋 다 중앙축 위라 대칭 단언을 깨지 않는다.
+  const svg = pitchLines('soccer');
+  const cells = [...svg.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="1.5" height="1.5"/g)]
+    .map((m) => [Number(m[1]), Number(m[2])]);
+  assert.ok(cells.length > 12, `블록이 너무 적다: ${cells.length}`);
+  const key = ([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`;
+  const set = new Set(cells.map(key));
+  // 블록의 좌상단 x 를 중심 34 에 대해 뒤집으면(칸 폭 1.5 를 보정) 다시 집합 안에 있어야 한다.
+  for (const [x, y] of cells) {
+    assert.ok(set.has(key([2 * 34 - x - 1.5, y])), `좌우 비대칭: ${x},${y}`);
+    assert.ok(set.has(key([x, 2 * 52.5 - y - 1.5])), `상하 비대칭: ${x},${y}`);
+  }
+});
+
+test('선수 카드에 아바타·OVR·자리 라벨·이름·포지션이 다 들어간다', () => {
+  const s = place(initial(5), 0, 1);
+  const html = pitchHtml(s, [P(1, '김현서', 'GK', 80)], null);
+  const btn = html.match(/<button[^>]*data-slot="0"[^>]*>[\s\S]*?<\/button>/)[0];
+  assert.ok(btn.includes('class="bd-sprite"'), '아바타 자리가 없다');
+  assert.ok(/<svg[^>]*height="32"/.test(btn), '아바타가 32px(도트 정렬)로 안 들어갔다');
+  assert.ok(btn.includes('class="bd-ovr">80<'), 'OVR 이 없다');
+  assert.ok(btn.includes('class="bd-slotlabel">GK<'), '자리 라벨이 없다');
+  assert.ok(btn.includes('class="bd-name">김현서<'), '이름이 없다');
+  assert.ok(btn.includes('class="bd-pos">GK<'), '선수 포지션이 없다');
+});
+
+test('빈 자리에는 아바타를 넣지 않는다', () => {
+  const html = pitchHtml(initial(5), [], null);
+  assert.ok(!html.includes('bd-sprite'), '빈 자리에 아바타가 들어갔다');
+  assert.equal(count(html, 'bd-empty'), 5);
+});
+
+test('아바타가 들어가도 카드 문자열은 결정적이다 (dangerouslySetInnerHTML 계약)', () => {
+  const s = place(initial(5), 0, 1);
+  const ps = [P(1, '김현서', 'GK', 80)];
+  assert.equal(pitchHtml(s, ps, null), pitchHtml(s, ps, null));
+});
