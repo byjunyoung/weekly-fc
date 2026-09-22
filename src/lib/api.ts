@@ -68,11 +68,27 @@ export function buildUrl(action: string, params: Record<string, unknown> = {}, b
   for (const [k, v] of Object.entries(params)) u.searchParams.set(k, typeof v === 'object' && v !== null ? encodeURIComponent(JSON.stringify(v)) : String(v));
   return u.toString();
 }
+/** 응답을 기다리는 한도. 넘기면 끊고 오류로 돌린다.
+ *  카톡 인앱 브라우저에서 이 요청이 **실패가 아니라 멈춤**으로 끝나는 걸 확인했다
+ *  (2026-09-22, 12초 무응답). 오류가 안 나니 화면이 "불러오는 중"에서 영영 굳었다.
+ *  정상 왕복은 3~4초라 15초면 느린 회선에도 넉넉하면서 멈춤은 붙잡는다. */
+export const TIMEOUT_MS = 15000;
+
 async function call(action: string, params: Record<string, unknown> = {}): Promise<Raw> {
-  const res = await fetch(buildUrl(action, params));
-  const json = (await res.json()) as Raw;
-  if (json.error) throw new Error(String(json.error));
-  return json;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(buildUrl(action, params), { signal: ac.signal });
+    const json = (await res.json()) as Raw;
+    if (json.error) throw new Error(String(json.error));
+    return json;
+  } catch (e) {
+    // 끊은 것과 진짜 네트워크 오류를 다른 문구로 — 배너만 보고도 어느 쪽인지 알게.
+    if ((e as Error).name === 'AbortError') throw new Error(`${TIMEOUT_MS / 1000}초 동안 응답이 없습니다`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function cached(): Data | null { try { const s = localStorage.getItem(CACHE_KEY); return s ? (JSON.parse(s) as Data) : null; } catch { return null; } }

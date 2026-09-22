@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
 import * as T from '../../lib/teams';
+import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 
@@ -30,7 +31,7 @@ function Teams() {
   // 갱신은 항상 **직전 상태**에서 계산한다(렌더 시점의 st 를 클로저로 잡으면 연타가 날아간다).
   const commit = (fn: (prev: T.TeamsState) => T.TeamsState): void => { setSt(fn); };
 
-  if (!data) return <div className="page-head"><h1>자체전</h1><div className="actions" /></div>;
+  if (!data) return <Loading title="자체전" />;
 
   const players = data.players;
   const views = T.teamViews(st, players);

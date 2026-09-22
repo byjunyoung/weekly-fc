@@ -57,3 +57,39 @@ test('normalizeMatch: id는 date와 달리 자르지 않는다 (freeId의 "-2" �
   const suffixed = normalizeMatch({ id: '2026-09-05-2', date: '2026-09-05' });
   assert.equal(suffixed.id, '2026-09-05-2');
 });
+
+// ── 제한시간 ───────────────────────────────────────────────────────────
+// 카톡 인앱 브라우저에서 이 요청이 실패가 아니라 **멈춤**으로 끝났다(2026-09-22).
+// 오류가 안 나니 화면이 "불러오는 중"에서 영영 굳는다 — 끊어서 오류로 만들어야 배너가 뜬다.
+import test2 from 'node:test';
+import assert2 from 'node:assert/strict';
+import { fetchData, TIMEOUT_MS } from '../../src/lib/api.ts';
+
+test2('응답이 안 오면 제한시간에 끊고 오류로 돌린다', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const orig = globalThis.fetch;
+  let aborted = false;
+  globalThis.fetch = (_u, opts) => new Promise((_res, rej) => {
+    opts.signal.addEventListener('abort', () => {
+      aborted = true;
+      const e = new Error('The operation was aborted.'); e.name = 'AbortError'; rej(e);
+    });
+  });
+  try {
+    const p = fetchData();
+    t.mock.timers.tick(TIMEOUT_MS);
+    await assert2.rejects(p, (e) => {
+      assert2.match(e.message, /응답이 없습니다/, `문구가 다르다: ${e.message}`);
+      return true;
+    });
+    assert2.ok(aborted, '제한시간이 지나도 요청을 끊지 않았다 — 연결이 그대로 남는다');
+  } finally { globalThis.fetch = orig; }
+});
+
+test2('서버가 보낸 오류 문구는 제한시간 문구로 덮어쓰지 않는다', async () => {
+  const orig = globalThis.fetch;
+  globalThis.fetch = async () => ({ json: async () => ({ error: 'PIN이 올바르지 않습니다' }) });
+  try {
+    await assert2.rejects(fetchData(), (e) => e.message === 'PIN이 올바르지 않습니다');
+  } finally { globalThis.fetch = orig; }
+});

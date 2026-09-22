@@ -8,6 +8,7 @@ import { fmtWon } from '../../lib/html';
 import { getMe } from '../../lib/me';
 import { LINKS } from '../../lib/rules';
 import { href } from '../../lib/url';
+import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 import { computeHomeSummary } from './model';
@@ -80,7 +81,7 @@ function App() {
   }, []);
   const openMe = () => window.dispatchEvent(new Event('wfc:open-me'));
 
-  if (!data) return <div className="page-head"><h1>홈</h1><div className="actions" /></div>;
+  if (!data) return <Loading title="홈" />;
 
   const s = computeHomeSummary(data, me, new Date());
 

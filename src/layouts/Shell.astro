@@ -42,17 +42,42 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
     </div>
   </header>
   <main class="main">
-    <p class="warn load-err" id="load-err" hidden>데이터를 불러오지 못했습니다 · <button id="load-err-retry">다시 시도</button></p>
+    <p class="warn load-err" id="inapp-note" hidden><span id="inapp-msg"></span> · <button id="inapp-open">다시 열기</button></p>
+    <p class="warn load-err" id="load-err" hidden>데이터를 불러오지 못했습니다 · <button id="load-err-retry">다시 시도</button><button id="load-err-open" hidden>기본 브라우저로 열기</button></p>
     <slot />
   </main>
 
   <script>
     import { refresh } from '../lib/api';
+    import { detectInApp, escapeUrl, shouldAutoEscape, ESCAPE_KEY } from '../lib/inapp';
     const $ = (id: string) => document.getElementById(id) as HTMLElement;
     const loadErr = $('load-err');
     $('load-err-retry').onclick = () => { refresh().catch(() => {}); };
     window.addEventListener('wfc:error', () => { loadErr.hidden = false; });
     window.addEventListener('wfc:data', () => { loadErr.hidden = true; });
+
+    // 인앱 브라우저 — 카톡에서는 구글 Apps Script 요청이 응답 없이 멈춘다(2026-09-22 확인).
+    // 확인된 카톡만 밖으로 내보내고, 다른 인앱은 실제로 데이터가 안 왔을 때만 길을 알려 준다.
+    const inApp = detectInApp(navigator.userAgent);
+    const out = inApp ? escapeUrl(inApp, location.href) : null;
+    if (out) {
+      const open = () => { location.href = out; };
+      $('inapp-open').onclick = open;
+      ($('load-err-open') as HTMLButtonElement).onclick = open;
+      $('load-err-open').hidden = false;
+      if (shouldAutoEscape(inApp)) {
+        // 밖에서 뒤로가기로 돌아왔을 때 또 튕기지 않게 한 번만 — 저장소가 막힌 기기도 있어
+        // 실패하면 그냥 안 걸러진다(전환 자체는 되는 편이 낫다).
+        let tried = false;
+        try { tried = sessionStorage.getItem(ESCAPE_KEY) === '1'; } catch {}
+        $('inapp-msg').textContent = `${inApp!.name} 안에서는 명단을 불러오지 못해 기본 브라우저로 넘겼습니다`;
+        $('inapp-note').hidden = false;
+        if (!tried) {
+          try { sessionStorage.setItem(ESCAPE_KEY, '1'); } catch {}
+          open();
+        }
+      }
+    }
   </script>
 </body>
 </html>

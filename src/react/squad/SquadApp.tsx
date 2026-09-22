@@ -5,6 +5,7 @@ import { App } from 'antd';
 import { useState } from 'react';
 import * as L from '../../lib/lineup';
 import { href } from '../../lib/url';
+import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
@@ -25,7 +26,7 @@ function Squad() {
   const [q, setQ] = useState('');
   const [view, setView] = useState<View>(() => loadView(SQUAD_VIEWS));
 
-  if (!data) return <div className="page-head"><h1>명단</h1><div className="actions" /></div>;
+  if (!data) return <Loading title="명단" />;
 
   const rows = data.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
 

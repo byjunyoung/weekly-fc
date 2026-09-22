@@ -5,6 +5,7 @@ import { App, Button, Segmented, Select } from 'antd';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import * as L from '../../lib/lineup';
 import { MAX_COUNT, MIN_COUNT, SHAPES, type PitchKind } from '../../lib/formation';
+import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 import type { View } from './model';
@@ -45,7 +46,7 @@ function Lineup() {
     return () => document.removeEventListener('keydown', onEsc);
   }, [selected]);
 
-  if (!data) return <div className="page-head"><h1>라인업</h1><div className="actions" /></div>;
+  if (!data) return <Loading title="라인업" />;
 
   const rows = data.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
   const filled = st.slots.filter((x) => x != null).length;
