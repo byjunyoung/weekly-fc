@@ -29,9 +29,11 @@ const LOCKER_SPRITE_H = 300;
 function LockerStage({ svg, plate }: { svg: string; plate: ReactNode }) {
   return (
     <div className="locker-stage">
-      <div className="locker-wall" aria-hidden="true" />
-      <div className="locker-floor" aria-hidden="true" />
-      <div className="locker-sprite" dangerouslySetInnerHTML={{ __html: svg }} />
+      <div className="locker-wall" />
+      <div className="locker-floor" />
+      {/* 스프라이트는 순수 장식이다 — 아바타 코드가 없는 선수는 SVG 안에 번호 <text> 가 들어가
+          링크 이름에 번호가 한 번 더 읽힌다(이름표가 이미 말한다). */}
+      <div className="locker-sprite" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />
       {plate}
     </div>
   );
@@ -40,7 +42,7 @@ function LockerStage({ svg, plate }: { svg: string; plate: ReactNode }) {
 function LinkTile({ to, locker, children }: { to: string; locker?: boolean; children: ReactNode }) {
   const isExternal = to.startsWith('http');
   // 부모 <a> 는 display:contents 라 포커스를 받을 수 없다(CSS 스펙 — 박스 없는 요소는 포커스 대상이 될 수 없다).
-  // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 빈 「내 선수」 타일과 같은 패턴.
+  // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 이름을 안 고른 라커룸(버튼)과 같은 패턴.
   const go = () => { if (isExternal) window.open(to, '_blank', 'noopener'); else location.assign(to); };
   return (
     <a href={to} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined} style={{ display: 'contents' }}>

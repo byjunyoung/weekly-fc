@@ -25,12 +25,3 @@ export function rotationFor(players: Player[], sheet: RotationRow[], year: numbe
 }
 export const yearRows = (players: Player[], sheet: RotationRow[], year: number, now?: Date): RotationRow[] =>
   Array.from({ length: 12 }, (_, i) => rotationFor(players, sheet, year, i + 1, now));
-export function nextDuty(players: Player[], sheet: RotationRow[], name: string, now: Date = new Date()): { year: number; month: number } | null {
-  let y = now.getFullYear(), m = now.getMonth() + 1;
-  for (let i = 0; i < 36; i++) {
-    const r = rotationFor(players, sheet, y, m, now);
-    if (r.p1 === name || r.p2 === name) return { year: y, month: m };
-    if (++m > 12) { m = 1; y++; }
-  }
-  return null;
-}

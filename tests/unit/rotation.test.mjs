@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rotationOrder, computeMonth, rotationFor, yearRows, nextDuty } from '../../src/lib/rotation.ts';
+import { rotationOrder, computeMonth, rotationFor, yearRows } from '../../src/lib/rotation.ts';
 
 const P = (num, name, rot) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: 0, dribble: 0, pass: 0, shoot: 0, defend: 0, stamina: 0, rot });
 const ps = Array.from({ length: 29 }, (_, i) => P(i + 1, `p${i + 1}`, i + 1)).concat([P(99, 'admin', null)]);
@@ -32,7 +32,3 @@ test('시트 행이 있으면 그 값이 이긴다', () => {
   assert.deepEqual([r.p1, r.p2, r.done], ['p7', computeMonth(ps, 2026, 9, NOW).p2, true]);
 });
 test('yearRows는 12줄', () => assert.equal(yearRows(ps, [], 2026, NOW).length, 12));
-test('nextDuty는 이번 달부터 앞으로 찾는다', () => {
-  assert.deepEqual(nextDuty(ps, [], 'p1', NOW), { year: 2027, month: 3 });
-  assert.equal(nextDuty(ps, [], 'admin', NOW), null);
-});

@@ -19,7 +19,7 @@ import { countUp } from '../../lib/motion';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
-import { byAmount, byDate, byPaid, byType, numClash, playerFineSummary, playerFormDefaults, playerFromForm } from './model';
+import { byAmount, byDate, byPaid, byType, numClash, playerFines, playerFormDefaults, playerFromForm } from './model';
 import type { PlayerFormValues } from './model';
 
 function Detail({ num, isNew }: { num: number; isNew: boolean }) {
@@ -103,8 +103,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     if (isNew && admin && data && !player && editing === null && !open && !opening) openEdit(undefined);
   }, [isNew, admin, data, player, opening]);
 
-  // 벌금 내역 표의 원본. 아래 모달 경로에서 이르게 return 하기 전에 계산해 둔다.
-  const fineSummary = player ? playerFineSummary(data?.fines ?? [], player.name) : null;
+  const fines = player ? playerFines(data?.fines ?? [], player.name) : [];
 
   // OVR 카운트업 — playerCard() 가 html 로 그린 [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
   const cardRef = useRef<HTMLDivElement>(null);
@@ -239,9 +238,9 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
               <div className="card"><h2>능력치</h2><div className="attr-list">{attrRows}</div></div>
             </div>
           </div>
-          {fineSummary!.fines.length > 0 && (
+          {fines.length > 0 && (
             <div className="card"><h2>벌금 내역</h2>
-              <Table<Fine> size="small" rowKey="id" pagination={false} showSorterTooltip={false} scroll={{ x: 'max-content' }} columns={fineCols} dataSource={fineSummary!.fines} />
+              <Table<Fine> size="small" rowKey="id" pagination={false} showSorterTooltip={false} scroll={{ x: 'max-content' }} columns={fineCols} dataSource={fines} />
             </div>
           )}
         </div>
