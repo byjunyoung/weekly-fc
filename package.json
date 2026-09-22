@@ -12,7 +12,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "test:unit": "node --test \"tests/unit/*.test.mjs\"",
+    "test:unit": "TZ=UTC node --test \"tests/unit/*.test.mjs\"",
     "test:build": "node --test \"tests/build/*.test.mjs\"",
     "deploy:api": "clasp push -f && clasp deploy -i AKfycbyUDTkTHsKszkiOeJKmNDHDkVJobrVUjbRqufU251PNKmlyrvC0BZ3ir9x0vM_lCJkkmg",
     "test": "npm run test:unit && npm run build && npm run test:build"

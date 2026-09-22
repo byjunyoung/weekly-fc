@@ -6,7 +6,7 @@ import type { TableColumnsType } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { fetchFull, refresh, serializePlayer, write, writeAvatar, writeStats } from '../../lib/api';
-import { fmtDate, fmtWon } from '../../lib/html';
+import { fmtDate, fmtLogAt, fmtWon } from '../../lib/html';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { getMe } from '../../lib/me';
@@ -317,7 +317,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
                     <ul className="statlog">
                       {myLog.map((r, i) => (
                         <li key={`${r.ts}-${r.field}-${i}`}>
-                          <span className="muted">{fmtDate(r.ts.slice(0, 10))}</span>
+                          <span className="muted">{fmtLogAt(r.ts)}</span>
                           <b>{r.byName || '누군지 모름'}</b>
                           <span>{STAT_KO[r.field]}</span>
                           <span className="statlog-move">{r.before} → {r.after}</span>
