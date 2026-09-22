@@ -1,14 +1,9 @@
 // src/react/player/model.ts — 선수 상세 계산. 화면(PlayerDetail)과 떨어뜨려 단위 테스트한다.
 import type { Fine, Player } from '../../lib/types.ts';
 
-export type PlayerFineSummary = { fines: Fine[]; unpaid: number; total: number };
-/** 이 선수의 벌금 내역 — 미납 합계·전체 합계. 표의 정렬은 antd Table 의 sorter 가 맡으므로 원본 순서를 그대로 돌려준다. */
-export function playerFineSummary(fines: Fine[], playerName: string): PlayerFineSummary {
-  const mine = fines.filter((f) => f.player === playerName);
-  const unpaid = mine.filter((f) => !f.paid).reduce((s, f) => s + f.amount, 0);
-  const total = mine.reduce((s, f) => s + f.amount, 0);
-  return { fines: mine, unpaid, total };
-}
+/** 이 선수의 벌금 내역. 표의 정렬은 antd Table 의 sorter 가 맡으므로 원본 순서를 그대로 돌려준다.
+ *  미납·전체 합계도 같이 돌려줬었지만, 2026-09-22 에 선수 상세의 요약 줄이 빠지며 쓰는 곳이 없어졌다. */
+export const playerFines = (fines: Fine[], playerName: string): Fine[] => fines.filter((f) => f.player === playerName);
 
 export type PlayerFormValues = {
   num: number; name: string; pos: Player['pos']; detail: string; foot: string; vest: number | null; rot: number | null; phone: string;

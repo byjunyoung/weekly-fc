@@ -1,16 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { byAmount, byDate, byPaid, byType, numClash, playerFineSummary, playerFormDefaults, playerFromForm } from '../../src/react/player/model.ts';
+import { byAmount, byDate, byPaid, byType, numClash, playerFines, playerFormDefaults, playerFromForm } from '../../src/react/player/model.ts';
 
 const P = (num, name, over = {}) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '', ...over });
 const F = (id, player, amount, paid, date = '2026-09-05', type = '지각') => ({ id, date, match_id: '', player, type, amount, paid });
 
-test('playerFineSummary: 이 선수 것만, 미납·전체 합계', () => {
+test('playerFines: 이 선수 것만, 원본 순서 그대로', () => {
   const fines = [F('1', '김', 30000, false), F('2', '박', 50000, false), F('3', '김', 30000, true)];
-  assert.deepEqual(playerFineSummary(fines, '김'), { fines: [F('1', '김', 30000, false), F('3', '김', 30000, true)], unpaid: 30000, total: 60000 });
+  assert.deepEqual(playerFines(fines, '김'), [F('1', '김', 30000, false), F('3', '김', 30000, true)]);
 });
-test('playerFineSummary: 벌금 없으면 0', () => {
-  assert.deepEqual(playerFineSummary([], '김'), { fines: [], unpaid: 0, total: 0 });
+test('playerFines: 벌금 없으면 빈 배열', () => {
+  assert.deepEqual(playerFines([], '김'), []);
 });
 
 test('playerFormDefaults: 있는 선수는 그 값(전화 없으면 빈칸)', () => {
