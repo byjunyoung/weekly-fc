@@ -1,5 +1,7 @@
 // src/react/squad/RosterList.tsx — 명단 목록·카드·표 + 포지션 필터·검색·보기 전환.
 // 어느 보기를 쓸지는 부르는 쪽이 정한다 — /squad/ 는 표·카드, /lineup/ 은 좁은 칸에 들어가는 목록 하나.
+// **선발 찍기는 목록 보기에만 있다**(=라인업 전용). 표·카드에도 「넣기/선발」이 있었는데,
+// 명단에서까지 찍을 수 있으니 정본이 흐려져 걷어냈다(2026-09-22 사용자 결정).
 // 목록·카드는 옛 문자열(dangerouslySetInnerHTML) 그대로, 표만 진짜 antd Table 로 바꾼다
 // (옛 표의 정렬 시 행 이동 애니메이션은 접는다 — antd Table 자체 동작을 받아들인다, 3단계와 같은 결).
 import { Input, Segmented, Table } from 'antd';
@@ -43,26 +45,26 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
   views?: View[];
   pos: string; onPosChange: (p: string) => void;
   q: string; onQChange: (q: string) => void;
-  rows: Player[]; st: LineupState; onPick: (num: number) => void;
+  rows: Player[];
+  /** 선발 찍기 — 목록 보기에서만 쓴다. 표·카드만 그리는 /squad/ 는 넘기지 않는다. */
+  st?: LineupState; onPick?: (num: number) => void;
   /** 필터 줄을 여기서 안 그린다 — 라인업처럼 그 줄을 다른 자리에 이미 놓은 화면용. */
   bodyOnly?: boolean;
 }) {
-  // 목록·카드 뷰의 「선발/넣기」 버튼은 옛 문자열 템플릿 안 data-pick 속성으로 남아 있다 — 행마다
+  const starter = (num: number): boolean => (st != null && isStarter(st, num));
+  // 목록 뷰의 「선발/넣기」 버튼은 옛 문자열 템플릿 안 data-pick 속성으로 남아 있다 — 행마다
   // 리스너를 안 붙이고 바깥 한 곳에서 위임으로 받는다(옛 코드와 같은 이유: 다시 그릴 때마다 innerHTML 이
   // 통째로 바뀐다).
   const onBodyClick = (e: ReactMouseEvent<HTMLDivElement>) => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-pick]');
-    if (el) onPick(Number(el.dataset.pick));
+    if (el && onPick) onPick(Number(el.dataset.pick));
   };
   const onBodyKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('[role="button"][data-pick]');
-    if (el && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(Number(el.dataset.pick)); }
+    if (el && onPick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(Number(el.dataset.pick)); }
   };
 
   const columns: TableColumnsType<Player> = [
-    { title: '선발', key: 'pick', align: 'center', width: 64,
-      render: (_, p) => { const on = isStarter(st, p.num);
-        return <button type="button" className={on ? 'primary' : ''} onClick={() => onPick(p.num)} aria-pressed={on}>{on ? '선발' : '넣기'}</button>; } },
     { title: '', key: 'avatar', align: 'center', width: 44,
       render: (_, p) => <span dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 32, p.num) }} /> },
     { title: '#', dataIndex: 'num', key: 'num', align: 'right', sorter: (a, b) => a.num - b.num },
@@ -83,17 +85,15 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
     <>
       {!bodyOnly && <RosterFilters view={view} onViewChange={onViewChange} views={views} pos={pos} onPosChange={onPosChange} q={q} onQChange={onQChange} />}
       <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'pcard-wall' : ''}
-        onClick={view !== 'table' ? onBodyClick : undefined} onKeyDown={view !== 'table' ? onBodyKeyDown : undefined}>
+        onClick={view === 'list' ? onBodyClick : undefined} onKeyDown={view === 'list' ? onBodyKeyDown : undefined}>
         {view === 'table' ? (
           <Table<Player> size="small" rowKey="num" pagination={false} columns={columns} dataSource={rows}
             locale={{ emptyText: '명단이 비어 있습니다' }} />
         ) : view === 'card' ? (
           rows.length ? byOvr(rows).map((p) => {
-            const on = isStarter(st, p.num);
             return (
               <div className="bd-cardcell" key={p.num}>
-                <div className={`bd-cardpick${on ? ' is-on' : ''}`} role="button" tabIndex={0} data-pick={p.num} aria-pressed={on}
-                  dangerouslySetInnerHTML={{ __html: playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 112, p.num, true)) }} />
+                <div dangerouslySetInnerHTML={{ __html: playerCard(p, avatarSvg(avatarSpecFor(p.num, p.avatar), 112, p.num, true)) }} />
                 <a className="bd-card-link" href={href(`/squad/${p.num}/`)}>선수 페이지 ›</a>
               </div>
             );
@@ -101,7 +101,7 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
         ) : rows.length ? (
           <div className="bd-rows">
             {byOvr(rows).map((p) => {
-              const on = isStarter(st, p.num);
+              const on = starter(p.num);
               return (
                 <div className={`bd-row${on ? ' is-on' : ''}`} key={p.num}>
                   <button type="button" className="bd-pick" data-pick={p.num} aria-pressed={on}>
