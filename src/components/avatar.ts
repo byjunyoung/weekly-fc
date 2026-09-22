@@ -221,6 +221,14 @@ function fallback(x0: number, y0: number, w: number, h: number, width: number, h
   return svgFrame(x0, y0, w, h, width, height, inner, bare);
 }
 
+/** 24×32 문자맵 + 팔레트 — **SVG 가 아닌 곳**(공유 이미지의 캔버스)에서 같은 그림을 그릴 때 쓴다.
+ *  한 글자가 한 칸이고 '.' 은 투명, 나머지는 팔레트 키다. 미설정 스펙이면 null(부를 쪽이 폴백).
+ *  그림 데이터를 여기 한 곳에 두려는 것이다 — 캔버스가 자기 몫의 도트를 따로 그리면 둘이 갈린다. */
+export function avatarPixels(spec: AvatarSpec): { map: string[]; palette: Record<string, string>; w: number; h: number } | null {
+  if (isUnsetAvatar(spec)) return null;
+  return { map: mapOf(spec), palette: paletteOf(spec), w: GRID_W, h: GRID_H };
+}
+
 /**
  * 전신 도트 선수. `size`는 **세로 길이**이고 가로는 3:4 비율로 따라온다
  * (카드 머리 영역이 높이 기준이라 세로만 맞추면 레이아웃이 안 흔들린다).
