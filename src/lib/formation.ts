@@ -10,15 +10,18 @@ export const MIN_COUNT = 5;
 export const MAX_COUNT = 11;
 
 /** 인원(GK 포함) → 고를 수 있는 모양. 모양은 GK 를 뺀 줄별 인원이고 첫 항목이 기본이다.
- *  6·8인은 플랩에서 흔해 새로 넣었다. */
+ *  6·8인은 플랩에서 흔해 넣었고, 2026-09-22 에 "프리셋을 더 많이"(사용자) 요청으로 인원마다
+ *  네댓 가지가 되도록 늘렸다. **새 모양을 더할 땐 줄 수 2~4, 수비 줄 최대 5, 미드필더 줄
+ *  최대 5, 공격 줄 최대 3 을 지켜야 한다**(ROW_LABELS 가 거기까지만 이름을 갖고 있다).
+ *  자리가 서로 겹치는지는 tests/unit/formation-fit.test.mjs 가 전수로 검사한다. */
 export const SHAPES: Record<number, string[]> = {
-  5: ['1-2-1', '2-2', '3-1', '1-3'],
-  6: ['2-2-1', '2-1-2', '3-1-1'],
-  7: ['2-3-1', '3-2-1', '2-2-2'],
-  8: ['3-3-1', '3-2-2', '2-3-2'],
-  9: ['3-3-2', '3-4-1'],
-  10: ['4-3-2', '3-4-2'],
-  11: ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2'],
+  5: ['1-2-1', '2-2', '3-1', '1-3', '2-1-1'],
+  6: ['2-2-1', '2-1-2', '3-1-1', '1-3-1', '3-2', '2-3'],
+  7: ['2-3-1', '3-2-1', '2-2-2', '3-1-2', '1-3-2', '3-3'],
+  8: ['3-3-1', '3-2-2', '2-3-2', '4-2-1', '3-1-3', '2-4-1'],
+  9: ['3-3-2', '3-4-1', '4-3-1', '3-2-3', '2-4-2', '2-3-3'],
+  10: ['4-3-2', '3-4-2', '4-4-1', '3-3-3', '4-2-3', '5-3-1'],
+  11: ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '3-4-3', '5-3-2', '4-5-1'],
 };
 
 /** 11인은 손으로 맞춘 배치 — 슬롯 라벨 → 어느 포지션 무리에서 뽑을지. 라벨은 축구 표기를 그대로 쓰고,
@@ -41,13 +44,15 @@ export const FORMATIONS: Record<string, Slot[]> = {
     { label: 'CM', group: 'MF', x: 0.62, y: 0.54 }, { label: 'RM', group: 'MF', x: 0.86, y: 0.50 },
     { label: 'ST', group: 'FW', x: 0.38, y: 0.20 }, { label: 'ST', group: 'FW', x: 0.62, y: 0.20 },
   ],
+  // 가운데가 다섯이라 11인 중 가장 빡빡하다 — 좁은 화면에서 카드가 겹치던 배치를
+  // 2026-09-22 에 벌렸다(뒤 셋은 평평하게, 미들 셋은 0.20 간격, 윙백은 한 줄 내려서).
   '3-5-2': [
     { label: 'GK', group: 'GK', x: 0.50, y: 0.93 },
-    { label: 'CB', group: 'DF', x: 0.28, y: 0.78 }, { label: 'CB', group: 'DF', x: 0.50, y: 0.81 },
-    { label: 'CB', group: 'DF', x: 0.72, y: 0.78 },
-    { label: 'LWB', group: 'MF', x: 0.10, y: 0.56 }, { label: 'CM', group: 'MF', x: 0.33, y: 0.54 },
-    { label: 'CM', group: 'MF', x: 0.50, y: 0.58 }, { label: 'CM', group: 'MF', x: 0.67, y: 0.54 },
-    { label: 'RWB', group: 'MF', x: 0.90, y: 0.56 },
+    { label: 'CB', group: 'DF', x: 0.28, y: 0.79 }, { label: 'CB', group: 'DF', x: 0.50, y: 0.79 },
+    { label: 'CB', group: 'DF', x: 0.72, y: 0.79 },
+    { label: 'LWB', group: 'MF', x: 0.10, y: 0.60 }, { label: 'CM', group: 'MF', x: 0.30, y: 0.50 },
+    { label: 'CM', group: 'MF', x: 0.50, y: 0.54 }, { label: 'CM', group: 'MF', x: 0.70, y: 0.50 },
+    { label: 'RWB', group: 'MF', x: 0.90, y: 0.60 },
     { label: 'ST', group: 'FW', x: 0.38, y: 0.20 }, { label: 'ST', group: 'FW', x: 0.62, y: 0.20 },
   ],
   '4-2-3-1': [
@@ -123,7 +128,9 @@ export function clampCount(n: number): number {
 export function slotsFor(count: number, shape: string): Slot[] {
   const n = clampCount(count);
   const key = SHAPES[n].includes(shape) ? shape : SHAPES[n][0];
-  return n === 11 ? FORMATIONS[key] : generate(key);
+  // 11인 중 손으로 맞춘 배치가 있으면 그걸 쓰고, 없으면 모양 문자열에서 만든다.
+  // 2026-09-22 에 11인 모양을 늘리면서 이 폴백이 없어 undefined 가 나왔다(테스트가 잡음).
+  return (n === 11 ? FORMATIONS[key] : undefined) ?? generate(key);
 }
 
 /** 7명 이하는 풋살장이 기본 — 사용자가 토글로 바꿀 수 있다. */
