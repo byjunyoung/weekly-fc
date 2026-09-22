@@ -319,16 +319,24 @@ a.card:hover { background: var(--charcoal); }
    더하거나 빼면 grid-auto-rows 가 받아 주긴 하지만 라커룸 아래로 한 칸이 흘러내리니 같이 손본다. */
 .rail { display: grid; grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: repeat(3, minmax(150px, 1fr));
   grid-auto-rows: minmax(150px, 1fr); gap: var(--s-sm); }
-.tile-locker { grid-row: 1 / span 3; }
+/* 라커룸 아바타 크기는 여기 한 곳에서 정한다 — 무대(.locker-stage)가 아바타에 맞춰 늘고,
+   라커룸이 3행을 가로지르므로 오른쪽 타일들도 같이 키가 는다. */
+.tile-locker { grid-row: 1 / span 3; --locker-h: 420px; }
+.locker-sprite svg { width: auto; height: var(--locker-h); }
 /* 1200px 아래에선 라커룸 칸을 더 크게 가져간다 — 이름표가 왼쪽 아래에 박혀 있어, 무대가 좁아지면
    가운데 선 선수의 왼발과 이름표가 겹친다(900px 에서 실측으로 겹침 확인). */
-@media (max-width: 1199px) { .rail { grid-template-columns: 1.6fr 1fr 1fr; } }
+@media (max-width: 1199px) { .rail { grid-template-columns: 1.6fr 1fr 1fr; } .tile-locker { --locker-h: 380px; } }
 /* 좌우로 세울 폭이 안 나오면 라커룸이 위에 가로로 눕고 타일은 2열로 내려간다. 이때 행 높이를
    1fr 로 두면 안 된다 — 높이가 정해지지 않은 그리드에서 fr 행은 전부 같은 높이가 돼, 라커룸
    행(약 450px)이 나머지 타일까지 그만큼 늘린다. */
 @media (max-width: 899px) {
   .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(148px, auto); }
-  .tile-locker { grid-column: 1 / -1; grid-row: auto; min-height: 340px; }
+  /* 라커룸이 한 줄을 다 쓰는 구간. 아바타 폭은 높이의 0.75 배인데, 무대 폭은 화면에서 68px
+     (좌우 여백·타일 안쪽 여백·테두리)을 뺀 값이고 왼쪽 88px 은 이름표 자리로 비워 둔다.
+     그래서 높이가 (화면 − 156) ÷ 0.75 를 넘으면 오른팔부터 잘린다 — 실제로 375px 에서 3px,
+     320px 에서 31px 잘리고 있었다(2026-09-22 실측). 고정값 대신 화면에서 끌어낸다. */
+  .tile-locker { grid-column: 1 / -1; grid-row: auto; min-height: 340px;
+    --locker-h: min(340px, calc((100vw - 156px) / 0.75)); }
 }
 /* 폰 폭에선 무대가 가장 좁다 — 가운데 정렬을 오른쪽으로 밀어 이름표 자리를 비운다. */
 @media (max-width: 639px) { .tile-locker .locker-stage { padding-left: 88px; } }
@@ -352,8 +360,9 @@ a.card:hover { background: var(--charcoal); }
   background: repeating-linear-gradient(90deg, #16181c 0 54px, #0e1013 54px 58px), linear-gradient(180deg, rgba(255, 255, 255, .05), transparent 45%); }
 .locker-wall::after { content: ""; position: absolute; left: 0; right: 0; top: 24%; height: 4px; background: #0e1013; }
 .locker-floor { position: absolute; left: 0; right: 0; bottom: 0; height: var(--floor-h); background: #26160f; box-shadow: inset 0 4px 0 #3a2216; }
-/* 스프라이트 맨 아랫줄은 빈 칸이라(24×32 중 한 행) 그만큼 더 내려야 발이 바닥에 닿는다. */
-.locker-sprite { position: relative; display: flex; margin-bottom: calc(var(--floor-h) - 9px); }
+/* 스프라이트 맨 아랫줄은 빈 칸이라(24×32 중 한 행) 그만큼 더 내려야 발이 바닥에 닿는다.
+   빈 줄 높이는 아바타 크기에 비례하므로 9px 로 박아 두면 안 된다 — 크기를 키우면 발이 뜬다. */
+.locker-sprite { position: relative; display: flex; margin-bottom: calc(var(--floor-h) - var(--locker-h) / 32); }
 /* 이름표 — 무대 왼쪽 아래에 박아 둔다. 도트 규약(10의 배수·합성 없음)은 각 줄에서 선언한다. */
 .locker-plate { position: absolute; left: var(--s-sm); bottom: var(--s-sm); display: flex; flex-direction: column;
   padding: var(--s-xs) var(--s-sm); background: rgba(0, 0, 0, .72); border: 2px solid var(--line); }
