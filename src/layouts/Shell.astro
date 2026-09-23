@@ -56,6 +56,15 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
     window.addEventListener('wfc:error', () => { loadErr.hidden = false; });
     window.addEventListener('wfc:data', () => { loadErr.hidden = true; });
 
+    // 탑바 높이는 폭에 따라 64px·115px 로 바뀐다(좁으면 탭이 제 줄로 내려간다). 그 아래에
+    // 붙는 sticky 요소가 탑바 뒤로 숨지 않게 실제 높이를 --topbar-h 로 내보낸다.
+    const bar = document.querySelector<HTMLElement>('.topbar');
+    if (bar) {
+      const putBarH = () => document.documentElement.style.setProperty('--topbar-h', `${bar.offsetHeight}px`);
+      putBarH();
+      new ResizeObserver(putBarH).observe(bar);
+    }
+
     // 인앱 브라우저 — 카톡에서는 구글 Apps Script 요청이 응답 없이 멈춘다(2026-09-22 확인).
     // 확인된 카톡만 밖으로 내보내고, 다른 인앱은 실제로 데이터가 안 왔을 때만 길을 알려 준다.
     const inApp = detectInApp(navigator.userAgent);
