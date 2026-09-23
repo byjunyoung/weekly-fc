@@ -7,6 +7,7 @@
 //   H 머리 · S 피부 · W 흰자 · E 눈동자 · M 입(피부 어두운 톤)
 //   K 유니폼 · D 유니폼 그늘(무늬에도 재사용) · P 반바지 · O 축구양말 · B 축구화
 //   T 손목테이프 · G 장갑                                   (2026-09-22 축구 테마 확장)
+//   R 수염 · X 액세서리                                      (2026-09-23 꾸미기 고도화)
 // 색은 렌더 시점에 팔레트로 주입한다(K 는 선수마다 다른 자유 hex).
 //
 // 팔 부위 3행은 각자 독립된 커스텀 자리다 — BODY 가 그리는 기본 모양(반팔+맨손)
@@ -118,6 +119,35 @@ const GLOVE_LAYERS: Record<'off' | 'on', Layer> = {
   on: { 19: '......G..........G......' },
 };
 
+// ── 수염 3종 (2026-09-23) ────────────────────────────────────
+// 입(9행 11~12열)을 가리지 않는다. 콧수염은 8행, 턱수염은 턱 가운데 10~11행 — 두 자리 다
+// 얼굴형 5종 모두의 피부 안이다. 덥수룩은 얼굴형마다 턱 폭이 달라 고정 문자열로 못 그리므로
+// 그 얼굴형의 9~11행 피부를 그대로 수염으로 바꿔 만든다(beardLayer).
+const BEARD_FIXED: Record<'none' | 'mustache' | 'goatee', Layer> = {
+  none: {},
+  mustache: { 8: '..........RRRR..........' },
+  goatee: { 10: '...........RR...........', 11: '...........RR...........' },
+};
+/** 덥수룩한 수염 — 입 자리는 피부로 비워 둬 수염 속에서도 입이 보인다. */
+function beardLayer(shape: (typeof PARTS.beard)[number]['shape'], face: Layer): Layer {
+  if (shape !== 'full') return BEARD_FIXED[shape];
+  const out: Layer = {};
+  for (const y of [9, 10, 11]) out[y] = (face[y] ?? '.'.repeat(GRID_W)).replace(/S/g, 'R');
+  out[9] = out[9].slice(0, 11) + 'SS' + out[9].slice(13);
+  return out;
+}
+
+// ── 액세서리 3종 (2026-09-23) ────────────────────────────────
+// 헤어밴드는 이마(4행)에 머리 폭 그대로. 안경은 눈(7행 9~10·13~14열)을 테로 두르고 6행에
+// 윗테 — 눈동자 칸은 비워 둬 눈이 테 안에서 보인다. 주장 완장은 선수의 왼팔(화면 오른쪽)
+// 위팔 16행. 다른 부위보다 **나중에** 칠해 머리·눈·소매 위에 얹힌다.
+const ACC_LAYERS: Record<(typeof PARTS.acc)[number]['shape'], Layer> = {
+  none: {},
+  headband: { 4: '.......XXXXXXXXXX.......' },
+  glasses: { 6: '........XXXXXXXX........', 7: '........X..XX..X........' },
+  armband: { 16: '.................XX.....' },
+};
+
 /** #rrggbb 를 f 배 밝기로. 유니폼 그늘·입 색을 코드로 만들어 팔레트를 늘리지 않는다. */
 function shade(hex: string, f: number): string {
   const n = Number.parseInt(hex.slice(1), 16);
@@ -176,8 +206,17 @@ function paletteOf(spec: AvatarSpec): Record<string, string> {
   const socks = PARTS.socks[spec.socks ?? 0] ?? PARTS.socks[0];
   const gloves = PARTS.gloves[spec.gloves ?? 0] ?? PARTS.gloves[0];
   const tape = PARTS.tape[spec.tape ?? 0] ?? PARTS.tape[0];
+  // 2026-09-23 — 머리색·액세서리·반바지·축구화. 전부 0(기본)이면 예전 팔레트와 같다.
+  const hairColor = PARTS.hairColor[spec.hairColor ?? 0] ?? PARTS.hairColor[0];
+  const acc = PARTS.acc[spec.acc ?? 0] ?? PARTS.acc[0];
+  const shorts = PARTS.shorts[spec.shorts ?? 0] ?? PARTS.shorts[0];
+  const boots = PARTS.boots[spec.boots ?? 0] ?? PARTS.boots[0];
+  const hairHex = hairColor.color || hair.color;
   return {
-    H: hair.color || skin.color,
+    H: hairHex || skin.color,
+    // 수염은 머리색을 따른다. 민머리에 머리색도 안 골랐으면 흑갈색.
+    R: hairHex || '#2a1c14',
+    X: acc.color || '#1a1a1a',
     S: skin.color,
     W: '#ffffff',
     E: eyes.color,
@@ -186,10 +225,10 @@ function paletteOf(spec: AvatarSpec): Record<string, string> {
     K: kit,
     D: shade(kit, 0.7),
     // 거의 흰 유니폼을 고르면 흰 반바지와 한 덩어리가 되므로 반바지를 내린다.
-    P: brightness(kit) > 0.85 ? '#9aa0a8' : '#e8e8e8',
+    P: shorts.color === 'kit' ? kit : shorts.color || (brightness(kit) > 0.85 ? '#9aa0a8' : '#e8e8e8'),
     // 양말은 "유니폼과 같음"(color:'')이면 kit 를 그대로 따라간다 — 옛 동작과 동일.
     O: socks.color || kit,
-    B: '#1a1a1a',
+    B: boots.color || '#1a1a1a',
     // 장갑·테이프가 "없음"이어도 팔레트엔 안전한 색을 채워 둔다 — 해당 글자는
     // GLOVE_LAYERS.off/TAPE_LAYERS.off 가 비어 있어 어차피 안 쓰인다.
     G: gloves.color || skin.color,
@@ -208,9 +247,15 @@ function mapOf(spec: AvatarSpec): string[] {
   // (인덱스 0 = 없음이라는 별도 규칙을 여기 또 두지 않는다) 둘이 어긋날 여지가 없다.
   const glove = gloveOpt.color ? 'on' : 'off';
   const tape = tapeOpt.color ? 'on' : 'off';
+  const beard = PARTS.beard[spec.beard ?? 0] ?? PARTS.beard[0];
+  const acc = PARTS.acc[spec.acc ?? 0] ?? PARTS.acc[0];
+  const faceLayer = FACE_LAYERS[face.shape];
+  // 순서가 곧 겹침이다 — 수염은 얼굴 위·머리 아래(장발이 턱선을 덮는다), 입은 수염 위,
+  // 액세서리는 맨 위(헤어밴드가 머리를, 안경이 눈을, 완장이 소매를 덮는다).
   return compose([
     BODY, JERSEY_LAYERS[jersey.shape], TAPE_LAYERS[tape], GLOVE_LAYERS[glove],
-    FACE_LAYERS[face.shape], HAIR_LAYERS[hair.shape], EYE_LAYERS[eyes.shape], MOUTH,
+    faceLayer, beardLayer(beard.shape, faceLayer), HAIR_LAYERS[hair.shape], EYE_LAYERS[eyes.shape],
+    beard.shape === 'full' ? {} : MOUTH, ACC_LAYERS[acc.shape],
   ]);
 }
 

@@ -5,12 +5,12 @@ import { avatarSvg, avatarFaceSvg } from '../../src/components/avatar.ts';
 
 // 서버 검증 정규식(server/weeklyfc-apps-script.js isValidAvatarCode)을 그대로 복사한다 —
 // 클라이언트가 만드는 코드가 서버에서 거부되지 않는다는 계약을 이 테스트가 지킨다.
-const SERVER_CODE_RE = /^([a-z]\d{1,2}:){1,8}k#[0-9a-fA-F]{3,6}$/;
+const SERVER_CODE_RE = /^([a-z]\d{1,2}:){1,16}k#[0-9a-fA-F]{3,6}$/;
 
 test('serializeAvatar ↔ parseAvatar 왕복: 각 부품 인덱스가 그대로 돌아온다', () => {
   for (let face = 0; face < PARTS.face.length; face++) {
     for (let hair = 0; hair < PARTS.hair.length; hair++) {
-      const spec = { face, hair, skin: 2, eyes: 1, jersey: 0, socks: 0, gloves: 0, tape: 0, kit: '#1a2b3c' };
+      const spec = { face, hair, skin: 2, eyes: 1, jersey: 0, socks: 0, gloves: 0, tape: 0, hairColor: 0, beard: 0, acc: 0, shorts: 0, boots: 0, kit: '#1a2b3c' };
       const code = serializeAvatar(spec);
       assert.deepEqual(parseAvatar(code), spec);
       assert.equal(serializeAvatar(parseAvatar(code)), code);
@@ -24,7 +24,7 @@ test('serializeAvatar ↔ parseAvatar 왕복: 축구 테마 네 필드도 그대
     for (let socks = 0; socks < PARTS.socks.length; socks++) {
       for (let gloves = 0; gloves < PARTS.gloves.length; gloves++) {
         for (let tape = 0; tape < PARTS.tape.length; tape++) {
-          const spec = { face: 0, hair: 0, skin: 0, eyes: 0, jersey, socks, gloves, tape, kit: '#1a2b3c' };
+          const spec = { face: 0, hair: 0, skin: 0, eyes: 0, jersey, socks, gloves, tape, hairColor: 0, beard: 0, acc: 0, shorts: 0, boots: 0, kit: '#1a2b3c' };
           const code = serializeAvatar(spec);
           assert.deepEqual(parseAvatar(code), spec);
           assert.equal(serializeAvatar(parseAvatar(code)), code);
@@ -34,10 +34,20 @@ test('serializeAvatar ↔ parseAvatar 왕복: 축구 테마 네 필드도 그대
   }
 });
 
+test('serializeAvatar ↔ parseAvatar 왕복: 새 부위 다섯의 모든 값', () => {
+  for (const field of ['hairColor', 'beard', 'acc', 'shorts', 'boots']) {
+    for (let v = 0; v < PARTS[field].length; v++) {
+      const spec = { ...parseAvatar('f1:h2:s3:e4:j1:o1:g1:t1:k#1a2b3c'), [field]: v };
+      const code = serializeAvatar(spec);
+      assert.deepEqual(parseAvatar(code), spec, `${field}=${v}: ${code}`);
+    }
+  }
+});
+
 test('parseAvatar: 옛 4세그먼트 코드(축구 테마 확장 이전)도 하위 호환 — 새 필드는 기본값 0', () => {
   const spec = parseAvatar('f2:h3:s1:e0:k#2980b9');
   assert.equal(isUnsetAvatar(spec), false);
-  assert.deepEqual(spec, { face: 2, hair: 3, skin: 1, eyes: 0, kit: '#2980b9', jersey: 0, socks: 0, gloves: 0, tape: 0 });
+  assert.deepEqual(spec, { face: 2, hair: 3, skin: 1, eyes: 0, kit: '#2980b9', jersey: 0, socks: 0, gloves: 0, tape: 0, hairColor: 0, beard: 0, acc: 0, shorts: 0, boots: 0 });
   // 다시 저장하면 8세그먼트(j/o/g/t 포함) 코드가 되지만, 서버 정규식은 여전히 통과한다.
   const resaved = serializeAvatar(spec);
   assert.equal(resaved, 'f2:h3:s1:e0:j0:o0:g0:t0:k#2980b9');
@@ -335,3 +345,99 @@ test('randomAvatar: 유니폼 무늬·양말은 골고루 뽑힌다(0번에 안 
   assert.ok(socks.size > 1, '30명이 전부 같은 양말 색을 받았다');
 });
 
+
+// ── 2026-09-23 꾸미기 고도화: 머리색·수염·액세서리·반바지·축구화 ──────────────
+import { readFileSync as readFs } from 'node:fs';
+import { avatarPixels } from '../../src/components/avatar.ts';
+
+test('앱과 서버의 아바타 코드 정규식이 같다 — 파일에서 직접 읽어 대조', () => {
+  // 복사본끼리 비교하면 한쪽만 고쳐도 안 걸린다. 두 파일의 실제 정규식을 꺼내 맞춘다.
+  const client = /const CODE_SHAPE = (\/.+\/);/.exec(readFs('src/lib/avatar.ts', 'utf8'))[1];
+  const server = /return (\/\^\(\[a-z\].+\/)\.test\(code\)/.exec(readFs('server/weeklyfc-apps-script.js', 'utf8'))[1];
+  assert.equal(server, client);
+  assert.equal(client, String(SERVER_CODE_RE));
+});
+
+test('새 부위를 안 쓰면 코드에 적히지 않는다 — 기존 코드·기본 아바타가 그대로', () => {
+  for (let n = 1; n <= 30; n++) {
+    const code = serializeAvatar(randomAvatar(n));
+    assert.doesNotMatch(code, /(^|:)[cbapz]\d/, `${n}번 기본 아바타 코드에 새 부위가 섞였다: ${code}`);
+  }
+  const old = 'f2:h1:s1:e3:j0:o2:g0:t0:k#7f8c8d';
+  assert.equal(serializeAvatar(parseAvatar(old)), old);
+});
+
+test('새 부위 왕복 — 적고 다시 읽으면 같고, 서버 규칙·길이를 통과한다', () => {
+  const spec = { ...parseAvatar('f4:h7:s5:e5:j3:o5:g3:t2:k#ecf0f1'), hairColor: 9, beard: 3, acc: 3, shorts: 4, boots: 4 };
+  const code = serializeAvatar(spec);
+  assert.match(code, /c9:b3:a3:p4:z4:k#/);
+  assert.match(code, SERVER_CODE_RE);
+  assert.ok(code.length <= 120, `코드가 서버 상한 120자를 넘는다: ${code.length}`);
+  const back = parseAvatar(code);
+  for (const k of ['hairColor', 'beard', 'acc', 'shorts', 'boots']) assert.equal(back[k], spec[k], k);
+});
+
+const px = (over) => avatarPixels({ ...parseAvatar('f0:h1:s0:e0:j0:o0:g0:t0:k#c0392b'), ...over });
+
+test('덥수룩한 수염은 얼굴형 다섯 모두에서 얼굴 밖으로 안 나가고 입을 남긴다', () => {
+  for (let face = 0; face < PARTS.face.length; face++) {
+    const bare = px({ face, beard: 0, hair: 0 }).map;
+    const full = px({ face, beard: 3, hair: 0 }).map;
+    let beardCells = 0;
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 24; x++) {
+      if (full[y][x] !== 'R') continue;
+      beardCells++;
+      assert.equal(bare[y][x], 'S', `얼굴형 ${face}: (${x},${y}) 수염이 피부 밖에 그려졌다`);
+    }
+    assert.ok(beardCells > 10, `얼굴형 ${face}: 수염이 거의 없다(${beardCells}칸)`);
+    assert.notEqual(full[9][11], 'R', `얼굴형 ${face}: 입이 수염에 덮였다`);
+    assert.notEqual(full[9][12], 'R');
+  }
+});
+
+test('콧수염·턱수염은 얼굴형 다섯 모두의 피부 위에만', () => {
+  for (let face = 0; face < PARTS.face.length; face++) {
+    const bare = px({ face, hair: 0 }).map;
+    for (const beard of [1, 2]) {
+      const m = px({ face, hair: 0, beard }).map;
+      for (let y = 0; y < 32; y++) for (let x = 0; x < 24; x++) if (m[y][x] === 'R') assert.equal(bare[y][x], 'S', `얼굴형 ${face} 수염 ${beard}: (${x},${y})`);
+    }
+  }
+});
+
+test('안경은 눈동자를 가리지 않는다 · 헤어밴드는 이마 · 완장은 긴팔 위에도', () => {
+  const g = px({ acc: 2 }).map;
+  for (const x of [10, 14]) assert.equal(g[7][x], 'E', `안경이 눈동자(${x},7)를 덮었다`);
+  assert.ok(g[6].includes('X') && g[7].includes('X'), '안경테가 없다');
+  assert.equal(px({ acc: 1 }).map[4].slice(7, 17), 'X'.repeat(10));
+  const arm = px({ acc: 3, jersey: 3 }).map;          // 긴팔(16~17행 소매) 위에 완장
+  assert.equal(arm[16].slice(17, 19), 'XX');
+});
+
+test('머리색이 머리와 수염을 같이 바꾸고, 반바지·축구화 색이 먹는다', () => {
+  const a = px({ hairColor: 9, beard: 1 });
+  assert.equal(a.palette.H, PARTS.hairColor[9].color);
+  assert.equal(a.palette.R, PARTS.hairColor[9].color);
+  assert.equal(px({ shorts: 1 }).palette.P, '#c0392b', '"유니폼과 같음"이면 반바지 = 유니폼 색');
+  assert.equal(px({ shorts: 2 }).palette.P, PARTS.shorts[2].color);
+  assert.equal(px({ boots: 3 }).palette.B, PARTS.boots[3].color);
+  assert.equal(px({}).palette.B, '#1a1a1a', '기본 축구화는 예전처럼 검정');
+});
+
+import { rollAvatar } from '../../src/lib/avatar.ts';
+test('rollAvatar: 모든 부위가 범위 안이고, 코드로 적으면 서버 규칙을 통과한다', () => {
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 300; i++) {
+    const s = rollAvatar(rnd);
+    for (const k of ['face', 'hair', 'skin', 'eyes', 'jersey', 'socks', 'gloves', 'tape', 'hairColor', 'beard', 'acc', 'shorts', 'boots']) {
+      assert.ok(s[k] >= 0 && s[k] < PARTS[k].length, `${k}=${s[k]}`);
+    }
+    assert.ok(PARTS.kit.includes(s.kit));
+    assert.match(serializeAvatar(s), SERVER_CODE_RE);
+  }
+});
+test('rollAvatar: 난수가 1 에 붙어도(0.9999…) 범위를 안 넘는다', () => {
+  const s = rollAvatar(() => 0.9999999999);
+  assert.equal(s.face, PARTS.face.length - 1);
+  assert.equal(s.beard, PARTS.beard.length - 1);
+});

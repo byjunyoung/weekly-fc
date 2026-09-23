@@ -199,12 +199,11 @@ function handleDeleteFine(f) {
 // ── 라인업 ───────────────────────────────────────
 function isValidAvatarCode(code) {
   if (typeof code !== 'string') return false;
-  if (code.length > 80) return false;
+  if (code.length > 120) return false;          // 2026-09-23: 부위 13개까지 들어가게 80 → 120
   if (code === '') return true;                       // 빈 값 = 기본 아바타로 되돌리기
   // f2:h5:s3:e1:k#1a1a1a  — 부품은 영문자+숫자, 색은 3/6자리 hex.
-  // 클라이언트는 2026-09-22 부터 최대 8세그먼트(f/h/s/e/j/o/g/t)까지 보낼 수 있다 —
-  // 정규식은 이미 그 상한을 허용하므로 이 파일은 그대로 둔다.
-  return /^([a-z]\d{1,2}:){1,8}k#[0-9a-fA-F]{3,6}$/.test(code);
+  // 세그먼트 상한 16 — 클라이언트(src/lib/avatar.ts CODE_SHAPE)와 반드시 같은 값(2026-09-23 에 8 → 16).
+  return /^([a-z]\d{1,2}:){1,16}k#[0-9a-fA-F]{3,6}$/.test(code);
 }
 
 function handleWriteAvatar(p) {

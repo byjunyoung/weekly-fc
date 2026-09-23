@@ -1,6 +1,8 @@
 // src/lib/avatar.ts — 아바타 코드의 형식·부품표·시드 기반 기본값.
-// 코드 형식: f{face}:h{hair}:s{skin}:e{eyes}:j{jersey}:o{socks}:g{gloves}:t{tape}:k#{hex}
-// — 얼굴형:헤어:피부:눈:유니폼무늬:양말색:장갑:손목테이프:유니폼색.
+// 코드 형식: f{face}:h{hair}:s{skin}:e{eyes}:j{jersey}:o{socks}:g{gloves}:t{tape}[:c:b:a:p:z]:k#{hex}
+// — 얼굴형:헤어:피부:눈:유니폼무늬:양말색:장갑:손목테이프[:머리색:수염:액세서리:반바지:축구화]:유니폼색.
+// 대괄호 다섯(2026-09-23 추가)은 0 이 아닐 때만 적는다 — 새 부위를 안 쓴 사람의 코드는
+// 예전과 글자 하나 다르지 않다.
 // (스펙 4절 · docs/superpowers/specs/2026-09-11-game-ui-redesign.md,
 //  축구 테마 확장은 2026-09-22 · docs/superpowers/specs/2026-09-21-pixel-refresh-design.md §13)
 //
@@ -8,9 +10,9 @@
 // 반드시 같은 모양이어야 한다 — 클라이언트가 만드는 코드가 서버에서 거부되면
 // 안 되기 때문이다. tests/unit/avatar.test.mjs 에도 이 정규식을 그대로 복사해
 // serializeAvatar 출력이 실제로 통과하는지 검증한다(그게 계약이다).
-// 세그먼트는 최대 8개까지 — f/h/s/e/j/o/g/t 로 정확히 상한이다. 여기서 하나라도
-// 더 늘리려면 서버 정규식도 같이 넓혀야 한다.
-const CODE_SHAPE = /^([a-z]\d{1,2}:){1,8}k#[0-9a-fA-F]{3,6}$/;
+// 세그먼트는 최대 16개까지 — 지금 쓰는 건 f/h/s/e/j/o/g/t/c/b/a/p/z 13개다. 2026-09-23 에
+// 8 → 16 으로 넓혔다(8개가 꽉 차 새 부위를 못 넣었다). 서버 정규식도 같은 값이다.
+const CODE_SHAPE = /^([a-z]\d{1,2}:){1,16}k#[0-9a-fA-F]{3,6}$/;
 
 // jersey·socks·gloves·tape 는 2026-09-22 에 늘린 필드라 optional 이다 — 이 넷이 없는
 // 옛 스펙 리터럴(테스트·PLACEHOLDER_SPEC 등)도 그대로 타입이 맞고, 소비하는 쪽(아래
@@ -18,6 +20,8 @@ const CODE_SHAPE = /^([a-z]\d{1,2}:){1,8}k#[0-9a-fA-F]{3,6}$/;
 export type AvatarSpec = {
   face: number; hair: number; skin: number; eyes: number; kit: string;
   jersey?: number; socks?: number; gloves?: number; tape?: number;
+  // 2026-09-23 — 머리색·수염·액세서리·반바지·축구화. 0 = 예전 그림 그대로("기본"/"없음").
+  hairColor?: number; beard?: number; acc?: number; shorts?: number; boots?: number;
 };
 
 // face(등 인덱스)가 음수면 "미설정" 상태 — 코드가 비어 있거나 파싱에 실패했을 때만 나온다.
@@ -97,6 +101,50 @@ export const PARTS = {
     { id: 't1', label: '화이트 테이프', color: '#ecf0f1' },
     { id: 't2', label: '블랙 테이프', color: '#1a1a1a' },
   ] as Colored[],
+  // ── 2026-09-23 추가 ──
+  // 머리색 — 예전엔 헤어 모양마다 색이 박혀 있었다(가르마는 늘 금발). color:'' = 그 모양의 원래 색.
+  hairColor: [
+    { id: 'c0', label: '모양 기본', color: '' },
+    { id: 'c1', label: '검정', color: '#171717' },
+    { id: 'c2', label: '흑갈색', color: '#2a1c14' },
+    { id: 'c3', label: '갈색', color: '#6b3f22' },
+    { id: 'c4', label: '밝은 갈색', color: '#9a6a3a' },
+    { id: 'c5', label: '금발', color: '#d8b25a' },
+    { id: 'c6', label: '빨강', color: '#a33b20' },
+    { id: 'c7', label: '회색', color: '#8a8a8a' },
+    { id: 'c8', label: '흰색', color: '#e8e8e8' },
+    { id: 'c9', label: '파랑', color: '#2f5fb0' },
+  ] as Colored[],
+  // 수염 — 색은 머리색을 따른다(민머리면 흑갈색).
+  beard: [
+    { id: 'b0', label: '없음', shape: 'none' },
+    { id: 'b1', label: '콧수염', shape: 'mustache' },
+    { id: 'b2', label: '턱수염', shape: 'goatee' },
+    { id: 'b3', label: '덥수룩', shape: 'full' },
+  ] as Shaped<'none' | 'mustache' | 'goatee' | 'full'>[],
+  // 액세서리 — 하나만 고른다(사용자 결정 2026-09-23: 헤어밴드·안경·주장 완장 중 하나).
+  acc: [
+    { id: 'a0', label: '없음', color: '', shape: 'none' },
+    { id: 'a1', label: '헤어밴드', color: '#ecf0f1', shape: 'headband' },
+    { id: 'a2', label: '안경', color: '#1a1a1a', shape: 'glasses' },
+    { id: 'a3', label: '주장 완장', color: '#f1c40f', shape: 'armband' },
+  ] as ShapedColored<'none' | 'headband' | 'glasses' | 'armband'>[],
+  // 반바지 — color:'' = 예전 규칙(흰색, 유니폼이 거의 흰색이면 회색). 'kit' = 유니폼과 같은 색.
+  shorts: [
+    { id: 'p0', label: '기본(흰색)', color: '' },
+    { id: 'p1', label: '유니폼과 같음', color: 'kit' },
+    { id: 'p2', label: '블랙', color: '#1a1a1a' },
+    { id: 'p3', label: '네이비', color: '#1f2d4a' },
+    { id: 'p4', label: '레드', color: '#c0392b' },
+  ] as Colored[],
+  // 축구화 — color:'' = 예전 그대로 검정.
+  boots: [
+    { id: 'z0', label: '기본(검정)', color: '' },
+    { id: 'z1', label: '화이트', color: '#ecf0f1' },
+    { id: 'z2', label: '레드', color: '#c0392b' },
+    { id: 'z3', label: '형광', color: '#c8ff3d' },
+    { id: 'z4', label: '골드', color: '#d4af37' },
+  ] as Colored[],
 };
 
 const clampIdx = (i: number, len: number): number => ((Math.trunc(i) % len) + len) % len;
@@ -115,7 +163,12 @@ function normalizeHex(digits: string): string {
 
 const FIELD_BY_LETTER: Record<string, keyof Omit<AvatarSpec, 'kit'>> = {
   f: 'face', h: 'hair', s: 'skin', e: 'eyes', j: 'jersey', o: 'socks', g: 'gloves', t: 'tape',
+  c: 'hairColor', b: 'beard', a: 'acc', p: 'shorts', z: 'boots',
 };
+/** 0 이 아닐 때만 코드에 적는 새 부위(2026-09-23) — 글자 순서가 곧 직렬화 순서다. */
+const OPTIONAL_FIELDS: Array<[string, 'hairColor' | 'beard' | 'acc' | 'shorts' | 'boots']> = [
+  ['c', 'hairColor'], ['b', 'beard'], ['a', 'acc'], ['p', 'shorts'], ['z', 'boots'],
+];
 
 /** 코드 문자열 → AvatarSpec. 관용적으로 파싱한다: 형식이 아예 안 맞거나 빈 값이면
  * UNSET_AVATAR. 형식은 맞지만 범위를 벗어난 인덱스·미지의 글자는 조용히 보정한다
@@ -128,12 +181,13 @@ export function parseAvatar(code: string): AvatarSpec {
   const spec: AvatarSpec = {
     face: 0, hair: 0, skin: 0, eyes: 0, kit: normalizeHex(kitToken.slice(2)),
     jersey: 0, socks: 0, gloves: 0, tape: 0,
+    hairColor: 0, beard: 0, acc: 0, shorts: 0, boots: 0,
   };
   for (let i = 0; i < tokens.length - 1; i++) {
     const m = /^([a-z])(\d{1,2})$/.exec(tokens[i]);
     if (!m) continue;
     const field = FIELD_BY_LETTER[m[1]];
-    if (!field) continue; // f/h/s/e/j/o/g/t 밖의 글자는 우리 어휘에 없는 부품 — 무시
+    if (!field) continue; // 어휘에 없는 글자는 무시 — 미래 부품이 와도 죽지 않는다
     spec[field] = clampIdx(Number(m[2]), PARTS[field].length);
   }
   return spec;
@@ -154,7 +208,12 @@ export function serializeAvatar(spec: AvatarSpec): string {
   const g = clampIdx(spec.gloves ?? 0, PARTS.gloves.length);
   const t = clampIdx(spec.tape ?? 0, PARTS.tape.length);
   const kit = /^#[0-9a-fA-F]{6}$/.test(spec.kit) ? spec.kit.toLowerCase() : '#333a45';
-  return `f${f}:h${h}:s${s}:e${e}:j${j}:o${o}:g${g}:t${t}:k${kit}`;
+  // 새 부위는 0 이 아닐 때만 — 안 쓴 사람의 코드가 예전과 똑같이 남는다.
+  const extra = OPTIONAL_FIELDS
+    .map(([letter, field]) => [letter, clampIdx(spec[field] ?? 0, PARTS[field].length)] as const)
+    .filter(([, v]) => v !== 0)
+    .map(([letter, v]) => `${letter}${v}:`).join('');
+  return `f${f}:h${h}:s${s}:e${e}:j${j}:o${o}:g${g}:t${t}:${extra}k${kit}`;
 }
 
 // mulberry32 — 시드 하나로 재현 가능한 의사난수. 암호화 용도가 아니라 "같은 시드는
@@ -201,7 +260,25 @@ export function randomAvatar(seed: number): AvatarSpec {
   const socks = pick(PARTS.socks.length);
   const gloves = pickMostlyNone(PARTS.gloves.length);
   const tape = pickMostlyNone(PARTS.tape.length);
-  return { face, hair, skin, eyes, jersey, socks, gloves, tape, kit };
+  // 새 부위(2026-09-23)는 뽑지 않고 0 으로 둔다 — 뽑으면 아직 안 꾸민 선수들의 얼굴이
+  // 하루아침에 바뀐다(수염·안경이 갑자기 생긴다). 난수도 더 안 쓰므로 위 결과도 그대로다.
+  return { face, hair, skin, eyes, jersey, socks, gloves, tape, kit, hairColor: 0, beard: 0, acc: 0, shorts: 0, boots: 0 };
+}
+
+/** 꾸미기 화면의 "랜덤" — 모든 부위를 새로 뽑는다. 등번호 시드로 뽑는 randomAvatar 와 달리
+ *  매번 다르다(난수를 받아 테스트에선 고정할 수 있다). 수염·액세서리·장갑·테이프는 대부분이
+ *  안 쓰는 부위라 "없음"에 치우쳐 뽑는다 — 균등하면 누르는 족족 안경에 완장까지 달린다. */
+export function rollAvatar(rnd: () => number = Math.random): AvatarSpec {
+  const pick = (len: number) => Math.min(len - 1, Math.floor(rnd() * len));
+  const mostlyNone = (len: number) => (rnd() < 0.7 ? 0 : 1 + pick(len - 1));
+  return {
+    face: pick(PARTS.face.length), hair: pick(PARTS.hair.length), skin: pick(PARTS.skin.length), eyes: pick(PARTS.eyes.length),
+    kit: PARTS.kit[pick(PARTS.kit.length)],
+    jersey: pick(PARTS.jersey.length), socks: pick(PARTS.socks.length),
+    gloves: mostlyNone(PARTS.gloves.length), tape: mostlyNone(PARTS.tape.length),
+    hairColor: pick(PARTS.hairColor.length), beard: mostlyNone(PARTS.beard.length), acc: mostlyNone(PARTS.acc.length),
+    shorts: pick(PARTS.shorts.length), boots: pick(PARTS.boots.length),
+  };
 }
 
 /** 화면에 실제로 쓸 스펙을 고르는 규칙 한 곳: 저장된 코드가 있으면 그걸 파싱하고

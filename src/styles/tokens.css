@@ -401,6 +401,24 @@ a.card:hover { background: var(--charcoal); }
 .statlog li b { font-weight: var(--fw-body); }
 .statlog-move { margin-left: auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--muted); }
 
+/* ── 꾸미기 패널 (2026-09-23 고도화) ─────────────────────────
+   모양 부위는 옵션을 입힌 작은 그림, 색 부위는 색 칸. 고른 칸은 안쪽 링 — 바깥 링은
+   줄바꿈된 격자에서 옆 칸과 겹친다. */
+.av-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-xs); margin-bottom: var(--s-md); }
+.av-tools { display: flex; gap: var(--s-xs); }
+.av-group > .label { margin-bottom: var(--s-xs); }
+.av-grid { display: flex; flex-wrap: wrap; gap: var(--s-xs); }
+.av-opt { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: var(--s-xxs);
+  min-width: 64px; min-height: 0; padding: var(--s-xxs) var(--s-xxs) 2px; border: 2px solid var(--line); border-radius: 0; background: var(--canvas); color: var(--muted); }
+.av-opt:hover { border-color: var(--fg); background: var(--canvas); }
+.av-opt.is-on { border-color: var(--link); box-shadow: inset 0 0 0 2px var(--link); color: var(--fg); }
+.av-pic { display: flex; }
+/* 이름은 본문 글꼴(갈무리14)로 — 버튼이라 전역 규칙의 갈무리9 를 물려받는데, 그 글꼴을 14px 로 찍으면 10px 격자가 깨져 흐려진다. */
+.av-name { font-family: var(--font); font-size: var(--fs-xs); line-height: 1.2; white-space: nowrap; }
+.av-swatch { display: block; width: 32px; height: 32px; border: 1px solid var(--hairline-strong); }
+.av-swatch.is-none { background: repeating-linear-gradient(135deg, transparent 0 5px, var(--hairline-strong) 5px 6px); }
+.av-opt-bare { min-width: 0; padding: var(--s-xxs); }
+
 /* ══ 운영 규칙 ══════════════════════════════════════════════ */
 .rules-live { display: flex; flex-direction: column; gap: var(--s-sm); margin-top: var(--s-lg); }
 .rules-live-head { justify-content: space-between; }
