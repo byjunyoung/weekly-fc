@@ -86,7 +86,7 @@ function App() {
 
   return (
     <>
-      <div className="page-head"><h1>홈</h1><div className="actions"><span className="muted" id="stamp">{s.stamp}</span></div></div>
+      <div className="page-head"><h1>홈 <span className="muted" id="stamp">{s.stamp}</span></h1><div className="actions" /></div>
       <div className="rail">
         {s.meTile.kind === 'picked'
           ? (
