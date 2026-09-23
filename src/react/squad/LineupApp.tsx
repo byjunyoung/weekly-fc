@@ -67,7 +67,7 @@ function Lineup() {
   function onSwap(a: number, b: number): void { setSelected(null); commit(L.swap(st, a, b)); }
 
   const hint = selected !== null ? `${L.slotsOf(st)[selected].label} 자리 — 명단에서 선수를 누르거나, 다른 자리를 누르면 맞바꿉니다`
-    : '자리를 누르고 선수를 고르세요 · 카드를 끌면 옮기거나 맞바꿉니다';
+    : '자리를 누르고 선수를 고르세요 · 선수를 끌면 옮기거나 맞바꿉니다';
 
   return (
     <>

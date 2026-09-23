@@ -210,7 +210,9 @@ body.wide .main { max-width: none; padding: var(--s-md); }
   gap: var(--s-md); margin-bottom: var(--s-xl); }
 .page-head .actions > .muted { font-size: var(--fs-sm); }
 .page-head h1 { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-display); font-synthesis: none; line-height: 1.2; letter-spacing: 0; }
-.page-head h1 .muted { font-family: var(--font); font-size: var(--fs-h-md); font-weight: var(--fw-body); }
+/* 제목 옆 숫자("30명")도 제목과 같은 갈무리9 로 — 갈무리14 28px 가 갈무리9 40px 옆에 붙어
+   한 줄에 도트 굵기가 두 벌(2px·4px)이었다. */
+.page-head h1 .muted { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .page-head .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
 body.wide .page-head { margin-bottom: var(--s-md); }
 body.wide .page-head h1 { font-size: var(--fs-h-lg); }
@@ -272,7 +274,10 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
 /* 정본 product-card-dark: 면 #181818, 반경 8, padding 24. 그라디언트·그림자 없음. */
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s-md); }
 .card { padding: var(--s-lg); background: var(--card); border-radius: var(--r-md); }
-.card h2 { margin-bottom: var(--s-sm); font-size: var(--fs-xs); font-weight: var(--fw-strong); color: var(--muted); }
+/* 카드 제목은 홈 타일 라벨·운영 규칙 섹션 제목과 같은 역할이라 같은 모양(갈무리9 20px, 밝은 글씨)으로
+   맞춘다 — 혼자 14px 흐린 글씨라 "능력치"·"온 사람 고르기"가 제목이 아니라 주석처럼 보였다(2026-09-23 검수). */
+.card h2 { margin-bottom: var(--s-sm); font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body);
+  font-synthesis: none; letter-spacing: 0; line-height: 1.2; color: var(--fg); }
 a.card { transition: background var(--dur-micro) var(--ease-std); }
 a.card:hover { background: var(--charcoal); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--s-xs); }
@@ -416,7 +421,7 @@ a.card:hover { background: var(--charcoal); }
   .player-hero.is-dressing .phero-sub { display: none; }
 }
 .player-side { display: flex; flex-direction: column; gap: var(--s-md); min-width: 0; }
-@media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } .player-hero .phero { max-width: var(--pcard-w); margin: 0 auto; } }
+@media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } }
 .attr-list { display: flex; flex-direction: column; }
 /* 라벨 · − · 값 · ＋ · 막대. 스텝퍼는 누구나 눌러 고칠 수 있다(2026-09-22) — 버튼을 따로
    숨겨 두지 않고 값 옆에 바로 둔다. */
@@ -636,7 +641,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .tm-chips { display: flex; flex-wrap: wrap; gap: var(--s-xxs); min-height: 52px; padding: var(--s-xs); }
 .tm-chip { display: inline-flex; align-items: center; gap: var(--s-xxs); min-height: 34px; padding: 2px var(--s-xs);
   border: 2px solid var(--line); border-radius: 0; background: var(--card); color: var(--fg);
-  font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .tm-chip b { font-weight: var(--fw-body); }
 .tm-chip:hover { border-color: var(--fg); }
 .tm-chip.is-picked { background: var(--link); color: var(--canvas); border-color: var(--link); }
