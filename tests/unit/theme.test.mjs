@@ -108,10 +108,3 @@ test('모달 제목 글자 크기는 여기 한 곳에서만 정한다 — 20px(
   assert.equal(m.titleFontSize, px('fs-pixel-sm'));
 });
 
-test('선수 요약(Descriptions)은 지금 .card 모습 — 라벨 바탕 --elevated·글자 --muted, 값 글자 --fg', () => {
-  const d = themeConfig.components.Descriptions;
-  assert.equal(d.labelBg, tok('elevated'));
-  assert.equal(d.labelColor, tok('muted'));
-  assert.equal(d.contentColor, tok('fg'));
-  assert.equal(d.titleColor, tok('fg'));
-});

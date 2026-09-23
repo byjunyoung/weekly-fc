@@ -1,10 +1,10 @@
 // src/lib/api.ts — Apps Script 호출은 여기 한 곳
-import { STAT_KEYS, type Data, type Fine, type Lineup, type Match, type Player, type RotationRow, type StatKey, type StatLogRow, type Team } from './types.ts';
+import { STAT_KEYS, type Data, type Fine, type Player, type RotationRow, type StatKey, type StatLogRow } from './types.ts';
 
 export const API_URL = 'https://script.google.com/macros/s/AKfycbyUDTkTHsKszkiOeJKmNDHDkVJobrVUjbRqufU251PNKmlyrvC0BZ3ir9x0vM_lCJkkmg/exec';
 const CACHE_KEY = 'wfc_cache_v2';
 const PIN_KEY = 'wfc_pin';
-export const EMPTY: Data = { players: [], matches: [], rotation: [], fines: [], lineups: [], statLog: [] };
+export const EMPTY: Data = { players: [], rotation: [], fines: [], statLog: [] };
 
 type Raw = Record<string, unknown>;
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -25,18 +25,6 @@ export function normalizePlayer(r: Raw): Player {
   if (r.phone !== undefined) p.phone = String(r.phone);
   return p;
 }
-export function normalizeMatch(r: Raw): Match {
-  let teams: Team[] = [];
-  if (r.teams) {
-    try {
-      const t = typeof r.teams === 'string' ? JSON.parse(r.teams) : r.teams;
-      if (Array.isArray(t)) teams = t.map((x: Raw) => ({ name: String(x.name ?? ''), players: Array.isArray(x.players) ? x.players.map(String) : [], points: numOrNull(x.points) }));
-    } catch { teams = []; }
-  }
-  const type = String(r.type ?? '');
-  return { id: String(r.id ?? ''), date: day(r.date), location: String(r.location ?? ''), youtube: String(r.youtube ?? ''),
-    type: type === '2파전' || type === '3파전' ? type : '', attendees: list(r.attendees), teams, winner: String(r.winner ?? '') };
-}
 export function normalizeFine(r: Raw): Fine {
   const type = String(r.type ?? '');
   return { id: String(r.id ?? ''), date: day(r.date), match_id: String(r.match_id ?? ''), player: String(r.player ?? ''),
@@ -44,9 +32,6 @@ export function normalizeFine(r: Raw): Fine {
 }
 export function normalizeRotation(r: Raw): RotationRow {
   return { year: num(r.year), month: num(r.month), p1: String(r.p1 ?? ''), p2: String(r.p2 ?? ''), done: bool(r.done) };
-}
-export function normalizeLineup(r: Raw): Lineup {
-  return { id: String(r.id ?? ''), match_id: String(r.match_id ?? ''), name: String(r.name ?? ''), formation: String(r.formation ?? ''), assignments: typeof r.assignments === 'string' ? r.assignments : JSON.stringify(r.assignments ?? '') };
 }
 export function normalizeStatLog(r: Raw): StatLogRow | null {
   const field = String(r.field ?? '') as StatKey;
@@ -60,18 +45,14 @@ export function normalizeStatLog(r: Raw): StatLogRow | null {
 export function normalizeData(d: Raw): Data {
   const arr = (v: unknown): Raw[] => (Array.isArray(v) ? (v as Raw[]) : []);
   return { players: arr(d.players).map(normalizePlayer).filter((p) => p.num > 0),
-    matches: arr(d.matches).map(normalizeMatch).filter((m) => m.id).sort((a, b) => b.date.localeCompare(a.date)),
-    rotation: arr(d.rotation).map(normalizeRotation), fines: arr(d.fines).map(normalizeFine).filter((f) => f.id), lineups: arr(d.lineups).map(normalizeLineup),
+    rotation: arr(d.rotation).map(normalizeRotation), fines: arr(d.fines).map(normalizeFine).filter((f) => f.id),
     // 최신이 위로 — 시트는 덧붙인 순서(오래된 것부터)라 뒤집는다.
     statLog: arr(d.statLog).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null).reverse() };
 }
 
 export const serializePlayer = (p: Player): Raw => ({ ...p, vest: p.vest ?? '', rot: p.rot ?? '', avatar: p.avatar ?? '' });
-export const serializeMatch = (m: Match): Record<string, string> => ({ id: m.id, date: m.date, location: m.location, youtube: m.youtube, type: m.type,
-  attendees: m.attendees.join(', '), teams: m.teams.length ? JSON.stringify(m.teams) : '', winner: m.winner });
 export const serializeFine = (f: Fine): Record<string, string | number> => ({ id: f.id, date: f.date, match_id: f.match_id, player: f.player, type: f.type, amount: f.amount, paid: f.paid ? 'TRUE' : 'FALSE' });
 export const serializeRotation = (r: RotationRow): Record<string, string | number> => ({ year: r.year, month: r.month, p1: r.p1, p2: r.p2, done: r.done ? 'TRUE' : 'FALSE' });
-export const serializeLineup = (l: Lineup): Record<string, string> => ({ id: l.id, match_id: l.match_id, name: l.name, formation: l.formation, assignments: l.assignments });
 
 export function buildUrl(action: string, params: Record<string, unknown> = {}, base: string = API_URL): string {
   const u = new URL(base);

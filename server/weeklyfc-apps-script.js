@@ -3,17 +3,13 @@
 // =====================================================
 
 const SHEET_PLAYERS  = '선수명단';
-const SHEET_MATCHES  = '매치기록';
 const SHEET_ROTATION = '봉사로테이션';
 const SHEET_FINES    = '벌금';
-const SHEET_LINEUPS  = '라인업';
 const SHEET_STATLOG  = '능력치기록';
 
 const PLAYER_COLS  = ['num','pos','detail','foot','name','phone','vest','note','pace','dribble','pass','shoot','defend','stamina','rot','avatar'];
-const MATCH_COLS   = ['id','date','location','youtube','type','attendees','teams','winner'];
 const ROT_COLS     = ['year','month','p1','p2','done'];
 const FINE_COLS    = ['id','date','match_id','player','type','amount','paid'];
-const LINEUP_COLS  = ['id','match_id','name','formation','assignments'];
 const STATLOG_COLS = ['ts','by','by_name','num','field','before','after'];
 const STAT_FIELDS  = ['pace','dribble','pass','shoot','defend','stamina'];
 /** 화면에 돌려주는 기록 수. 전부 보내면 시즌이 갈수록 응답이 무거워진다 —
@@ -31,8 +27,6 @@ function doGet(e) {
     // 읽기 액션 (PIN 불필요)
     if (action === 'getAll') {
       result = handleGetAll(false);
-    } else if (action === 'getChannelVideos') {
-      result = handleGetChannelVideos(e.parameter.nocache === '1');
     } else if (action === 'writeAvatar') {
       // PIN 없이 동작하는 쓰기 그 하나. 아바타 칸 하나만 건드린다 — 아래 핸들러 주석 참고.
       result = handleWriteAvatar(payload);
@@ -50,12 +44,9 @@ function doGet(e) {
         case 'getAllFull':      result = handleGetAll(true);            break;
         case 'writePlayer':    result = handleWritePlayer(payload);    break;
         case 'deletePlayer':   result = handleDeletePlayer(payload);   break;
-        case 'writeMatch':     result = handleWriteMatch(payload);     break;
-        case 'deleteMatch':    result = handleDeleteMatch(payload);    break;
         case 'writeRotation':  result = handleWriteRotation(payload);  break;
         case 'writeFine':      result = handleWriteFine(payload);      break;
         case 'deleteFine':     result = handleDeleteFine(payload);     break;
-        case 'writeLineup':    result = handleWriteLineup(payload);    break;
         default: result = { error: '알 수 없는 액션: ' + action };
       }
     }
@@ -83,29 +74,15 @@ function verifyPin(pin) {
 // ── 전체 데이터 ──────────────────────────────────
 // 옛 4열 형식(id,name,formation,assignments)으로 남아 있던 'default' 행을 지운다.
 // 새 5열 형식에서는 열이 한 칸씩 밀려 읽혀 쓰레기 행이 되므로 제거. 멱등 — 없으면 아무 일도 안 한다.
-function dropLegacyLineupRow(ss) {
-  const sheet = ss.getSheetByName(SHEET_LINEUPS);
-  if (!sheet || sheet.getLastRow() < 2) return;
-  const data = sheet.getDataRange().getValues();
-  for (let i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][0]) === 'default' && String(data[i][4] || '') === '') { sheet.deleteRow(i + 1); }
-  }
-}
-
 function handleGetAll(includePhone) {
   const ss = getSpreadsheet();
   getOrCreateSheet(ss, SHEET_PLAYERS, PLAYER_COLS);
-  getOrCreateSheet(ss, SHEET_MATCHES, MATCH_COLS);
-  dropLegacyLineupRow(ss);
-  getOrCreateSheet(ss, SHEET_LINEUPS, LINEUP_COLS);
   let players = sheetToObjects(ss, SHEET_PLAYERS, PLAYER_COLS);
   if (!includePhone) players = players.map(function(p) { var q = Object.assign({}, p); delete q.phone; return q; });
   return {
     players:  players,
-    matches:  sheetToObjects(ss, SHEET_MATCHES,  MATCH_COLS),
     rotation: sheetToObjects(ss, SHEET_ROTATION, ROT_COLS),
     fines:    sheetToObjects(ss, SHEET_FINES,    FINE_COLS),
-    lineups:  sheetToObjects(ss, SHEET_LINEUPS,  LINEUP_COLS),
     statLog:  recentStatLog(ss),
   };
 }
@@ -187,29 +164,6 @@ function handleDeletePlayer(p) {
   return { ok: true };
 }
 
-// ── 매치 ─────────────────────────────────────────
-function handleWriteMatch(m) {
-  const ss    = getSpreadsheet();
-  const sheet = getOrCreateSheet(ss, SHEET_MATCHES, MATCH_COLS);
-  const data  = sheet.getDataRange().getValues();
-  if (!m.id) m.id = String(Date.now());
-  const rowIdx = findRowByField(data, 0, String(m.id));
-  const row = MATCH_COLS.map(k => m[k] !== undefined ? m[k] : '');
-  if (rowIdx > 0) sheet.getRange(rowIdx+1, 1, 1, row.length).setValues([row]);
-  else sheet.appendRow(row);
-  return { ok: true, id: m.id };
-}
-
-function handleDeleteMatch(m) {
-  const ss    = getSpreadsheet();
-  const sheet = getOrCreateSheet(ss, SHEET_MATCHES, MATCH_COLS);
-  const data  = sheet.getDataRange().getValues();
-  const rowIdx = findRowByField(data, 0, String(m.id));
-  if (rowIdx > 0) sheet.deleteRow(rowIdx+1);
-  return { ok: true };
-}
-
-// ── 봉사 ─────────────────────────────────────────
 function handleWriteRotation(r) {
   const ss = getSpreadsheet(); const sheet = getOrCreateSheet(ss, SHEET_ROTATION, ROT_COLS);
   const data = sheet.getDataRange().getValues();
@@ -243,23 +197,6 @@ function handleDeleteFine(f) {
 }
 
 // ── 라인업 ───────────────────────────────────────
-function handleWriteLineup(l) {
-  const ss    = getSpreadsheet();
-  const sheet = getOrCreateSheet(ss, SHEET_LINEUPS, LINEUP_COLS);
-  const data  = sheet.getDataRange().getValues();
-  if (!l.id) l.id = 'default';
-  const rowIdx = findRowByField(data, 0, String(l.id));
-  if (typeof l.assignments === 'object') l.assignments = JSON.stringify(l.assignments);
-  const row = LINEUP_COLS.map(k => l[k] !== undefined ? l[k] : '');
-  if (rowIdx > 0) sheet.getRange(rowIdx+1, 1, 1, row.length).setValues([row]);
-  else sheet.appendRow(row);
-  return { ok: true };
-}
-
-// ── 아바타 ───────────────────────────────────────
-// 팀원 누구나 잠금 없이 쓸 수 있는 유일한 액션(사용자 결정 2026-09-11).
-// 그래서 writePlayer 를 재사용하지 않는다 — 잠금 없는 경로가 능력치·이름·전화를
-// 건드릴 수 있으면 안 되므로, 이 함수는 avatar 열 한 칸만 setValue 한다.
 function isValidAvatarCode(code) {
   if (typeof code !== 'string') return false;
   if (code.length > 80) return false;
@@ -285,80 +222,6 @@ function handleWriteAvatar(p) {
   const col = PLAYER_COLS.indexOf('avatar') + 1;
   sheet.getRange(rowIdx + 1, col).setValue(code);     // 이 한 칸만
   return { ok: true };
-}
-
-// ── 유튜브 채널 영상 ──────────────────────────────
-function handleGetChannelVideos(nocache) {
-  var cache = CacheService.getScriptCache();
-  if (!nocache) { var cached = cache.get('YT_VIDEOS'); if (cached) return { videos: JSON.parse(cached) }; }
-
-  // 1순위: YouTube Data API 의 업로드 재생목록.
-  // RSS(아래 폴백)는 구글 서버 egress 에 404/500 을 일관되게 돌려주기 시작했다 —
-  // 내 맥에서는 200 이 오므로 유튜브가 데이터센터 IP 를 막는 것으로 보인다.
-  // 업로드 재생목록은 채널 id 의 UC → UU 로 바꾼 것이고, 호출당 1 unit 이라 search(100) 보다 싸다.
-  try {
-    var res = YouTube.PlaylistItems.list('snippet', { playlistId: 'UUfL5rqpEVpMPe-FNG2UvobA', maxResults: 50 });
-    var videos = (res.items || []).map(function(it) {
-      var sn = it.snippet || {};
-      return { id: (sn.resourceId || {}).videoId, title: sn.title || '', published: (sn.publishedAt || '').slice(0, 10) };
-    }).filter(function(v) { return v.id && v.title; });
-    videos.sort(function(a, b) { return b.published < a.published ? -1 : 1; });
-    if (videos.length) { cache.put('YT_VIDEOS', JSON.stringify(videos), 21600); return { videos: videos }; }
-  } catch (e) {
-    // 고급 서비스가 아직 안 켜졌거나 할당량 초과 — 폴백으로 내려간다
-  }
-
-  // 2순위: RSS. 될 때도 있으므로 남겨둔다.
-  var lastCode = 0;
-  for (var attempt = 0; attempt < 2; attempt++) {
-    try {
-      var r = UrlFetchApp.fetch('https://www.youtube.com/feeds/videos.xml?channel_id=UCfL5rqpEVpMPe-FNG2UvobA',
-        { muteHttpExceptions: true, followRedirects: true, headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/atom+xml,application/xml' } });
-      lastCode = r.getResponseCode();
-      if (lastCode === 200) {
-        var entries = r.getContentText().match(/<entry>([\s\S]*?)<\/entry>/g) || [];
-        var vs = entries.map(function(e) {
-          var id = (e.match(/<yt:videoId>([^<]+)/) || [])[1];
-          var t = (e.match(/<title>([^<]+)/) || [])[1];
-          var pub = (e.match(/<published>([^<]+)/) || [])[1];
-          return id && t ? { id: id, title: t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'").replace(/&quot;/g,'"'), published: pub ? pub.slice(0,10) : '' } : null;
-        }).filter(Boolean);
-        if (vs.length) { cache.put('YT_VIDEOS', JSON.stringify(vs), 21600); return { videos: vs }; }
-      }
-    } catch (e2) { lastCode = 'fetch failed: ' + e2.message; }
-    if (attempt === 0) Utilities.sleep(800);
-  }
-  var stale = cache.get('YT_VIDEOS');
-  if (stale) return { videos: JSON.parse(stale), error_detail: 'youtube ' + lastCode + ' (캐시 사용)' };
-  return { videos: [], error_detail: 'youtube ' + lastCode };
-}
-
-// ── 능력치 1-5 → 1-99 스케일 일괄 마이그레이션 ──────────
-function migrateStats() {
-  const SCALE = {1:40, 2:55, 3:70, 4:84, 5:99};
-  const STAT_KEYS = ['pace','dribble','pass','shoot','defend','stamina'];
-  const ss = getSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_PLAYERS);
-  if (!sheet) { Logger.log('선수명단 시트 없음'); return; }
-  const data = sheet.getDataRange().getValues();
-  let count = 0;
-  for (let i = 1; i < data.length; i++) {
-    let changed = false;
-    STAT_KEYS.forEach(function(key) {
-      const colIdx = PLAYER_COLS.indexOf(key);
-      if (colIdx < 0) return;
-      const val = Number(data[i][colIdx]);
-      if (val >= 1 && val <= 5) {
-        data[i][colIdx] = SCALE[val] || 70;
-        changed = true;
-      }
-    });
-    if (changed) {
-      sheet.getRange(i + 1, 1, 1, data[i].length).setValues([data[i]]);
-      count++;
-    }
-  }
-  Logger.log('마이그레이션 완료: ' + count + '명 업데이트');
 }
 
 // ── 유틸 ─────────────────────────────────────────

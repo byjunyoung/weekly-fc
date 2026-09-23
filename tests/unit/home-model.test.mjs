@@ -9,7 +9,7 @@ const fines = [
   { id: 'f2', date: '2026-09-05', match_id: '', player: '김민수', type: '노쇼', amount: 50000, paid: true },
 ];
 const rotation = [{ year: 2026, month: 9, p1: '김민수', p2: '이서준', done: false }];
-const data = { players, matches: [], rotation, fines, lineups: [] };
+const data = { players, rotation, fines, statLog: [] };
 const now = new Date(2026, 8, 15); // 2026-09-15, rotation 시트와 같은 달
 
 test('nextMonthOf: 12월 다음은 다음 해 1월', () => {
