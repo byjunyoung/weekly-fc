@@ -304,6 +304,8 @@ a.card:hover { background: var(--charcoal); }
 /* 라커룸 아바타 크기는 여기 한 곳에서 정한다 — 무대(.locker-stage)가 아바타에 맞춰 늘고,
    라커룸이 3행을 가로지르므로 오른쪽 타일들도 같이 키가 는다. */
 .tile-locker { grid-row: 1 / span 3; --locker-h: 420px; }
+/* 두 칸 폭 타일 — 타일이 홀수(5)가 되며 생긴 격자 구멍을 메운다(미납 벌금 타일을 뺀 뒤). */
+.tile-wide { grid-column: span 2; }
 .locker-sprite svg { width: auto; height: var(--locker-h); }
 /* 1200px 아래에선 라커룸 칸을 더 크게 가져간다 — 이름표가 왼쪽 아래에 박혀 있어, 무대가 좁아지면
    가운데 선 선수의 왼발과 이름표가 겹친다(900px 에서 실측으로 겹침 확인). */

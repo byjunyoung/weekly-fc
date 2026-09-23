@@ -1,17 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { byAmount, byDate, byPaid, byType, numClash, playerFines, playerFormDefaults, playerFromForm } from '../../src/react/player/model.ts';
+import { numClash, playerFormDefaults, playerFromForm } from '../../src/react/player/model.ts';
 
 const P = (num, name, over = {}) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '', ...over });
-const F = (id, player, amount, paid, date = '2026-09-05', type = '지각') => ({ id, date, match_id: '', player, type, amount, paid });
-
-test('playerFines: 이 선수 것만, 원본 순서 그대로', () => {
-  const fines = [F('1', '김', 30000, false), F('2', '박', 50000, false), F('3', '김', 30000, true)];
-  assert.deepEqual(playerFines(fines, '김'), [F('1', '김', 30000, false), F('3', '김', 30000, true)]);
-});
-test('playerFines: 벌금 없으면 빈 배열', () => {
-  assert.deepEqual(playerFines([], '김'), []);
-});
 
 test('playerFormDefaults: 있는 선수는 그 값(전화 없으면 빈칸)', () => {
   const p = P(7, '김민수', { phone: undefined });
@@ -36,12 +27,3 @@ test('numClash: 다른 선수가 쓰는 번호면 그 선수를 돌려준다', (
   assert.deepEqual(numClash([P(7, '김'), P(9, '박')], 9, 7), P(9, '박'));
 });
 
-test('정렬 비교: 날짜·유형(한국어)·금액·납부', () => {
-  const a = F('1', '김', 50000, true, '2026-09-12', '지각');
-  const b = F('2', '김', 30000, false, '2026-09-05', '노쇼');
-  assert.ok(byDate(a, b) > 0);
-  assert.ok(byType(a, b) > 0);
-  assert.ok(byAmount(a, b) > 0);
-  assert.ok(byPaid(a, b) > 0);
-  for (const cmp of [byDate, byType, byAmount, byPaid]) assert.equal(cmp(a, a), 0);
-});

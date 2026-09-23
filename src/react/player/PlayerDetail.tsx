@@ -1,12 +1,11 @@
-// 선수 상세 — 아바타·능력치·벌금 내역·편집·아바타 에디터.
-// 미납 벌금·봉사 요약은 2026-09-22 에 뺐다 — 운영 탭에 같은 내용이 있고, 홈 라커룸에서 들어오는
+// 선수 상세 — 아바타·능력치(고친 기록)·편집·꾸미기.
+// 벌금·봉사는 이 화면에 두지 않는다 — 요약은 2026-09-22, 내역은 2026-09-23 에 뺐다. 운영 탭에 같은 내용이 있고, 홈 라커룸에서 들어오는
 // 이 화면은 "내 선수를 보고 꾸미는" 자리라 재정 정보가 끼어들 이유가 없다(사용자 지시).
-import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Table } from 'antd';
-import type { TableColumnsType } from 'antd';
+import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { fetchFull, refresh, serializePlayer, write, writeAvatar, writeStats } from '../../lib/api';
-import { fmtDate, fmtLogAt, fmtWon } from '../../lib/html';
+import { fmtLogAt } from '../../lib/html';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { getMe } from '../../lib/me';
@@ -14,12 +13,12 @@ import { avatarSvg } from '../../components/avatar';
 import { PARTS, avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
-import type { Fine, Player, StatKey } from '../../lib/types';
+import type { Player, StatKey } from '../../lib/types';
 import { countUp } from '../../lib/motion';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
-import { byAmount, byDate, byPaid, byType, numClash, playerFines, playerFormDefaults, playerFromForm } from './model';
+import { numClash, playerFormDefaults, playerFromForm } from './model';
 import type { PlayerFormValues } from './model';
 
 function Detail({ num, isNew }: { num: number; isNew: boolean }) {
@@ -131,7 +130,6 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     return () => { document.removeEventListener('visibilitychange', onHide); flushRef.current(); };
   }, []);
 
-  const fines = player ? playerFines(data?.fines ?? [], player.name) : [];
   // 이 선수 기록만, 최신 여덟 줄. 전체 목록은 두지 않았다 — 숫자가 이상하면 그 선수 자리에서 보면 된다.
   const myLog = player ? (data?.statLog ?? []).filter((r) => r.num === player.num).slice(0, 8) : [];
 
@@ -202,13 +200,6 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
       </div>
     );
   }) : null;
-
-  const fineCols: TableColumnsType<Fine> = [
-    { title: '날짜', dataIndex: 'date', sorter: byDate, defaultSortOrder: 'descend', render: (d: string) => fmtDate(d) },
-    { title: '유형', dataIndex: 'type', sorter: byType },
-    { title: '금액', dataIndex: 'amount', align: 'right', sorter: byAmount, render: (a: number) => fmtWon(a) },
-    { title: '납부', dataIndex: 'paid', sorter: byPaid, render: (p: boolean) => (p ? '완료' : <span className="warn">미납</span>) },
-  ];
 
   function editModal() {
     return (
@@ -331,11 +322,6 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
               )}
             </div>
           </div>
-          {fines.length > 0 && (
-            <div className="card"><h2>벌금 내역</h2>
-              <Table<Fine> size="small" rowKey="id" pagination={false} showSorterTooltip={false} scroll={{ x: 'max-content' }} columns={fineCols} dataSource={fines} />
-            </div>
-          )}
         </div>
       )}
       {editModal()}

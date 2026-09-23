@@ -1,9 +1,8 @@
 // src/react/player/model.ts — 선수 상세 계산. 화면(PlayerDetail)과 떨어뜨려 단위 테스트한다.
-import type { Fine, Player } from '../../lib/types.ts';
+import type { Player } from '../../lib/types.ts';
 
 /** 이 선수의 벌금 내역. 표의 정렬은 antd Table 의 sorter 가 맡으므로 원본 순서를 그대로 돌려준다.
  *  미납·전체 합계도 같이 돌려줬었지만, 2026-09-22 에 선수 상세의 요약 줄이 빠지며 쓰는 곳이 없어졌다. */
-export const playerFines = (fines: Fine[], playerName: string): Fine[] => fines.filter((f) => f.player === playerName);
 
 export type PlayerFormValues = {
   num: number; name: string; pos: Player['pos']; detail: string; foot: string; vest: number | null; rot: number | null; phone: string;
@@ -32,7 +31,3 @@ export const numClash = (players: Player[], newNum: number, currentNum: number):
   newNum !== currentNum ? players.find((p) => p.num === newNum) : undefined;
 
 // 벌금 내역 표 정렬(스펙 §5 "정렬 포함"). 문자열은 한국어 순.
-export const byDate = (a: Fine, b: Fine): number => a.date.localeCompare(b.date);
-export const byType = (a: Fine, b: Fine): number => a.type.localeCompare(b.type, 'ko');
-export const byAmount = (a: Fine, b: Fine): number => a.amount - b.amount;
-export const byPaid = (a: Fine, b: Fine): number => Number(a.paid) - Number(b.paid);

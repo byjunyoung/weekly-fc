@@ -41,11 +41,6 @@ test('computeHomeSummary: 이번 달·다음 달 봉사 — 시트 값 우선', 
   assert.deepEqual(s.duty, { p1: '김민수', p2: '이서준', monthLabel: '2026년 9월', sub: '대관비·조끼·정산' });
   assert.equal(s.dutyNext.monthLabel, '2026년 10월');
 });
-test('computeHomeSummary: 미납 벌금 합계·건수', () => {
-  const s = computeHomeSummary(data, null, now);
-  assert.equal(s.unpaidAmount, 30000);
-  assert.equal(s.unpaidCount, 1);
-});
 test('computeHomeSummary: 도장 문구는 인원수만(영상 카운트 없음)', () => {
   assert.equal(computeHomeSummary(data, null, now).stamp, '3명');
 });

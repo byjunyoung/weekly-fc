@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { avatarSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
-import { fmtWon } from '../../lib/html';
 import { getMe } from '../../lib/me';
 import { LINKS } from '../../lib/rules';
 import { href } from '../../lib/url';
@@ -40,14 +39,14 @@ function LockerStage({ svg, plate }: { svg: string; plate: ReactNode }) {
   );
 }
 
-function LinkTile({ to, locker, children }: { to: string; locker?: boolean; children: ReactNode }) {
+function LinkTile({ to, locker, wide, children }: { to: string; locker?: boolean; wide?: boolean; children: ReactNode }) {
   const isExternal = to.startsWith('http');
   // 부모 <a> 는 display:contents 라 포커스를 받을 수 없다(CSS 스펙 — 박스 없는 요소는 포커스 대상이 될 수 없다).
   // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 이름을 안 고른 라커룸(버튼)과 같은 패턴.
   const go = () => { if (isExternal) window.open(to, '_blank', 'noopener'); else location.assign(to); };
   return (
     <a href={to} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined} style={{ display: 'contents' }}>
-      <Card className={locker ? 'tile tile-locker' : 'tile'} variant="borderless" style={locker ? LOCKER_STYLE : TILE_STYLE} styles={TILE_BODY}
+      <Card className={locker ? 'tile tile-locker' : wide ? 'tile tile-wide' : 'tile'} variant="borderless" style={locker ? LOCKER_STYLE : TILE_STYLE} styles={TILE_BODY}
         role="link" tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
         {children}
@@ -109,8 +108,9 @@ function App() {
         <LinkTile to={href('/lineup/')}><span className="tile-label">라인업</span><b className="tile-big">짜서 공유</b><span className="tile-sub">선수를 골라 자리 잡고 이미지로</span></LinkTile>
         <LinkTile to={href('/rules/#duty')}><span className="tile-label">{s.duty.monthLabel} 봉사</span>{dutyBody(s.duty)}</LinkTile>
         <LinkTile to={href('/rules/#duty')}><span className="tile-label">다음 봉사</span>{dutyBody(s.dutyNext)}</LinkTile>
-        <LinkTile to={href('/rules/#fees')}><span className="tile-label">미납 벌금</span><b className="tile-big">{fmtWon(s.unpaidAmount)}</b><span className="tile-sub">{s.unpaidCount}건 · 내역 보기</span></LinkTile>
-        <LinkTile to={LINKS.youtube}><span className="tile-label">매치 영상</span><b className="tile-big">유튜브</b><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span></LinkTile>
+        {/* 미납 벌금 타일은 뺐다 — 벌금은 운영 규칙에서만 본다(2026-09-23 사용자 결정). 다섯 칸이 되어
+            마지막 타일을 두 칸 폭으로 펴 격자의 구멍을 메운다. */}
+        <LinkTile to={LINKS.youtube} wide><span className="tile-label">매치 영상</span><b className="tile-big">유튜브</b><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span></LinkTile>
       </div>
     </>
   );
