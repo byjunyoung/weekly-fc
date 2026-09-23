@@ -11,11 +11,11 @@ const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '
   <nav class="tabs">{toc.map(([id, l]) => <a href={`#${id}`}>{l}</a>)}</nav>
   <article class="prose stack">
     <section id="when"><h2>언제 어디서</h2><ul><li>매주 카톡 투표, {MATCH_MIN}인 이상 모이면 진행</li><li>시간: {MATCH_TIME}</li><li>장소: {PLACES.join(' / ')}</li><li>대관 실패 시 일정·장소를 유연하게 조정</li><li>비가 오면 논의 후 진행 여부 결정</li></ul></section>
-    <section id="join"><h2>참여 방법</h2><ol><li>오픈카톡에 자기소개를 남기고 모임 통장 초대 받기</li><li>매주 카톡 투표로 참석 여부 표시</li><li>매치 참석 후 당일 정산(대관비·음료비)</li></ol><p class="label">자기소개 양식 (채팅방에 붙여넣기)</p><pre class="card rules-pre">이름 :
+    <section id="join"><h2>참여 방법</h2><ol><li>오픈카톡에 자기소개를 남기고 모임 통장 초대 받기</li><li>매주 카톡 투표로 참석 여부 표시</li><li>매치 참석 후 당일 정산(대관비·음료비)</li></ol><details class="rules-fold"><summary class="label">자기소개 양식 (채팅방에 붙여넣기)</summary><pre class="card rules-pre">이름 :
 연락처 :
 선호 포지션 (축구 기준) :
 주발 :
-나이 (OO년생) :</pre></section>
+나이 (OO년생) :</pre></details></section>
     <section id="fees"><h2>비용 · 벌금</h2>
       <FineRulesTable />
       <p class="muted">{FINE_EXEMPT}</p>

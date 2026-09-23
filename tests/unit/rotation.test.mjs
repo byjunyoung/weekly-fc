@@ -32,3 +32,24 @@ test('시트 행이 있으면 그 값이 이긴다', () => {
   assert.deepEqual([r.p1, r.p2, r.done], ['p7', computeMonth(ps, 2026, 9, NOW).p2, true]);
 });
 test('yearRows는 12줄', () => assert.equal(yearRows(ps, [], 2026, NOW).length, 12));
+
+// 운영 규칙 봉사표의 기본 보기 — 이번 달부터 석 달(2026-09-23).
+import test2 from 'node:test';
+import assert2 from 'node:assert/strict';
+import { upcomingRows } from '../../src/lib/rotation.ts';
+
+test2('upcomingRows: 이번 달부터 석 달', () => {
+  const r = upcomingRows([], [], new Date(2026, 8, 23));   // 9월
+  assert2.deepEqual(r.map((x) => [x.year, x.month]), [[2026, 9], [2026, 10], [2026, 11]]);
+});
+
+test2('upcomingRows: 11월이면 다음 해 1월까지 넘어간다', () => {
+  const r = upcomingRows([], [], new Date(2026, 10, 5));   // 11월
+  assert2.deepEqual(r.map((x) => [x.year, x.month]), [[2026, 11], [2026, 12], [2027, 1]]);
+});
+
+test2('upcomingRows: 시트에 적힌 당번을 그대로 쓴다 (계산값보다 시트가 우선)', () => {
+  const sheet = [{ year: 2026, month: 10, p1: '가', p2: '나', done: false }];
+  const r = upcomingRows([], sheet, new Date(2026, 8, 1));
+  assert2.deepEqual([r[1].p1, r[1].p2], ['가', '나']);
+});

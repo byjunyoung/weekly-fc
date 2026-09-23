@@ -37,6 +37,7 @@ function Fees() {
   useEffect(() => { if (!admin) setOpen(false); }, [admin]);
 
   const summary = data ? fineSummary(data.fines) : null;
+  const unpaid = data ? unpaidRows(data.fines, data.players) : [];
   const playerLink = (name: string) => {
     const p = data?.players.find((x) => x.name === name);
     return p ? <a href={href(`/squad/${p.num}/`)}>{name}</a> : name;
@@ -98,12 +99,16 @@ function Fees() {
         <span className="label">미납 현황 <span id="fees-total">{summary && `· ${fmtWon(summary.unpaid)} (${summary.unpaidCount}건)`}</span></span>
         <span id="fees-actions">{admin && data && <Button id="fees-add" onClick={() => { setDraft(emptyDraft(seoulToday(), data.players)); setOpen(true); }}>벌금 추가</Button>}</span>
       </div>
+      {/* 비어 있는 표는 그리지 않고 한 줄로 — 머리줄과 "없음" 칸만 있는 표 둘이 240px 을 차지했다
+          (2026-09-23 측정). id 자리는 그대로 둔다(빌드 테스트·앵커). */}
       <div id="fees-unpaid">
-        {data && <Table<UnpaidRow> size="small" rowKey="name" pagination={false} columns={unpaidCols} dataSource={unpaidRows(data.fines, data.players)} locale={{ emptyText: '미납 없음' }} />}
+        {data && (unpaid.length
+          ? <Table<UnpaidRow> size="small" rowKey="name" pagination={false} columns={unpaidCols} dataSource={unpaid} />
+          : <p className="muted rules-empty">{data.fines.length ? '미납 없음' : '미납 없음 · 벌금 기록 없음'}</p>)}
       </div>
-      <span className="label">내역</span>
+      {data && data.fines.length > 0 && <span className="label">내역</span>}
       <div id="fees-app">
-        {data && <Table<Fine> size="small" rowKey="id" pagination={false} scroll={{ x: 'max-content' }} showSorterTooltip={false} columns={fineCols} dataSource={data.fines} locale={{ emptyText: '벌금 기록이 없습니다' }} />}
+        {data && data.fines.length > 0 && <Table<Fine> size="small" rowKey="id" pagination={false} scroll={{ x: 'max-content' }} showSorterTooltip={false} columns={fineCols} dataSource={data.fines} />}
       </div>
       <Modal title="벌금 기록" open={open} width={460} destroyOnHidden afterClose={() => setDraft(null)} onCancel={() => setOpen(false)}
         okText="저장" cancelText="취소" confirmLoading={saving} onOk={() => form.submit()}

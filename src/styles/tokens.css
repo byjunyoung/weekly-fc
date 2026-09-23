@@ -398,6 +398,14 @@ a.card:hover { background: var(--charcoal); }
 /* ══ 운영 규칙 ══════════════════════════════════════════════ */
 .rules-live { display: flex; flex-direction: column; gap: var(--s-sm); margin-top: var(--s-lg); }
 .rules-live-head { justify-content: space-between; }
+#duty-year { gap: var(--s-xs); }
+.rules-empty { margin: 0; font-size: var(--fs-sm); }
+/* 자기소개 양식 — 처음 한 번만 필요한 내용이라 접어 둔다. 기본 삼각형 대신 글자 뒤 표시. */
+.rules-fold > summary { cursor: pointer; list-style: none; }
+.rules-fold > summary::-webkit-details-marker { display: none; }
+.rules-fold > summary::after { content: " ›"; }
+.rules-fold[open] > summary::after { content: " ⌄"; }
+.rules-fold[open] > summary { margin-bottom: var(--s-xs); }
 .duty-pair { display: inline-flex; flex-wrap: wrap; gap: var(--s-xs) var(--s-md); }
 .duty-pair b { min-width: 4em; font-weight: var(--fw-strong); }
 
