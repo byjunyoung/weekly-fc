@@ -228,6 +228,12 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
 
 /* ══ 탭 ════════════════════════════════════════════════════ */
 .tabs { display: flex; gap: var(--s-xs); border-bottom: 1px solid var(--hairline); margin-bottom: var(--s-lg); overflow-x: auto; }
+/* 폰에선 목차가 704px 이라 가로로 밀렸는데 밀린다는 표시가 없어 "비용·벌"에서 잘린 것처럼 보였다.
+   접어서 전부 보이게 한다 — 여섯 개라 두 줄이면 들어간다(2026-09-23). */
+@media (max-width: 600px) {
+  .tabs { flex-wrap: wrap; overflow-x: visible; gap: 0 var(--s-xxs); }
+  .tabs a, .tabs button { padding: var(--s-xs) var(--s-sm); }
+}
 .tabs a, .tabs button { min-height: 0; padding: var(--s-sm) var(--s-md); border: 0; border-radius: 0; background: none;
   color: var(--muted); font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; white-space: nowrap; margin-bottom: -1px;
   border-bottom: 2px solid transparent; }
@@ -408,6 +414,20 @@ a.card:hover { background: var(--charcoal); }
 .rules-fold[open] > summary { margin-bottom: var(--s-xs); }
 .duty-pair { display: inline-flex; flex-wrap: wrap; gap: var(--s-xs) var(--s-md); }
 .duty-pair b { min-width: 4em; font-weight: var(--fw-strong); }
+/* 월 칸은 접지 않는다 — "9월 이번 달"이 줄바꿈되면 그 줄만 두 배로 높아진다. 폭은 표가 당번 칸에서 가져온다. */
+#duty-app .ant-table-tbody td:first-child { white-space: nowrap; }
+/* "이번 달" 라벨은 .label 이 블록이라 늘 월 아래 줄로 떨어져 그 줄만 90px 이었다 — 표 안에선 한 줄에 붙인다. */
+#duty-app .label { display: inline; margin-left: var(--s-xxs); }
+/* 폰에선 봉사표 한 줄이 두세 줄 높이(98~121px)였다 — 이름칸(191px)에 이름 둘의 최소폭(80px씩)과
+   간격·칸 여백이 안 들어가 세로로 쌓이고, "이번 달"(80px)이 월 칸(95px)에서 아래로 접혔다.
+   여백·간격을 조이고 "이번 달" 글자는 화면에서만 숨긴다 — 그 줄은 바탕색으로 이미 표시되고,
+   스크린리더는 글자를 그대로 읽는다(2026-09-23). */
+@media (max-width: 480px) {
+  #duty-app .ant-table-cell { padding-inline: var(--s-xs); }
+  .duty-pair { gap: var(--s-xxs) var(--s-sm); }
+  .duty-pair b { min-width: 0; }
+  #duty-app .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 
 /* ══ 능력치 막대(선수 페이지) ═══════════════════════════════ */
 /* 좌우 높이를 맞춘다 — align-items: start 면 내용이 짧은 쪽만 짧아 두 칸이 어긋나 보인다
