@@ -78,7 +78,7 @@
 
   /* ── 치수 ─────────────────────────────────────────────────── */
   --header-h: 64px; --header-h-m: 102px; --hint-h: 0px;
-  --max: 1280px; --prose-max: 680px; --pcard-w: 268px; --pitch-max: 400px;
+  --max: 1280px; --prose-max: 680px; --phero-w: 320px; --pitch-max: 400px;
   --modal-xwide: 640px; --row-h: 48px; --ctrl-h: 48px; --bd-list-w: 360px;
   --h-accent: 2px; --w-accent: 28px; --ctrl: 28px;
 
@@ -382,7 +382,10 @@ a.card:hover { background: var(--charcoal); }
 /* 선수 페이지 머리 — 같은 아바타를 더 크게. 아바타를 누르면 꾸미기가 열린다. */
 .phero { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-xs);
   padding: var(--s-lg) var(--s-md); border-radius: var(--r-md); background: var(--card); }
-.phero .avatar-svg { width: 168px; height: 224px; }
+/* 격자(24×32)의 정수배라야 도트가 안 뭉갠다 — 데스크톱 10배(240×320), 폰 9배(216×288).
+   2026-09-23 에 7배(168×224)에서 키웠다("선수 페이지 아바타도 더 크게"). */
+.phero .avatar-svg { width: 240px; height: 320px; }
+@media (max-width: 799px) { .phero .avatar-svg { width: 216px; height: 288px; } }
 .phero-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
 .phero-meta { display: flex; align-items: center; gap: var(--s-xs); }
 .phero-sub { margin: 0; font-size: var(--fs-xs); color: var(--muted); text-align: center; }
@@ -450,7 +453,7 @@ a.card:hover { background: var(--charcoal); }
 /* ══ 능력치 막대(선수 페이지) ═══════════════════════════════ */
 /* 좌우 높이를 맞춘다 — align-items: start 면 내용이 짧은 쪽만 짧아 두 칸이 어긋나 보인다
    (2026-09-22 사용자 지적). 늘어난 쪽의 내용은 가운데에 둔다. */
-.player-hero { display: grid; grid-template-columns: var(--pcard-w) minmax(0, 1fr); gap: var(--s-xl); align-items: stretch; }
+.player-hero { display: grid; grid-template-columns: var(--phero-w) minmax(0, 1fr); gap: var(--s-xl); align-items: stretch; }
 .player-side > .card { flex: 1; }
 /* 꾸미는 동안엔 옵션 목록이 길어 왼쪽 칸까지 늘리면 아바타가 한참 아래로 내려간다.
    위에 붙여 두고 스크롤을 따라오게 한다 — 고르는 내내 미리보기가 보여야 한다. */
