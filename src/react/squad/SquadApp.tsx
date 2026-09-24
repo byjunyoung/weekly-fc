@@ -10,6 +10,7 @@ import { useData } from '../useData';
 import { loadView, nextFreeNum, saveView, type View } from './model';
 import RosterList from './RosterList';
 import { tierByNum } from '../../lib/card';
+import { currentPotm } from '../../lib/matches';
 
 // 목록 보기는 라인업(/lineup/) 오른쪽 칸이 가져갔다 — 여기는 폭을 다 쓰는 표·카드만 남긴다.
 const SQUAD_VIEWS: View[] = ['table', 'card'];
@@ -25,6 +26,7 @@ function Squad() {
   if (!data) return <Loading title="명단" />;
 
   const tiers = tierByNum(data.players);
+  const potm = currentPotm(data.matches);
 
   const rows = data.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
 
@@ -37,7 +39,7 @@ function Squad() {
         <h1>명단 <span className="muted" id="count">{data.players.length}명</span></h1>
         <div className="actions">{admin && <button type="button" id="add" onClick={onAdd}>선수 추가</button>}</div>
       </div>
-      <RosterList tiers={tiers} view={view} onViewChange={onViewChange} views={SQUAD_VIEWS} pos={pos} onPosChange={setPos}
+      <RosterList tiers={tiers} potm={potm} view={view} onViewChange={onViewChange} views={SQUAD_VIEWS} pos={pos} onPosChange={setPos}
         q={q} onQChange={setQ} rows={rows} />
     </>
   );

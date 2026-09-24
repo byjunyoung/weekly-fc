@@ -30,18 +30,21 @@ export const FLAG_KR_H = 12;
 const FLAG_KR: string[] = [
   'WWWWWWWWWWWWWWWWWW',
   'WWWWWWWWWWWWWWWWWW',
-  'WKKKWWWWWWWWWK.KWW',
+  'WKKKWWWWWWWWWKWKWW',
   'WWWWWWWRRRRWWWWWWW',
-  'WKKKWWRRRRRRWK.KWW',
+  'WKKKWWRRRRRRWKWKWW',
   'WWWWWWRRRRBBWWWWWW',
   'WWWWWWRRBBBBWWWWWW',
-  'WK.KWWBBBBBBWKKKWW',
+  'WKWKWWBBBBBBWKKKWW',
   'WWWWWWWBBBBWWWWWWW',
-  'WK.KWWWWWWWWWKKKWW',
+  'WKWKWWWWWWWWWKKKWW',
   'WWWWWWWWWWWWWWWWWW',
   'WWWWWWWWWWWWWWWWWW',
 ];
 const FLAG_KR_PALETTE = { W: '#f4f4f4', R: '#cd2e3a', B: '#0f4fa8', K: '#111111' };
+/** 캔버스(공유 이미지)가 같은 그림을 찍을 때 쓰는 격자 — drawAvatar 가 받는 모양과 같다. */
+export const flagKrPixels = (): { map: string[]; palette: Record<string, string>; w: number; h: number } =>
+  ({ map: FLAG_KR, palette: FLAG_KR_PALETTE, w: FLAG_KR_W, h: FLAG_KR_H });
 /** 태극기. `scale` 은 한 칸의 픽셀 수(1·2·3…). */
 export const flagKrSvg = (scale = 1): string => svg(FLAG_KR, FLAG_KR_PALETTE, FLAG_KR_W, FLAG_KR_H, scale, '대한민국');
 
@@ -52,10 +55,15 @@ const BOOT_L = ['.LLLL..', '.LLLLL.', 'LLLLLLL', 'LLLLLLL', 'lllllll'];
 const BOOT_R = ['..RRRR.', '.RRRRR.', 'RRRRRRR', 'RRRRRRR', 'rrrrrrr'];
 const FEET: string[] = BOOT_L.map((l, i) => `${l}..${BOOT_R[i]}`);
 const ON = '#f4f4f4', ON_SOLE = '#111111', OFF = '#4a4f57', OFF_SOLE = '#2b2e33';
-export function feetSvg(mode: FootMode, scale = 1): string {
+function feetPalette(mode: FootMode): Record<string, string> {
   const left = mode === 'left' || mode === 'both';
   const right = mode === 'right' || mode === 'both';
-  const palette = { L: left ? ON : OFF, l: left ? ON_SOLE : OFF_SOLE, R: right ? ON : OFF, r: right ? ON_SOLE : OFF_SOLE };
+  return { L: left ? ON : OFF, l: left ? ON_SOLE : OFF_SOLE, R: right ? ON : OFF, r: right ? ON_SOLE : OFF_SOLE };
+}
+export const feetPixels = (mode: FootMode): { map: string[]; palette: Record<string, string>; w: number; h: number } =>
+  ({ map: FEET, palette: feetPalette(mode), w: FEET_W, h: FEET_H });
+export function feetSvg(mode: FootMode, scale = 1): string {
+  const palette = feetPalette(mode);
   const label = mode === 'both' ? '양발' : mode === 'left' ? '왼발' : mode === 'right' ? '오른발' : '주발 미정';
   return svg(FEET, palette, FEET_W, FEET_H, scale, label);
 }

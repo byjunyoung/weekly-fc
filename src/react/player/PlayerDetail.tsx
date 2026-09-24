@@ -11,6 +11,8 @@ import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { rivalPairs } from '../../lib/tier';
 import { FOOT_OPTIONS, tierByNum } from '../../lib/card';
+import { currentPotm, matchLabel } from '../../lib/matches';
+import CardShareModal from '../CardShareModal';
 import PlayerCard from '../PlayerCard';
 import { avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import AvatarEditor from './AvatarEditor';
@@ -118,6 +120,9 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
 
   // OVR 카운트업 — [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
   const cardRef = useRef<HTMLDivElement>(null);
+  const [shareOpen, setShareOpen] = useState(false);   // 카드 이미지 저장(2026-09-25)
+  const potm = currentPotm(data?.matches ?? []);
+  const myPotmDate = player && potm && potm.nums.includes(player.num) ? potm.date : null;
   useEffect(() => {
     if (!player || !cardRef.current) return;
     const ovrEl = cardRef.current.querySelector<HTMLElement>('[data-ovr]');
@@ -132,6 +137,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
       {/* 꾸미기는 본인(로그인해 차지한 번호)과 관리자만 — 홈 라커룸에서 "꾸미기"로 들어오는 자리라
           카드 속 작은 아바타를 눌러야만 열리던 것을 겉으로 꺼내 둔다. */}
       <span className="actions" id="actions">
+        {player && !avatarOpen && <Button onClick={() => setShareOpen(true)}>이미지 저장</Button>}
         {player && canDress && !avatarOpen && <Button onClick={() => openAvatar(player)}>꾸미기</Button>}
         {admin && data && <Button onClick={() => openEdit(player)} loading={opening}>편집</Button>}
       </span>
@@ -220,7 +226,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
             <div className="phero" ref={cardRef}>
               {/* 피파식 카드(2026-09-25). 아바타 자리가 꾸미기 버튼 — 꾸미는 중엔 고르는 스펙을 그 자리에 미리 보여 준다. */}
               <PlayerCard player={avatarOpen && avatarSpec ? { ...player, avatar: serializeAvatar(avatarSpec) } : player}
-                tier={tierByNum(data?.players ?? []).get(player.num)} size="lg"
+                tier={tierByNum(data?.players ?? []).get(player.num)} size="lg" potmDate={myPotmDate}
                 avatar={(svg) => (
                   <button type="button" id="avatar-edit-btn" className="avatar-btn" title={canDress ? '아바타 편집' : undefined}
                     disabled={!canDress} onClick={() => openAvatar(player)} dangerouslySetInnerHTML={{ __html: svg }} />
@@ -272,6 +278,10 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
         </div>
       )}
       {editModal()}
+      <CardShareModal open={shareOpen} onClose={() => setShareOpen(false)} player={player ?? null}
+        tier={player ? tierByNum(data?.players ?? []).get(player.num) : null}
+        title={player ? `${player.name} 카드` : '카드'} fileTag={`card-${num}`}
+        opts={{ sub: myPotmDate ? `${matchLabel(myPotmDate)} 매치 POTM` : undefined, potmDate: myPotmDate }} />
     </>
   );
 }

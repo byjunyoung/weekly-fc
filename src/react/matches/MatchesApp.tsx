@@ -11,6 +11,8 @@ import { seoulToday } from '../../lib/html';
 import { href } from '../../lib/url';
 import * as M from '../../lib/matches';
 import type { Match, Player } from '../../lib/types';
+import { tierByNum } from '../../lib/card';
+import CardShareModal from '../CardShareModal';
 import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
@@ -22,7 +24,7 @@ function Face({ num, players, size = 24 }: { num: number; players: Player[]; siz
     dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(num, players.find((p) => p.num === num)?.avatar), size, num) }} />;
 }
 
-function Card({ m, players, today, admin }: { m: Match; players: Player[]; today: string; admin: boolean }) {
+function Card({ m, players, today, admin, onPotmImage }: { m: Match; players: Player[]; today: string; admin: boolean; onPotmImage: (m: Match, num: number) => void }) {
   const { message } = App.useApp();
   const me = useMeInfo();
   const [busy, setBusy] = useState(false);
@@ -80,6 +82,11 @@ function Card({ m, players, today, admin }: { m: Match; players: Player[]; today
             <span key={n} className="mt-potm-who"><Face num={n} players={players} size={28} /><b>{nameOf(n)}</b></span>
           ))}
         {potm.votes > 0 && <span className="muted">{potm.votes}표{potm.nums.length > 1 ? ' · 공동' : ''}</span>}
+        {potm.nums.map((n) => (
+          <Button key={n} size="small" onClick={() => onPotmImage(m, n)}>
+            {potm.nums.length > 1 ? `${nameOf(n)} POTM 이미지` : 'POTM 이미지'}
+          </Button>
+        ))}
       </div>
 
       <div className="mt-teams">
@@ -128,9 +135,13 @@ function Card({ m, players, today, admin }: { m: Match; players: Player[]; today
 function Matches() {
   const { data } = useData();
   const admin = useAdmin();
+  const [share, setShare] = useState<{ m: Match; num: number } | null>(null);   // 훅은 이른 return 앞에(순서 고정)
   if (!data) return <Loading title="매치" />;
   const matches = data.matches ?? [];
   const today = seoulToday();
+  const tiers = tierByNum(data.players);
+  const sharePlayer = share ? data.players.find((p) => p.num === share.num) ?? null : null;
+  const shareVotes = share ? (share.m.tally[share.num] ?? 0) : 0;
   return (
     <>
       <div className="page-head">
@@ -141,8 +152,11 @@ function Matches() {
         <div className="card"><h2>아직 저장된 매치가 없습니다</h2><p className="muted">[팀 짜기]에서 온 사람을 조끼 팀으로 가르고, 관리자 모드로 날짜를 골라 저장하면 여기에 쌓입니다.</p></div>
       )}
       <div className="stack">
-        {matches.map((m) => <Card key={m.id} m={m} players={data.players} today={today} admin={admin} />)}
+        {matches.map((m) => <Card key={m.id} m={m} players={data.players} today={today} admin={admin} onPotmImage={(mm, n) => setShare({ m: mm, num: n })} />)}
       </div>
+      <CardShareModal open={!!share} onClose={() => setShare(null)} player={sharePlayer} tier={share ? tiers.get(share.num) : null}
+        title={share ? `${M.matchLabel(share.m.date, Number(today.slice(0, 4)))} POTM` : 'POTM'} fileTag={share ? `potm-${share.num}` : 'potm'}
+        opts={share ? { title: 'POTM', sub: `${M.matchLabel(share.m.date, Number(today.slice(0, 4)))} 매치 · ${shareVotes}표`, potmDate: share.m.date } : undefined} />
     </>
   );
 }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cardModel, CARD_STAT_ORDER, footMode, FOOT_OPTIONS, tierByNum } from '../../src/lib/card.ts';
-import { feetSvg, flagKrSvg, FLAG_KR_H, FLAG_KR_W, FEET_W, FEET_H, gridRects } from '../../src/components/pixel-icons.ts';
+import { feetPixels, feetSvg, flagKrPixels, flagKrSvg, FLAG_KR_H, FLAG_KR_W, FEET_W, FEET_H, gridRects } from '../../src/components/pixel-icons.ts';
 
 const P = (num, v, over = {}) => ({ num, name: `P${num}`, pos: 'MF', detail: '', foot: '오른발', vest: null, note: '',
   pace: v, dribble: v, pass: v, shoot: v, defend: v, stamina: v, rot: null, avatar: '', ...over });
@@ -50,4 +50,14 @@ test('feetSvg — 주발 쪽만 밝고, 양발이면 둘 다, 미정이면 둘 �
   assert.equal(on(feetSvg('both')), on(feetSvg('right')) * 2);
   assert.ok(feetSvg('right').includes('aria-label="오른발"') && feetSvg('both').includes('aria-label="양발"'));
   for (const m of ['right', 'left', 'both', 'none']) assert.ok(!feetSvg(m).includes('undefined'), m);
+});
+
+test('flagKrPixels·feetPixels — 캔버스용 격자는 SVG 와 같은 데이터, 행 길이 불변', () => {
+  const f = flagKrPixels();
+  assert.equal(f.w, FLAG_KR_W); assert.equal(f.h, FLAG_KR_H); assert.equal(f.map.length, FLAG_KR_H);
+  for (const row of f.map) { assert.equal(row.length, FLAG_KR_W); for (const ch of row) assert.ok(ch in f.palette, `팔레트에 없는 글자 ${ch}`); }
+  const b = feetPixels('left');
+  assert.equal(b.w, FEET_W); assert.equal(b.h, FEET_H);
+  for (const row of b.map) assert.equal(row.length, FEET_W);
+  assert.equal(b.palette.L, '#f4f4f4'); assert.equal(b.palette.R, '#4a4f57');
 });

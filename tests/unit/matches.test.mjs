@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, applyPotm, attendees, deadline, isVideoUrl, matchLabel, potmOf, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
+import { addDays, applyPotm, attendees, currentPotm, deadline, isVideoUrl, matchLabel, potmOf, shortDate, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
 import { addGuest, initialTeams, moveTo, playerKey, guestKey, togglePicked } from '../../src/lib/teams.ts';
 import { normalizeMatch, normalizeData, EMPTY } from '../../src/lib/api.ts';
 
@@ -99,4 +99,22 @@ test('isVideoUrl — http(s) 로 시작하는 한 덩어리만', () => {
   assert.equal(isVideoUrl('youtu.be/abc'), false);
   assert.equal(isVideoUrl(''), false);
   assert.equal(isVideoUrl('https://a b'), false);
+});
+
+test('shortDate — 9/27, 깨진 값은 그대로', () => {
+  assert.equal(shortDate('2026-09-27'), '9/27');
+  assert.equal(shortDate('2026-12-06'), '12/6');
+  assert.equal(shortDate('없음'), '없음');
+});
+
+test('currentPotm — 표가 있는 가장 최근 매치의 1위(공동 포함). 더 새 매치라도 표가 없으면 건너뛴다', () => {
+  assert.equal(currentPotm([]), null);
+  assert.equal(currentPotm([M()]), null, '표 없음');
+  const older = M({ id: 1, date: '2026-09-20', tally: { 2: 3 } });
+  const newerNoVotes = M({ id: 2, date: '2026-09-27' });
+  assert.deepEqual(currentPotm([newerNoVotes, older]), { date: '2026-09-20', matchId: 1, nums: [2], votes: 3 });
+  const newerVoted = M({ id: 3, date: '2026-09-27', tally: { 3: 1, 2: 1 } });
+  assert.deepEqual(currentPotm([older, newerVoted]), { date: '2026-09-27', matchId: 3, nums: [2, 3], votes: 1 }, '캐시 순서와 무관, 공동');
+  const sameDay = M({ id: 4, date: '2026-09-27', tally: { 2: 2 } });
+  assert.equal(currentPotm([newerVoted, sameDay]).matchId, 4, '같은 날이면 id 큰 쪽');
 });

@@ -74,3 +74,21 @@ export function applyPotm(d: Data, id: number, tally: Record<number, number>, vo
 
 /** 영상 링크로 쓸 수 있는 문자열인가 — 비면 false, http(s) 로 시작해야 true(서버도 같은 규칙). */
 export const isVideoUrl = (v: string): boolean => /^https?:\/\/\S+$/i.test((v ?? '').trim());
+
+/** '2026-09-27' → '9/27'. 카드 리본처럼 좁은 자리용. */
+export function shortDate(ymd: string): string {
+  const [, m, d] = ymd.split('-').map(Number);
+  return m && d ? `${m}/${d}` : ymd;
+}
+
+export type CurrentPotm = { date: string; matchId: number; nums: number[]; votes: number };
+/** 지금 카드에 붙는 POTM — **표가 하나라도 있는 가장 최근 매치**의 1위(공동 포함). 사용자 결정(2026-09-25):
+ *  "첫 표부터 바로". 다음 매치에 첫 표가 들어오면 그쪽으로 넘어간다. 캐시 순서를 믿지 않고 여기서 다시 정렬한다. */
+export function currentPotm(matches: Match[]): CurrentPotm | null {
+  const withVotes = (matches ?? []).filter((m) => Object.values(m.tally).some((v) => v > 0))
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
+  const m = withVotes[0];
+  if (!m) return null;
+  const p = potmOf(m);
+  return { date: m.date, matchId: m.id, nums: p.nums, votes: p.votes };
+}

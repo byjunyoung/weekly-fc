@@ -835,3 +835,17 @@ details.year[open] > summary::before { content: "▾ "; }
   .player-hero.is-dressing .phero .fcard-avatar { margin: 0 auto; }
   .player-hero.is-dressing .phero .fcard .avatar-btn .avatar-svg { width: 72px; height: 96px; }
 }
+
+/* ── 카드 POTM 띠(2026-09-25) — 표가 있는 가장 최근 매치의 1위. 수평 띠(도트 글자는 기울이면 뭉개진다) + 테두리 반짝임. */
+.fcard { position: relative; }
+.fcard-potm { display: block; padding: 4px var(--s-xs); background: var(--gold); color: var(--ink); text-align: center;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
+.fcard-sm .fcard-potm { font-size: var(--fs-pixel-xs); padding: 4px var(--s-xxs); }
+.fcard-is-potm { --fc-frame: var(--gold); box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--gold); }
+@media (prefers-reduced-motion: no-preference) {
+  .fcard-is-potm { animation: fcard-glow 2.4s ease-in-out infinite; }
+  @keyframes fcard-glow {
+    0%, 100% { box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--gold), 0 0 0 rgba(255, 206, 33, 0); }
+    50% { box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--gold), 0 0 18px rgba(255, 206, 33, .55); }
+  }
+}

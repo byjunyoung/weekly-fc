@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { avatarSvg } from '../../components/avatar';
 import { tierByNum } from '../../lib/card';
+import { currentPotm } from '../../lib/matches';
 import PlayerCard from '../PlayerCard';
 import { getMe } from '../../lib/me';
 import { LINKS } from '../../lib/rules';
@@ -87,6 +88,7 @@ function App() {
   const meNum = s.meTile.kind === 'picked' ? s.meTile.num : null;
   const mePlayer = meNum != null ? data.players.find((p) => p.num === meNum) : undefined;
   const tiers = tierByNum(data.players);
+  const potm = currentPotm(data.matches);
 
   return (
     <>
@@ -97,7 +99,7 @@ function App() {
             <LinkTile to={href(`/squad/${s.meTile.num}/`)} locker>
               <span className="tile-label">라커룸</span>
               <LockerStage>
-                <PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" />
+                <PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />
               </LockerStage>
               <span className="tile-sub tile-go">눌러서 내 선수 보기 · 꾸미기 ›</span>
             </LinkTile>
