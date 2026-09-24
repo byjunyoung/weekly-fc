@@ -1,0 +1,20 @@
+# Supabase 무료 프로젝트는 7일 동안 DB 활동이 없으면 멈춘다. 사흘마다 공개 데이터(get_all —
+# 전화번호 없음)를 한 번 읽어 깨워 둔다. 저장은 하지 않는다. 백업은 두지 않기로 했다(2026-09-24).
+# 서버가 이미 멈췄거나 선수가 0명이면 실패한다 — GitHub 가 실패 메일을 보내 알려 준다.
+# 공개 레포는 60일간 커밋이 없으면 GitHub 가 예약 작업을 끈다. 끄기 전에 메일이 오니 Actions 탭에서 다시 켠다.
+name: keepalive
+on:
+  schedule:
+    - cron: '17 3 */3 * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 공개 데이터 한 번 읽기
+        run: |
+          set -euo pipefail
+          curl -sf --retry 3 --retry-delay 20 -X POST 'https://irltzwgijbbodkgzmnrc.supabase.co/rest/v1/rpc/get_all' \
+            -H 'apikey: sb_publishable_Aum9yotpAs5M7_3g9DqA5Q_Q7mLRlMk' -H 'Content-Type: application/json' -d '{}' \
+            | jq -e '.players | length > 0'
