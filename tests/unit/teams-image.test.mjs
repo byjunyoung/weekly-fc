@@ -49,6 +49,7 @@ test('teamsLayout — 줄은 조끼 순서, 한 줄 6명, 세로 안에 들어�
   const last = lay2.rows[lay2.rows.length - 1];
   assert.ok(last.y + last.h <= IMG_H - 60, '세로 안');
   assert.ok(lay2.rows[0].slots[0].cell < 4, '많으면 아바타를 줄인다');
+  assert.equal(teamsLayout(LINEUP).rows[0].slots[0].cell, 7, '적으면 가장 크게');
   const per = lay2.rows[0].slots.filter((s) => s.y === lay2.rows[0].slots[0].y).length;
   assert.ok(per >= 6 && lay2.rows[0].slots[per].y > lay2.rows[0].slots[0].y, '한 줄이 차면 다음 줄');
 });

@@ -13,13 +13,14 @@ const TOP = 230;
 const BOTTOM = IMG_H - 60;
 const HEAD_H = 56;          // 조끼 줄 머리(색 띠 + 이름)
 const ROW_GAP = 28;
-const NAME_H = 34;
+const NAME_H = 44;
 
 export type TeamsSlot = { name: string; num: number | null; x: number; y: number; cell: number; w: number };
 export type TeamsLayout = { rows: Array<{ vest: string; y: number; h: number; slots: TeamsSlot[] }> };
 
-/** 줄마다 사람 수에 맞춰 칸을 잡는다 — 한 줄 6명·아바타 4배부터, 세로가 모자라면 아바타를 줄이고 한 줄 인원을 늘린다. */
-const FITS: Array<[number, number]> = [[6, 4], [6, 3], [8, 3], [8, 2], [10, 2], [12, 2]];   // [한 줄 인원, 아바타 배수]
+/** 줄마다 사람 수에 맞춰 칸을 잡는다 — **들어가는 것 중 가장 큰** 아바타를 고른다(적은 인원이면 크게, 많으면 한 줄 인원을 늘리고 줄인다).
+ *  처음엔 6명·4배로만 그렸더니 7명짜리 이미지가 위 40% 만 쓰고 아래가 비었다. */
+const FITS: Array<[number, number]> = [[4, 7], [5, 6], [6, 5], [6, 4], [6, 3], [8, 3], [8, 2], [10, 2], [12, 2]];   // [한 줄 인원, 아바타 배수]
 export function teamsLayout(lineup: MatchTeam[]): TeamsLayout {
   const build = (perLine: number, c: number): TeamsLayout => {
     const colW = (IMG_W - M * 2) / perLine;
@@ -76,8 +77,8 @@ export function drawTeamsImage(c: HTMLCanvasElement, lineup: MatchTeam[], player
         ctx.fillStyle = muted; ctx.font = pixelFont(20); ctx.textAlign = 'center';
         ctx.fillText('용병', s.x + s.w / 2, s.y + 16 * s.cell + 7);
       }
-      ctx.fillStyle = fg; ctx.font = pixelFont(20); ctx.textAlign = 'center';
-      ctx.fillText(fit(ctx, names.get(s.num != null ? `p${s.num}` : s.name) ?? s.name, s.w - 8), s.x + s.w / 2, s.y + 32 * s.cell + 24);
+      ctx.fillStyle = fg; ctx.font = pixelFont(s.cell >= 5 ? 30 : 20); ctx.textAlign = 'center';   // 아바타가 크면 이름도 30px
+      ctx.fillText(fit(ctx, names.get(s.num != null ? `p${s.num}` : s.name) ?? s.name, s.w - 8), s.x + s.w / 2, s.y + 32 * s.cell + 32);
     }
   });
   ctx.textAlign = 'left';
