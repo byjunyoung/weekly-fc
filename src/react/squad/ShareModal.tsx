@@ -6,24 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import { drawLineupImage, ensureShareFonts } from '../../components/share-image';
 import { seoulToday } from '../../lib/html';
 import { defaultTitle, type LineupState } from '../../lib/lineup';
-import { fallbackMethod, pickShareMethod, shareFileName, type ShareEnv, type ShareMethod } from '../../lib/share';
+import { fallbackMethod, pickShareMethod, shareFileName, type ShareMethod } from '../../lib/share';
+import { dataUrlToFile, shareEnv } from '../shareFile';
 import type { Player } from '../../lib/types';
-
-function shareEnv(file: File | null): ShareEnv {
-  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-  let canShareFiles = false;
-  try { canShareFiles = !!file && typeof nav.share === 'function' && !!nav.canShare?.({ files: [file] }); } catch { canShareFiles = false; }
-  return { canShareFiles, ua: navigator.userAgent, touchPoints: navigator.maxTouchPoints || 0 };
-}
-/** data:URL → File. toBlob 콜백/프라미스를 거치지 않아 완전히 동기다 — 그려진 파일을 바로
- *  navigator.share 에 넘겨야 사용자 제스처가 유지된다. */
-function dataUrlToFile(url: string, name: string): File {
-  const base64 = url.slice(url.indexOf(',') + 1);
-  const bin = atob(base64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new File([bytes], name, { type: 'image/png' });
-}
 
 export default function ShareModal({ open, onClose, st, players, onSetTitle }: {
   open: boolean; onClose: () => void; st: LineupState; players: Player[]; onSetTitle: (title: string) => void;

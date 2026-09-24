@@ -181,23 +181,17 @@ input:where(:not(.wfc, .wfc *)):focus, select:where(:not(.wfc, .wfc *)):focus, t
   .topnav a { padding: var(--s-xs) var(--s-xs); }
 }
 @media (max-width: 380px) { .mark { font-size: var(--fs-pixel-sm); } }
-/* 320px 급에선 워드마크를 줄여도 한 줄에 다섯이 안 들어간다(필요 308px, 남는 폭 288px).
-   가로로 밀어 보게 두면 활성 탭이 화면 밖에서 시작하므로 **탭을 제 줄로 내린다** — 두 줄이
-   되는 대신 다섯이 다 보인다. 360px 부터는 한 줄에 들어가므로 손대지 않는다(실측). */
-/* 좁은 화면에선 탭을 제 줄로 내리고 좌우 여백을 줄인다. 경계는 가장 긴 라벨이 정한다 —
-   「운영 규칙」까지 다섯 탭이 한 줄에 들어가려면 388px 이 필요했다(실측 2026-09-22, 그 전
-   「운영」 시절엔 360px 이면 됐다). 라벨을 또 늘리면 여기도 다시 재야 한다. */
-@media (max-width: 389px) {
+/* 좁은 화면에선 탭을 제 줄로 내리고 좌우 여백을 줄인다. 2026-09-24 티어 탭이 더해져 여섯 탭이
+   한 줄에 들어가려면 약 414px 가 필요하다(실측) — 흔한 폰 폭(360·390)에선 모자란다. 두 줄로
+   접는 대신 **가로로 밀게** 두고(설계 승인), 전에 문제였던 "더 있는 줄 모른다"는 오른쪽 끝을
+   흐리게(.is-more) 해 알리고 지금 탭은 Shell 스크립트가 보이는 자리로 밀어 둔다. */
+@media (max-width: 459px) {
   .topbar { height: auto; min-height: var(--header-h); flex-wrap: wrap; padding-block: var(--s-xs); row-gap: var(--s-xs); }
-  .topnav { flex: 1 0 100%; order: 3; overflow: visible; justify-content: space-between; }
-  .topnav a { padding: var(--s-xxs) var(--s-xxs); }
+  .topnav { flex: 1 0 100%; order: 3; overflow-x: auto; justify-content: space-between; }
+  .topnav a { padding: var(--s-xxs) var(--s-xs); }
+  .topnav.is-more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
   .mark { flex: 1 1 auto; }
-}
-/* 더 좁아지면 여백을 줄여도 다섯 탭이 한 줄에 안 들어간다(실측 348px 필요). 그대로 두면
-   브라우저가 페이지를 0.92배로 축소해 맞추는데, 비정수 배율은 도트 글꼴을 통째로 뭉갠다 —
-   차라리 탭을 두 줄로 접는다. */
-@media (max-width: 347px) {
-  .topnav { flex-wrap: wrap; justify-content: center; row-gap: var(--s-xxs); }
 }
 .topnav a:hover { color: var(--fg); background: rgba(255, 255, 255, .08); }
 .topnav a.active { color: var(--fg); background: rgba(255, 255, 255, .14); }
@@ -480,22 +474,14 @@ a.card:hover { background: var(--charcoal); }
 .player-side { display: flex; flex-direction: column; gap: var(--s-md); min-width: 0; }
 @media (max-width: 799px) { .player-hero { grid-template-columns: minmax(0, 1fr); } }
 .attr-list { display: flex; flex-direction: column; }
-/* 라벨 · − · 값 · ＋ · 막대. 스텝퍼는 누구나 눌러 고칠 수 있다(2026-09-22) — 버튼을 따로
-   숨겨 두지 않고 값 옆에 바로 둔다. */
-/* 칸 너비를 px 로 못 박고 버튼·격자가 **같은 변수**를 본다. 처음엔 둘 다 1.8em 이었는데,
-   버튼 안의 em 은 버튼 글꼴(20px)을 기준으로 36px 이 되고 격자의 em 은 줄 글꼴(14px)을
-   기준으로 25px 이 돼, 버튼이 칸을 11px 씩 삐져나와 막대와 겹쳤다(2026-09-22 사용자 지적).
-   값 칸(48px)도 같은 이유로 3em(42px)에서 넘치고 있었다. */
-.attr-row { --step: 36px; --valw: 48px;
-  display: grid; grid-template-columns: 4.2em var(--step) var(--valw) var(--step) minmax(0, 1fr);
-  align-items: center; gap: var(--s-xs);
+/* 라벨 · 값 · 막대. 스텝퍼(− ＋)는 2026-09-24 에 걷었다 — 숫자는 티어 게임 대결로만 움직인다.
+   줄 높이는 스텝퍼가 있던 때(36px)를 지켜 왼쪽 아바타 칸과 높이가 그대로 맞게 둔다.
+   값 칸은 px 로 못 박는다 — em 이면 값 글꼴과 줄 글꼴 기준이 갈려 넘친다(2026-09-22 사용자 지적). */
+.attr-row { --valw: 48px;
+  display: grid; grid-template-columns: 4.2em var(--valw) minmax(0, 1fr);
+  align-items: center; gap: var(--s-xs); min-height: calc(36px + var(--s-xs) * 2); box-sizing: border-box;
   padding: var(--s-xs) 0; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); }
-.attr-step { min-height: 0; padding: 0; width: var(--step); height: var(--step); line-height: 1; border-radius: var(--r-sm);
-  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .attr-row > .val { width: var(--valw); min-width: 0; padding-inline: 0; }
-/* 아직 안 보낸 값 — 곧 저장된다는 표시. 저장되면 평범한 값으로 돌아온다. */
-.val.is-draft { box-shadow: inset 0 0 0 2px var(--link); }
-.attr-state { font-size: var(--fs-xs); }
 .attr-row:last-child { border-bottom: 0; }
 .attr-row > .attr-key { color: var(--muted); font-size: var(--fs-xs); font-weight: var(--fw-strong); }
 .attr-bar { display: block; height: 6px; border-radius: var(--r-full); background: var(--charcoal); overflow: hidden; }
@@ -718,3 +704,48 @@ details.year[open] > summary::before { content: "▾ "; }
 .tm-chip-remove { border-style: dashed; color: var(--muted); }
 .tm-chip-remove:hover { border-color: var(--warn, #e0c23c); color: var(--fg); }
 .tm-warn { margin: 0 0 var(--s-sm); font-size: var(--fs-xs); color: var(--cond-mid, #e0c23c); }
+
+/* ══ 티어 게임(2026-09-24) ═════════════════════════════════ */
+.tier-help { font-size: var(--fs-xs); margin: 0 0 var(--s-sm); }
+.tier-board { display: flex; flex-direction: column; }
+.tier-row { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--s-xs); align-items: stretch;
+  padding: var(--s-xs) 0; border-bottom: 1px solid var(--hairline); }
+.tier-row:last-child { border-bottom: 0; }
+.tier-badge { display: flex; align-items: center; justify-content: center; min-height: 72px; border-radius: var(--r-sm); color: #000000;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.tier-S { background: var(--gold); } .tier-A { background: var(--val-a); } .tier-B { background: var(--val-b); }
+.tier-C { background: var(--val-c); } .tier-D { background: var(--val-d); }
+.tier-people { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
+.tier-p { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 56px; color: var(--fg); }
+.tier-p:hover .tier-name { color: var(--link); }
+.tier-face { display: flex; }
+.tier-face svg { width: 48px; height: 48px; }
+.tier-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); }
+.tier-link { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-xs); margin-top: var(--s-xs); }
+.tier-link .label { display: inline; }
+.tier-link-url { font-size: var(--fs-xs); word-break: break-all; user-select: all; }
+
+.duel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-xs); margin-bottom: var(--s-md); }
+.duel-q { margin: 0; font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
+.duel-arena { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--s-sm); }
+.duel-vs { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--muted); }
+.duel-pick { display: flex; flex-direction: column; align-items: center; gap: var(--s-xxs); min-width: 0; padding: var(--s-md) var(--s-xs);
+  border: 2px solid var(--line); border-radius: var(--r-md); background: none; color: var(--fg); cursor: pointer;
+  transition: border-color var(--dur-micro) var(--ease-std), background var(--dur-micro) var(--ease-std); }
+.duel-pick:hover:not(:disabled) { border-color: var(--fg); background: var(--charcoal); }
+.duel-pick:disabled { cursor: default; }
+.duel-sprite { display: flex; }
+.duel-sprite svg { width: 120px; height: 160px; }
+.duel-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.duel-delta { min-height: 20px; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.duel-pick.is-up { border-color: var(--val-a); } .duel-pick.is-up .duel-delta { color: var(--val-a); }
+.duel-pick.is-down { border-color: var(--val-d); } .duel-pick.is-down .duel-delta { color: var(--val-d); }
+.duel-pick.is-still .duel-delta { color: var(--muted); }
+.duel-foot { display: flex; justify-content: space-between; gap: var(--s-xs); margin-top: var(--s-md); }
+.duel-me .duel-me-pick { width: 100%; max-width: 320px; }
+/* 항목 일곱 칸은 폰 폭에 안 들어간다 — 제 줄로 내리고 가로로 민다. */
+.tier-head { flex-wrap: wrap; }
+.tier-keys { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.tier-keys::-webkit-scrollbar { display: none; }
+@media (max-width: 479px) { .duel-sprite svg { width: 96px; height: 128px; } .duel-pick { padding: var(--s-sm) var(--s-xxs); } }

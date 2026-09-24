@@ -4,17 +4,16 @@
 import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { fetchFull, refresh, serializePlayer, write, writeAvatar, writeStats } from '../../lib/api';
+import { fetchFull, serializePlayer, write, writeAvatar } from '../../lib/api';
 import { fmtLogAt } from '../../lib/html';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
-import { getMe } from '../../lib/me';
 import { avatarSvg } from '../../components/avatar';
 import { avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import AvatarEditor from './AvatarEditor';
 import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
-import type { Player, StatKey } from '../../lib/types';
+import type { Player } from '../../lib/types';
 import { countUp } from '../../lib/motion';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
@@ -32,11 +31,6 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   const [saving, setSaving] = useState(false);
   const [opening, setOpening] = useState(false); // fetchFull 이 도는 동안(모달이 뜨기 전)
   const [deleting, setDeleting] = useState(false);
-  const [draft, setDraft] = useState<Partial<Record<StatKey, number>>>({});
-  const [statBusy, setStatBusy] = useState(false);
-  const draftRef = useRef<Partial<Record<StatKey, number>>>({});
-  const statTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flushRef = useRef<() => void>(() => {});
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [avatarSpec, setAvatarSpec] = useState<AvatarSpec | null>(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
@@ -97,52 +91,8 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
     if (isNew && admin && data && !player && editing === null && !open && !opening) openEdit(undefined);
   }, [isNew, admin, data, player, opening]);
 
-  const STAT_SAVE_DELAY = 1500;
-  const flushStats = async (): Promise<void> => {
-    if (statTimer.current) { clearTimeout(statTimer.current); statTimer.current = null; }
-    const d = draftRef.current;
-    if (!player || Object.keys(d).length === 0) return;
-    try {
-      await writeStats(player.num, d, getMe());
-      draftRef.current = {};
-      setDraft({});
-      // 값은 바로 갱신되는데 방금 덧붙인 기록 줄은 한 박자 늦게 읽힌다(시트 덧붙이기 직후의
-      // 읽기가 못 따라온다). 기록이 이 기능의 되먹임이라 잠시 뒤 한 번 더 받아온다.
-      setTimeout(() => { void refresh().catch(() => {}); }, 1200);
-    } catch (e) { message.error((e as Error).message); }
-    finally { setStatBusy(false); }
-  };
-  flushRef.current = () => { void flushStats(); };
-  // 화면을 떠나거나 탭을 접을 때 남은 편집을 먼저 보낸다.
-  useEffect(() => {
-    const onHide = () => { if (document.visibilityState === 'hidden') flushRef.current(); };
-    document.addEventListener('visibilitychange', onHide);
-    return () => { document.removeEventListener('visibilitychange', onHide); flushRef.current(); };
-  }, []);
-
-  // 이 선수 기록만, 최신 여덟 줄. 전체 목록은 두지 않았다 — 숫자가 이상하면 그 선수 자리에서 보면 된다.
+  // 이 선수 기록만, 최신 여덟 줄(서버도 선수마다 여덟 줄만 보낸다).
   const myLog = player ? (data?.statLog ?? []).filter((r) => r.num === player.num).slice(0, 8) : [];
-
-  // ── 능력치 스텝퍼 ──────────────────────────────────────────────
-  // 누를 때마다 서버로 보내면 기록이 누른 횟수만큼 쌓인다(84→85, 85→86…). 손을 뗀 뒤
-  // 잠깐 기다렸다 바뀐 칸만 한 번에 보내 84→87 한 줄로 남긴다. 기다리는 사이에 화면을
-  // 떠나면 그 편집이 날아가므로, 언마운트와 탭 전환에서 남은 걸 먼저 흘려보낸다.
-  const shownStat = (k: StatKey): number => draft[k] ?? (player ? player[k] : 0);
-  const bump = (k: StatKey, by: number): void => {
-    if (!player) return;
-    const now = shownStat(k);
-    const val = Math.max(1, Math.min(99, now + by));
-    if (val === now) return;
-    const next = { ...draft };
-    if (val === player[k]) delete next[k];              // 되돌아왔으면 보낼 게 없다
-    else next[k] = val;
-    draftRef.current = next;
-    setDraft(next);
-    if (statTimer.current) clearTimeout(statTimer.current);
-    if (Object.keys(next).length === 0) { setStatBusy(false); return; }
-    setStatBusy(true);
-    statTimer.current = setTimeout(() => { void flushRef.current(); }, STAT_SAVE_DELAY);
-  };
 
   // OVR 카운트업 — [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
   const cardRef = useRef<HTMLDivElement>(null);
@@ -179,13 +129,11 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   }
 
   const attrRows = player ? STAT_KEYS.map((k) => {
-    const v = shownStat(k), b = band(v, STAT_CUTS);
+    const v = player[k], b = band(v, STAT_CUTS);
     return (
       <div className="attr-row" key={k}>
         <span className="attr-key">{STAT_KO[k]}</span>
-        <button type="button" className="attr-step" aria-label={`${STAT_KO[k]} 낮추기`} disabled={v <= 1} onClick={() => bump(k, -1)}>−</button>
-        <b className={`val val-${b}${draft[k] != null ? ' is-draft' : ''}`}>{v || '–'}</b>
-        <button type="button" className="attr-step" aria-label={`${STAT_KO[k]} 올리기`} disabled={v >= 99} onClick={() => bump(k, 1)}>+</button>
+        <b className={`val val-${b}`}>{v || '–'}</b>
         <i className="attr-bar"><b className={`val-${b}`} style={{ '--fill': `${Math.max(0, Math.min(100, v))}%` } as CSSProperties} /></i>
       </div>
     );
@@ -264,8 +212,9 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
             <div className="player-side">
               {avatarOpen ? avatarPanel() : (
               <div className="card">
+                {/* 스텝퍼는 걷었다(2026-09-24) — 숫자는 티어 게임 대결로만 움직인다. 이 선수가 낀 대결부터 낸다. */}
                 <div className="card-head"><h2>능력치</h2>
-                  <span className="muted attr-state" aria-live="polite">{statBusy ? '저장 중…' : '＋ − 로 바로 고칩니다'}</span>
+                  <span className="card-head-act"><Button size="small" href={href(`/tier/?num=${player.num}`)}>티어 게임에서 바꾸기</Button></span>
                 </div>
                 <div className="attr-list">{attrRows}</div>
                 {myLog.length > 0 && (
@@ -277,7 +226,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
                           <span className="muted">{fmtLogAt(r.ts)}</span>
                           <b>{r.byName || '누군지 모름'}</b>
                           <span>{STAT_KO[r.field]}</span>
-                          <span className="statlog-move">{r.before} → {r.after}</span>
+                          <span className="statlog-move">{r.before} → {r.after}{r.via === 'game' ? ' · 대결' : ''}</span>
                         </li>
                       ))}
                     </ul>

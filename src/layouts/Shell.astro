@@ -9,6 +9,7 @@ const nav = [
   { href: href('/squad/'), label: '명단' },
   { href: href('/lineup/'), label: '라인업' },
   { href: href('/teams/'), label: '팀짜기' },
+  { href: href('/tier/'), label: '티어' },
   { href: href('/rules/'), label: '운영 규칙' },
 ];
 const path = Astro.url.pathname;
@@ -62,6 +63,17 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
       const putBarH = () => document.documentElement.style.setProperty('--topbar-h', `${bar.offsetHeight}px`);
       putBarH();
       new ResizeObserver(putBarH).observe(bar);
+    }
+
+    // 폰에선 탭 줄을 가로로 민다(2026-09-24 여섯 탭) — 지금 탭이 보이게 밀어 두고, 오른쪽에 더 있으면 끝을 흐린다.
+    const tabs = document.querySelector<HTMLElement>('.topnav');
+    if (tabs) {
+      const on = tabs.querySelector<HTMLElement>('a.active');
+      if (on && on.offsetLeft + on.offsetWidth > tabs.clientWidth) tabs.scrollLeft = on.offsetLeft - tabs.clientWidth / 2 + on.offsetWidth / 2;
+      const hint = () => tabs.classList.toggle('is-more', tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 2);
+      hint();
+      tabs.addEventListener('scroll', hint, { passive: true });
+      window.addEventListener('resize', hint);
     }
 
     // 인앱 브라우저 — 데이터를 못 불러왔을 때만 기본 브라우저로 여는 버튼을 보여 준다.

@@ -33,10 +33,10 @@ export async function ensureShareFonts(): Promise<void> {
   } catch { /* 글꼴을 못 불러도 대체 글꼴로 그리는 편이 낫다 */ }
 }
 
-const tok = (name: string, fallback: string): string => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-const pixelFont = (px: number): string => `400 ${px}px ${PIXEL_FAMILY}, sans-serif`;
+export const tok = (name: string, fallback: string): string => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+export const pixelFont = (px: number): string => `400 ${px}px ${PIXEL_FAMILY}, sans-serif`;
 
-function fit(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
+export function fit(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
   if (ctx.measureText(text).width <= maxW) return text;
   let s = text;
   while (s.length > 1 && ctx.measureText(`${s}…`).width > maxW) s = s.slice(0, -1);
@@ -63,7 +63,7 @@ function drawGrain(ctx: CanvasRenderingContext2D, kind: PitchKind, w: number, h:
 }
 
 /** 아바타 한 장 — 24×32 픽셀맵을 그대로 칸칸이 찍는다. 가로로 이어진 같은 칸은 한 번에 묶는다. */
-function drawAvatar(ctx: CanvasRenderingContext2D, spec: ReturnType<typeof avatarPixels>, x: number, y: number, cell: number, fallbackLabel: number): void {
+export function drawAvatar(ctx: CanvasRenderingContext2D, spec: ReturnType<typeof avatarPixels>, x: number, y: number, cell: number, fallbackLabel: number): void {
   if (!spec) {
     // 코드가 깨진 선수 — 화면(avatarSvg)이 번호로 폴백하듯 여기서도 번호를 적는다.
     ctx.save();
