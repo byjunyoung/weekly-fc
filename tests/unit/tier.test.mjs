@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { voteDelta, VOTE_SCALE, VOTE_K, tierOf, TIERS, tierRows, pickPair, QUESTION, statValue } from '../../src/lib/tier.ts';
+import { voteDelta, VOTE_SCALE, VOTE_K, tierQuota, TIERS, tierRows, pickPair, QUESTION, statValue } from '../../src/lib/tier.ts';
 import { STAT_KEYS } from '../../src/lib/types.ts';
 
 const P = (num, v, extra = {}) => ({ num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
@@ -28,22 +28,42 @@ test('SQL 의 vote_delta 와 상수가 같다 — 앱과 서버 식이 갈리지
   assert.equal(Number(m[2]), VOTE_SCALE);
 });
 
-test('tierOf — 경계값', () => {
-  assert.equal(tierOf(85), 'S'); assert.equal(tierOf(84), 'A'); assert.equal(tierOf(78), 'A');
-  assert.equal(tierOf(77), 'B'); assert.equal(tierOf(70), 'B'); assert.equal(tierOf(69), 'C');
-  assert.equal(tierOf(63), 'C'); assert.equal(tierOf(62), 'D'); assert.equal(tierOf(1), 'D');
+test('tierQuota — 비율 10/20/40/20/10, 합은 정확히 n', () => {
   assert.deepEqual(TIERS, ['S', 'A', 'B', 'C', 'D']);
+  assert.deepEqual(tierQuota(30), { S: 3, A: 6, B: 12, C: 6, D: 3 });
+  assert.deepEqual(tierQuota(29), { S: 3, A: 6, B: 11, C: 6, D: 3 }, '2.9·5.8·11.6·5.8·2.9 → 나머지 큰 S·D·A·C 에 한 명씩');
+  assert.deepEqual(tierQuota(10), { S: 1, A: 2, B: 4, C: 2, D: 1 });
+  assert.deepEqual(tierQuota(0), { S: 0, A: 0, B: 0, C: 0, D: 0 });
+  for (let n = 0; n <= 40; n++) assert.equal(Object.values(tierQuota(n)).reduce((a, b) => a + b, 0), n, `n=${n}`);
 });
 
-test('tierRows — 종합은 여섯 평균, 칸 안은 높은 순, 빈 칸도 줄은 남는다', () => {
-  const ps = [P(1, 90), P(2, 70), P(3, 71), P(4, 60, { pace: 99 })];
+test('tierRows — 순위로 담는다: 30명이면 3·6·12·6·3, 칸 안은 높은 순, 종합은 여섯 평균', () => {
+  const ps = Array.from({ length: 30 }, (_, i) => P(i + 1, 99 - i));   // 1번이 99 … 30번이 70
   const rows = tierRows(ps, 'ovr');
   assert.deepEqual(rows.map((r) => r.tier), ['S', 'A', 'B', 'C', 'D']);
-  assert.deepEqual(rows[0].players.map((p) => p.num), [1]);
-  assert.deepEqual(rows[1].players, []);
-  assert.deepEqual(rows[2].players.map((p) => p.num), [3, 2]);
-  assert.deepEqual(rows[3].players.map((p) => p.num), [4], '(99+60*5)/6 = 66.5 → 67 → C');
-  assert.deepEqual(tierRows(ps, 'pace')[0].players.map((p) => p.num), [4, 1]);
+  assert.deepEqual(rows.map((r) => r.players.length), [3, 6, 12, 6, 3]);
+  assert.deepEqual(rows[0].players.map((p) => p.num), [1, 2, 3]);
+  assert.deepEqual(rows[4].players.map((p) => p.num), [28, 29, 30]);
+  const mixed = [P(1, 90), P(2, 70), P(3, 71), P(4, 60, { pace: 99 })];
+  assert.deepEqual(tierRows(mixed, 'ovr').flatMap((r) => r.players.map((p) => p.num)), [1, 3, 2, 4], '(99+60*5)/6 = 66.5 → 67, 71 보다 아래');
+  assert.deepEqual(tierRows(mixed, 'pace').flatMap((r) => r.players.map((p) => p.num)), [4, 1, 3, 2]);
+});
+
+test('tierRows — 동점은 위 칸으로 같이 올라가고, 그만큼 아래 칸이 줄어 D 가 나머지를 받는다', () => {
+  // 10명: 정원 1·2·4·2·1. 1~3번이 모두 90 이면 S 는 3명, A 는 다음 2명 …
+  const ps = [P(1, 90), P(2, 90), P(3, 90), ...Array.from({ length: 7 }, (_, i) => P(i + 4, 80 - i))];
+  const rows = tierRows(ps, 'ovr');
+  assert.deepEqual(rows.map((r) => r.players.map((p) => p.num)), [[1, 2, 3], [4, 5], [6, 7, 8, 9], [10], []]);
+  // 전원 동점이면 전부 S
+  const same = Array.from({ length: 6 }, (_, i) => P(i + 1, 70));
+  assert.deepEqual(tierRows(same, 'ovr').map((r) => r.players.length), [6, 0, 0, 0, 0]);
+});
+
+test('tierRows — 인원이 적어도 빈 칸 줄은 남고 아무도 안 잃는다', () => {
+  const ps = [P(1, 90), P(2, 80), P(3, 70)];
+  const rows = tierRows(ps, 'ovr');
+  assert.deepEqual(rows.map((r) => r.tier), ['S', 'A', 'B', 'C', 'D']);
+  assert.deepEqual(rows.flatMap((r) => r.players.map((p) => p.num)), [1, 2, 3]);
 });
 
 test('tierRows — 능력치가 아직 없는(0) 선수는 뺀다', () => {

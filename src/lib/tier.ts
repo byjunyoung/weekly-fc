@@ -17,18 +17,44 @@ export function voteDelta(win: number, lose: number): number {
 
 export const TIERS = ['S', 'A', 'B', 'C', 'D'] as const;
 export type Tier = (typeof TIERS)[number];
-/** S·A·B·C 의 하한. 2026-09-24 값으로 나누면 S 5 · A 7 · B 11 · C 2 · D 5. */
-const CUTS: Array<[Tier, number]> = [['S', 85], ['A', 78], ['B', 70], ['C', 63]];
-export const tierOf = (v: number): Tier => CUTS.find(([, min]) => v >= min)?.[0] ?? 'D';
+/** 티어는 점수 구간이 아니라 **순위 비율**로 가른다(2026-09-25 "점수가 아니라 순위/명수로 제한하자").
+ *  옛 구간(S ≥ 85 …)은 숫자가 70 에 몰린 채로는 S 가 비거나 넘쳤다. 위에서부터 10·20·40·20·10% —
+ *  30명이면 S 3 · A 6 · B 12 · C 6 · D 3. 인원이 바뀌어도 모양이 유지된다. */
+export const TIER_RATIO: Record<Tier, number> = { S: 0.1, A: 0.2, B: 0.4, C: 0.2, D: 0.1 };
+
+/** 인원 n 을 비율대로 나눈 명수. 소수점은 **큰 나머지 순**으로 채워 합이 정확히 n 이 된다. */
+export function tierQuota(n: number): Record<Tier, number> {
+  const raw = TIERS.map((t) => n * TIER_RATIO[t]);
+  const q = raw.map(Math.floor);
+  let left = n - q.reduce((a, b) => a + b, 0);
+  // 나머지가 큰 칸부터, 같으면 가운데(B)에 가깝게 — 순서를 고정해 같은 n 이면 늘 같은 결과.
+  const order = TIERS.map((_, i) => i).sort((a, b) => (raw[b] - q[b]) - (raw[a] - q[a]) || Math.abs(a - 2) - Math.abs(b - 2));
+  for (const i of order) { if (left <= 0) break; q[i] += 1; left -= 1; }
+  return Object.fromEntries(TIERS.map((t, i) => [t, q[i]])) as Record<Tier, number>;
+}
 
 export type TierKey = StatKey | 'ovr';
 export const statValue = (p: Player, key: TierKey): number => (key === 'ovr' ? ovr(p) : p[key]);
 
-/** S~D 다섯 줄. 칸 안은 높은 순(같으면 번호순). 숫자가 아직 없는(0) 선수는 뺀다. */
+/** S~D 다섯 줄 — 높은 순으로 세워 위 칸부터 명수만큼 담는다. 칸 안은 높은 순(같으면 번호순).
+ *  **동점은 위 칸으로**: 칸이 찼어도 다음 사람의 숫자가 마지막으로 담은 사람과 같으면 같은 칸에 넣는다
+ *  (같은 숫자인데 한 명은 S, 한 명은 A 가 되면 설명이 안 된다). 그만큼 아래 칸이 줄고, D 가 나머지를 받는다.
+ *  숫자가 아직 없는(0) 선수는 뺀다. */
 export function tierRows(players: Player[], key: TierKey): Array<{ tier: Tier; players: Player[] }> {
   const rated = players.filter((p) => statValue(p, key) > 0)
     .sort((a, b) => statValue(b, key) - statValue(a, key) || a.num - b.num);
-  return TIERS.map((tier) => ({ tier, players: rated.filter((p) => tierOf(statValue(p, key)) === tier) }));
+  const quota = tierQuota(rated.length);
+  const rows: Array<{ tier: Tier; players: Player[] }> = [];
+  let i = 0;
+  for (const tier of TIERS) {
+    const take: Player[] = [];
+    const want = tier === 'D' ? rated.length - i : quota[tier];
+    while (i < rated.length && (take.length < want || (take.length > 0 && statValue(rated[i], key) === statValue(take[take.length - 1], key)))) {
+      take.push(rated[i]); i += 1;
+    }
+    rows.push({ tier, players: take });
+  }
+  return rows;
 }
 
 export const QUESTION: Record<StatKey, string> = {

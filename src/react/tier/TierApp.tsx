@@ -186,7 +186,7 @@ function Tier() {
             <h2>지금 티어</h2>
             <Segmented<TierKey> className="chips tier-keys" value={tierKey} onChange={setTierKey} options={KEYS} />
           </div>
-          <p className="muted tier-help">둘 중 누가 더 나은지 고르면 그 자리에서 능력치가 바뀝니다. 칸은 숫자 구간 — S 85 이상 · A 78 · B 70 · C 63 · D 그 아래.</p>
+          <p className="muted tier-help">둘 중 누가 더 나은지 고르면 그 자리에서 능력치가 바뀝니다. 칸은 순위 — 위에서부터 S 10% · A 20% · B 40% · C 20% · D 10%, 같은 숫자는 같은 칸.</p>
           <Board players={players} tierKey={tierKey} />
         </div>
       </div>
