@@ -9,13 +9,14 @@ import { avatarFaceSvg } from '../../components/avatar';
 import { saveMatch } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
 import { seoulToday } from '../../lib/html';
-import { fromMatch, isVideoUrl, matchLabel, snapshot } from '../../lib/matches';
+import { fromMatch, matchLabel, snapshot } from '../../lib/matches';
 import * as T from '../../lib/teams';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
+import TeamsShareModal from './TeamsShareModal';
 
 function Teams() {
   const { message } = App.useApp();
@@ -27,7 +28,7 @@ function Teams() {
   const admin = useAdmin();
   // 매치로 저장(2026-09-25). 날짜는 그날 하루가 매치 하나라 기본 오늘. 저장은 관리자만, 초안은 그대로 둔다.
   const [date, setDate] = useState(() => seoulToday());
-  const [video, setVideo] = useState('');   // 유튜브 링크(선택) — 비워 두면 이미 있던 링크를 지킨다
+  const [shareOpen, setShareOpen] = useState(false);   // 팀 나누기 이미지(2026-09-25, 텍스트 복사 대신)
   const [saving, setSaving] = useState(false);
   // 저장된 매치 고치기(2026-09-25): /matches/new/?edit=ID 로 들어오면 그 매치를 불러와 초안을 대체한다. 한 번만.
   // 빌드 때는 location 이 없다(정적 빌드 — 프론트매터·초기 렌더에서 쿼리를 읽지 말 것). 화면이 뜬 뒤에만 읽는다.
@@ -44,7 +45,7 @@ function Teams() {
     const m = data.matches.find((x) => x.id === editId);
     if (!m) { message.error('그 매치를 찾지 못했습니다'); return; }
     setSt(fromMatch(m, data.players));
-    setDate(m.date); setVideo(m.video);
+    setDate(m.date);
     setEditing({ id: m.id, date: m.date });
     setPicked(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,6 +60,7 @@ function Teams() {
   if (!data) return <Loading title="팀짜기" />;
 
   const players = data.players;
+  const snap = snapshot(st, players);   // 팀이 다 짜였을 때만 이미지 저장이 켜진다
   const views = T.teamViews(st, players);
   const rest = T.unassigned(st, players);
   const total = T.membersOf(st, players).length;
@@ -75,38 +77,24 @@ function Teams() {
     commit((prev) => T.moveTo(prev, picked, team));
     setPicked(null);
   }
-  /** 복사가 막히는 자리가 있다(비-HTTPS 로 연 폰, 권한 거부) — 그때 **글을 띄워 준다**.
-   *  예전엔 "아래 글을 길게 눌러 복사하라"고만 하고 그 글이 화면에 없어 막다른 길이었다. */
-  function showText(text: string): void {
-    Modal.info({
-      title: '팀 나누기', width: 480, okText: '닫기',
-      content: <textarea className="tm-text" readOnly rows={Math.min(14, text.split('\n').length + 1)} value={text} />,
-    });
-  }
+
   async function onSaveMatch(): Promise<void> {
-    const snap = snapshot(st, players);
     if (!snap.ok) { message.info(snap.error); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { message.info('날짜를 골라 주세요'); return; }
-    if (video.trim() && !isVideoUrl(video)) { message.info('영상 링크는 http(s)로 시작해야 합니다'); return; }
     const run = async () => {
       setSaving(true);
       try {
-        await saveMatch(date, snap.lineup, video.trim() ? video.trim() : null);
-        message.success(<span>{matchLabel(date)} 매치에 저장했습니다 · <a href={href('/matches/')}>보러 가기</a></span>, 5);
+        await saveMatch(date, snap.lineup);
+        message.success(`${matchLabel(date)} 매치에 저장했습니다`);
+        location.href = href('/matches/');   // 매치 탭의 기능이니 저장하면 목록으로 돌아간다
       } catch (e) { message.error((e as Error).message); }
       finally { setSaving(false); }
     };
-    // 같은 날짜가 이미 있으면 덮어쓴다 — 표는 남으니 알려만 주고 진행.
     if (editing && editing.date === date) { await run(); return; }   // 고치던 매치 그대로 — 덮어쓰기가 목적이다
+    // 같은 날짜가 이미 있으면 덮어쓴다 — 표는 남으니 알려만 주고 진행.
     if ((data?.matches ?? []).some((m) => m.date === date)) {
       Modal.confirm({ title: `${matchLabel(date)} 매치가 이미 있습니다`, content: '팀 구성을 이걸로 덮어씁니다. POTM 표는 그대로 남습니다.', okText: '덮어쓰기', cancelText: '취소', onOk: run });
     } else await run();
-  }
-  async function onCopy(): Promise<void> {
-    const text = T.shareText(st, players);
-    if (!text) { message.info('먼저 팀을 나눠 주세요'); return; }
-    try { await navigator.clipboard.writeText(text); message.success('복사했습니다 — 카톡에 붙여넣으세요'); }
-    catch { showText(text); }
   }
 
   const chip = (m: T.Member) => (
@@ -125,7 +113,7 @@ function Teams() {
         <h1>{editing ? `${matchLabel(editing.date)} 팀 수정` : '팀짜기'} <span className="muted">{total}명</span></h1>
         <div className="actions">
           <Button onClick={() => { location.href = href('/matches/'); }}>매치 목록</Button>
-          <Button type="primary" onClick={onCopy}>텍스트 복사</Button>
+          <Button type="primary" disabled={!snap.ok} title={snap.ok ? undefined : snap.error} onClick={() => setShareOpen(true)}>이미지 저장</Button>
         </div>
       </div>
 
@@ -146,11 +134,8 @@ function Teams() {
           <label className="bd-field"><span className="label">날짜</span>
             <Input type="date" className="w-date" value={date} max="2099-12-31" onChange={(e) => setDate(e.target.value)} />
           </label>
-          <label className="bd-field"><span className="label">영상</span>
-            <Input type="url" className="w-video" placeholder="유튜브 링크 (선택)" value={video} maxLength={500} onChange={(e) => setVideo(e.target.value)} />
-          </label>
           <Button onClick={onSaveMatch} loading={saving}>매치로 저장</Button>
-          <span className="muted tm-save-hint">그날 팀 구성이 매치 탭에 남고, 뛴 사람들이 POTM 을 뽑습니다. 영상은 나중에 매치 카드에서 붙여도 됩니다</span>
+          <span className="muted tm-save-hint">그날 팀 구성이 매치 탭에 남고, 뛴 사람들이 POTM 을 뽑습니다</span>
         </div>
       )}
 
@@ -217,6 +202,7 @@ function Teams() {
           </>
         )}
       </div>
+      <TeamsShareModal open={shareOpen} onClose={() => setShareOpen(false)} lineup={snap.ok ? snap.lineup : []} players={players} date={date} />
     </>
   );
 }

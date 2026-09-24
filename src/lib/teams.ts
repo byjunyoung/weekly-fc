@@ -199,6 +199,11 @@ function nameMap(members: Member[]): Map<string, string> {
   return out;
 }
 
+/** 저장된 lineup(번호·이름만)에서도 같은 규칙으로 — 키는 명단 선수 `p{번호}`, 용병은 이름. 공유 이미지가 쓴다. */
+export function nameMapOf(members: Array<{ num: number | null; name: string }>): Map<string, string> {
+  return nameMap(members.map((m) => ({ key: m.num != null ? playerKey(m.num) : m.name, name: m.name, ovr: null, num: m.num })));
+}
+
 /** 카톡에 그대로 붙여넣을 텍스트. 사용자가 손으로 적던 모양을 그대로 따른다. */
 export function shareText(st: TeamsState, players: Player[]): string {
   const names = nameMap(membersOf(st, players));

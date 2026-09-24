@@ -2,11 +2,12 @@
 //
 // 카드 하나가 매치 하루. 팀은 팀짜기와 같은 칩 모양으로(같은 손버릇), POTM 은 맨 위에 아바타로.
 // 투표는 그날 뛴 로그인 회원만 — 못 누르는 이유는 lib 가 정한 한 줄을 그대로 보여 준다.
-import { App, Button, Input, Modal } from 'antd';
+import { App, Button, Modal } from 'antd';
 import { useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
-import { deleteMatch, setMatchVideo, votePotm } from '../../lib/api';
+import { deleteMatch, votePotm } from '../../lib/api';
+import { LINKS } from '../../lib/rules';
 import { seoulToday } from '../../lib/html';
 import { href } from '../../lib/url';
 import * as M from '../../lib/matches';
@@ -41,20 +42,6 @@ function Card({ m, players, today, admin, onPotmImage }: { m: Match; players: Pl
     catch (e) { message.error((e as Error).message); }
     finally { setBusy(false); }
   }
-  /** 유튜브 링크 붙이기·고치기(관리자). 영상은 보통 팀을 짠 뒤에 올라오니 카드에서 따로 붙인다. */
-  function onVideo(): void {
-    let v = m.video;
-    Modal.confirm({
-      title: `${M.matchLabel(m.date, year)} 매치 영상 링크`, icon: null, okText: '저장', cancelText: '취소',
-      content: <Input type="url" defaultValue={m.video} placeholder="https://youtu.be/…  (비우면 지움)" maxLength={500} onChange={(e) => { v = e.target.value; }} />,
-      onOk: async () => {
-        const t = v.trim();
-        if (t && !M.isVideoUrl(t)) { message.info('링크는 http(s)로 시작해야 합니다'); throw new Error('invalid'); }
-        try { await setMatchVideo(m.id, t); message.success(t ? '영상 링크를 붙였습니다' : '영상 링크를 지웠습니다'); }
-        catch (e) { message.error((e as Error).message); throw e; }
-      },
-    });
-  }
   function onDelete(): void {
     Modal.confirm({
       title: `${M.matchLabel(m.date, year)} 매치를 지울까요?`, content: '팀 구성과 POTM 표가 함께 사라집니다.',
@@ -68,9 +55,7 @@ function Card({ m, players, today, admin, onPotmImage }: { m: Match; players: Pl
       <div className="card-head">
         <h2>{M.matchLabel(m.date, year)}</h2>
         <div className="card-head-act">
-          {m.video && <Button size="small" href={m.video} target="_blank" rel="noopener">▶ 영상 보기</Button>}
           {admin && <Button size="small" onClick={() => { location.href = href(`/matches/new/?edit=${m.id}`); }}>팀 수정</Button>}
-          {admin && <Button size="small" onClick={onVideo}>{m.video ? '영상 링크 고치기' : '영상 링크'}</Button>}
           {admin && <Button size="small" danger onClick={onDelete}>삭제</Button>}
         </div>
       </div>
@@ -147,7 +132,10 @@ function Matches() {
     <>
       <div className="page-head">
         <h1>매치</h1>
-        <div className="actions"><Button type="primary" onClick={() => { location.href = href('/matches/new/'); }}>팀 짜기</Button></div>
+        <div className="actions">
+          <Button href={LINKS.youtube} target="_blank" rel="noopener">▶ 유튜브 채널</Button>
+          <Button type="primary" onClick={() => { location.href = href('/matches/new/'); }}>팀 짜기</Button>
+        </div>
       </div>
       {matches.length === 0 && (
         <div className="card"><h2>아직 저장된 매치가 없습니다</h2><p className="muted">[팀 짜기]에서 온 사람을 조끼 팀으로 가르고, 관리자 모드로 날짜를 골라 저장하면 여기에 쌓입니다.</p></div>
