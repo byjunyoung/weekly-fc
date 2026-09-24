@@ -61,8 +61,8 @@ function EmptyMeTile({ onOpen }: { onOpen: () => void }) {
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
       <span className="tile-label">라커룸</span>
       <LockerStage svg={avatarSvg(PLACEHOLDER_SPEC, LOCKER_SPRITE_H, undefined, true)}
-        plate={<span className="locker-plate locker-plate-empty">이름을 고르면 내 선수가 섭니다</span>} />
-      <span className="tile-sub tile-go">눌러서 이름 고르기 ›</span>
+        plate={<span className="locker-plate locker-plate-empty">로그인하면 내 선수가 섭니다</span>} />
+      <span className="tile-sub tile-go">눌러서 로그인 ›</span>
     </Card>
   );
 }

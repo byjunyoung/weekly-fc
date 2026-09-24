@@ -75,17 +75,19 @@ test('antd CSS는 wfc 변수 클래스로 뽑혔고 스펙 부품 규칙을 담�
   }
   assert.ok(/\.ant-btn[^{]*\{[^}]*background/.test(css), '부품 규칙이 비었다 — zeroRuntime 을 켠 채 뽑았다');
 });
-test('상단바 이름·관리자 버튼은 React 섬으로 그려지고 옛 모달·토스트는 없다', () => {
+test('상단바 로그인 버튼은 React 섬으로 그려지고, 관리자 버튼은 빌드 때 없다(관리자 계정일 때만), 옛 모달·토스트는 없다', () => {
   for (const p of SHELL_PAGES) {
     const html = read(p);
     const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/TopbarActions\.[^"]+\.js"[^>]*>/);
     assert.ok(island, `${p}: TopbarActions 섬 없음`);
     assert.ok(island[0].includes('client="load"'), `${p}: client:load 아님`);
-    assert.ok(html.includes('id="me-btn"') && html.includes('id="admin-btn"'), `${p}: 버튼이 빌드 때 안 그려짐`);
-    for (const old of ['id="pin-modal"', 'id="me-modal"', 'id="toast"']) assert.ok(!html.includes(old), `${p}: ${old} 가 남음`);
-    const adminBtn = html.match(/<button\b[^>]*\bid="admin-btn"[^>]*>/);
-    assert.ok(adminBtn, `${p}: admin-btn 태그 없음`);
-    assert.ok(/\bclass="[^"]*\bwfc\b[^"]*"/.test(adminBtn[0]), `${p}: 빌드 때 그린 버튼에 wfc 변수 클래스가 없다(빌드 CSS와 어긋남)`);
+    assert.ok(html.includes('id="me-btn"'), `${p}: 로그인 버튼이 빌드 때 안 그려짐`);
+    // 2026-09-24 본인인증: 관리자 버튼은 서버가 관리자라고 답한 계정에만 뜬다 — 빌드 결과엔 없어야 한다.
+    assert.ok(!html.includes('id="admin-btn"'), `${p}: 관리자 버튼이 빌드 때 그려짐`);
+    for (const old of ['id="pin-modal"', 'id="me-modal"', 'id="toast"', 'id="pin-input"']) assert.ok(!html.includes(old), `${p}: ${old} 가 남음`);
+    const meBtn = html.match(/<button\b[^>]*\bid="me-btn"[^>]*>/);
+    assert.ok(meBtn, `${p}: me-btn 태그 없음`);
+    assert.ok(/\bclass="[^"]*\bwfc\b[^"]*"/.test(meBtn[0]), `${p}: 빌드 때 그린 버튼에 wfc 변수 클래스가 없다(빌드 CSS와 어긋남)`);
   }
 });
 test('운영 탭 벌금 — 기준표는 빌드 때 그린 antd 표, 현황·내역은 FeesLive 섬, 옛 벌금 모달 없음', () => {

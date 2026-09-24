@@ -12,7 +12,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "test:unit": "TZ=UTC node --test \"tests/unit/*.test.mjs\"",
+    "test:unit": "TZ=UTC node --test --test-timeout=20000 \"tests/unit/*.test.mjs\"",
     "test:build": "node --test \"tests/build/*.test.mjs\"",
     "test": "npm run test:unit && npm run build && npm run test:build"
   },
