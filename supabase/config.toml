@@ -1,0 +1,22 @@
+# Supabase 설정 — 여기 적은 항목만 `supabase config push` 로 올라간다(안 적은 설정은 서버 그대로).
+# 2026-09-24 본인인증: 이메일 6자리 코드 로그인. 설계 docs/superpowers/specs/2026-09-24-email-auth-design.md
+# 메일 발송(SMTP)은 비밀번호가 들어가 여기 두지 않는다 — 대시보드에서 사용자가 넣는다.
+project_id = "weekly-fc"
+
+[auth]
+site_url = "https://byjunyoung.github.io/weekly-fc/"
+
+[auth.email]
+otp_length = 6
+otp_expiry = 600          # 10분
+max_frequency = "60s"     # 같은 주소로 코드 다시 받기는 1분 뒤부터
+
+# 처음 가입하는 사람(confirmation)과 이미 있는 사람(magic_link) 둘 다 링크 대신 코드를 보낸다 —
+# 카톡 인앱에서 링크를 누르면 다른 브라우저가 열려 로그인이 엉뚱한 곳에 남는다.
+[auth.email.template.confirmation]
+subject = "WEEKLY FC 로그인 코드"
+content_path = "./supabase/templates/code.html"
+
+[auth.email.template.magic_link]
+subject = "WEEKLY FC 로그인 코드"
+content_path = "./supabase/templates/code.html"
