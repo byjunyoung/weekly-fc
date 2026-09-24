@@ -94,6 +94,15 @@ CSS 를 더 싣지 않는다. 기본값은 오늘.
 - 단위: snapshot(빈 팀 제거·안 정한 사람 오류·용병 이름 그대로), potmOf(동점·0표), voteOpen(경계 7일), voteBlock 문구.
 - 폰 폭에서 눌러서: 팀짜기 저장 → 매치 카드 → 투표 → 표 옮기기 → 삭제.
 
+## 5b. 유튜브 링크(2026-09-25 추가, "매치에 유튜브 링크도 걸어두자")
+
+- `matches.video_url text default ''`. 마이그레이션 `20260925100000_match_video.sql`.
+- `save_match(p_date, p_lineup, p_video default null)` — null 이면 있던 링크를 지키고, '' 이면 지운다. 옛 2인자 함수는 drop(둘 다 있으면 PostgREST 가 못 고른다).
+- `set_match_video(p_id, p_video)`(관리자) — 영상은 보통 팀을 짠 뒤에 올라오므로 카드에서 따로 붙인다.
+- 규칙(`private.clean_video_url`): 비면 '', 아니면 `http(s)://` 로 시작, 500자 이하. 앱 `isVideoUrl` 도 같은 규칙.
+- 화면: 팀짜기 저장 줄에 "영상" 입력(선택), 매치 카드 머리에 [▶ 영상 보기](새 탭) · 관리자 [영상 링크 / 고치기](Modal + Input).
+- `get_all` 의 matches 에 `video` 가 실린다.
+
 ## 6. 범위 밖
 
 선수 페이지의 POTM 횟수, 벌금과 매치 연결(`fines.match_id`), 홈 타일, 경기 결과(스코어), 평점, 용병 POTM.

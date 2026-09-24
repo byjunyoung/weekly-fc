@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, applyPotm, attendees, deadline, matchLabel, potmOf, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
+import { addDays, applyPotm, attendees, deadline, isVideoUrl, matchLabel, potmOf, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
 import { addGuest, initialTeams, moveTo, playerKey, guestKey, togglePicked } from '../../src/lib/teams.ts';
 import { normalizeMatch, normalizeData, EMPTY } from '../../src/lib/api.ts';
 
 const P = (num, name) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '',
   pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '' });
 const ROSTER = [P(2, '김현서'), P(3, '김준영'), P(4, '이동훈')];
-const M = (over = {}) => ({ id: 1, date: '2026-09-27', voters: 0, tally: {},
+const M = (over = {}) => ({ id: 1, date: '2026-09-27', voters: 0, tally: {}, video: '',
   lineup: [{ vest: 'none', members: [{ num: 2, name: '김현서' }, { num: null, name: '오준 용병+2' }] },
            { vest: 'orange', members: [{ num: 3, name: '김준영' }] }], ...over });
 
@@ -84,10 +84,19 @@ test('normalizeMatch: 모르는 조끼·이름 없는 사람은 버리고, 집�
   const m = normalizeMatch({ id: '5', date: '2026-09-27T00:00:00', voters: '2',
     lineup: [{ vest: 'none', members: [{ num: '2', name: ' 김현서 ' }, { name: '' }] }, { vest: 'pink', members: [{ name: 'x' }] }, { vest: 'neon', members: [] }],
     tally: { '3': 2, '0': 1, '2': '0' } });
-  assert.deepEqual(m, { id: 5, date: '2026-09-27', voters: 2, tally: { 3: 2 },
+  assert.deepEqual(m, { id: 5, date: '2026-09-27', voters: 2, tally: { 3: 2 }, video: '',
     lineup: [{ vest: 'none', members: [{ num: 2, name: '김현서' }] }] });
+  assert.equal(normalizeMatch({ id: 6, video: ' https://youtu.be/x ' }).video, 'https://youtu.be/x');
   assert.equal(normalizeMatch({ date: '2026-09-27' }), null, 'id 없으면 버린다');
 });
 test('normalizeData: matches 가 없어도 빈 배열', () => {
   assert.deepEqual(normalizeData({}).matches, []);
+});
+
+test('isVideoUrl — http(s) 로 시작하는 한 덩어리만', () => {
+  assert.equal(isVideoUrl('https://youtu.be/abc'), true);
+  assert.equal(isVideoUrl(' http://youtube.com/watch?v=1 '), true);
+  assert.equal(isVideoUrl('youtu.be/abc'), false);
+  assert.equal(isVideoUrl(''), false);
+  assert.equal(isVideoUrl('https://a b'), false);
 });

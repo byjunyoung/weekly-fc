@@ -763,6 +763,7 @@ details.year[open] > summary::before { content: "▾ "; }
 
 /* ── 매치 (2026-09-25) — 카드 하나가 하루. 팀은 팀짜기 칩을 그대로 쓰되 누르는 게 아니라 보는 것이다. */
 .w-date { width: 160px; }
+.w-video { width: 240px; max-width: 100%; }
 .tm-save { padding-top: var(--s-sm); border-top: 2px solid var(--line); }
 .tm-save-hint { font-size: var(--fs-xs); }
 .mt-potm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }

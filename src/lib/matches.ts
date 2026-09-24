@@ -71,3 +71,6 @@ export function matchLabel(ymd: string, todayYear?: number): string {
 export function applyPotm(d: Data, id: number, tally: Record<number, number>, voters: number): Data {
   return { ...d, matches: (d.matches ?? []).map((m) => (m.id === id ? { ...m, tally, voters } : m)) };
 }
+
+/** 영상 링크로 쓸 수 있는 문자열인가 — 비면 false, http(s) 로 시작해야 true(서버도 같은 규칙). */
+export const isVideoUrl = (v: string): boolean => /^https?:\/\/\S+$/i.test((v ?? '').trim());

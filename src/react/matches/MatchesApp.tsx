@@ -2,11 +2,11 @@
 //
 // 카드 하나가 매치 하루. 팀은 팀짜기와 같은 칩 모양으로(같은 손버릇), POTM 은 맨 위에 아바타로.
 // 투표는 그날 뛴 로그인 회원만 — 못 누르는 이유는 lib 가 정한 한 줄을 그대로 보여 준다.
-import { App, Button, Modal } from 'antd';
+import { App, Button, Input, Modal } from 'antd';
 import { useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
-import { deleteMatch, votePotm } from '../../lib/api';
+import { deleteMatch, setMatchVideo, votePotm } from '../../lib/api';
 import { seoulToday } from '../../lib/html';
 import { href } from '../../lib/url';
 import * as M from '../../lib/matches';
@@ -39,6 +39,20 @@ function Card({ m, players, today, admin }: { m: Match; players: Player[]; today
     catch (e) { message.error((e as Error).message); }
     finally { setBusy(false); }
   }
+  /** 유튜브 링크 붙이기·고치기(관리자). 영상은 보통 팀을 짠 뒤에 올라오니 카드에서 따로 붙인다. */
+  function onVideo(): void {
+    let v = m.video;
+    Modal.confirm({
+      title: `${M.matchLabel(m.date, year)} 매치 영상 링크`, icon: null, okText: '저장', cancelText: '취소',
+      content: <Input type="url" defaultValue={m.video} placeholder="https://youtu.be/…  (비우면 지움)" maxLength={500} onChange={(e) => { v = e.target.value; }} />,
+      onOk: async () => {
+        const t = v.trim();
+        if (t && !M.isVideoUrl(t)) { message.info('링크는 http(s)로 시작해야 합니다'); throw new Error('invalid'); }
+        try { await setMatchVideo(m.id, t); message.success(t ? '영상 링크를 붙였습니다' : '영상 링크를 지웠습니다'); }
+        catch (e) { message.error((e as Error).message); throw e; }
+      },
+    });
+  }
   function onDelete(): void {
     Modal.confirm({
       title: `${M.matchLabel(m.date, year)} 매치를 지울까요?`, content: '팀 구성과 POTM 표가 함께 사라집니다.',
@@ -51,7 +65,11 @@ function Card({ m, players, today, admin }: { m: Match; players: Player[]; today
     <section className="card mt-card" aria-label={`${M.matchLabel(m.date, year)} 매치`}>
       <div className="card-head">
         <h2>{M.matchLabel(m.date, year)}</h2>
-        {admin && <div className="card-head-act"><Button size="small" danger onClick={onDelete}>삭제</Button></div>}
+        <div className="card-head-act">
+          {m.video && <Button size="small" href={m.video} target="_blank" rel="noopener">▶ 영상 보기</Button>}
+          {admin && <Button size="small" onClick={onVideo}>{m.video ? '영상 링크 고치기' : '영상 링크'}</Button>}
+          {admin && <Button size="small" danger onClick={onDelete}>삭제</Button>}
+        </div>
       </div>
 
       <div className="mt-potm" aria-live="polite">

@@ -62,7 +62,7 @@ export function normalizeMatch(r: Raw): Match | null {
   });
   const tally: Record<number, number> = {};
   for (const [k, v] of Object.entries((r.tally as Raw) ?? {})) { const n = num(k); if (n > 0 && num(v) > 0) tally[n] = num(v); }
-  return { id, date: day(r.date), lineup, tally, voters: num(r.voters) };
+  return { id, date: day(r.date), lineup, tally, voters: num(r.voters), video: String(r.video ?? '').trim() };
 }
 
 export function normalizeData(d: Raw): Data {
@@ -233,12 +233,20 @@ export async function writeAvatar(num: number, avatar: string): Promise<Raw> {
 
 // ── 매치 · POTM (2026-09-25) ──────────────────────────────────
 /** 팀짜기 결과를 그날 매치로 저장(관리자). 같은 날짜면 서버가 덮어쓴다. 끝나면 다시 읽는다. */
-export async function saveMatch(date: string, lineup: MatchTeam[]): Promise<number> {
+export async function saveMatch(date: string, lineup: MatchTeam[], video: string | null = null): Promise<number> {
   if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
-  const r = await rpc('save_match', { p_date: date, p_lineup: lineup });
+  // video 가 null 이면 서버가 이미 있던 링크를 지킨다(팀만 다시 저장할 때).
+  const r = await rpc('save_match', { p_date: date, p_lineup: lineup, p_video: video });
   if (inflight) await inflight.catch(() => {});
   await refresh();
   return num(r.id);
+}
+/** 매치의 유튜브 링크만 붙이거나 고친다(관리자). '' 이면 지운다. */
+export async function setMatchVideo(id: number, video: string): Promise<void> {
+  if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
+  await rpc('set_match_video', { p_id: id, p_video: video });
+  if (inflight) await inflight.catch(() => {});
+  await refresh();
 }
 export async function deleteMatch(id: number): Promise<void> {
   if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');

@@ -9,7 +9,7 @@ import { avatarFaceSvg } from '../../components/avatar';
 import { saveMatch } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
 import { seoulToday } from '../../lib/html';
-import { matchLabel, snapshot } from '../../lib/matches';
+import { isVideoUrl, matchLabel, snapshot } from '../../lib/matches';
 import * as T from '../../lib/teams';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
@@ -27,6 +27,7 @@ function Teams() {
   const admin = useAdmin();
   // 매치로 저장(2026-09-25). 날짜는 그날 하루가 매치 하나라 기본 오늘. 저장은 관리자만, 초안은 그대로 둔다.
   const [date, setDate] = useState(() => seoulToday());
+  const [video, setVideo] = useState('');   // 유튜브 링크(선택) — 비워 두면 이미 있던 링크를 지킨다
   const [saving, setSaving] = useState(false);
 
   // 초안은 명단과 무관하게 한 번만 불러온다 — 예전엔 명단을 기다렸다 그걸로 걸렀는데,
@@ -71,10 +72,11 @@ function Teams() {
     const snap = snapshot(st, players);
     if (!snap.ok) { message.info(snap.error); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { message.info('날짜를 골라 주세요'); return; }
+    if (video.trim() && !isVideoUrl(video)) { message.info('영상 링크는 http(s)로 시작해야 합니다'); return; }
     const run = async () => {
       setSaving(true);
       try {
-        await saveMatch(date, snap.lineup);
+        await saveMatch(date, snap.lineup, video.trim() ? video.trim() : null);
         message.success(<span>{matchLabel(date)} 매치에 저장했습니다 · <a href={href('/matches/')}>보러 가기</a></span>, 5);
       } catch (e) { message.error((e as Error).message); }
       finally { setSaving(false); }
@@ -128,8 +130,11 @@ function Teams() {
           <label className="bd-field"><span className="label">날짜</span>
             <Input type="date" className="w-date" value={date} max="2099-12-31" onChange={(e) => setDate(e.target.value)} />
           </label>
+          <label className="bd-field"><span className="label">영상</span>
+            <Input type="url" className="w-video" placeholder="유튜브 링크 (선택)" value={video} maxLength={500} onChange={(e) => setVideo(e.target.value)} />
+          </label>
           <Button onClick={onSaveMatch} loading={saving}>매치로 저장</Button>
-          <span className="muted tm-save-hint">그날 팀 구성이 매치 탭에 남고, 뛴 사람들이 POTM 을 뽑습니다</span>
+          <span className="muted tm-save-hint">그날 팀 구성이 매치 탭에 남고, 뛴 사람들이 POTM 을 뽑습니다. 영상은 나중에 매치 카드에서 붙여도 됩니다</span>
         </div>
       )}
 
