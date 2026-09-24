@@ -9,6 +9,7 @@ export const PAGES = [
   'lineup/index.html',
   'teams/index.html',
   'matches/index.html',
+  'matches/new/index.html',
   'squad/9/index.html',
   'squad/99/index.html',
   'rules/index.html',
@@ -20,7 +21,7 @@ export const PAGES = [
 ];
 export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
-const REDIRECTS = ['record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'tactics/index.html', 'about/index.html'];
+const REDIRECTS = ['teams/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'tactics/index.html', 'about/index.html'];
 export const SHELL_PAGES = PAGES.filter((p) => !REDIRECTS.includes(p));
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
 
@@ -40,10 +41,14 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 홈·명단·라인업·팀짜기·매치·티어·운영 규칙 일곱 갈래', () => {
+test('상단 탭은 홈·명단·라인업·매치·티어·운영 규칙 여섯 갈래 — 팀짜기는 매치 아래 기능(2026-09-25)', () => {
   const html = read('index.html');
-  for (const l of ['홈', '명단', '라인업', '팀짜기', '매치', '티어', '운영 규칙']) assert.ok(html.includes(`<span>${l}</span>`), l);
-  for (const l of ['스쿼드', '기록', '전술', '소개']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+  for (const l of ['홈', '명단', '라인업', '매치', '티어', '운영 규칙']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['스쿼드', '기록', '전술', '소개', '팀짜기']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+});
+test('옛 /teams/ 는 /matches/new/ 로 넘긴다(카톡에 남은 링크)', () => {
+  assert.ok(read('teams/index.html').includes('url=/weekly-fc/matches/new/'));
+  // [팀 짜기] 버튼은 React 섬이 브라우저에서 그리므로 정적 HTML 엔 없다 — 페이지 존재는 PAGES 가 본다.
 });
 test('검색 허용 페이지가 없으니 sitemap 도 없다', () => {
   assert.ok(!existsSync('dist/sitemap-index.xml'), 'sitemap-index.xml 이 남아 있다');

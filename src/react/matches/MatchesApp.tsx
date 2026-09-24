@@ -8,6 +8,7 @@ import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
 import { deleteMatch, votePotm } from '../../lib/api';
 import { seoulToday } from '../../lib/html';
+import { href } from '../../lib/url';
 import * as M from '../../lib/matches';
 import type { Match, Player } from '../../lib/types';
 import Loading from '../Loading';
@@ -116,9 +117,10 @@ function Matches() {
     <>
       <div className="page-head">
         <h1>매치 <span className="muted">{matches.length}회</span></h1>
+        <div className="actions"><Button type="primary" onClick={() => { location.href = href('/matches/new/'); }}>팀 짜기</Button></div>
       </div>
       {matches.length === 0 && (
-        <div className="card"><h2>아직 저장된 매치가 없습니다</h2><p className="muted">팀짜기에서 관리자 모드로 날짜를 골라 저장하면 여기에 쌓입니다.</p></div>
+        <div className="card"><h2>아직 저장된 매치가 없습니다</h2><p className="muted">[팀 짜기]에서 온 사람을 조끼 팀으로 가르고, 관리자 모드로 날짜를 골라 저장하면 여기에 쌓입니다.</p></div>
       )}
       <div className="stack">
         {matches.map((m) => <Card key={m.id} m={m} players={data.players} today={today} admin={admin} />)}

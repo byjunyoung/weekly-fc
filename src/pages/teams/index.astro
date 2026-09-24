@@ -1,7 +1,4 @@
 ---
-import Shell from '../../layouts/Shell.astro';
-import TeamsApp from '../../react/teams/TeamsApp.tsx';
+import Redirect from '../../components/Redirect.astro';
 ---
-<Shell title="팀짜기">
-  <TeamsApp client:load />
-</Shell>
+<Redirect to="/matches/new/" title="팀짜기" />

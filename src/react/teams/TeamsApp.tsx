@@ -105,7 +105,10 @@ function Teams() {
     <>
       <div className="page-head">
         <h1>팀짜기 <span className="muted">{total}명</span></h1>
-        <div className="actions"><Button type="primary" onClick={onCopy}>텍스트 복사</Button></div>
+        <div className="actions">
+          <Button onClick={() => { location.href = href('/matches/'); }}>매치 목록</Button>
+          <Button type="primary" onClick={onCopy}>텍스트 복사</Button>
+        </div>
       </div>
 
       <div className="bd-controls" role="group" aria-label="팀 나누기 설정">

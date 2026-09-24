@@ -21,13 +21,14 @@
 ## 2. 화면
 
 ```
-상단 탭: 홈 · 명단 · 라인업 · 팀짜기 · 매치 · 티어 · 운영 규칙
+상단 탭: 홈 · 명단 · 라인업 · 매치 · 티어 · 운영 규칙
+  (팀짜기 탭은 없앤다 — "매치에 팀짜기를 기능으로 넣자"(2026-09-25). 옛 /teams/ 는 /matches/new/ 로 넘긴다)
 
-/teams/ (팀짜기) — 관리자 모드일 때만 아래 줄이 보인다
+/matches/ 상단 [팀 짜기] → /matches/new/ (팀짜기) — 관리자 모드일 때만 아래 줄이 보인다
   [날짜: 2026-09-27] [매치로 저장]
     · 아직 안 정한 사람이 있으면 저장 안 됨("아직 안 정한 사람이 있습니다")
     · 같은 날짜가 이미 있으면 덮어쓴다(확인 창)
-    · 저장 뒤 "매치에 저장했습니다 — 보러 가기" 링크. 초안(브라우저 저장소)은 그대로 둔다.
+    · 저장 뒤 매치 목록으로 돌아간다. 초안(브라우저 저장소)은 그대로 둔다.
 
 /matches/ (매치) — 최신이 위. 매치마다 카드 하나
   ┌ 9월 27일 (토)                                   [삭제 — 관리자]
@@ -41,7 +42,7 @@
   └ 안 열려 있으면 이유 한 줄("로그인하면 투표할 수 있습니다" / "그날 뛴 사람만 투표합니다" / "투표가 끝났습니다")
 ```
 
-폰 폭에서 탭이 일곱이 된다 — 탭 줄은 이미 가로로 밀고 끝을 흐리게 하므로(티어 게임 §2) 그대로 둔다.
+탭 수는 여섯 그대로(팀짜기가 매치 아래로 들어가서). 폰 폭 탭 줄은 티어 게임 §2 규칙 그대로.
 
 ## 3. 서버
 
@@ -78,8 +79,9 @@
 | `src/lib/matches.ts` | 순수 함수 — `snapshot(st, players)`(팀짜기 상태 → lineup, 안 정한 사람 있으면 오류 문구), `potmOf(match)`(동점 공동), `voteOpen(match, today)`, `attendees(match)`, `voteBlock(match, me, today)`(못 누르는 이유 문구), `applyPotm(data, id, tally)`, `matchLabel(date)` |
 | `src/lib/api.ts` | `normalizeMatch`, `saveMatch(date, lineup)`·`deleteMatch(id)`(관리자, 뒤에 refresh), `votePotm(id, num)`(응답 tally 로 캐시·`me.potm` 을 고쳐 다시 읽지 않는다 — 티어 `vote()` 와 같은 길) |
 | `src/react/teams/TeamsApp.tsx` | 관리자일 때 날짜 + 저장 줄 |
-| `src/pages/matches/index.astro` · `src/react/matches/MatchesApp.tsx` | 매치 목록·POTM·투표 |
-| `src/layouts/Shell.astro` | 탭 '매치' |
+| `src/pages/matches/index.astro` · `src/react/matches/MatchesApp.tsx` | 매치 목록·POTM·투표, [팀 짜기] 버튼 |
+| `src/pages/matches/new.astro` · `src/pages/teams/index.astro`(넘김) | 팀짜기를 매치 아래로 |
+| `src/layouts/Shell.astro` | 탭 '팀짜기' → '매치' |
 | `tests/unit/matches.test.mjs` · `tests/build/dist.test.mjs` | 순수 함수 · 페이지 목록 |
 
 날짜 입력은 브라우저 기본 `<input type="date">`(antd Input 에 type 만 준다) — 폰에선 OS 달력이 뜨고, 라이브러리 달력
