@@ -1,11 +1,12 @@
 // src/lib/api.ts — 서버 호출은 여기 한 곳. 2026-09-24 에 Apps Script → Supabase RPC 로 옮겼다.
 // 공개 함수(fetchData·refresh·login·write·writeAvatar·fetchFull)의 모양은 그대로라 화면은 모른다.
 // 2026-09-24 티어 게임: 스텝퍼(writeStats)를 걷고 대결 한 판(vote)을 더했다.
+// 2026-09-24 본인인증: 관리자 PIN 을 없애고 로그인 세션(auth.ts)으로 — 로그인 중이면 모든 호출에 토큰을 싣는다.
+import { accessToken, adminOn, cachedMe, session, setCachedMe, type Me } from './auth.ts';
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
 import { STAT_KEYS, type Data, type Fine, type Player, type RotationRow, type StatKey, type StatLogRow } from './types.ts';
 
 const CACHE_KEY = 'wfc_cache_v2';
-const PIN_KEY = 'wfc_pin';
 export const EMPTY: Data = { players: [], rotation: [], fines: [], statLog: [] };
 
 type Raw = Record<string, unknown>;
@@ -68,14 +69,19 @@ export const RPC_OF: Record<string, string> = {
   writeFine: 'write_fine', deleteFine: 'delete_fine',
 };
 
-/** DB 함수 하나를 부른다 — POST · JSON 본문(PIN 이 주소에 안 실린다) · apikey 헤더만. */
+/** DB 함수 하나를 부른다 — POST · JSON 본문 · apikey 헤더. 로그인 중이면 Authorization 에 토큰을 싣는다
+ *  (서버가 auth.uid() 로 누구인지 정한다). 공개 키는 Authorization 에 넣지 않는다. */
 export async function rpc(fn: string, args: Record<string, unknown> = {}, base: string = SUPABASE_URL, key: string = SUPABASE_KEY): Promise<Raw> {
+  // 토큰을 먼저 얻고 나서 제한시간을 잰다 — 갱신 왕복이 요청 제한시간을 갉아먹지 않게.
+  // 로그인 전이면 기다리지 않는다(요청이 같은 박자에 바로 나간다).
+  const token = session() ? await accessToken() : null;
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), TIMEOUT_MS);
   try {
+    const headers: Record<string, string> = { apikey: key, 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(`${base}/rest/v1/rpc/${fn}`, {
-      method: 'POST', signal: ac.signal,
-      headers: { apikey: key, 'Content-Type': 'application/json' },
+      method: 'POST', signal: ac.signal, headers,
       body: JSON.stringify(args),
     });
     const text = await res.text();
@@ -126,31 +132,35 @@ export function onData(render: (d: Data) => void): void {
   window.addEventListener('wfc:data', (e) => render((e as CustomEvent<Data>).detail));
   refresh().catch(() => { if (!c) render(EMPTY); });
 }
-export function getPin(): string { try { return sessionStorage.getItem(PIN_KEY) ?? ''; } catch { return ''; } }
-export function isAdmin(): boolean { return getPin() !== ''; }
-export type LoginResult = 'ok' | 'bad-pin' | 'error';
-export async function login(pin: string): Promise<LoginResult> {
-  try {
-    await rpc('verify_pin', { p_pin: pin });
-    sessionStorage.setItem(PIN_KEY, pin);
-    return 'ok';
-  } catch (e) {
-    // verify_pin 이 틀린 PIN일 때 던지는 서버 문구로만 "틀린 PIN"을 구분한다. 그 외(네트워크 실패 등)는 연결 실패.
-    return (e as Error).message?.includes('PIN이 올바르지 않습니다') ? 'bad-pin' : 'error';
-  }
+/** 관리자 모드가 켜져 있나 — 관리자 계정(서버 me().admin)이고 상단바에서 켰을 때. 서버도 매 호출 다시 확인한다. */
+export function isAdmin(): boolean { return !!cachedMe().admin && adminOn(); }
+
+/** 로그인한 사람을 서버에서 다시 읽어 저장한다(이름 차지·관리자·오늘 판수). 로그인 전이면 {login:false}. */
+export async function refreshMe(): Promise<Me> {
+  if (!session()) { const none = { login: false }; setCachedMe(none); return none; }
+  const r = (await rpc('me')) as Me;
+  setCachedMe(r);
+  return r;
 }
-export function logout(): void { try { sessionStorage.removeItem(PIN_KEY); } catch {} }
-/** 쓰기: PIN 동봉 → 성공하면 refresh()까지. 실패는 throw. */
+/** 명단 번호 차지 — 먼저 고른 사람이 차지한다(관리자가 풀어 준다). */
+export async function claim(num: number): Promise<Me> { await rpc('claim', { p_num: num }); return refreshMe(); }
+/** 이미 차지된 번호들(누가인지는 안 알려 준다). */
+export async function claimedNums(): Promise<number[]> { const r = await rpc('claimed_nums'); return Array.isArray(r) ? (r as unknown[]).map(Number) : []; }
+export type MemberRow = { num: number; email: string; claimed_at: string };
+export async function adminMembers(): Promise<MemberRow[]> { const r = await rpc('admin_members'); return Array.isArray(r) ? (r as MemberRow[]) : []; }
+export async function adminRelease(num: number): Promise<void> { await rpc('admin_release', { p_num: num }); }
+
+/** 관리자 쓰기 → 성공하면 refresh()까지. 실패는 throw. 관리자인지는 서버가 토큰으로 다시 확인한다. */
 export async function write(action: string, payload: unknown): Promise<Raw> {
-  const pin = getPin(); if (!pin) throw new Error('관리자 PIN이 필요합니다');
+  if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
   const fn = RPC_OF[action]; if (!fn) throw new Error(`알 수 없는 액션: ${action}`);
-  const r = await rpc(fn, { p_pin: pin, p_payload: payload });
+  const r = await rpc(fn, { p_payload: payload });
   // 쓰기가 끝나기 전부터 돌고 있던 read는 이 쓰기보다 옛 데이터를 볼 수 있다 — 그게 끝나길 기다렸다가 새로 한 번 더 refresh.
   if (inflight) await inflight.catch(() => {});
   await refresh();
   return r;
 }
-export async function fetchFull(): Promise<Data> { return normalizeData(await rpc('get_all_full', { p_pin: getPin() })); }
+export async function fetchFull(): Promise<Data> { return normalizeData(await rpc('get_all_full')); }
 
 /** 대결 한 판의 서버 응답(public.vote). */
 export type VoteResult = { ts: string; field: StatKey; by: number | null; by_name: string;
@@ -167,14 +177,18 @@ export function applyVote(d: Data, r: VoteResult): Data {
   return { ...d, players, statLog: [...rows, ...d.statLog] };
 }
 
-/** 대결 한 판. PIN 없이 누구나 — by 는 고른 "나"(자칭, 2026-09-24 사용자 결정: 이름만 남긴다).
- *  판마다 전체를 다시 읽지 않는다: 응답으로 캐시를 고쳐 wfc:data 를 보낸다(연달아 누르는 게임이라). */
-export async function vote(field: StatKey, win: number, lose: number, by: number | null): Promise<VoteResult> {
-  const raw = await rpc('vote', { p_field: field, p_win: win, p_lose: lose, p_by: by });
+/** 대결 한 판. 로그인 + 이름 차지가 있어야 한다 — 누른 사람은 서버가 토큰으로 정한다(본인인증 2026-09-24).
+ *  하루 30판·같은 선수 3번 제한도 서버가 센다. 판마다 전체를 다시 읽지 않는다: 응답으로 캐시와 내 오늘 판수를 고친다. */
+export async function vote(field: StatKey, win: number, lose: number): Promise<VoteResult> {
+  const raw = await rpc('vote', { p_field: field, p_win: win, p_lose: lose });
   const r: VoteResult = {
     ts: String(raw.ts ?? ''), field, by: numOrNull(raw.by), by_name: String(raw.by_name ?? ''),
     win: raw.win as VoteResult['win'], lose: raw.lose as VoteResult['lose'],
   };
+  const m = cachedMe();
+  const by = { ...(m.todayBy ?? {}) };
+  for (const n of [win, lose]) by[n] = (by[n] ?? 0) + 1;
+  setCachedMe({ ...m, today: (m.today ?? 0) + 1, todayBy: by });
   const base = cached();
   if (base) {
     const d = applyVote(base, r);

@@ -4,7 +4,8 @@
 import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { fetchFull, serializePlayer, write, writeAvatar } from '../../lib/api';
+import { adminMembers, adminRelease, fetchFull, serializePlayer, write, writeAvatar, type MemberRow } from '../../lib/api';
+import { maskEmail } from '../../lib/auth';
 import { fmtLogAt } from '../../lib/html';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
@@ -18,6 +19,7 @@ import type { Player } from '../../lib/types';
 import { countUp } from '../../lib/motion';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
+import { useMe } from '../useMe';
 import { useData } from '../useData';
 import { numClash, playerFormDefaults, playerFromForm } from './model';
 import type { PlayerFormValues } from './model';
@@ -26,6 +28,22 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   const { message } = App.useApp();
   const { data } = useData();
   const admin = useAdmin();
+  const me = useMe();
+  // 꾸미기는 본인과 관리자만(2026-09-24 본인인증). 서버도 같은 걸 다시 확인한다.
+  const canDress = admin || (me != null && me === num);
+  // 관리자: 이 번호를 차지한 계정 — 잘못 차지됐으면 여기서 푼다.
+  const [member, setMember] = useState<MemberRow | null | undefined>(undefined);
+  const [releasing, setReleasing] = useState(false);
+  useEffect(() => {
+    if (!admin) { setMember(undefined); return; }
+    adminMembers().then((rows) => setMember(rows.find((r) => r.num === num) ?? null)).catch(() => setMember(undefined));
+  }, [admin, num]);
+  const release = async () => {
+    setReleasing(true);
+    try { await adminRelease(num); setMember(null); message.success('연결을 풀었습니다'); }
+    catch (e) { message.error((e as Error).message); }
+    finally { setReleasing(false); }
+  };
   const [form] = Form.useForm<PlayerFormValues>();
   const [editing, setEditing] = useState<{ isNewPlayer: boolean; prevAvatar: string } | null>(null); // null 이면 모달 닫힘
   const [open, setOpen] = useState(false);
@@ -110,10 +128,10 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   const pageHead = (
     <div className="page-head">
       <h1 id="title">{player ? player.name : `선수 #${num}`}</h1>
-      {/* 꾸미기는 관리자 전용이 아니다(아바타 에디터엔 PIN 이 없다) — 홈 라커룸에서 "꾸미기"로
-          들어오는 자리라, 카드 속 작은 아바타를 눌러야만 열리던 것을 겉으로 꺼내 둔다. */}
+      {/* 꾸미기는 본인(로그인해 차지한 번호)과 관리자만 — 홈 라커룸에서 "꾸미기"로 들어오는 자리라
+          카드 속 작은 아바타를 눌러야만 열리던 것을 겉으로 꺼내 둔다. */}
       <span className="actions" id="actions">
-        {player && !avatarOpen && <Button onClick={() => openAvatar(player)}>꾸미기</Button>}
+        {player && canDress && !avatarOpen && <Button onClick={() => openAvatar(player)}>꾸미기</Button>}
         {admin && data && <Button onClick={() => openEdit(player)} loading={opening}>편집</Button>}
       </span>
     </div>
@@ -199,8 +217,8 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
               주던 능력치 여섯 칸은 바로 오른쪽 칸이 막대까지 붙여 이미 하고 있었다. */}
           <div className={`player-hero${avatarOpen ? ' is-dressing' : ''}`}>
             <div className="phero" ref={cardRef}>
-              <button type="button" id="avatar-edit-btn" className="avatar-btn" title="아바타 편집"
-                onClick={() => openAvatar(player)}
+              <button type="button" id="avatar-edit-btn" className="avatar-btn" title={canDress ? '아바타 편집' : undefined}
+                disabled={!canDress} onClick={() => openAvatar(player)}
                 dangerouslySetInnerHTML={{ __html: avatarSvg(avatarOpen && avatarSpec ? avatarSpec : avatarSpecFor(player.num, player.avatar), 224, player.num, true) }} />
               <b className="phero-ovr" data-ovr={ovr(player)}>{ovr(player) || '–'}</b>
               <div className="phero-meta">
@@ -214,6 +232,14 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
                 <p className="phero-sub">{[player.detail, player.foot].filter(Boolean).join(' · ')}</p>
               )}
               {player.note && <p className="phero-sub">{player.note}</p>}
+              {admin && member !== undefined && (
+                <p className="phero-sub phero-member">
+                  {member ? <>연결된 계정 {maskEmail(member.email)}
+                    <Popconfirm title="이 계정과 선수의 연결을 풀까요?" okText="풀기" cancelText="취소" onConfirm={release}>
+                      <Button size="small" loading={releasing}>풀기</Button>
+                    </Popconfirm></> : '연결된 계정 없음'}
+                </p>
+              )}
             </div>
             <div className="player-side">
               {avatarOpen ? avatarPanel() : (

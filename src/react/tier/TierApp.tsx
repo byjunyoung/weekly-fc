@@ -1,12 +1,11 @@
 // src/react/tier/TierApp.tsx — 티어 게임(2026-09-24). 위는 지금 숫자로 나눈 S~D 티어표, 대결을 시작하면
 // "누가 더 ○○?" 두 선수 중 하나를 고르고, 고르는 즉시 서버가 두 숫자를 옮긴다(설계 §2·§3).
 // 선수 페이지의 "티어 게임에서 바꾸기"는 ?num=N 으로 들어와 그 선수가 낀 대결부터(항목마다 한 판) 낸다.
-import { App, Button, Segmented, Select } from 'antd';
+import { App, Button, Segmented } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { avatarFaceSvg, avatarSvg } from '../../components/avatar';
 import { vote } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
-import { setMe } from '../../lib/me';
 import { STAT_KO } from '../../lib/stats';
 import { pairKey, pickPair, QUESTION, rivalPairs, tierRows, type TierKey } from '../../lib/tier';
 import { STAT_KEYS, type Player, type StatKey } from '../../lib/types';
@@ -14,7 +13,7 @@ import { href } from '../../lib/url';
 import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
-import { useMe } from '../useMe';
+import { useMeInfo } from '../useMe';
 import TierShareModal from './TierShareModal';
 
 const KEYS: Array<{ value: TierKey; label: string }> = [
@@ -43,20 +42,24 @@ function Board({ players, tierKey }: { players: Player[]; tierKey: TierKey }) {
 }
 
 type Pair = { a: Player; b: Player; field: StatKey };
+/** 서버와 같은 제한(본인인증 2026-09-24) — 하루 30판, 같은 선수는 하루 3번. 화면은 미리 걸러 내고 서버가 최종 판정한다. */
+const DAILY = 30;
+const PER_PLAYER = 3;
 type Flash = Record<number, number>; // 번호 → 변화량(+2 / −2)
 
-function Duel({ players, me, focus, onExit }: { players: Player[]; me: number; focus: number | null; onExit: () => void }) {
+function Duel({ players, used, today, focus, onExit }: { players: Player[]; used: Record<string, number>; today: number; focus: number | null; onExit: () => void }) {
   const { message } = App.useApp();
   const seen = useRef<Record<number, number>>({});
   const recent = useRef<string[]>([]);
   const queue = useRef<StatKey[]>([]);
   const focusLeft = useRef<StatKey[]>(focus != null ? [...STAT_KEYS] : []);
-  const playersRef = useRef(players);
-  playersRef.current = players;
+  // 오늘 3번 찬 선수는 짝에서 뺀다 — 눌러 봐야 서버가 거절할 판을 내지 않는다.
+  const open = players.filter((p) => (used[p.num] ?? 0) < PER_PLAYER);
+  const playersRef = useRef(open);
+  playersRef.current = open;
   const [pair, setPair] = useState<Pair | null>(null);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState<Flash | null>(null);
-  const [count, setCount] = useState(0);
 
   const nextField = (): { field: StatKey; withFocus: boolean } => {
     if (focusLeft.current.length) return { field: focusLeft.current.shift()!, withFocus: true };
@@ -79,9 +82,8 @@ function Duel({ players, me, focus, onExit }: { players: Player[]; me: number; f
     if (!pair || busy) return;
     setBusy(true);
     try {
-      const r = await vote(pair.field, win.num, lose.num, me);
+      const r = await vote(pair.field, win.num, lose.num);
       setFlash({ [r.win.num]: r.win.after - r.win.before, [r.lose.num]: r.lose.after - r.lose.before });
-      setCount((c) => c + 1);
       setTimeout(() => { next(); setBusy(false); }, 700);
     } catch (e) {
       message.error((e as Error).message);
@@ -89,10 +91,19 @@ function Duel({ players, me, focus, onExit }: { players: Player[]; me: number; f
     }
   }
 
+  if (today >= DAILY) {
+    return (
+      <div className="card duel">
+        <h2 className="duel-q">오늘 대결은 여기까지!</h2>
+        <p className="muted">하루 {DAILY}판까지 할 수 있습니다. 내일 또 해 주세요.</p>
+        <Button onClick={onExit}>티어표로</Button>
+      </div>
+    );
+  }
   if (!pair) {
     return (
       <div className="card duel">
-        <p className="muted">대결할 선수가 부족합니다.</p>
+        <p className="muted">오늘 판정할 수 있는 선수가 부족합니다. 같은 선수는 하루 {PER_PLAYER}번까지입니다.</p>
         <Button onClick={onExit}>티어표로</Button>
       </div>
     );
@@ -114,7 +125,7 @@ function Duel({ players, me, focus, onExit }: { players: Player[]; me: number; f
       <div className="duel-head">
         {rivalPairs(players).get(pair.a.num) === pair.b.num && <div className="duel-rival"><span className="rival-tag">라이벌전!</span></div>}
         <h2 className="duel-q">{QUESTION[pair.field]}</h2>
-        <span className="muted">{count}판 · 누르면 바로 반영</span>
+        <span className="muted">오늘 {today}/{DAILY}판 · 누르면 바로 반영</span>
       </div>
       <div className="duel-arena">
         {side(pair.a, pair.b)}
@@ -131,7 +142,7 @@ function Duel({ players, me, focus, onExit }: { players: Player[]; me: number; f
 
 function Tier() {
   const { data } = useData();
-  const me = useMe();
+  const me = useMeInfo();
   const [tierKey, setTierKey] = useState<TierKey>('ovr');
   const [playing, setPlaying] = useState(false);
   const [focus, setFocus] = useState<number | null>(null);
@@ -157,19 +168,17 @@ function Tier() {
         </span>
       </div>
       <div className="stack">
-        {playing && me == null && (
+        {playing && !me.num && (
           <div className="card duel-me">
-            <h2>누가 하는지 골라 주세요</h2>
-            <p className="muted">대결 기록에 이 이름이 남습니다.</p>
-            <Select showSearch={{ optionFilterProp: "label" }} className="duel-me-pick" placeholder="내 이름"
-              options={[...players].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map((p) => ({ value: p.num, label: p.name }))}
-              onChange={(v: number) => setMe(v)} />
+            <h2>{me.login ? '먼저 내 이름을 골라 주세요' : '로그인이 필요합니다'}</h2>
+            <p className="muted">대결은 로그인한 팀원만 할 수 있습니다. 누가 판정했는지 기록에 남고, 하루 {DAILY}판·같은 선수 {PER_PLAYER}번까지입니다.</p>
+            <Button type="primary" onClick={() => window.dispatchEvent(new Event('wfc:open-me'))}>{me.login ? '이름 고르기' : '로그인'}</Button>
           </div>
         )}
-        {playing && me != null && (
+        {playing && !!me.num && (
           <>
             {focusName && <p className="muted">{focusName} 선수가 낀 대결부터 나옵니다.</p>}
-            <Duel players={players} me={me} focus={focus} onExit={() => { setPlaying(false); setFocus(null); }} />
+            <Duel players={players} used={me.todayBy ?? {}} today={me.today ?? 0} focus={focus} onExit={() => { setPlaying(false); setFocus(null); }} />
           </>
         )}
         <div className="card">
