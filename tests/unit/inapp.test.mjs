@@ -62,3 +62,10 @@ test('자동 전환은 카톡에만 — 증상을 확인한 곳만 내보낸다'
   assert.equal(shouldAutoEscape(detectInApp(UA.naver)), false);
   assert.equal(shouldAutoEscape(null), false);
 });
+
+test('주소에 inapp=stay 가 있으면 카톡이어도 자동 전환하지 않는다 — 새 백엔드를 인앱에서 확인하는 용도', () => {
+  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos), '?inapp=stay'), false);
+  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos), '?x=1&inapp=stay'), false);
+  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos), ''), true);
+  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos), '?inapp=go'), true);
+});

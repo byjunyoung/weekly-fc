@@ -62,7 +62,10 @@ export function escapeUrl(info: InApp, url: string): string | null {
   return null;
 }
 
-/** 지금 바로 밖으로 내보낼 대상인가 — 확인된 카톡만. */
-export function shouldAutoEscape(info: InApp | null): boolean {
+/** 지금 바로 밖으로 내보낼 대상인가 — 확인된 카톡만.
+ *  주소에 `inapp=stay` 를 붙이면 카톡이어도 머문다. 백엔드를 Supabase 로 옮긴 뒤(2026-09-24)
+ *  카톡 인앱에서 멈춤이 사라졌는지 확인하는 길이다 — 사라졌으면 자동 전환을 걷어낸다. */
+export function shouldAutoEscape(info: InApp | null, search = ''): boolean {
+  if (new URLSearchParams(search).get('inapp') === 'stay') return false;
   return info != null && info.kakao;
 }

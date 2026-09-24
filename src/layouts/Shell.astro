@@ -74,7 +74,7 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
       $('inapp-open').onclick = open;
       ($('load-err-open') as HTMLButtonElement).onclick = open;
       $('load-err-open').hidden = false;
-      if (shouldAutoEscape(inApp)) {
+      if (shouldAutoEscape(inApp, location.search)) {
         // 밖에서 뒤로가기로 돌아왔을 때 또 튕기지 않게 한 번만 — 저장소가 막힌 기기도 있어
         // 실패하면 그냥 안 걸러진다(전환 자체는 되는 편이 낫다).
         let tried = false;
