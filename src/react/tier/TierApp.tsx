@@ -121,7 +121,7 @@ function Duel({ players, me, focus, onExit }: { players: Player[]; me: number; f
         {side(pair.b, pair.a)}
       </div>
       <div className="duel-foot">
-        <Button disabled={busy} onClick={next}>비슷함·모르겠음</Button>
+        <Button disabled={busy} onClick={next}>모르겠음</Button>
         <Button onClick={onExit}>그만하기</Button>
       </div>
     </div>
