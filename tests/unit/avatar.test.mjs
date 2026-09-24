@@ -352,10 +352,13 @@ import { avatarPixels } from '../../src/components/avatar.ts';
 
 test('앱과 서버의 아바타 코드 정규식이 같다 — 파일에서 직접 읽어 대조', () => {
   // 복사본끼리 비교하면 한쪽만 고쳐도 안 걸린다. 두 파일의 실제 정규식을 꺼내 맞춘다.
-  const client = /const CODE_SHAPE = (\/.+\/);/.exec(readFs('src/lib/avatar.ts', 'utf8'))[1];
-  const server = /return (\/\^\(\[a-z\].+\/)\.test\(code\)/.exec(readFs('server/weeklyfc-apps-script.js', 'utf8'))[1];
+  // 2026-09-24 서버가 Supabase 로 옮겨 대조 대상이 SQL 함수가 됐다.
+  const client = /const CODE_SHAPE = \/(.+)\/;/.exec(readFs('src/lib/avatar.ts', 'utf8'))[1];
+  const sql = readFs('supabase/migrations/20260924000000_init.sql', 'utf8');
+  const server = /p_avatar !~ '([^']+)'/.exec(sql)[1];
   assert.equal(server, client);
-  assert.equal(client, String(SERVER_CODE_RE));
+  assert.equal(`/${client}/`, String(SERVER_CODE_RE));
+  assert.match(sql, /length\(p_avatar\) > 120/);
 });
 
 test('새 부위를 안 쓰면 코드에 적히지 않는다 — 기존 코드·기본 아바타가 그대로', () => {

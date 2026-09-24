@@ -1,0 +1,35 @@
+# 비공개 저장소 byjunyoung/weekly-fc-backup 에 둔다(공개 저장소엔 실명·전화번호를 두지 않는다).
+# 사흘마다 전체 데이터를 받아 커밋한다. 그 읽기가 Supabase 무료 프로젝트를 깨운다(7일 미사용 시 멈춤).
+# 비밀값 WFC_PIN 은 저장소 Settings → Secrets 에 사용자가 넣는다.
+name: backup
+on:
+  schedule:
+    - cron: '17 3 */3 * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 데이터 받기
+        env:
+          WFC_PIN: ${{ secrets.WFC_PIN }}
+          SUPABASE_URL: https://irltzwgijbbodkgzmnrc.supabase.co
+          SUPABASE_KEY: sb_publishable_Aum9yotpAs5M7_3g9DqA5Q_Q7mLRlMk
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          body=$(jq -n --arg p "$WFC_PIN" '{p_pin: $p}')
+          curl -sf -X POST "$SUPABASE_URL/rest/v1/rpc/get_all_full" \
+            -H "apikey: $SUPABASE_KEY" -H 'Content-Type: application/json' -d "$body" > backup/latest.json
+          jq -e '.players | length > 0' backup/latest.json > /dev/null
+          cp backup/latest.json "backup/$(date -u +%F).json"
+      - name: 커밋
+        run: |
+          git config user.name 'weekly-fc-backup'
+          git config user.email 'actions@users.noreply.github.com'
+          git add backup
+          git diff --cached --quiet || git commit -m "backup $(date -u +%F)"
+          git push

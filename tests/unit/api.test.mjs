@@ -1,12 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildUrl, normalizeFine, normalizePlayer, normalizeRotation, serializeFine, serializeRotation } from '../../src/lib/api.ts';
+import { normalizeFine, normalizePlayer, normalizeRotation, serializeFine, serializeRotation, rpc, RPC_OF } from '../../src/lib/api.ts';
 
-test('buildUrl은 action과 payload를 쿼리에 싣는다', () => {
-  const u = new URL(buildUrl('writeFine', { pin: '1234', payload: { id: 'x' } }, 'https://example.com/exec'));
-  assert.equal(u.searchParams.get('action'), 'writeFine');
-  assert.equal(u.searchParams.get('pin'), '1234');
-  assert.equal(JSON.parse(decodeURIComponent(u.searchParams.get('payload'))).id, 'x');
+// ── 전달 통로(2026-09-24 Supabase RPC) ────────────────────────────
+test('rpc 는 POST 로 /rest/v1/rpc/<함수> 를 부르고 apikey 헤더만 싣는다', async () => {
+  const orig = globalThis.fetch; let seen;
+  globalThis.fetch = async (url, init) => { seen = { url, init }; return { ok: true, status: 200, text: async () => '{"ok":true}' }; };
+  try {
+    const r = await rpc('write_fine', { p_pin: '1234', p_payload: { id: 'x' } }, 'https://ex.supabase.co', 'pk');
+    assert.deepEqual(r, { ok: true });
+    assert.equal(seen.url, 'https://ex.supabase.co/rest/v1/rpc/write_fine');
+    assert.equal(seen.init.method, 'POST');
+    assert.equal(seen.init.headers.apikey, 'pk');
+    assert.equal(seen.init.headers.Authorization, undefined, '공개 키를 Authorization 에 싣지 않는다');
+    assert.deepEqual(JSON.parse(seen.init.body), { p_pin: '1234', p_payload: { id: 'x' } });
+    assert.ok(!seen.url.includes('1234'), 'PIN 이 주소에 실리면 안 된다');
+  } finally { globalThis.fetch = orig; }
+});
+
+test('rpc 오류 응답은 서버 문구 그대로 던진다 (틀린 PIN 구분이 이 문구에 기댄다)', async () => {
+  const orig = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: false, status: 400, text: async () => '{"code":"P0001","message":"PIN이 올바르지 않습니다."}' });
+  try { await assert.rejects(rpc('verify_pin', { p_pin: 'x' }, 'https://ex', 'pk'), /PIN이 올바르지 않습니다\./); }
+  finally { globalThis.fetch = orig; }
+});
+
+test('rpc 빈 응답(204)은 빈 객체', async () => {
+  const orig = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, status: 204, text: async () => '' });
+  try { assert.deepEqual(await rpc('x', {}, 'https://ex', 'pk'), {}); } finally { globalThis.fetch = orig; }
+});
+
+test('관리자 쓰기 액션 다섯이 모두 RPC 이름을 가진다', () => {
+  assert.deepEqual(RPC_OF, { writePlayer: 'write_player', deletePlayer: 'delete_player', writeRotation: 'write_rotation', writeFine: 'write_fine', deleteFine: 'delete_fine' });
 });
 test('normalizeFine: paid 문자열 → boolean, amount 숫자', () => {
   const f = normalizeFine({ id: '1', date: '2026-09-05', player: '김철수', type: '지각', amount: '30000', paid: 'TRUE' });
@@ -56,7 +82,7 @@ test2('응답이 안 오면 제한시간에 끊고 오류로 돌린다', async (
 
 test2('서버가 보낸 오류 문구는 제한시간 문구로 덮어쓰지 않는다', async () => {
   const orig = globalThis.fetch;
-  globalThis.fetch = async () => ({ json: async () => ({ error: 'PIN이 올바르지 않습니다' }) });
+  globalThis.fetch = async () => ({ ok: false, status: 400, text: async () => '{"message":"PIN이 올바르지 않습니다"}' });
   try {
     await assert2.rejects(fetchData(), (e) => e.message === 'PIN이 올바르지 않습니다');
   } finally { globalThis.fetch = orig; }
