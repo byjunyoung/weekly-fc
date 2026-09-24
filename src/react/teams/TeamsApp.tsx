@@ -6,10 +6,15 @@
 import { App, Button, Input, Modal, Segmented } from 'antd';
 import { useEffect, useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
+import { saveMatch } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
+import { seoulToday } from '../../lib/html';
+import { matchLabel, snapshot } from '../../lib/matches';
 import * as T from '../../lib/teams';
+import { href } from '../../lib/url';
 import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
+import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
 
 function Teams() {
@@ -19,6 +24,10 @@ function Teams() {
   const [picked, setPicked] = useState<string | null>(null);   // 옮기려고 고른 사람
   const [guestName, setGuestName] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const admin = useAdmin();
+  // 매치로 저장(2026-09-25). 날짜는 그날 하루가 매치 하나라 기본 오늘. 저장은 관리자만, 초안은 그대로 둔다.
+  const [date, setDate] = useState(() => seoulToday());
+  const [saving, setSaving] = useState(false);
 
   // 초안은 명단과 무관하게 한 번만 불러온다 — 예전엔 명단을 기다렸다 그걸로 걸렀는데,
   // 첫 값이 비었거나 낡으면 초안이 잘린 채 저장됐다(2026-09-22 리뷰). 안 온 사람을 거르는 건
@@ -58,6 +67,23 @@ function Teams() {
       content: <textarea className="tm-text" readOnly rows={Math.min(14, text.split('\n').length + 1)} value={text} />,
     });
   }
+  async function onSaveMatch(): Promise<void> {
+    const snap = snapshot(st, players);
+    if (!snap.ok) { message.info(snap.error); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { message.info('날짜를 골라 주세요'); return; }
+    const run = async () => {
+      setSaving(true);
+      try {
+        await saveMatch(date, snap.lineup);
+        message.success(<span>{matchLabel(date)} 매치에 저장했습니다 · <a href={href('/matches/')}>보러 가기</a></span>, 5);
+      } catch (e) { message.error((e as Error).message); }
+      finally { setSaving(false); }
+    };
+    // 같은 날짜가 이미 있으면 덮어쓴다 — 표는 남으니 알려만 주고 진행.
+    if ((data?.matches ?? []).some((m) => m.date === date)) {
+      Modal.confirm({ title: `${matchLabel(date)} 매치가 이미 있습니다`, content: '팀 구성을 이걸로 덮어씁니다. POTM 표는 그대로 남습니다.', okText: '덮어쓰기', cancelText: '취소', onOk: run });
+    } else await run();
+  }
   async function onCopy(): Promise<void> {
     const text = T.shareText(st, players);
     if (!text) { message.info('먼저 팀을 나눠 주세요'); return; }
@@ -94,6 +120,15 @@ function Teams() {
         </label>
         <Button onClick={onAddGuest}>추가</Button>
       </div>
+      {admin && (
+        <div className="bd-controls tm-save" role="group" aria-label="매치로 저장">
+          <label className="bd-field"><span className="label">날짜</span>
+            <Input type="date" className="w-date" value={date} max="2099-12-31" onChange={(e) => setDate(e.target.value)} />
+          </label>
+          <Button onClick={onSaveMatch} loading={saving}>매치로 저장</Button>
+          <span className="muted tm-save-hint">그날 팀 구성이 매치 탭에 남고, 뛴 사람들이 POTM 을 뽑습니다</span>
+        </div>
+      )}
 
       <p className="muted tm-hint" aria-live="polite">
         {picked ? '옮길 팀을 누르세요 · 다시 누르면 취소' : '이름을 누르고 팀을 누르면 옮겨집니다'}

@@ -8,6 +8,7 @@ export const PAGES = [
   'squad/index.html',
   'lineup/index.html',
   'teams/index.html',
+  'matches/index.html',
   'squad/9/index.html',
   'squad/99/index.html',
   'rules/index.html',
@@ -39,10 +40,10 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 홈·명단·라인업·팀짜기·티어·운영 규칙 여섯 갈래', () => {
+test('상단 탭은 홈·명단·라인업·팀짜기·매치·티어·운영 규칙 일곱 갈래', () => {
   const html = read('index.html');
-  for (const l of ['홈', '명단', '라인업', '팀짜기', '티어', '운영 규칙']) assert.ok(html.includes(`<span>${l}</span>`), l);
-  for (const l of ['스쿼드', '기록', '전술', '소개', '매치']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+  for (const l of ['홈', '명단', '라인업', '팀짜기', '매치', '티어', '운영 규칙']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['스쿼드', '기록', '전술', '소개']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
 test('검색 허용 페이지가 없으니 sitemap 도 없다', () => {
   assert.ok(!existsSync('dist/sitemap-index.xml'), 'sitemap-index.xml 이 남아 있다');
@@ -150,7 +151,8 @@ test('4단계 뒤 dist 전체에 webawesome 문자열이 없다(스펙 §7.3)', 
   const hit = files.find((f) => readFileSync(f, 'utf8').includes('webawesome'));
   assert.ok(!hit, `webawesome 문자열이 남음: ${hit}`);
 });
-test('매치 탭이 완전히 삭제됐다(스펙 §7 · 2026-09-21 리프레시)', () => {
+// 2026-09-25 의 새 '매치' 탭(/matches/, 팀 구성·POTM)은 다른 것이다 — 옛 영상 목록(/match/, MatchApp)만 없는지 본다.
+test('옛 영상 목록 매치 탭이 완전히 삭제됐다(스펙 §7 · 2026-09-21 리프레시)', () => {
   assert.ok(!existsSync('dist/match'), 'dist/match 디렉터리가 남음');
   const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
     e.isDirectory() ? walk(`${dir}/${e.name}`) : [`${dir}/${e.name}`]);

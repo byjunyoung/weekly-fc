@@ -760,3 +760,25 @@ details.year[open] > summary::before { content: "▾ "; }
 .phero-rival a { color: var(--fg); font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
 .phero-rival a:hover { color: var(--link); }
 .duel-rival { flex-basis: 100%; }
+
+/* ── 매치 (2026-09-25) — 카드 하나가 하루. 팀은 팀짜기 칩을 그대로 쓰되 누르는 게 아니라 보는 것이다. */
+.w-date { width: 160px; }
+.tm-save { padding-top: var(--s-sm); border-top: 2px solid var(--line); }
+.tm-save-hint { font-size: var(--fs-xs); }
+.mt-potm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
+.mt-potm-label { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; }
+.mt-potm-who { display: inline-flex; align-items: center; gap: var(--s-xxs); font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-synthesis: none; letter-spacing: 0; }
+.mt-teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-sm); }
+.mt-team { border: 2px solid var(--line); background: var(--elevated); }
+.mt-team-head { display: flex; align-items: center; gap: var(--s-xs); min-height: 36px; padding: var(--s-xxs) var(--s-sm); border-bottom: 3px solid var(--line);
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; }
+.mt-team-head .muted { margin-left: auto; font-family: var(--font); font-size: var(--fs-xs); }
+.mt-team .tm-chips { min-height: 0; }
+.mt-chip { cursor: default; }
+.mt-chip:hover { border-color: var(--line); }
+.mt-vote { margin-top: var(--s-md); }
+.mt-vote-hint { margin: 0 0 var(--s-xs); font-size: var(--fs-sm); }
+.mt-ballot { padding: 0; }
+.mt-ballot .tm-chip:disabled { opacity: .6; }
+.mt-vote-count { margin: var(--s-xs) 0 0; font-size: var(--fs-xs); }
+.linklike { padding: 0; border: 0; background: none; color: var(--link); font: inherit; text-decoration: underline; cursor: pointer; }
