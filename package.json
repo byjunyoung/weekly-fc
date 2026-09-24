@@ -14,7 +14,6 @@
     "check": "astro check",
     "test:unit": "TZ=UTC node --test \"tests/unit/*.test.mjs\"",
     "test:build": "node --test \"tests/build/*.test.mjs\"",
-    "deploy:api": "clasp push -f && clasp deploy -i AKfycbyUDTkTHsKszkiOeJKmNDHDkVJobrVUjbRqufU251PNKmlyrvC0BZ3ir9x0vM_lCJkkmg",
     "test": "npm run test:unit && npm run build && npm run test:build"
   },
   "dependencies": {
@@ -29,7 +28,6 @@
   "devDependencies": {
     "@ant-design/static-style-extract": "^2.1.0",
     "@astrojs/check": "^0.9.10",
-    "@google/clasp": "^3.4.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "typescript": "^6.0.3"

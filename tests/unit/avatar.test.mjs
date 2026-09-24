@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parseAvatar, serializeAvatar, randomAvatar, avatarSpecFor, isUnsetAvatar, PARTS, UNSET_AVATAR } from '../../src/lib/avatar.ts';
 import { avatarSvg, avatarFaceSvg } from '../../src/components/avatar.ts';
 
-// 서버 검증 정규식(server/weeklyfc-apps-script.js isValidAvatarCode)을 그대로 복사한다 —
+// 서버 검증 정규식(supabase/migrations 의 write_avatar)을 그대로 복사한다 —
 // 클라이언트가 만드는 코드가 서버에서 거부되지 않는다는 계약을 이 테스트가 지킨다.
 const SERVER_CODE_RE = /^([a-z]\d{1,2}:){1,16}k#[0-9a-fA-F]{3,6}$/;
 

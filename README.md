@@ -2,7 +2,7 @@
 
 매주 토요일 모이는 풋살 팀의 포탈. https://byjunyoung.github.io/weekly-fc/
 
-- 스택: Astro 정적 사이트 + Google Apps Script(구글시트). 프레임워크·외부 라이브러리 없음.
+- 스택: Astro 정적 사이트(React 섬 + antd) + Supabase(Postgres). 2026-09-24 에 구글시트·Apps Script 에서 옮겼다 — `docs/superpowers/specs/2026-09-24-supabase-migration-design.md`.
 - 설계: `docs/superpowers/specs/2026-09-10-weekly-fc-portal-design.md`. 결정을 바꾸면 그 문서부터.
 - 배포: `main` push → GitHub Actions → Pages.
 
@@ -16,42 +16,24 @@ npm test           # 단위 테스트 + 빌드 + dist 검사
 
 ## 데이터
 
-전부 구글시트에 있고 소스에는 없다. 시트: `선수명단`(rot 열이 봉사 순번) · `매치기록` · `봉사로테이션` · `벌금` · `라인업`.
-Apps Script는 standalone 프로젝트 `weekly fc`(`script.google.com/u/1/home/my`). 재배포는 "배포 관리 > 새 버전"으로 주소를 유지한다. 스크립트 속성 `SPREADSHEET_ID`·`ADMIN_PIN` 필요.
-
-## 배포 순서
-
-백엔드를 프런트보다 먼저 올린다. 프런트가 먼저 나가면 새 코드가 옛 열 구성의
-백엔드에 쓰게 되고, 참석자 명단이 매핑 밖 열로 들어가 백엔드를 올리는 순간 사라진다.
-열 구성을 바꾸는 변경일수록 이 순서가 중요하다.
+Supabase 프로젝트 `irltzwgijbbodkgzmnrc`(서울 리전, 무료). 표는 바깥에서 직접 못 닿고, 앱은
+`src/lib/api.ts` 의 `rpc()` 로 DB 함수만 부른다. 주소·공개 키는 `src/lib/backend.ts`.
+표·함수 정의는 `supabase/migrations/` — 바꿀 땐 새 파일을 더해 올린다.
 
 ```bash
-npm run deploy:api   # 1. 백엔드 — clasp 가 기존 배포에 새 버전을 물린다(주소 유지)
-npm test             # 2. 프런트 검증
-git push origin main # 3. 프런트 — Actions 가 빌드해 Pages 로 배포
+# Supabase CLI 로그인은 한 번(브라우저 승인). Claude Code 안에서 돌리면 환경변수
+# CLAUDECODE·AI_AGENT 를 빼야 CLI 가 대화형 모드로 뜬다.
+npx supabase db query --linked --project-ref irltzwgijbbodkgzmnrc -f 파일.sql
 ```
 
-`npm run deploy:api` 는 최초 1회 `clasp login` 이 필요하다(개인 구글 계정).
-scriptId 는 `.clasp.json`, 배포 id 는 `package.json` 의 스크립트에 박혀 있다.
-`.claspignore` 가 `server/` 안의 두 파일만 올라가도록 막는다.
+관리자 PIN 은 DB 에 해시로만 있다. 무료 프로젝트는 7일 동안 안 쓰면 멈추므로
+`.github/workflows/keepalive.yml` 이 사흘마다 한 번 읽어 깨운다(멈췄으면 실패 메일).
+옛 구글시트는 옮긴 날 모습으로 남겨 둔 보관본이다 — 사이트는 더 이상 읽지 않는다.
 
-배포 직후 몇십 초간 웹앱 주소가 404 를 내는 일이 있다 — 전파 지연이니 잠시 뒤 다시 확인한다.
+## 배포
+
+`main` push → Actions 가 `npm test` 뒤 Pages 로 배포. DB 함수를 바꾸면 SQL 을 먼저 올리고 프런트를 민다.
 
 ## 규칙 상수
 
 벌금·시간·장소·통장은 `src/lib/rules.ts` 한 곳. 운영 규칙 페이지(`/rules/`)와 정산 화면이 같은 값을 쓴다.
-
-## 알려진 제약 — 유튜브 채널 목록
-
-유튜브 RSS(`feeds/videos.xml`)가 구글 서버 egress 에 404 를 준다. 같은 주소가
-개인 맥에서는 200 에 15건이 온다 — 데이터센터 IP 차단으로 보인다. 간헐이었다가
-2026-09-11 부터 지속.
-
-`handleGetChannelVideos` 는 YouTube Data API(업로드 재생목록, 호출당 1 unit)를
-먼저 시도하고 실패하면 RSS 로 내려간다. **고급 서비스가 꺼져 있어 지금은 둘 다 실패한다.**
-Apps Script 에디터에서 `서비스 +` → `YouTube Data API v3` 를 한 번 켜면 첫 경로가 살아난다.
-
-그래서 빌드가 채널 영상 목록을 `src/data/videos.ts` 에 구워 넣는다(`scripts/fetch-videos.mjs`,
-매일 05:00 KST Actions cron으로 다시 긁는다). 이제 매치 탭 전체와 홈의 "최근 매치"·"매치"
-타일이 전부 이 구운 목록을 읽는다. 관리자의 「영상에서 가져오기」는 더 이상 없다.
-위 백엔드 경로가 막혀 있는 동안 사이트가 계속 돌아가는 건 이 구운 목록 덕분이다.

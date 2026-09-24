@@ -6,7 +6,7 @@
 // (스펙 4절 · docs/superpowers/specs/2026-09-11-game-ui-redesign.md,
 //  축구 테마 확장은 2026-09-22 · docs/superpowers/specs/2026-09-21-pixel-refresh-design.md §13)
 //
-// 아래 정규식은 서버 검증(server/weeklyfc-apps-script.js의 isValidAvatarCode)과
+// 아래 정규식은 서버 검증(supabase/migrations 의 write_avatar 함수)과
 // 반드시 같은 모양이어야 한다 — 클라이언트가 만드는 코드가 서버에서 거부되면
 // 안 되기 때문이다. tests/unit/avatar.test.mjs 에도 이 정규식을 그대로 복사해
 // serializeAvatar 출력이 실제로 통과하는지 검증한다(그게 계약이다).
