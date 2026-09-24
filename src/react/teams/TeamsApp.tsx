@@ -16,7 +16,6 @@ import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
-import TeamsShareModal from './TeamsShareModal';
 
 function Teams() {
   const { message } = App.useApp();
@@ -28,7 +27,6 @@ function Teams() {
   const admin = useAdmin();
   // 매치로 저장(2026-09-25). 날짜는 그날 하루가 매치 하나라 기본 오늘. 저장은 관리자만, 초안은 그대로 둔다.
   const [date, setDate] = useState(() => seoulToday());
-  const [shareOpen, setShareOpen] = useState(false);   // 팀 나누기 이미지(2026-09-25, 텍스트 복사 대신)
   const [saving, setSaving] = useState(false);
   // 저장된 매치 고치기(2026-09-25): /matches/new/?edit=ID 로 들어오면 그 매치를 불러와 초안을 대체한다. 한 번만.
   // 빌드 때는 location 이 없다(정적 빌드 — 프론트매터·초기 렌더에서 쿼리를 읽지 말 것). 화면이 뜬 뒤에만 읽는다.
@@ -60,7 +58,7 @@ function Teams() {
   if (!data) return <Loading title="팀짜기" />;
 
   const players = data.players;
-  const snap = snapshot(st, players);   // 팀이 다 짜였을 때만 이미지 저장이 켜진다
+  const snap = snapshot(st, players);   // 저장 가능 여부(안 정한 사람 없음·팀 둘 이상)
   const views = T.teamViews(st, players);
   const rest = T.unassigned(st, players);
   const total = T.membersOf(st, players).length;
@@ -113,7 +111,6 @@ function Teams() {
         <h1>{editing ? `${matchLabel(editing.date)} 팀 수정` : '팀짜기'} <span className="muted">{total}명</span></h1>
         <div className="actions">
           <Button onClick={() => { location.href = href('/matches/'); }}>매치 목록</Button>
-          <Button type="primary" disabled={!snap.ok} title={snap.ok ? undefined : snap.error} onClick={() => setShareOpen(true)}>이미지 저장</Button>
         </div>
       </div>
 
@@ -202,7 +199,6 @@ function Teams() {
           </>
         )}
       </div>
-      <TeamsShareModal open={shareOpen} onClose={() => setShareOpen(false)} lineup={snap.ok ? snap.lineup : []} players={players} date={date} />
     </>
   );
 }
