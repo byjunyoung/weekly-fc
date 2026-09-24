@@ -43,13 +43,14 @@ export function potmOf(m: Match): { nums: number[]; votes: number } {
 }
 
 export const deadline = (m: Match): string => addDays(m.date, VOTE_DAYS);
-/** 투표 창 — 매치 날짜부터 7일째까지(둘 다 포함). today 는 'YYYY-MM-DD'(서울). */
-export const voteOpen = (m: Match, today: string): boolean => today <= deadline(m);
+/** 투표 창 — 매치 날짜 **당일부터** 7일째까지(둘 다 포함). 경기 전엔 못 한다(2026-09-25). today 는 'YYYY-MM-DD'(서울). */
+export const voteOpen = (m: Match, today: string): boolean => today >= m.date && today <= deadline(m);
 
 export type Voter = { login: boolean; num: number | null };
 
 /** 투표 못 하는 이유. 할 수 있으면 null. 마감이 먼저다 — 끝난 매치에 로그인을 권할 이유가 없다. */
 export function voteBlock(m: Match, me: Voter, today: string): string | null {
+  if (today < m.date) return '경기 뒤에 투표할 수 있습니다';
   if (!voteOpen(m, today)) return '투표가 끝났습니다';
   if (!me.login) return '로그인하면 투표할 수 있습니다';
   if (me.num == null) return '먼저 내 이름을 골라 주세요';

@@ -47,13 +47,15 @@ test('attendees 는 용병을 뺀 명단 선수만, 팀 순서대로', () => {
 test('voteOpen: 매치 날짜부터 7일째까지 열리고 8일째 닫힌다', () => {
   const m = M();
   assert.equal(deadline(m), '2026-10-04');
+  assert.equal(voteOpen(m, '2026-09-26'), false, '경기 전날은 닫힘');
   assert.equal(voteOpen(m, '2026-09-27'), true);
   assert.equal(voteOpen(m, '2026-10-04'), true);
   assert.equal(voteOpen(m, '2026-10-05'), false);
   assert.equal(addDays('2026-12-30', 7), '2027-01-06', '해 넘김');
 });
-test('voteBlock: 마감 → 로그인 → 이름 차지 → 그날 뛴 사람 순으로 이유를 낸다', () => {
+test('voteBlock: 경기 전 → 마감 → 로그인 → 이름 차지 → 그날 뛴 사람 순으로 이유를 낸다', () => {
   const m = M();
+  assert.equal(voteBlock(m, { login: true, num: 2 }, '2026-09-26'), '경기 뒤에 투표할 수 있습니다');
   assert.equal(voteBlock(m, { login: false, num: null }, '2026-10-05'), '투표가 끝났습니다');
   assert.equal(voteBlock(m, { login: false, num: null }, '2026-09-28'), '로그인하면 투표할 수 있습니다');
   assert.equal(voteBlock(m, { login: true, num: null }, '2026-09-28'), '먼저 내 이름을 골라 주세요');

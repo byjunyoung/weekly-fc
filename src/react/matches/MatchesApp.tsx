@@ -146,7 +146,7 @@ function Matches() {
   return (
     <>
       <div className="page-head">
-        <h1>매치 <span className="muted">{matches.length}회</span></h1>
+        <h1>매치</h1>
         <div className="actions"><Button type="primary" onClick={() => { location.href = href('/matches/new/'); }}>팀 짜기</Button></div>
       </div>
       {matches.length === 0 && (
