@@ -8,7 +8,7 @@ import { vote } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
 import { setMe } from '../../lib/me';
 import { STAT_KO } from '../../lib/stats';
-import { pairKey, pickPair, QUESTION, tierRows, type TierKey } from '../../lib/tier';
+import { pairKey, pickPair, QUESTION, rivalPairs, tierRows, type TierKey } from '../../lib/tier';
 import { STAT_KEYS, type Player, type StatKey } from '../../lib/types';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
@@ -65,7 +65,7 @@ function Duel({ players, me, focus, onExit }: { players: Player[]; me: number; f
   };
   const next = (): void => {
     const { field, withFocus } = nextField();
-    const p = pickPair(playersRef.current, { field, seen: seen.current, recent: recent.current, rand: Math.random, focus: withFocus ? focus : null });
+    const p = pickPair(playersRef.current, { field, seen: seen.current, recent: recent.current, rand: Math.random, focus: withFocus ? focus : null, rivals: rivalPairs(playersRef.current) });
     setFlash(null);
     setPair(p);
     if (!p) return;
@@ -112,6 +112,7 @@ function Duel({ players, me, focus, onExit }: { players: Player[]; me: number; f
   return (
     <div className="card duel">
       <div className="duel-head">
+        {rivalPairs(players).get(pair.a.num) === pair.b.num && <div className="duel-rival"><span className="rival-tag">라이벌전!</span></div>}
         <h2 className="duel-q">{QUESTION[pair.field]}</h2>
         <span className="muted">{count}판 · 누르면 바로 반영</span>
       </div>

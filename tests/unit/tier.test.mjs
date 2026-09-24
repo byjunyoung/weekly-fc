@@ -98,3 +98,36 @@ test('pickPair — 선수가 둘 미만이면 null', () => {
 test('QUESTION — 여섯 항목 모두 질문 문구가 있다', () => {
   for (const k of STAT_KEYS) assert.match(QUESTION[k], /^누가 .+\?$/);
 });
+
+import { rivalPairs } from '../../src/lib/tier.ts';
+
+test('rivalPairs — 종합 순 이웃끼리 둘씩, 서로가 서로의 라이벌', () => {
+  const ps = [P(1, 90), P(2, 60), P(3, 88), P(4, 61), P(5, 75), P(6, 74)];
+  const r = rivalPairs(ps);
+  assert.equal(r.get(1), 3); assert.equal(r.get(3), 1);
+  assert.equal(r.get(5), 6); assert.equal(r.get(6), 5);
+  assert.equal(r.get(4), 2); assert.equal(r.get(2), 4);
+});
+
+test('rivalPairs — 홀수면 남은 한 명은 바로 위 사람을 라이벌로(한쪽만)', () => {
+  const r = rivalPairs([P(1, 90), P(2, 80), P(3, 70)]);
+  assert.equal(r.get(1), 2); assert.equal(r.get(2), 1); assert.equal(r.get(3), 2);
+});
+
+test('rivalPairs — 숫자 없는 선수는 빼고, 같은 점수는 번호순으로 고정', () => {
+  const r = rivalPairs([P(4, 70), P(2, 70), P(3, 0), P(1, 70), P(5, 70)]);
+  assert.equal(r.has(3), false);
+  assert.equal(r.get(1), 2); assert.equal(r.get(4), 5);
+});
+
+test('pickPair — rivals 를 주면 네 판에 한 번꼴로 라이벌끼리 붙인다', () => {
+  const ps = Array.from({ length: 30 }, (_, i) => P(i + 1, 50 + (i * 7) % 40));
+  const rivals = rivalPairs(ps);
+  const r = rng(5);
+  let hit = 0;
+  for (let i = 0; i < 400; i++) {
+    const { a, b } = pickPair(ps, { field: 'pace', seen: {}, recent: [], rand: r, rivals });
+    if (rivals.get(a.num) === b.num || rivals.get(b.num) === a.num) hit++;
+  }
+  assert.ok(hit >= 80 && hit <= 160, `${hit}/400`);
+});
