@@ -9,7 +9,7 @@ import { avatarFaceSvg } from '../../components/avatar';
 import { saveMatch } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
 import { seoulToday } from '../../lib/html';
-import { isVideoUrl, matchLabel, snapshot } from '../../lib/matches';
+import { fromMatch, isVideoUrl, matchLabel, snapshot } from '../../lib/matches';
 import * as T from '../../lib/teams';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
@@ -29,11 +29,26 @@ function Teams() {
   const [date, setDate] = useState(() => seoulToday());
   const [video, setVideo] = useState('');   // 유튜브 링크(선택) — 비워 두면 이미 있던 링크를 지킨다
   const [saving, setSaving] = useState(false);
+  // 저장된 매치 고치기(2026-09-25): /matches/new/?edit=ID 로 들어오면 그 매치를 불러와 초안을 대체한다. 한 번만.
+  // 빌드 때는 location 이 없다(정적 빌드 — 프론트매터·초기 렌더에서 쿼리를 읽지 말 것). 화면이 뜬 뒤에만 읽는다.
+  const [editId, setEditId] = useState<number | null>(null);
+  useEffect(() => { const n = Number(new URLSearchParams(location.search).get('edit')); if (Number.isInteger(n) && n > 0) setEditId(n); }, []);
+  const [editing, setEditing] = useState<{ id: number; date: string } | null>(null);
 
   // 초안은 명단과 무관하게 한 번만 불러온다 — 예전엔 명단을 기다렸다 그걸로 걸렀는데,
   // 첫 값이 비었거나 낡으면 초안이 잘린 채 저장됐다(2026-09-22 리뷰). 안 온 사람을 거르는 건
   // 화면(membersOf)이 한다.
   useEffect(() => { setSt(T.load()); setLoaded(true); }, []);
+  useEffect(() => {
+    if (editId == null || editing || !data) return;
+    const m = data.matches.find((x) => x.id === editId);
+    if (!m) { message.error('그 매치를 찾지 못했습니다'); return; }
+    setSt(fromMatch(m, data.players));
+    setDate(m.date); setVideo(m.video);
+    setEditing({ id: m.id, date: m.date });
+    setPicked(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId, data]);
 
   // 저장은 상태가 바뀐 뒤에 따로 한다 — commit 안에서 하면 연타 때 낡은 스냅샷이 저장된다.
   useEffect(() => { if (loaded) T.save(st); }, [st, loaded]);
@@ -82,6 +97,7 @@ function Teams() {
       finally { setSaving(false); }
     };
     // 같은 날짜가 이미 있으면 덮어쓴다 — 표는 남으니 알려만 주고 진행.
+    if (editing && editing.date === date) { await run(); return; }   // 고치던 매치 그대로 — 덮어쓰기가 목적이다
     if ((data?.matches ?? []).some((m) => m.date === date)) {
       Modal.confirm({ title: `${matchLabel(date)} 매치가 이미 있습니다`, content: '팀 구성을 이걸로 덮어씁니다. POTM 표는 그대로 남습니다.', okText: '덮어쓰기', cancelText: '취소', onOk: run });
     } else await run();
@@ -106,7 +122,7 @@ function Teams() {
   return (
     <>
       <div className="page-head">
-        <h1>팀짜기 <span className="muted">{total}명</span></h1>
+        <h1>{editing ? `${matchLabel(editing.date)} 팀 수정` : '팀짜기'} <span className="muted">{total}명</span></h1>
         <div className="actions">
           <Button onClick={() => { location.href = href('/matches/'); }}>매치 목록</Button>
           <Button type="primary" onClick={onCopy}>텍스트 복사</Button>
@@ -140,6 +156,7 @@ function Teams() {
 
       <p className="muted tm-hint" aria-live="polite">
         {picked ? '옮길 팀을 누르세요 · 다시 누르면 취소' : '이름을 누르고 팀을 누르면 옮겨집니다'}
+        {editing && <> · 저장된 매치를 불러왔습니다. [매치로 저장]을 누르면 그 매치가 이걸로 바뀝니다(표는 남습니다)</>}
       </p>
       {/* 인원이 적거나 팀이 많으면 어떤 배치로도 평균이 안 맞는다(5명 4팀은 최적해도 17 차이) —
           "배치됐으니 됐다"고 믿지 않게 알려 준다. */}

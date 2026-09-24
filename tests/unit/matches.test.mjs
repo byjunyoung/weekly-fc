@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, applyPotm, attendees, currentPotm, deadline, isVideoUrl, matchLabel, potmOf, shortDate, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
+import { addDays, applyPotm, attendees, currentPotm, deadline, fromMatch, isVideoUrl, matchLabel, potmOf, shortDate, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
 import { addGuest, initialTeams, moveTo, playerKey, guestKey, togglePicked } from '../../src/lib/teams.ts';
 import { normalizeMatch, normalizeData, EMPTY } from '../../src/lib/api.ts';
 
@@ -117,4 +117,20 @@ test('currentPotm — 표가 있는 가장 최근 매치의 1위(공동 포함).
   assert.deepEqual(currentPotm([older, newerVoted]), { date: '2026-09-27', matchId: 3, nums: [2, 3], votes: 1 }, '캐시 순서와 무관, 공동');
   const sameDay = M({ id: 4, date: '2026-09-27', tally: { 2: 2 } });
   assert.equal(currentPotm([newerVoted, sameDay]).matchId, 4, '같은 날이면 id 큰 쪽');
+});
+
+test('fromMatch — 저장된 매치를 팀짜기 상태로: 조끼 순서 칸, 명단에 없는 사람은 이름만 든 용병으로', () => {
+  const m = M({ id: 9, lineup: [
+    { vest: 'none', members: [{ num: 2, name: '김현서' }, { num: null, name: '오준 용병+2' }] },
+    { vest: 'neon', members: [{ num: 3, name: '김준영' }, { num: 1, name: '강준영' }] },   // 1번은 명단에서 빠진 사람
+  ] });
+  const st = fromMatch(m, ROSTER, (i) => `g${i}`);
+  assert.equal(st.teams, 3, '야광조끼(2번 칸)까지 → 3팀');
+  assert.deepEqual(st.picked, [2, 3]);
+  assert.deepEqual(st.guests, [{ id: 'g0', name: '오준 용병+2' }, { id: 'g1', name: '강준영' }]);
+  assert.deepEqual(st.assign, { [playerKey(2)]: 0, [guestKey('g0')]: 0, [playerKey(3)]: 2, [guestKey('g1')]: 2 });
+  // 되돌린 상태를 다시 스냅샷하면 같은 팀 구성(용병은 이름만)
+  const snap = snapshot(st, ROSTER);
+  assert.equal(snap.ok, true);
+  assert.deepEqual(snap.lineup.map((t) => [t.vest, t.members.map((x) => x.name)]), [['none', ['김현서', '오준 용병+2']], ['neon', ['김준영', '강준영']]]);
 });

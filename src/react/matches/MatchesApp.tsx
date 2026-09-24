@@ -69,6 +69,7 @@ function Card({ m, players, today, admin, onPotmImage }: { m: Match; players: Pl
         <h2>{M.matchLabel(m.date, year)}</h2>
         <div className="card-head-act">
           {m.video && <Button size="small" href={m.video} target="_blank" rel="noopener">▶ 영상 보기</Button>}
+          {admin && <Button size="small" onClick={() => { location.href = href(`/matches/new/?edit=${m.id}`); }}>팀 수정</Button>}
           {admin && <Button size="small" onClick={onVideo}>{m.video ? '영상 링크 고치기' : '영상 링크'}</Button>}
           {admin && <Button size="small" danger onClick={onDelete}>삭제</Button>}
         </div>

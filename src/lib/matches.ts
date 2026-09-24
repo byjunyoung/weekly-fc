@@ -4,7 +4,7 @@
 // 매치 하나 = 하루. 팀짜기(teams.ts)의 상태를 **이름까지 박은 스냅샷**으로 굳혀 저장한다 —
 // 명단에서 빠진 사람도 지난 매치엔 그대로 보여야 하니까. POTM 은 그날 뛴 회원이 한 표씩,
 // 매치 날짜부터 7일 동안. 자격은 서버가 다시 보지만 화면이 미리 이유를 알려 주려고 여기서도 센다.
-import { VESTS, membersOf, teamViews, unassigned, type TeamsState } from './teams.ts';
+import { MIN_TEAMS, VESTS, guestKey, membersOf, playerKey, teamViews, unassigned, type TeamsState } from './teams.ts';
 import type { Data, Match, MatchMember, MatchTeam, Player, VestKey } from './types.ts';
 
 export const VOTE_DAYS = 7;
@@ -91,4 +91,28 @@ export function currentPotm(matches: Match[]): CurrentPotm | null {
   if (!m) return null;
   const p = potmOf(m);
   return { date: m.date, matchId: m.id, nums: p.nums, votes: p.votes };
+}
+
+/** 저장된 매치를 팀짜기 상태로 되돌린다(2026-09-25 "수정도 가능하게"). 팀은 조끼 순서대로 0·1·2·3 번 칸.
+ *  명단에서 빠진 사람(번호가 지금 명단에 없음)은 이름만 든 용병으로 옮겨 **한 명도 잃지 않는다** —
+ *  membersOf 가 명단에 없는 번호를 화면에서 거르기 때문이다. 용병 id 는 부르는 쪽이 준다(순수 함수). */
+export function fromMatch(m: Match, players: Player[], guestId: (i: number) => string = (i) => `m${m.id}-${i}`): TeamsState {
+  const have = new Set(players.map((p) => p.num));
+  const st: TeamsState = { teams: MIN_TEAMS, picked: [], guests: [], assign: {} };
+  let gi = 0;
+  m.lineup.forEach((t) => {
+    const team = Math.max(0, VESTS.findIndex((v) => v.key === t.vest));
+    st.teams = Math.max(st.teams, team + 1);
+    for (const x of t.members) {
+      if (x.num != null && have.has(x.num)) {
+        if (!st.picked.includes(x.num)) st.picked.push(x.num);
+        st.assign[playerKey(x.num)] = team;
+      } else {
+        const id = guestId(gi++);
+        st.guests.push({ id, name: x.name });
+        st.assign[guestKey(id)] = team;
+      }
+    }
+  });
+  return st;
 }
