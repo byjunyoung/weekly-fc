@@ -97,7 +97,7 @@ import { normalizeStatLog, normalizeData } from '../../src/lib/api.ts';
 
 test3('기록 한 줄을 화면이 쓰는 모양으로 바꾼다', () => {
   const r = normalizeStatLog({ ts: '2026-09-22T10:00:00.000Z', by: '7', by_name: '이찬우', num: '2', field: 'pace', before: '70', after: '84' });
-  assert3.deepEqual(r, { ts: '2026-09-22T10:00:00.000Z', by: 7, byName: '이찬우', num: 2, field: 'pace', before: 70, after: 84 });
+  assert3.deepEqual(r, { ts: '2026-09-22T10:00:00.000Z', by: 7, byName: '이찬우', num: 2, field: 'pace', before: 70, after: 84, via: '' });
 });
 
 test3('모르는 칸·번호 없는 줄은 버린다 — 화면이 이름을 못 붙인다', () => {
@@ -123,4 +123,30 @@ test3('기록은 최신이 위로 온다 — 시트는 덧붙인 순서라 뒤�
 
 test3('기록이 아예 없어도 빈 배열이다 (서버가 옛 버전이어도 화면이 안 깨진다)', () => {
   assert3.deepEqual(normalizeData({}).statLog, []);
+});
+
+// ── 티어 게임(2026-09-24) ─────────────────────────────────────────
+import { applyVote } from '../../src/lib/api.ts';
+
+test3('기록 줄의 via 를 그대로 받는다 — 대결로 바뀐 줄은 game', () => {
+  assert3.equal(normalizeStatLog({ ts: 't', num: '2', field: 'pace', before: 1, after: 2, via: 'game' }).via, 'game');
+  assert3.equal(normalizeStatLog({ ts: 't', num: '2', field: 'pace', before: 1, after: 2 }).via, '');
+});
+
+const pl = (num, pace) => ({ num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
+  pace, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '' });
+
+test3('applyVote — 서버 응답으로 두 선수 숫자를 고치고 기록 두 줄을 맨 위에 얹는다(다시 읽지 않는다)', () => {
+  const d = { players: [pl(1, 70), pl(2, 70), pl(3, 50)], rotation: [], fines: [], statLog: [{ ts: 'old', by: null, byName: '', num: 1, field: 'pace', before: 60, after: 70, via: '' }] };
+  const r = { ts: 'now', field: 'pace', by: 3, by_name: 'P3', win: { num: 2, before: 70, after: 72 }, lose: { num: 1, before: 70, after: 68 } };
+  const n = applyVote(d, r);
+  assert3.deepEqual(n.players.map((p) => p.pace), [68, 72, 50]);
+  assert3.deepEqual(n.statLog.map((x) => [x.num, x.before, x.after, x.via, x.byName]), [[2, 70, 72, 'game', 'P3'], [1, 70, 68, 'game', 'P3'], [1, 60, 70, '', '']]);
+  assert3.equal(d.players[0].pace, 70, '원본은 건드리지 않는다');
+});
+
+test3('applyVote — 끝에 막혀 안 바뀐 쪽은 기록을 남기지 않는다(서버와 같다)', () => {
+  const d = { players: [pl(1, 99), pl(2, 98)], rotation: [], fines: [], statLog: [] };
+  const n = applyVote(d, { ts: 't', field: 'pace', by: null, by_name: '', win: { num: 1, before: 99, after: 99 }, lose: { num: 2, before: 98, after: 96 } });
+  assert3.deepEqual(n.statLog.map((x) => x.num), [2]);
 });

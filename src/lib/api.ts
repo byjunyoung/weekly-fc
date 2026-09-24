@@ -1,5 +1,6 @@
 // src/lib/api.ts — 서버 호출은 여기 한 곳. 2026-09-24 에 Apps Script → Supabase RPC 로 옮겼다.
-// 공개 함수(fetchData·refresh·login·write·writeAvatar·writeStats·fetchFull)의 모양은 그대로라 화면은 모른다.
+// 공개 함수(fetchData·refresh·login·write·writeAvatar·fetchFull)의 모양은 그대로라 화면은 모른다.
+// 2026-09-24 티어 게임: 스텝퍼(writeStats)를 걷고 대결 한 판(vote)을 더했다.
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
 import { STAT_KEYS, type Data, type Fine, type Player, type RotationRow, type StatKey, type StatLogRow } from './types.ts';
 
@@ -40,7 +41,7 @@ export function normalizeStatLog(r: Raw): StatLogRow | null {
   const who = num(r.num);
   if (who <= 0) return null;
   return { ts: String(r.ts ?? ''), by: numOrNull(r.by), byName: String(r.by_name ?? '').trim(),
-    num: who, field, before: num(r.before), after: num(r.after) };
+    num: who, field, before: num(r.before), after: num(r.after), via: String(r.via ?? '') };
 }
 
 export function normalizeData(d: Raw): Data {
@@ -151,23 +152,44 @@ export async function write(action: string, payload: unknown): Promise<Raw> {
 }
 export async function fetchFull(): Promise<Data> { return normalizeData(await rpc('get_all_full', { p_pin: getPin() })); }
 
+/** 대결 한 판의 서버 응답(public.vote). */
+export type VoteResult = { ts: string; field: StatKey; by: number | null; by_name: string;
+  win: { num: number; before: number; after: number }; lose: { num: number; before: number; after: number } };
+
+/** 대결 결과를 데이터에 얹는다 — 두 선수 숫자를 고치고, 실제로 바뀐 쪽만 기록 줄을 맨 위에.
+ *  서버가 남긴 것과 같은 모양이라 다시 읽지 않아도 화면이 맞는다. 원본은 건드리지 않는다. */
+export function applyVote(d: Data, r: VoteResult): Data {
+  const after = new Map([[r.win.num, r.win.after], [r.lose.num, r.lose.after]]);
+  const players = d.players.map((p) => (after.has(p.num) ? { ...p, [r.field]: after.get(p.num)! } : p));
+  const rows: StatLogRow[] = [r.win, r.lose].filter((x) => x.before !== x.after).map((x) => ({
+    ts: r.ts, by: r.by, byName: r.by_name, num: x.num, field: r.field, before: x.before, after: x.after, via: 'game',
+  }));
+  return { ...d, players, statLog: [...rows, ...d.statLog] };
+}
+
+/** 대결 한 판. PIN 없이 누구나 — by 는 고른 "나"(자칭, 2026-09-24 사용자 결정: 이름만 남긴다).
+ *  판마다 전체를 다시 읽지 않는다: 응답으로 캐시를 고쳐 wfc:data 를 보낸다(연달아 누르는 게임이라). */
+export async function vote(field: StatKey, win: number, lose: number, by: number | null): Promise<VoteResult> {
+  const raw = await rpc('vote', { p_field: field, p_win: win, p_lose: lose, p_by: by });
+  const r: VoteResult = {
+    ts: String(raw.ts ?? ''), field, by: numOrNull(raw.by), by_name: String(raw.by_name ?? ''),
+    win: raw.win as VoteResult['win'], lose: raw.lose as VoteResult['lose'],
+  };
+  const base = cached();
+  if (base) {
+    const d = applyVote(base, r);
+    saveCache(d);
+    window.dispatchEvent(new CustomEvent<Data>('wfc:data', { detail: d }));
+  }
+  return r;
+}
+
 /** 아바타 전용 잠금 없는 쓰기. write()와 분리한 이유: write()는 PIN을 요구하고
  * 어떤 액션에든 재사용되므로, PIN 없는 경로를 write()에 얹으면 다른 실수(예: 다른
  * 액션에 pin 없이 접근)가 새 필드 하나로 새어나갈 여지가 생긴다. writeAvatar는
  * 서버의 write_avatar 함수(아바타 칸 하나만 고친다)에만 좁게 대응한다.
  * 서버가 형식 위반·없는 번호를 오류로 돌려주면 rpc()가 그 문구 그대로 throw한다 —
  * 호출부가 toast()로 실패를 보여줘야 한다(성공을 가장하지 않는다). */
-/** 능력치 전용 쓰기. writeAvatar 와 같은 이유로 write() 와 나눠 둔다 — 이쪽은 PIN 을
- *  요구하지 않으므로, 한 함수에 얹으면 PIN 없는 경로가 다른 액션으로 새어나갈 여지가 생긴다.
- *  by 는 홈에서 고른 내 번호(자칭)다. 서버가 값을 1~99 로 검사하고, 바뀐 칸마다 기록을 남긴다.
- *  **바꾼 칸만 보낸다** — 여섯 칸을 통째로 보내면 아직 값이 0 인 칸까지 덮어쓴다. */
-export async function writeStats(num: number, stats: Partial<Record<StatKey, number>>, by: number | null): Promise<Raw> {
-  const r = await rpc('write_stats', { p_num: num, p_stats: stats, p_by: by });
-  if (inflight) await inflight.catch(() => {});
-  await refresh();
-  return r;
-}
-
 export async function writeAvatar(num: number, avatar: string): Promise<Raw> {
   const r = await rpc('write_avatar', { p_num: num, p_avatar: avatar });
   if (inflight) await inflight.catch(() => {});
