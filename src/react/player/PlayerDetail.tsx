@@ -8,6 +8,7 @@ import { fetchFull, serializePlayer, write, writeAvatar } from '../../lib/api';
 import { fmtLogAt } from '../../lib/html';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
+import { rivalPairs } from '../../lib/tier';
 import { avatarSvg } from '../../components/avatar';
 import { avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import AvatarEditor from './AvatarEditor';
@@ -92,6 +93,8 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
   }, [isNew, admin, data, player, opening]);
 
   // 이 선수 기록만, 최신 여덟 줄(서버도 선수마다 여덟 줄만 보낸다).
+  // 라이벌 — 종합이 이웃한 짝(src/lib/tier.ts rivalPairs). 대결로 숫자가 움직이면 바뀐다.
+  const rival = player && data ? data.players.find((p) => p.num === rivalPairs(data.players).get(player.num)) : undefined;
   const myLog = player ? (data?.statLog ?? []).filter((r) => r.num === player.num).slice(0, 8) : [];
 
   // OVR 카운트업 — [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
@@ -204,6 +207,9 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
                 <span className={`pos pos-${player.pos.toLowerCase()}`}>{player.pos || '–'}</span>
                 <span className="muted">#{player.num}{player.vest ? ` · 조끼 ${player.vest}` : ''}</span>
               </div>
+              {rival && (
+                <p className="phero-rival"><span className="rival-tag">라이벌</span><a href={href(`/squad/${rival.num}/`)}>{rival.name}</a></p>
+              )}
               {(player.detail || player.foot) && (
                 <p className="phero-sub">{[player.detail, player.foot].filter(Boolean).join(' · ')}</p>
               )}

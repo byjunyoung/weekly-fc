@@ -50,8 +50,9 @@ const shuffle = <T>(xs: T[], rand: () => number): T[] => {
  *  - recent 에 있는 쌍은 다른 길이 있으면 피한다. 화면 좌우는 무작위로 섞는다. */
 export function pickPair(players: Player[], opt: {
   field: StatKey; seen: Record<number, number>; recent: string[]; rand: () => number; focus?: number | null;
+  rivals?: Map<number, number>;
 }): { a: Player; b: Player; field: StatKey } | null {
-  const { field, seen, recent, rand, focus } = opt;
+  const { field, seen, recent, rand, focus, rivals } = opt;
   const pool = players.filter((p) => p[field] > 0);
   if (pool.length < 2) return null;
   const seenOf = (p: Player) => seen[p.num] ?? 0;
@@ -72,11 +73,30 @@ export function pickPair(players: Player[], opt: {
       .slice(0, 6);
 
   let pick: [Player, Player] | null = null;
-  for (const a of firsts) {
+  // 라이벌전 — 라이벌은 종합으로 묶여 항목 숫자로 고르는 B 에 잘 안 걸린다(실측 60판에 한 번).
+  // 네 판에 한 번꼴로 A 의 라이벌을 바로 붙인다.
+  if (rivals && rand() < 0.25) {
+    const a = firsts[0];
+    const r = pool.find((p) => p.num === rivals.get(a.num));
+    if (r && !recent.includes(pairKey(a.num, r.num))) pick = [a, r];
+  }
+  for (const a of pick ? [] : firsts) {
     const fresh = nearOf(a).filter((b) => !recent.includes(pairKey(a.num, b.num)));
     if (fresh.length) { pick = [a, fresh[Math.floor(rand() * fresh.length)]]; break; }
   }
   if (!pick) { const a = firsts[0]; const near = nearOf(a); pick = [a, near[Math.floor(rand() * near.length)]]; }
   const [a, b] = rand() < 0.5 ? pick : [pick[1], pick[0]];
   return { a, b, field };
+}
+
+/** 라이벌(2026-09-24 사용자: "능력치 비슷한 애들 라이벌 딱지"). 종합 점수 순으로 세워 이웃끼리 둘씩 —
+ *  서로가 서로의 라이벌이다(사용자 결정: 서로 짝). 한 줄로 선 숫자에서 차이 합이 가장 작은 짝짓기가
+ *  바로 이 이웃 묶기다. 홀수면 남은 한 명은 바로 위 사람을 라이벌로 둔다(그쪽은 이미 짝이 있어 한쪽만).
+ *  대결로 숫자가 움직이면 라이벌도 바뀐다. 숫자가 없는(0) 선수는 뺀다. */
+export function rivalPairs(players: Player[]): Map<number, number> {
+  const line = players.filter((p) => ovr(p) > 0).sort((a, b) => ovr(b) - ovr(a) || a.num - b.num);
+  const m = new Map<number, number>();
+  for (let i = 0; i + 1 < line.length; i += 2) { m.set(line[i].num, line[i + 1].num); m.set(line[i + 1].num, line[i].num); }
+  if (line.length % 2 === 1 && line.length > 1) m.set(line[line.length - 1].num, line[line.length - 2].num);
+  return m;
 }

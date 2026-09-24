@@ -469,6 +469,7 @@ a.card:hover { background: var(--charcoal); }
   .player-hero.is-dressing .phero .avatar-svg { width: 72px; height: 96px; }
   .player-hero.is-dressing .phero-ovr,
   .player-hero.is-dressing .phero-meta,
+  .player-hero.is-dressing .phero-rival,
   .player-hero.is-dressing .phero-sub { display: none; }
 }
 .player-side { display: flex; flex-direction: column; gap: var(--s-md); min-width: 0; }
@@ -749,3 +750,11 @@ details.year[open] > summary::before { content: "▾ "; }
 .tier-keys { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .tier-keys::-webkit-scrollbar { display: none; }
 @media (max-width: 479px) { .duel-sprite svg { width: 96px; height: 128px; } .duel-pick { padding: var(--s-sm) var(--s-xxs); } }
+
+/* 라이벌 딱지(2026-09-24) — 종합이 이웃한 짝. 선수 페이지 이름 아래, 대결에서 라이벌끼리 붙으면 질문 위. */
+.rival-tag { display: inline-flex; align-items: center; padding: 2px var(--s-xs); border-radius: var(--r-sm); background: var(--val-d); color: #000000;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
+.phero-rival { display: flex; align-items: center; justify-content: center; gap: var(--s-xs); margin: 0; }
+.phero-rival a { color: var(--fg); font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
+.phero-rival a:hover { color: var(--link); }
+.duel-rival { flex-basis: 100%; }
