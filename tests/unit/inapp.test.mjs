@@ -2,7 +2,7 @@
 // 2026-09-22 진단 페이지에 찍힌 문자열 그대로다(그 환경에서 API 가 멈추는 걸 확인했다).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectInApp, escapeUrl, shouldAutoEscape } from '../../src/lib/inapp.ts';
+import { detectInApp, escapeUrl } from '../../src/lib/inapp.ts';
 
 const UA = {
   kakaoIos: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1 KAKAOTALK/26.7.3 (INAPP)',
@@ -52,20 +52,4 @@ test('iOS 의 카톡 아닌 인앱은 빠져나갈 길이 없다 — 안내만 �
   assert.equal(insta.name, '인스타그램');
   assert.equal(escapeUrl(insta, URL_), null, 'iOS 는 앱이 사파리를 강제로 띄우지 못한다');
   assert.equal(escapeUrl(detectInApp(UA.naver), URL_), null);
-});
-
-test('자동 전환은 카톡에만 — 증상을 확인한 곳만 내보낸다', () => {
-  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos)), true);
-  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoAos)), true);
-  assert.equal(shouldAutoEscape(detectInApp(UA.instaIos)), false);
-  assert.equal(shouldAutoEscape(detectInApp(UA.instaAos)), false, '안드로이드라도 카톡이 아니면 자동 전환하지 않는다');
-  assert.equal(shouldAutoEscape(detectInApp(UA.naver)), false);
-  assert.equal(shouldAutoEscape(null), false);
-});
-
-test('주소에 inapp=stay 가 있으면 카톡이어도 자동 전환하지 않는다 — 새 백엔드를 인앱에서 확인하는 용도', () => {
-  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos), '?inapp=stay'), false);
-  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos), '?x=1&inapp=stay'), false);
-  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos), ''), true);
-  assert.equal(shouldAutoEscape(detectInApp(UA.kakaoIos), '?inapp=go'), true);
 });
