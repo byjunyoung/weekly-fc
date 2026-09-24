@@ -75,6 +75,15 @@
 
 ## 5b. POTM 띠·이미지 저장 — 매치 스펙 §5c 참고(2026-09-25 추가).
 
+## 5c. 선수 방명록(2026-09-25 추가, "각 선수 라커룸? 카드? 에 방명록 달 수 있게 하자")
+
+- 자리: 선수 페이지 카드 아래 `Guestbook` 카드(라커룸은 그리로 들어가는 입구). 꾸미는 중엔 숨긴다.
+- 쓰는 사람: 로그인해 이름을 차지한 회원(사용자 결정). 이름은 서버가 붙인다. 지우기는 본인·관리자.
+- 서버(`20260925200000_guestbook.sql`): `guestbook(player_num → players cascade, author uuid, author_num, author_name, text, ts)`,
+  `guestbook(p_num)`(누구나, 최신 100) · `guestbook_write(p_num, p_text)`(1~140자, 겹공백 하나로, 하루 30건) · `guestbook_delete(p_id)`.
+- 앱: `api.fetchGuestbook/writeGuestbook/deleteGuestbook`, `card.guestbookProblem`(서버와 같은 규칙), `react/player/Guestbook.tsx`.
+  get_all 에 싣지 않는다 — 선수마다 따로 읽는다(끝없이 커진다).
+
 ## 6. 범위 밖
 
 국적 칸, 약발 별점, 카드 공유 이미지(티어 이미지·라인업 이미지는 그대로), 카드 뒷면.

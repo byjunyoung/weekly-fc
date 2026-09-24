@@ -40,3 +40,12 @@ export function cardModel(p: Player, tier: Tier | null | undefined): CardModel {
     stats: CARD_STAT_ORDER.map((key) => ({ key, label: STAT_KO[key], value: p[key], band: band(p[key], STAT_CUTS) })),
   };
 }
+
+export const GUESTBOOK_MAX = 140;
+/** 방명록 글 검사 — 서버(private.clean_guestbook_text)와 같은 규칙. 문제 없으면 null, 있으면 문구. */
+export function guestbookProblem(text: string): string | null {
+  const v = (text ?? '').replace(/\s+/g, ' ').trim();
+  if (!v) return '내용을 적어 주세요';
+  if (v.length > GUESTBOOK_MAX) return `${GUESTBOOK_MAX}자까지만 남길 수 있습니다`;
+  return null;
+}

@@ -16,6 +16,7 @@ import CardShareModal from '../CardShareModal';
 import PlayerCard from '../PlayerCard';
 import { avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import AvatarEditor from './AvatarEditor';
+import Guestbook from './Guestbook';
 import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
 import type { Player } from '../../lib/types';
@@ -275,6 +276,8 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
               )}
             </div>
           </div>
+          {/* 방명록(2026-09-25) — 카드 아래 한 줄씩. 꾸미는 중엔 숨긴다(옵션 목록이 길다). */}
+          {!avatarOpen && data && <Guestbook player={player} players={data.players} />}
         </div>
       )}
       {editModal()}

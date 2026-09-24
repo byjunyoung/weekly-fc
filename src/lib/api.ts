@@ -6,7 +6,7 @@
 import { accessToken, adminOn, cachedMe, session, setCachedMe, type Me } from './auth.ts';
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
 import { applyPotm } from './matches.ts';
-import { STAT_KEYS, type Data, type Fine, type Match, type MatchTeam, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
+import { STAT_KEYS, type Data, type Fine, type GuestbookRow, type Match, type MatchTeam, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
 
 // v3: matches 가 생겼다(2026-09-25) — 옛 캐시엔 그 칸이 없어 화면이 깨지므로 키를 올려 한 번 버린다.
 const CACHE_KEY = 'wfc_cache_v3';
@@ -269,3 +269,23 @@ export async function votePotm(id: number, target: number): Promise<Record<numbe
   }
   return tally;
 }
+
+// ── 방명록 (2026-09-25) ───────────────────────────────────────
+export function normalizeGuestbook(r: Raw): GuestbookRow | null {
+  const id = num(r.id);
+  const text = String(r.text ?? '').trim();
+  if (id <= 0 || !text) return null;
+  return { id, num: num(r.num), authorNum: numOrNull(r.author_num), authorName: String(r.author_name ?? '').trim(), text, ts: String(r.ts ?? '') };
+}
+/** 한 선수의 방명록(최신이 위). 누구나. get_all 에 안 싣고 선수 페이지에서 따로 읽는다. */
+export async function fetchGuestbook(playerNum: number): Promise<GuestbookRow[]> {
+  const r = await rpc('guestbook', { p_num: playerNum });
+  return (Array.isArray(r) ? (r as Raw[]) : []).map(normalizeGuestbook).filter((x): x is GuestbookRow => x !== null);
+}
+/** 한 줄 남기기 — 로그인 + 이름 차지. 쓴 사람 이름은 서버가 붙인다. 응답 한 줄을 돌려준다. */
+export async function writeGuestbook(playerNum: number, text: string): Promise<GuestbookRow> {
+  const r = normalizeGuestbook(await rpc('guestbook_write', { p_num: playerNum, p_text: text }));
+  if (!r) throw new Error('저장 결과를 읽지 못했습니다');
+  return r;
+}
+export async function deleteGuestbook(id: number): Promise<void> { await rpc('guestbook_delete', { p_id: id }); }

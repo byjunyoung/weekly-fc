@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cardModel, CARD_STAT_ORDER, footMode, FOOT_OPTIONS, tierByNum } from '../../src/lib/card.ts';
+import { cardModel, CARD_STAT_ORDER, footMode, FOOT_OPTIONS, GUESTBOOK_MAX, guestbookProblem, tierByNum } from '../../src/lib/card.ts';
+import { normalizeGuestbook } from '../../src/lib/api.ts';
 import { feetPixels, feetSvg, flagKrPixels, flagKrSvg, FLAG_KR_H, FLAG_KR_W, FEET_W, FEET_H, gridRects } from '../../src/components/pixel-icons.ts';
 
 const P = (num, v, over = {}) => ({ num, name: `P${num}`, pos: 'MF', detail: '', foot: '오른발', vest: null, note: '',
@@ -60,4 +61,21 @@ test('flagKrPixels·feetPixels — 캔버스용 격자는 SVG 와 같은 데이�
   assert.equal(b.w, FEET_W); assert.equal(b.h, FEET_H);
   for (const row of b.map) assert.equal(row.length, FEET_W);
   assert.equal(b.palette.L, '#f4f4f4'); assert.equal(b.palette.R, '#4a4f57');
+});
+
+test('guestbookProblem — 서버와 같은 규칙: 빈 글·140자 초과만 막고 공백은 하나로 센다', () => {
+  assert.equal(guestbookProblem('  안녕  '), null);
+  assert.equal(guestbookProblem('   '), '내용을 적어 주세요');
+  assert.equal(guestbookProblem(''), '내용을 적어 주세요');
+  assert.equal(guestbookProblem('가'.repeat(GUESTBOOK_MAX)), null);
+  assert.equal(guestbookProblem('가'.repeat(GUESTBOOK_MAX + 1)), '140자까지만 남길 수 있습니다');
+  assert.equal(guestbookProblem('가   '.repeat(50)), null, '겹공백은 하나로 — 99자');
+  assert.equal(guestbookProblem('가   '.repeat(71)), '140자까지만 남길 수 있습니다', '141자');
+});
+test('normalizeGuestbook — id·글 없으면 버리고 이름은 다듬는다', () => {
+  assert.deepEqual(normalizeGuestbook({ id: '5', num: 3, author_num: 2, author_name: ' 김현서 ', text: ' 잘했다 ', ts: 'T' }),
+    { id: 5, num: 3, authorNum: 2, authorName: '김현서', text: '잘했다', ts: 'T' });
+  assert.equal(normalizeGuestbook({ id: 5, text: '   ' }), null);
+  assert.equal(normalizeGuestbook({ text: 'x' }), null);
+  assert.equal(normalizeGuestbook({ id: 1, text: 'x', author_num: null }).authorNum, null);
 });
