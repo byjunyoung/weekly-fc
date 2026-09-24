@@ -198,10 +198,9 @@ export async function vote(field: StatKey, win: number, lose: number): Promise<V
   return r;
 }
 
-/** 아바타 전용 잠금 없는 쓰기. write()와 분리한 이유: write()는 PIN을 요구하고
- * 어떤 액션에든 재사용되므로, PIN 없는 경로를 write()에 얹으면 다른 실수(예: 다른
- * 액션에 pin 없이 접근)가 새 필드 하나로 새어나갈 여지가 생긴다. writeAvatar는
- * 서버의 write_avatar 함수(아바타 칸 하나만 고친다)에만 좁게 대응한다.
+/** 아바타 쓰기. write()와 나눈 이유: write()는 관리자 전용 액션 묶음이고, 꾸미기는 본인도 한다 —
+ * 한 함수에 얹으면 관리자 아닌 경로가 다른 액션으로 새어나갈 여지가 생긴다. writeAvatar는
+ * 서버의 write_avatar 함수(아바타 칸 하나만, 본인·관리자만 — 서버가 토큰으로 확인)에만 좁게 대응한다.
  * 서버가 형식 위반·없는 번호를 오류로 돌려주면 rpc()가 그 문구 그대로 throw한다 —
  * 호출부가 toast()로 실패를 보여줘야 한다(성공을 가장하지 않는다). */
 export async function writeAvatar(num: number, avatar: string): Promise<Raw> {
