@@ -16,8 +16,8 @@ jobs:
       - name: 데이터 받기
         env:
           WFC_PIN: ${{ secrets.WFC_PIN }}
-          SUPABASE_URL: https://PROJECT_REF.supabase.co
-          SUPABASE_KEY: PUBLISHABLE_KEY
+          SUPABASE_URL: https://irltzwgijbbodkgzmnrc.supabase.co
+          SUPABASE_KEY: sb_publishable_Aum9yotpAs5M7_3g9DqA5Q_Q7mLRlMk
         run: |
           set -euo pipefail
           mkdir -p backup
