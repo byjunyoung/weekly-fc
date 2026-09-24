@@ -2,12 +2,15 @@
 // 공개 함수(fetchData·refresh·login·write·writeAvatar·fetchFull)의 모양은 그대로라 화면은 모른다.
 // 2026-09-24 티어 게임: 스텝퍼(writeStats)를 걷고 대결 한 판(vote)을 더했다.
 // 2026-09-24 본인인증: 관리자 PIN 을 없애고 로그인 세션(auth.ts)으로 — 로그인 중이면 모든 호출에 토큰을 싣는다.
+// 2026-09-25 매치: 팀짜기를 날짜로 저장(saveMatch)하고 POTM 표(votePotm)를 응답으로 캐시에 얹는다.
 import { accessToken, adminOn, cachedMe, session, setCachedMe, type Me } from './auth.ts';
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
-import { STAT_KEYS, type Data, type Fine, type Player, type RotationRow, type StatKey, type StatLogRow } from './types.ts';
+import { applyPotm } from './matches.ts';
+import { STAT_KEYS, type Data, type Fine, type Match, type MatchTeam, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
 
-const CACHE_KEY = 'wfc_cache_v2';
-export const EMPTY: Data = { players: [], rotation: [], fines: [], statLog: [] };
+// v3: matches 가 생겼다(2026-09-25) — 옛 캐시엔 그 칸이 없어 화면이 깨지므로 키를 올려 한 번 버린다.
+const CACHE_KEY = 'wfc_cache_v3';
+export const EMPTY: Data = { players: [], rotation: [], fines: [], statLog: [], matches: [] };
 
 type Raw = Record<string, unknown>;
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -45,12 +48,30 @@ export function normalizeStatLog(r: Raw): StatLogRow | null {
     num: who, field, before: num(r.before), after: num(r.after), via: String(r.via ?? '') };
 }
 
+const VEST_KEYS: VestKey[] = ['none', 'orange', 'neon', 'black'];
+/** 매치 한 줄. 모양이 깨진 팀·사람은 버리고, 표 집계는 숫자 키로 옮긴다. id 가 없으면 null. */
+export function normalizeMatch(r: Raw): Match | null {
+  const id = num(r.id);
+  if (id <= 0) return null;
+  const arr = (v: unknown): Raw[] => (Array.isArray(v) ? (v as Raw[]) : []);
+  const lineup: MatchTeam[] = arr(r.lineup).flatMap((t) => {
+    const vest = VEST_KEYS.find((k) => k === t.vest);
+    if (!vest) return [];
+    const members = arr(t.members).map((m) => ({ num: numOrNull(m.num), name: String(m.name ?? '').trim() })).filter((m) => m.name);
+    return members.length ? [{ vest, members }] : [];
+  });
+  const tally: Record<number, number> = {};
+  for (const [k, v] of Object.entries((r.tally as Raw) ?? {})) { const n = num(k); if (n > 0 && num(v) > 0) tally[n] = num(v); }
+  return { id, date: day(r.date), lineup, tally, voters: num(r.voters) };
+}
+
 export function normalizeData(d: Raw): Data {
   const arr = (v: unknown): Raw[] => (Array.isArray(v) ? (v as Raw[]) : []);
   return { players: arr(d.players).map(normalizePlayer).filter((p) => p.num > 0),
     rotation: arr(d.rotation).map(normalizeRotation), fines: arr(d.fines).map(normalizeFine).filter((f) => f.id),
     // 최신이 위로 — 서버는 오래된 것부터 보낸다(옛 시트와 같은 순서)라 뒤집는다.
-    statLog: arr(d.statLog).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null).reverse() };
+    statLog: arr(d.statLog).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null).reverse(),
+    matches: arr(d.matches).map(normalizeMatch).filter((m): m is Match => m !== null) };
 }
 
 export const serializePlayer = (p: Player): Raw => ({ ...p, vest: p.vest ?? '', rot: p.rot ?? '', avatar: p.avatar ?? '' });
@@ -208,4 +229,35 @@ export async function writeAvatar(num: number, avatar: string): Promise<Raw> {
   if (inflight) await inflight.catch(() => {});
   await refresh();
   return r;
+}
+
+// ── 매치 · POTM (2026-09-25) ──────────────────────────────────
+/** 팀짜기 결과를 그날 매치로 저장(관리자). 같은 날짜면 서버가 덮어쓴다. 끝나면 다시 읽는다. */
+export async function saveMatch(date: string, lineup: MatchTeam[]): Promise<number> {
+  if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
+  const r = await rpc('save_match', { p_date: date, p_lineup: lineup });
+  if (inflight) await inflight.catch(() => {});
+  await refresh();
+  return num(r.id);
+}
+export async function deleteMatch(id: number): Promise<void> {
+  if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
+  await rpc('delete_match', { p_id: id });
+  if (inflight) await inflight.catch(() => {});
+  await refresh();
+}
+/** POTM 한 표. 자격(그날 뛴 회원·본인 제외·7일)은 서버가 본다. 응답의 집계로 캐시와 내 표를 고쳐 다시 읽지 않는다. */
+export async function votePotm(id: number, target: number): Promise<Record<number, number>> {
+  const r = await rpc('vote_potm', { p_match: id, p_num: target });
+  const m = normalizeMatch({ id, tally: r.tally, voters: r.voters });
+  const tally = m?.tally ?? {};
+  const me = cachedMe();
+  setCachedMe({ ...me, potm: { ...(me.potm ?? {}), [String(id)]: target } });
+  const base = cached();
+  if (base) {
+    const d = applyPotm(base, id, tally, m?.voters ?? 0);
+    saveCache(d);
+    window.dispatchEvent(new CustomEvent<Data>('wfc:data', { detail: d }));
+  }
+  return tally;
 }

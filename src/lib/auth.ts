@@ -13,7 +13,7 @@ const ME_KEY = 'wfc_me_v2';
 const ADMIN_ON_KEY = 'wfc_admin_on';
 
 export type Session = { access_token: string; refresh_token: string; expires_at: number; email: string };
-export type Me = { login: boolean; email?: string; num?: number | null; name?: string | null; admin?: boolean; today?: number; todayBy?: Record<string, number> };
+export type Me = { login: boolean; email?: string; num?: number | null; name?: string | null; admin?: boolean; today?: number; todayBy?: Record<string, number>; potm?: Record<string, number> };
 
 const store = {
   get<T>(k: string): T | null { try { const s = localStorage.getItem(k); return s ? (JSON.parse(s) as T) : null; } catch { return null; } },
