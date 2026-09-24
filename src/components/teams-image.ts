@@ -46,8 +46,11 @@ export function teamsLayout(lineup: MatchTeam[]): TeamsLayout {
     const fitAcross = Math.max(1, Math.floor((IMG_W - M * 2) / (24 * c + 16)));   // 이 크기에서 가로에 들어가는 최대 인원
     const perLine = Math.min(maxTeam, fitAcross);
     lay = build(Math.max(perLine, Math.min(4, maxTeam)), c);
-    if (bottom(lay) <= BOTTOM) return lay;
+    if (bottom(lay) <= BOTTOM) break;
   }
+  // 남는 세로는 위아래로 나눠 가운데에 둔다 — 두 팀뿐이면 아래 절반이 비어 보였다.
+  const shift = Math.max(0, Math.floor((BOTTOM - bottom(lay)) / 2));
+  if (shift) for (const r of lay.rows) { r.y += shift; for (const sl of r.slots) sl.y += shift; }
   return lay;
 }
 
