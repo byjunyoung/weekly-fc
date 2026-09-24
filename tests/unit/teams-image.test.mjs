@@ -51,7 +51,13 @@ test('teamsLayout — 줄은 조끼 순서, 한 줄 6명, 세로 안에 들어�
   assert.ok(lay2.rows[0].slots[0].cell < 4, '많으면 아바타를 줄인다');
   assert.equal(teamsLayout(LINEUP).rows[0].slots[0].cell, 7, '적으면 가장 크게');
   const per = lay2.rows[0].slots.filter((s) => s.y === lay2.rows[0].slots[0].y).length;
-  assert.ok(per >= 6 && lay2.rows[0].slots[per].y > lay2.rows[0].slots[0].y, '한 줄이 차면 다음 줄');
+  assert.ok(per >= 6, '한 줄에 여섯 이상');
+  if (per < lay2.rows[0].slots.length) assert.ok(lay2.rows[0].slots[per].y > lay2.rows[0].slots[0].y, '한 줄이 차면 다음 줄');
+  // 7명·7명 두 팀이면 한 줄에 7명씩 — 7번째가 혼자 떨어지지 않는다
+  const seven = [0, 1].map((k) => ({ vest: k ? 'orange' : 'none', members: Array.from({ length: 7 }, (_, i) => ({ num: k * 10 + i + 1, name: `선수${k * 10 + i + 1}` })) }));
+  const lay3 = teamsLayout(seven);
+  for (const r of lay3.rows) assert.equal(new Set(r.slots.map((s) => s.y)).size, 1, '한 줄');
+  assert.ok(lay3.rows[0].slots[0].cell >= 5, '그러면서도 아바타는 크게');
 });
 
 test('drawTeamsImage — 1080×1350, 조끼 색 띠, 이름(짧게)·용병 표시, 숫자 없음, undefined 없음', () => {

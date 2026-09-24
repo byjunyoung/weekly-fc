@@ -18,10 +18,11 @@ const NAME_H = 44;
 export type TeamsSlot = { name: string; num: number | null; x: number; y: number; cell: number; w: number };
 export type TeamsLayout = { rows: Array<{ vest: string; y: number; h: number; slots: TeamsSlot[] }> };
 
-/** 줄마다 사람 수에 맞춰 칸을 잡는다 — **들어가는 것 중 가장 큰** 아바타를 고른다(적은 인원이면 크게, 많으면 한 줄 인원을 늘리고 줄인다).
- *  처음엔 6명·4배로만 그렸더니 7명짜리 이미지가 위 40% 만 쓰고 아래가 비었다. */
-const FITS: Array<[number, number]> = [[4, 7], [5, 6], [6, 5], [6, 4], [6, 3], [8, 3], [8, 2], [10, 2], [12, 2]];   // [한 줄 인원, 아바타 배수]
+/** 줄마다 사람 수에 맞춰 칸을 잡는다 — 아바타는 큰 것(7배)부터 작은 것(2배)까지 내려가며, 각 크기에서
+ *  **가장 큰 팀이 한 줄에 다 들어가는** 칸 수를 먼저 시도한다(7명 팀의 7번째가 혼자 다음 줄로 떨어지지 않게).
+ *  가로에 안 들어가면 그 크기에서 들어가는 만큼만 한 줄에 두고 넘긴다. 세로가 넘치면 한 단계 작게. */
 export function teamsLayout(lineup: MatchTeam[]): TeamsLayout {
+  const maxTeam = Math.max(1, ...lineup.map((t) => t.members.length));
   const build = (perLine: number, c: number): TeamsLayout => {
     const colW = (IMG_W - M * 2) / perLine;
     const rows: TeamsLayout['rows'] = [];
@@ -40,8 +41,13 @@ export function teamsLayout(lineup: MatchTeam[]): TeamsLayout {
     return { rows };
   };
   const bottom = (l: TeamsLayout) => (l.rows.length ? l.rows[l.rows.length - 1].y + l.rows[l.rows.length - 1].h : TOP);
-  let lay = build(FITS[0][0], FITS[0][1]);
-  for (const [perLine, c] of FITS) { lay = build(perLine, c); if (bottom(lay) <= BOTTOM) break; }
+  let lay = build(6, 2);
+  for (let c = 7; c >= 2; c--) {
+    const fitAcross = Math.max(1, Math.floor((IMG_W - M * 2) / (24 * c + 16)));   // 이 크기에서 가로에 들어가는 최대 인원
+    const perLine = Math.min(maxTeam, fitAcross);
+    lay = build(Math.max(perLine, Math.min(4, maxTeam)), c);
+    if (bottom(lay) <= BOTTOM) return lay;
+  }
   return lay;
 }
 
