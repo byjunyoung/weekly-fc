@@ -49,14 +49,16 @@ test('tierRows — 순위로 담는다: 30명이면 3·6·12·6·3, 칸 안은 �
   assert.deepEqual(tierRows(mixed, 'pace').flatMap((r) => r.players.map((p) => p.num)), [4, 1, 3, 2]);
 });
 
-test('tierRows — 동점은 위 칸으로 같이 올라가고, 그만큼 아래 칸이 줄어 D 가 나머지를 받는다', () => {
-  // 10명: 정원 1·2·4·2·1. 1~3번이 모두 90 이면 S 는 3명, A 는 다음 2명 …
-  const ps = [P(1, 90), P(2, 90), P(3, 90), ...Array.from({ length: 7 }, (_, i) => P(i + 4, 80 - i))];
+test('tierRows — 정원은 동점이어도 지킨다: 종합 동점은 여섯 항목 합계, 그다음 번호순', () => {
+  // 10명: 정원 1·2·4·2·1. 1~3번이 종합 90 이라도 S 는 한 명.
+  const ps = [P(1, 90), P(2, 90, { pace: 92 }), P(3, 90), ...Array.from({ length: 7 }, (_, i) => P(i + 4, 80 - i))];
   const rows = tierRows(ps, 'ovr');
-  assert.deepEqual(rows.map((r) => r.players.map((p) => p.num)), [[1, 2, 3], [4, 5], [6, 7, 8, 9], [10], []]);
-  // 전원 동점이면 전부 S
-  const same = Array.from({ length: 6 }, (_, i) => P(i + 1, 70));
-  assert.deepEqual(tierRows(same, 'ovr').map((r) => r.players.length), [6, 0, 0, 0, 0]);
+  assert.deepEqual(rows.map((r) => r.players.length), [1, 2, 4, 2, 1]);
+  assert.deepEqual(rows[0].players.map((p) => p.num), [2], '합계가 큰 2번이 S');
+  assert.deepEqual(rows[1].players.map((p) => p.num), [1, 3], '나머지 동점은 번호순');
+  // 전원 동점이어도 정원대로 갈린다(D 가 비지 않는다)
+  const same = Array.from({ length: 30 }, (_, i) => P(i + 1, 70));
+  assert.deepEqual(tierRows(same, 'ovr').map((r) => r.players.length), [3, 6, 12, 6, 3]);
 });
 
 test('tierRows — 인원이 적어도 빈 칸 줄은 남고 아무도 안 잃는다', () => {

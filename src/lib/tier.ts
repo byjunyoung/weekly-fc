@@ -1,7 +1,7 @@
 // src/lib/tier.ts — 티어 게임(2026-09-24). 1:1 대결 한 판마다 능력치를 옮기고, 숫자를 S~D 칸으로 나눈다.
 // 설계: docs/superpowers/specs/2026-09-24-tier-game-design.md
 import { ovr } from './stats.ts';
-import type { Player, StatKey } from './types.ts';
+import { STAT_KEYS, type Player, type StatKey } from './types.ts';
 
 /** 기대 승률의 폭 — 이만큼 차이 나면 강한 쪽이 10:1 로 이긴다고 본다(20점 차면 76%). */
 export const VOTE_SCALE = 40;
@@ -36,23 +36,21 @@ export function tierQuota(n: number): Record<Tier, number> {
 export type TierKey = StatKey | 'ovr';
 export const statValue = (p: Player, key: TierKey): number => (key === 'ovr' ? ovr(p) : p[key]);
 
-/** S~D 다섯 줄 — 높은 순으로 세워 위 칸부터 명수만큼 담는다. 칸 안은 높은 순(같으면 번호순).
- *  **동점은 위 칸으로**: 칸이 찼어도 다음 사람의 숫자가 마지막으로 담은 사람과 같으면 같은 칸에 넣는다
- *  (같은 숫자인데 한 명은 S, 한 명은 A 가 되면 설명이 안 된다). 그만큼 아래 칸이 줄고, D 가 나머지를 받는다.
- *  숫자가 아직 없는(0) 선수는 뺀다. */
+/** S~D 다섯 줄 — 높은 순으로 세워 위 칸부터 **정원만큼** 담는다(2026-09-25 사용자: "순위/명수로 제한").
+ *  처음엔 동점을 위 칸으로 같이 올렸는데, 숫자가 70·80 에 몰려 있어 A 8·B 13·D 0 이 됐다 — 정원이 무의미해졌다.
+ *  그래서 동점은 **여섯 항목 합계 → 번호순**으로 가른다(종합은 평균을 반올림한 값이라 합계가 더 촘촘하다).
+ *  숫자가 아직 없는(0) 선수는 뺀다. D 는 나머지를 받는다. */
 export function tierRows(players: Player[], key: TierKey): Array<{ tier: Tier; players: Player[] }> {
+  const fine = (p: Player): number => (key === 'ovr' ? STAT_KEYS.reduce((a, k) => a + p[k], 0) : p[key]);
   const rated = players.filter((p) => statValue(p, key) > 0)
-    .sort((a, b) => statValue(b, key) - statValue(a, key) || a.num - b.num);
+    .sort((a, b) => statValue(b, key) - statValue(a, key) || fine(b) - fine(a) || a.num - b.num);
   const quota = tierQuota(rated.length);
   const rows: Array<{ tier: Tier; players: Player[] }> = [];
   let i = 0;
   for (const tier of TIERS) {
-    const take: Player[] = [];
     const want = tier === 'D' ? rated.length - i : quota[tier];
-    while (i < rated.length && (take.length < want || (take.length > 0 && statValue(rated[i], key) === statValue(take[take.length - 1], key)))) {
-      take.push(rated[i]); i += 1;
-    }
-    rows.push({ tier, players: take });
+    rows.push({ tier, players: rated.slice(i, i + want) });
+    i += want;
   }
   return rows;
 }
