@@ -7,12 +7,14 @@
 import { Input, Segmented, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import type { MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { avatarSvg, avatarFaceSvg } from '../../components/avatar';
+import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
 import { href } from '../../lib/url';
 import { isStarter, type LineupState } from '../../lib/lineup';
 import { band, grade, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { STAT_KEYS, type Player } from '../../lib/types';
+import type { Tier } from '../../lib/tier';
+import PlayerCard from '../PlayerCard';
 import { ALL_VIEWS, byOvr, type View } from './model';
 
 // 보기 이름만 '아바타'로 바꾸고 키(card)는 그대로 둔다 — 기기에 저장된 보기 설정이
@@ -40,7 +42,7 @@ export function RosterFilters({ view, onViewChange, views = ALL_VIEWS, pos, onPo
   );
 }
 
-export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick, bodyOnly = false }: {
+export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick, bodyOnly = false, tiers }: {
   view: View; onViewChange: (v: View) => void;
   /** 이 화면이 고를 수 있는 보기. 하나뿐이면 전환 칩을 아예 그리지 않는다(라인업은 목록 고정). */
   views?: View[];
@@ -50,7 +52,7 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
   /** 선발 찍기 — 목록 보기에서만 쓴다. 표·카드만 그리는 /squad/ 는 넘기지 않는다. */
   st?: LineupState; onPick?: (num: number) => void;
   /** 필터 줄을 여기서 안 그린다 — 라인업처럼 그 줄을 다른 자리에 이미 놓은 화면용. */
-  bodyOnly?: boolean;
+  bodyOnly?: boolean; tiers?: Map<number, Tier>;
 }) {
   const starter = (num: number): boolean => (st != null && isStarter(st, num));
   // 목록 뷰의 「선발/넣기」 버튼은 옛 문자열 템플릿 안 data-pick 속성으로 남아 있다 — 행마다
@@ -85,29 +87,19 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
   return (
     <>
       {!bodyOnly && <RosterFilters view={view} onViewChange={onViewChange} views={views} pos={pos} onPosChange={onPosChange} q={q} onQChange={onQChange} />}
-      <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'atile-wall' : ''}
+      <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'fcard-wall' : ''}
         onClick={view === 'list' ? onBodyClick : undefined} onKeyDown={view === 'list' ? onBodyKeyDown : undefined}>
         {view === 'table' ? (
           <Table<Player> size="small" rowKey="num" pagination={false} columns={columns} dataSource={rows}
             locale={{ emptyText: '명단이 비어 있습니다' }} />
         ) : view === 'card' ? (
-          rows.length ? byOvr(rows).map((p) => {
-            // FC 카드(금속 면·큰 OVR·능력치 여섯 칸)를 걷어내고 아바타를 크게 세운다
-            // (2026-09-22 사용자: "카드 자체를 없애자 그냥 다 아바타 뷰로"). 카드가 보여 주던
-            // 숫자는 표 보기와 선수 페이지에 그대로 있다.
-            const o = ovr(p);
-            return (
-              <a className="atile" key={p.num} href={href(`/squad/${p.num}/`)}>
-                <span className="atile-sprite" aria-hidden="true"
-                  dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 128, p.num, true) }} />
-                <b className="atile-name">{p.name}</b>
-                <span className="atile-meta">
-                  <span className={`pos pos-${p.pos.toLowerCase()}`}>{p.pos || '–'}</span>
-                  <b className={`val val-${band(o, STAT_CUTS)}`}>{o || '–'}</b>
-                </span>
-              </a>
-            );
-          }) : <p className="list-empty">명단이 비어 있습니다</p>
+          // 2026-09-22 에 "카드 자체를 없애자, 아바타 뷰로" 했다가 2026-09-25 피파식 카드로 돌아왔다
+          // (티어·포지션·주발·국기·여섯 칸). 값은 lib/card.ts, 모양은 PlayerCard.
+          rows.length ? byOvr(rows).map((p) => (
+            <a className="fcard-link" key={p.num} href={href(`/squad/${p.num}/`)} aria-label={`${p.name} 선수 페이지`}>
+              <PlayerCard player={p} tier={tiers?.get(p.num)} size="sm" />
+            </a>
+          )) : <p className="list-empty">명단이 비어 있습니다</p>
         ) : rows.length ? (
           <div className="bd-rows">
             {byOvr(rows).map((p) => {

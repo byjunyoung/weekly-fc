@@ -10,7 +10,8 @@ import { fmtLogAt } from '../../lib/html';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { rivalPairs } from '../../lib/tier';
-import { avatarSvg } from '../../components/avatar';
+import { FOOT_OPTIONS, tierByNum } from '../../lib/card';
+import PlayerCard from '../PlayerCard';
 import { avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import AvatarEditor from './AvatarEditor';
 import type { AvatarSpec } from '../../lib/avatar';
@@ -181,7 +182,7 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
             <Form.Item name="name" label="이름" rules={[{ required: true, message: '이름을 넣으세요' }]}><Input /></Form.Item>
             <Form.Item name="pos" label="포지션"><Select options={['', 'GK', 'DF', 'MF', 'FW'].map((x) => ({ value: x, label: x || '—' }))} /></Form.Item>
             <Form.Item name="detail" label="세부 포지션"><Input /></Form.Item>
-            <Form.Item name="foot" label="주발"><Input /></Form.Item>
+            <Form.Item name="foot" label="주발"><Select allowClear options={FOOT_OPTIONS.map((x) => ({ value: x, label: x }))} /></Form.Item>
             <Form.Item name="vest" label="조끼"><InputNumber style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="rot" label="봉사 순번 (빈칸=제외)"><InputNumber style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="phone" label="전화 (공개 안 됨)"><Input type="tel" /></Form.Item>
@@ -217,14 +218,14 @@ function Detail({ num, isNew }: { num: number; isNew: boolean }) {
               주던 능력치 여섯 칸은 바로 오른쪽 칸이 막대까지 붙여 이미 하고 있었다. */}
           <div className={`player-hero${avatarOpen ? ' is-dressing' : ''}`}>
             <div className="phero" ref={cardRef}>
-              <button type="button" id="avatar-edit-btn" className="avatar-btn" title={canDress ? '아바타 편집' : undefined}
-                disabled={!canDress} onClick={() => openAvatar(player)}
-                dangerouslySetInnerHTML={{ __html: avatarSvg(avatarOpen && avatarSpec ? avatarSpec : avatarSpecFor(player.num, player.avatar), 224, player.num, true) }} />
-              <b className="phero-ovr" data-ovr={ovr(player)}>{ovr(player) || '–'}</b>
-              <div className="phero-meta">
-                <span className={`pos pos-${player.pos.toLowerCase()}`}>{player.pos || '–'}</span>
-                <span className="muted">#{player.num}{player.vest ? ` · 조끼 ${player.vest}` : ''}</span>
-              </div>
+              {/* 피파식 카드(2026-09-25). 아바타 자리가 꾸미기 버튼 — 꾸미는 중엔 고르는 스펙을 그 자리에 미리 보여 준다. */}
+              <PlayerCard player={avatarOpen && avatarSpec ? { ...player, avatar: serializeAvatar(avatarSpec) } : player}
+                tier={tierByNum(data?.players ?? []).get(player.num)} size="lg"
+                avatar={(svg) => (
+                  <button type="button" id="avatar-edit-btn" className="avatar-btn" title={canDress ? '아바타 편집' : undefined}
+                    disabled={!canDress} onClick={() => openAvatar(player)} dangerouslySetInnerHTML={{ __html: svg }} />
+                )} />
+              {player.vest ? <p className="phero-sub">조끼 {player.vest}</p> : null}
               {rival && (
                 <p className="phero-rival"><span className="rival-tag">라이벌</span><a href={href(`/squad/${rival.num}/`)}>{rival.name}</a></p>
               )}

@@ -3,7 +3,8 @@ import { Card } from 'antd';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { avatarSvg } from '../../components/avatar';
-import { avatarSpecFor } from '../../lib/avatar';
+import { tierByNum } from '../../lib/card';
+import PlayerCard from '../PlayerCard';
 import { getMe } from '../../lib/me';
 import { LINKS } from '../../lib/rules';
 import { href } from '../../lib/url';
@@ -25,16 +26,14 @@ const LOCKER_STYLE = { ...TILE_STYLE, gap: 'var(--s-sm)' };
 const PLACEHOLDER_SPEC = { face: 0, hair: 1, skin: 2, eyes: 0, kit: '#565f6f' };
 const LOCKER_SPRITE_H = 300;
 
-/** 라커룸 무대 — 사물함 벽·바닥 띠는 순수 CSS 라 스프라이트 하나만 넣는다. */
-function LockerStage({ svg, plate }: { svg: string; plate: ReactNode }) {
+/** 라커룸 무대 — 사물함 벽·바닥 띠는 순수 CSS. 그 위에 선수 카드(피파식, 2026-09-25)가 선다.
+ *  로그인 전엔 회색 유니폼 스프라이트만(카드로 만들 데이터가 없다). */
+function LockerStage({ children }: { children: ReactNode }) {
   return (
     <div className="locker-stage">
       <div className="locker-wall" />
       <div className="locker-floor" />
-      {/* 스프라이트는 순수 장식이다 — 아바타 코드가 없는 선수는 SVG 안에 번호 <text> 가 들어가
-          링크 이름에 번호가 한 번 더 읽힌다(이름표가 이미 말한다). */}
-      <div className="locker-sprite" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />
-      {plate}
+      {children}
     </div>
   );
 }
@@ -60,8 +59,10 @@ function EmptyMeTile({ onOpen }: { onOpen: () => void }) {
       role="button" tabIndex={0} onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
       <span className="tile-label">라커룸</span>
-      <LockerStage svg={avatarSvg(PLACEHOLDER_SPEC, LOCKER_SPRITE_H, undefined, true)}
-        plate={<span className="locker-plate locker-plate-empty">로그인하면 내 선수가 섭니다</span>} />
+      <LockerStage>
+        <div className="locker-sprite" aria-hidden="true" dangerouslySetInnerHTML={{ __html: avatarSvg(PLACEHOLDER_SPEC, LOCKER_SPRITE_H, undefined, true) }} />
+        <span className="locker-plate locker-plate-empty">로그인하면 내 선수가 섭니다</span>
+      </LockerStage>
       <span className="tile-sub tile-go">눌러서 로그인 ›</span>
     </Card>
   );
@@ -83,23 +84,21 @@ function App() {
   if (!data) return <Loading title="홈" />;
 
   const s = computeHomeSummary(data, me, new Date());
+  const meNum = s.meTile.kind === 'picked' ? s.meTile.num : null;
+  const mePlayer = meNum != null ? data.players.find((p) => p.num === meNum) : undefined;
+  const tiers = tierByNum(data.players);
 
   return (
     <>
       <div className="page-head"><h1>홈 <span className="muted" id="stamp">{s.stamp}</span></h1><div className="actions" /></div>
       <div className="rail">
-        {s.meTile.kind === 'picked'
+        {s.meTile.kind === 'picked' && mePlayer
           ? (
             <LinkTile to={href(`/squad/${s.meTile.num}/`)} locker>
               <span className="tile-label">라커룸</span>
-              <LockerStage svg={avatarSvg(avatarSpecFor(s.meTile.num, s.meTile.avatar), LOCKER_SPRITE_H, s.meTile.num, true)}
-                plate={(
-                  <span className="locker-plate">
-                    <b>{s.meTile.ovr || '–'}</b>
-                    <span>{s.meTile.name}</span>
-                    <i>{s.meTile.pos} · #{s.meTile.num}</i>
-                  </span>
-                )} />
+              <LockerStage>
+                <PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" />
+              </LockerStage>
               <span className="tile-sub tile-go">눌러서 내 선수 보기 · 꾸미기 ›</span>
             </LinkTile>
           )
