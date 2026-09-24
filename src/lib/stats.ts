@@ -23,5 +23,6 @@ export function fineSummary(fines: Fine[]) {
 }
 
 /** 능력치 이름. 영문 약어(PAC·DRI…)도 있었는데 "영어로 적으면 잘 모르니까"(2026-09-22)
- *  화면을 전부 한글로 바꾸면서 쓰는 곳이 없어져 지웠다. */
-export const STAT_KO: Record<StatKey, string> = { pace: '페이스', dribble: '드리블', pass: '패스', shoot: '슈팅', defend: '수비', stamina: '체력' };
+ *  화면을 전부 한글로 바꾸면서 쓰는 곳이 없어져 지웠다.
+ *  `stamina` 는 이름만 **몸싸움**이다(2026-09-25 "체력이 아니라 몸싸움") — 열 이름·기록의 field 값은 그대로 둔다. */
+export const STAT_KO: Record<StatKey, string> = { pace: '페이스', dribble: '드리블', pass: '패스', shoot: '슈팅', defend: '수비', stamina: '몸싸움' };

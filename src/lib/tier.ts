@@ -33,7 +33,7 @@ export function tierRows(players: Player[], key: TierKey): Array<{ tier: Tier; p
 
 export const QUESTION: Record<StatKey, string> = {
   pace: '누가 더 빠르다?', dribble: '누가 드리블을 더 잘한다?', pass: '누가 패스를 더 잘한다?',
-  shoot: '누가 슈팅을 더 잘한다?', defend: '누가 수비를 더 잘한다?', stamina: '누가 체력이 더 좋다?',
+  shoot: '누가 슈팅을 더 잘한다?', defend: '누가 수비를 더 잘한다?', stamina: '누가 몸싸움을 더 잘한다?',
 };
 
 export const pairKey = (a: number, b: number): string => (a < b ? `${a}-${b}` : `${b}-${a}`);
