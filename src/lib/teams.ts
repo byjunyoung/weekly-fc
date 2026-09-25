@@ -123,21 +123,28 @@ export function autoBalance(st: TeamsState, players: Player[], rnd?: () => numbe
   return { ...st, assign: rnd ? wander(balanced, rated, rest, st.teams, rnd) : balanced };
 }
 
-/** 균형 잡힌 배치에서 출발해 **평균 차이가 기준(원래 차이 + 1) 안에 머무는 맞바꿈만** 무작위로 받아들인다.
- *  그래서 팀 평균은 거의 그대로인데 조합은 매번 달라진다. 용병은 실력이 없으니 팀 사이에서 자유롭게 섞는다(머릿수 유지). */
+/** 균형 잡힌 배치에서 출발해 조합을 바꾼다 — 세 가지를 무작위로.
+ *  ① 팀 번호를 섞는다(어느 조끼가 1픽을 가져가나). ② 실력이 비슷한(종합 6 이내) 둘을 팀 사이에서 맞바꾸되
+ *  **평균 차이가 원래 + 2 안에 머물 때만** 받아들인다. ③ 용병은 실력이 없으니 팀 사이에서 자유롭게(머릿수 유지).
+ *  처음엔 "+1, 아무나"로 했더니 능력치가 3씩 벌어진 명단에선 한 번도 안 바뀌었다. */
 function wander(assign: Record<string, number>, rated: Member[], rest: Member[], teams: number, rnd: () => number): Record<string, number> {
-  const out = { ...assign };
-  const limit = spread(out, rated, teams) + 1;
   const pick = (n: number): number => Math.min(n - 1, Math.floor(rnd() * n));
-  const tries = rated.length * 6;
+  // ① 팀 번호 섞기
+  const order = Array.from({ length: teams }, (_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) { const j = pick(i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+  const out: Record<string, number> = {};
+  for (const [k, t] of Object.entries(assign)) out[k] = order[t];
+  // ② 비슷한 둘 맞바꾸기
+  const limit = spread(out, rated, teams) + 2;
+  const tries = rated.length * 8;
   for (let k = 0; k < tries && rated.length >= 2; k++) {
-    const a = rated[pick(rated.length)].key, b = rated[pick(rated.length)].key;
-    if (a === b || out[a] === out[b]) continue;
-    const ta = out[a], tb = out[b];
-    out[a] = tb; out[b] = ta;
-    if (spread(out, rated, teams) > limit + 1e-9) { out[a] = ta; out[b] = tb; }
+    const A = rated[pick(rated.length)], B = rated[pick(rated.length)];
+    if (A.key === B.key || out[A.key] === out[B.key] || Math.abs(A.ovr! - B.ovr!) > 6) continue;
+    const ta = out[A.key], tb = out[B.key];
+    out[A.key] = tb; out[B.key] = ta;
+    if (spread(out, rated, teams) > limit + 1e-9) { out[A.key] = ta; out[B.key] = tb; }
   }
-  // 용병끼리 자리 섞기(팀별 머릿수는 그대로)
+  // ③ 용병 자리 섞기
   for (let i = rest.length - 1; i > 0; i--) {
     const j = pick(i + 1);
     const a = rest[i].key, b = rest[j].key;

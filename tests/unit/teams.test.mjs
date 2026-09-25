@@ -223,15 +223,15 @@ test('restore — 빈 값·깨진 JSON 은 기본 상태', () => {
 
 // 씨앗 있는 난수(LCG) — 같은 씨앗이면 같은 순서라 테스트가 흔들리지 않는다.
 const lcg = (seed) => () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
-test('자동 배치에 난수를 주면 누를 때마다 다른 조합이 나오되, 팀 평균 차이는 원래 배치 + 1 안이고 머릿수는 같다', () => {
+test('자동 배치에 난수를 주면 누를 때마다 다른 조합이 나오되, 팀 평균 차이는 원래 배치 + 2 안이고 머릿수는 같다', () => {
   const st = setTeams(pickAll(12), 3);
   const base = autoBalance(st, ROSTER);
   const baseSpread = avgSpread(base, ROSTER);
-  const sizes = (x) => teamViews(x, ROSTER).map((v) => v.members.length);
+  const sizes = (x) => [...teamViews(x, ROSTER).map((v) => v.members.length)].sort();   // 팀 번호가 섞이니 정렬해 비교
   const seen = new Set();
   for (let seed = 1; seed <= 8; seed++) {
     const r = autoBalance(st, ROSTER, lcg(seed));
-    assert.ok(avgSpread(r, ROSTER) <= baseSpread + 1, `씨앗 ${seed}: 차이 ${avgSpread(r, ROSTER)} > ${baseSpread + 1}`);
+    assert.ok(avgSpread(r, ROSTER) <= baseSpread + 2, `씨앗 ${seed}: 차이 ${avgSpread(r, ROSTER)} > ${baseSpread + 2}`);
     assert.deepEqual(sizes(r), sizes(base), '머릿수 유지');
     assert.equal(Object.keys(r.assign).length, 12, '전원 배정');
     seen.add(JSON.stringify(r.assign));
@@ -243,7 +243,7 @@ test('용병은 난수 배치에서도 팀별 머릿수를 지키며 자리만 �
   let st = setTeams(pickAll(6), 3);
   st = addGuest(addGuest(addGuest(st, 'a', '용병A'), 'b', '용병B'), 'c', '용병C');
   const base = autoBalance(st, ROSTER);
-  const sizes = (x) => teamViews(x, ROSTER).map((v) => v.members.length);
+  const sizes = (x) => [...teamViews(x, ROSTER).map((v) => v.members.length)].sort();
   for (let seed = 1; seed <= 5; seed++) {
     const r = autoBalance(st, ROSTER, lcg(seed));
     assert.deepEqual(sizes(r), sizes(base));
