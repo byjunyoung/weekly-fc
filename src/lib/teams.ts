@@ -97,7 +97,7 @@ export function membersOf(st: TeamsState, players: Player[]): Member[] {
  * 단순 반씩 가르기보다 팀 평균이 고르게 모이고, 같은 입력이면 항상 같은 결과다.
  * 용병은 능력치를 모르므로 맨 뒤에서 사람 수가 적은 팀부터 채운다 — 실력이 아니라 머릿수를 맞춘다.
  */
-export function autoBalance(st: TeamsState, players: Player[]): TeamsState {
+export function autoBalance(st: TeamsState, players: Player[], rnd?: () => number): TeamsState {
   const all = membersOf(st, players);
   const rated = all.filter((m) => m.ovr != null).sort((a, b) => (b.ovr! - a.ovr!) || (a.num! - b.num!));
   const rest = all.filter((m) => m.ovr == null);
@@ -117,7 +117,33 @@ export function autoBalance(st: TeamsState, players: Player[]): TeamsState {
     assign[m.key] = team;
     size[team] += 1;
   }
-  return { ...st, assign: refine(assign, rated, st.teams) };
+  const balanced = refine(assign, rated, st.teams);
+  // 난수가 오면(화면) 누를 때마다 다른 조합 — 균형은 지킨다(2026-09-25 "누를 때마다 계속 섞이게").
+  // 난수가 없으면(테스트·대조) 예전처럼 같은 입력이면 같은 결과.
+  return { ...st, assign: rnd ? wander(balanced, rated, rest, st.teams, rnd) : balanced };
+}
+
+/** 균형 잡힌 배치에서 출발해 **평균 차이가 기준(원래 차이 + 1) 안에 머무는 맞바꿈만** 무작위로 받아들인다.
+ *  그래서 팀 평균은 거의 그대로인데 조합은 매번 달라진다. 용병은 실력이 없으니 팀 사이에서 자유롭게 섞는다(머릿수 유지). */
+function wander(assign: Record<string, number>, rated: Member[], rest: Member[], teams: number, rnd: () => number): Record<string, number> {
+  const out = { ...assign };
+  const limit = spread(out, rated, teams) + 1;
+  const pick = (n: number): number => Math.min(n - 1, Math.floor(rnd() * n));
+  const tries = rated.length * 6;
+  for (let k = 0; k < tries && rated.length >= 2; k++) {
+    const a = rated[pick(rated.length)].key, b = rated[pick(rated.length)].key;
+    if (a === b || out[a] === out[b]) continue;
+    const ta = out[a], tb = out[b];
+    out[a] = tb; out[b] = ta;
+    if (spread(out, rated, teams) > limit + 1e-9) { out[a] = ta; out[b] = tb; }
+  }
+  // 용병끼리 자리 섞기(팀별 머릿수는 그대로)
+  for (let i = rest.length - 1; i > 0; i--) {
+    const j = pick(i + 1);
+    const a = rest[i].key, b = rest[j].key;
+    const t = out[a]; out[a] = out[b]; out[b] = t;
+  }
+  return out;
 }
 
 /** 팀 평균의 최댓값−최솟값. 사람이 없는 팀은 뺀다(0으로 치면 늘 그 팀이 최솟값이 된다). */

@@ -119,7 +119,7 @@ function Teams() {
           <Segmented value={st.teams} onChange={(v) => { setPicked(null); commit((prev) => T.setTeams(prev, Number(v))); }}
             options={Array.from({ length: T.MAX_TEAMS - T.MIN_TEAMS + 1 }, (_, i) => T.MIN_TEAMS + i)} />
         </div>
-        <Button onClick={() => { setPicked(null); commit((prev) => T.autoBalance(prev, players)); }}>자동 배치</Button>
+        <Button onClick={() => { setPicked(null); commit((prev) => T.autoBalance(prev, players, Math.random)); }}>자동 배치</Button>
         <label className="bd-field"><span className="label">용병</span>
           <Input className="w-search" placeholder="이름 (예: 오준 용병+2)" value={guestName} maxLength={20}
             onChange={(e) => setGuestName(e.target.value)} onPressEnter={onAddGuest} />
