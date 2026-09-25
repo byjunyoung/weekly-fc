@@ -10,7 +10,7 @@ import { STAT_KO } from '../../lib/stats';
 import type { TierKey } from '../../lib/tier';
 import type { Player } from '../../lib/types';
 import { href } from '../../lib/url';
-import { dataUrlToFile, shareEnv } from '../shareFile';
+import { canCopyImage, copyImage, dataUrlToFile, shareEnv } from '../shareFile';
 
 const keyLabel = (k: TierKey): string => (k === 'ovr' ? '종합' : STAT_KO[k]);
 
@@ -48,13 +48,19 @@ export default function TierShareModal({ open, onClose, players, tierKey }: {
     catch (e) { if ((e as DOMException).name !== 'AbortError') setMethod(fallbackMethod(shareEnv(null))); }
   }
 
+  async function onCopy(): Promise<void> {
+    if (!fileRef.current) return;
+    try { await copyImage(fileRef.current); message.success('이미지를 복사했습니다 — 카톡 입력창에 붙여넣으세요'); }
+    catch { message.error('복사가 막혔습니다 — 내려받기를 쓰세요'); }
+  }
   const note = method === 'longpress' ? '이미지를 길게 눌러 사진에 저장한 뒤 카톡으로 보내세요. 아래 주소도 같이 붙여 주세요'
-    : method === 'download' ? '내려받은 이미지와 아래 주소를 카톡으로 보내세요'
+    : method === 'download' ? '[복사]를 누르고 카톡 입력창에 붙여넣거나 내려받아 보내세요. 아래 주소도 같이'
     : '공유하기를 누르면 이미지와 게임 주소가 함께 갑니다';
 
   return (
     <Modal title="티어표 공유" open={open} onCancel={onClose} width={560} footer={[
       <Button key="close" onClick={onClose}>닫기</Button>,
+      method === 'download' && canCopyImage() ? <Button key="copy" type="primary" onClick={onCopy}>복사</Button> : null,
       method === 'download' ? <a key="dl" className="btn" href={imgUrl} download={fileName}>내려받기</a> : null,
       method === 'share' ? <Button key="go" type="primary" onClick={onShare}>공유하기</Button> : null,
     ]}>

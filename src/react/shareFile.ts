@@ -16,3 +16,11 @@ export function dataUrlToFile(url: string, name: string): File {
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new File([bytes], name, { type: 'image/png' });
 }
+
+/** 클립보드에 이미지 한 장을 넣을 수 있나(데스크톱 크롬·사파리·엣지). 카톡 입력창에 붙여넣으면 한 장만 간다. */
+export function canCopyImage(): boolean {
+  try { return typeof ClipboardItem !== 'undefined' && typeof navigator.clipboard?.write === 'function'; } catch { return false; }
+}
+export async function copyImage(file: File): Promise<void> {
+  await navigator.clipboard.write([new ClipboardItem({ [file.type || 'image/png']: file })]);
+}

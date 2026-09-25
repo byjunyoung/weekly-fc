@@ -7,7 +7,7 @@ import { drawLineupImage, ensureShareFonts } from '../../components/share-image'
 import { seoulToday } from '../../lib/html';
 import { defaultTitle, type LineupState } from '../../lib/lineup';
 import { fallbackMethod, pickShareMethod, shareFileName, type ShareMethod } from '../../lib/share';
-import { dataUrlToFile, shareEnv } from '../shareFile';
+import { canCopyImage, copyImage, dataUrlToFile, shareEnv } from '../shareFile';
 import type { Player } from '../../lib/types';
 
 export default function ShareModal({ open, onClose, st, players, onSetTitle }: {
@@ -69,13 +69,19 @@ export default function ShareModal({ open, onClose, st, players, onSetTitle }: {
     catch (e) { if ((e as DOMException).name !== 'AbortError') setMethod(fallbackMethod(shareEnv(null))); }
   }
 
+  async function onCopy(): Promise<void> {
+    if (!fileRef.current) return;
+    try { await copyImage(fileRef.current); message.success('이미지를 복사했습니다 — 카톡 입력창에 붙여넣으세요'); }
+    catch { message.error('복사가 막혔습니다 — 내려받기를 쓰세요'); }
+  }
   const note = method === 'longpress' ? '이미지를 길게 눌러 사진에 저장한 뒤 카톡으로 보내세요'
-    : method === 'download' ? '내려받은 이미지를 카톡으로 보내세요'
+    : method === 'download' ? '[복사]를 누르고 카톡 입력창에 붙여넣거나, 내려받아 보내세요'
     : '공유하기를 누르면 카톡 등으로 바로 보낼 수 있습니다';
 
   return (
     <Modal title="이미지 공유" open={open} onCancel={onClose} width={560} footer={[
       <Button key="close" onClick={onClose}>닫기</Button>,
+      method === 'download' && canCopyImage() ? <Button key="copy" type="primary" onClick={onCopy}>복사</Button> : null,
       method === 'download' ? <a key="dl" className="btn" href={imgUrl} download={shareFileName(seoulToday())}>내려받기</a> : null,
       method === 'share' ? <Button key="go" type="primary" onClick={onShare}>공유하기</Button> : null,
     ]}>

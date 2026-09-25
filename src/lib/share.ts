@@ -7,5 +7,8 @@ export type ShareMethod = 'share' | 'longpress' | 'download';
 /** iPadOS 는 데스크톱 모드에서 맥 UA 를 보내므로 터치 지점 수로 가른다. */
 export const isIOS = (env: ShareEnv): boolean => /iPhone|iPad|iPod/i.test(env.ua) || (/Macintosh/i.test(env.ua) && env.touchPoints > 1);
 export const fallbackMethod = (env: ShareEnv): 'longpress' | 'download' => (isIOS(env) ? 'longpress' : 'download');
-export const pickShareMethod = (env: ShareEnv): ShareMethod => (env.canShareFiles ? 'share' : fallbackMethod(env));
+/** 터치가 없는 데스크톱(맥·윈도). 맥 공유 시트의 "복사"는 파일을 **두 번** 클립보드에 넣어 카톡에 두 장이 간다(2026-09-25 사용자 재현) —
+ *  데스크톱은 공유 시트를 안 쓰고 내려받기 + 클립보드 복사(이미지 한 장)로 간다. */
+export const isDesktop = (env: ShareEnv): boolean => env.touchPoints === 0 && !isIOS(env);
+export const pickShareMethod = (env: ShareEnv): ShareMethod => (env.canShareFiles && !isDesktop(env) ? 'share' : fallbackMethod(env));
 export const shareFileName = (today: string): string => `weeklyfc-lineup-${today}.png`;
