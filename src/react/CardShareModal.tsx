@@ -1,71 +1,16 @@
-// src/react/CardShareModal.tsx — 선수 카드 이미지 공유(2026-09-25). 티어표 공유(TierShareModal)와 같은 흐름:
-// 열면 그 순간의 숫자로 그리고 → 공유 / 길게 눌러 저장 / 내려받기. "내 카드"와 "POTM 카드" 둘 다 이걸로.
-import { App, Button, Modal } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+// src/react/CardShareModal.tsx — 선수 카드 이미지(내 카드·POTM 카드). 공통 틀(ImageShareModal)에 "무엇을 그리나"만 넘긴다.
 import { type CardImageOpts, drawCardImage } from '../components/card-image';
-import { ensureShareFonts } from '../components/share-image';
 import { seoulToday } from '../lib/html';
-import { fallbackMethod, pickShareMethod, type ShareMethod } from '../lib/share';
 import type { Tier } from '../lib/tier';
 import type { Player } from '../lib/types';
-import { canCopyImage, copyImage, dataUrlToFile, shareEnv } from './shareFile';
+import ImageShareModal from './ImageShareModal';
 
 export default function CardShareModal({ open, onClose, player, tier, opts, title, fileTag }: {
   open: boolean; onClose: () => void; player: Player | null; tier: Tier | null | undefined;
   opts?: CardImageOpts; title: string; fileTag: string;
 }) {
-  const { message } = App.useApp();
-  const canvasRef = useRef<HTMLCanvasElement>(undefined!);
-  if (!canvasRef.current && typeof document !== 'undefined') canvasRef.current = document.createElement('canvas');
-  const fileRef = useRef<File | null>(null);
-  const [imgUrl, setImgUrl] = useState<string | undefined>(undefined);
-  const [method, setMethod] = useState<ShareMethod>('download');
-  const [sharing, setSharing] = useState(false);
-  const fileName = `weeklyfc-${fileTag}-${seoulToday()}.png`;
-
-  useEffect(() => {
-    if (!open || !player) return;
-    setImgUrl(undefined);
-    (async () => {
-      try {
-        await ensureShareFonts();
-        drawCardImage(canvasRef.current, player, tier ?? null, opts);
-        const url = canvasRef.current.toDataURL('image/png');
-        setImgUrl(url);
-        fileRef.current = dataUrlToFile(url, fileName);
-        setMethod(pickShareMethod(shareEnv(fileRef.current)));
-      } catch (e) { message.error((e as Error).message); }
-    })();
-    // 열 때마다 그 순간의 값으로 다시 그린다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, player?.num]);
-
-  async function onShare(): Promise<void> {
-    if (!fileRef.current || sharing) return;
-    setSharing(true);
-    try { await navigator.share({ files: [fileRef.current], title }); }
-    catch (e) { if ((e as DOMException).name !== 'AbortError') setMethod(fallbackMethod(shareEnv(null))); }
-    finally { setSharing(false); }
-  }
-
-  async function onCopy(): Promise<void> {
-    if (!fileRef.current) return;
-    try { await copyImage(fileRef.current); message.success('이미지를 복사했습니다 — 카톡 입력창에 붙여넣으세요'); }
-    catch { message.error('복사가 막혔습니다 — 내려받기를 쓰세요'); }
-  }
-  const note = method === 'longpress' ? '이미지를 길게 눌러 사진에 저장하세요'
-    : method === 'download' ? '[복사]를 누르고 카톡 입력창에 붙여넣거나, 내려받아 저장하세요'
-    : '공유하기를 누르면 이미지가 바로 갑니다';
-
   return (
-    <Modal title={title} open={open} onCancel={onClose} width={560} footer={[
-      <Button key="close" onClick={onClose}>닫기</Button>,
-      method === 'download' && canCopyImage() ? <Button key="copy" type="primary" onClick={onCopy}>복사</Button> : null,
-      method === 'download' ? <a key="dl" className="btn" href={imgUrl} download={fileName}>내려받기</a> : null,
-      method === 'share' ? <Button key="go" type="primary" onClick={onShare} loading={sharing}>공유하기</Button> : null,
-    ]}>
-      <img className="bd-share-img" alt={`${title} 미리보기`} src={imgUrl} />
-      <p className="muted">{note}</p>
-    </Modal>
+    <ImageShareModal open={open && !!player} onClose={onClose} title={title} fileName={`weeklyfc-${fileTag}-${seoulToday()}.png`}
+      draw={(c) => { if (player) drawCardImage(c, player, tier ?? null, opts); }} />
   );
 }
