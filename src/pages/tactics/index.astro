@@ -1,0 +1,36 @@
+---
+// 전술 법칙(2026-09-26) — 경기 피드백에서 반복해서 나온 원칙 34개를 전술 보드 그림과 한 문장으로.
+// 정적 페이지(React 없음, JS 0). 데이터는 lib/tactics.ts, 그림은 components/tactics-board.ts.
+import Shell from '../../layouts/Shell.astro';
+import { tacticsBoardSvg } from '../../components/tactics-board';
+import { BOARDS, LAWS, lawsByTopic, TOPIC_COLOR } from '../../lib/tactics';
+const groups = lawsByTopic();
+---
+<Shell title="전술">
+  <div class="page-head">
+    <h1>전술 <span class="muted">{LAWS.length}</span></h1>
+    <div class="actions"><span class="muted">경기 피드백에서 반복해서 나온 것들 · 2025.08~2026.09</span></div>
+  </div>
+  <nav class="tl-jump" aria-label="주제">
+    {groups.map((g) => <a href={`#t-${g.topic}`} style={`--tc:${TOPIC_COLOR[g.topic]}`}>{g.topic} <span class="muted">{g.laws.length}</span></a>)}
+  </nav>
+  <div class="stack">
+    {groups.map((g) => (
+      <section class="tl-group" id={`t-${g.topic}`}>
+        <h2 class="tl-h" style={`--tc:${TOPIC_COLOR[g.topic]}`}><i></i>{g.topic}</h2>
+        <div class="tl-wall">
+          {g.laws.map((l) => (
+            <article class="tl-card" id={`law-${l.n}`}>
+              <div class="tl-board" set:html={tacticsBoardSvg(BOARDS[l.art], l.title)} />
+              <div class="tl-body">
+                <span class="tl-n">{l.n}</span>
+                <h3>{l.title}</h3>
+                <p>{l.desc}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
+</Shell>

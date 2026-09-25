@@ -21,7 +21,7 @@ export const PAGES = [
 ];
 export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
-const REDIRECTS = ['teams/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'tactics/index.html', 'about/index.html'];
+const REDIRECTS = ['teams/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'about/index.html'];   // tactics 는 2026-09-26 부터 진짜 페이지
 export const SHELL_PAGES = PAGES.filter((p) => !REDIRECTS.includes(p));
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
 
@@ -41,10 +41,10 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 홈·명단·라인업·매치·티어·운영 규칙 여섯 갈래 — 팀짜기는 매치 아래 기능(2026-09-25)', () => {
+test('상단 탭은 홈·명단·라인업·매치·티어·전술·운영 규칙 일곱 갈래 — 팀짜기는 매치 아래 기능(2026-09-25), 전술은 2026-09-26', () => {
   const html = read('index.html');
-  for (const l of ['홈', '명단', '라인업', '매치', '티어', '운영 규칙']) assert.ok(html.includes(`<span>${l}</span>`), l);
-  for (const l of ['스쿼드', '기록', '전술', '소개', '팀짜기']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+  for (const l of ['홈', '명단', '라인업', '매치', '티어', '전술', '운영 규칙']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['스쿼드', '기록', '소개', '팀짜기']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
 test('옛 /teams/ 는 /matches/new/ 로 넘긴다(카톡에 남은 링크)', () => {
   assert.ok(read('teams/index.html').includes('url=/weekly-fc/matches/new/'));
@@ -61,7 +61,6 @@ test('옛 주소는 새 주소로 넘긴다', () => {
     'record/index.html': '/weekly-fc/rules/#fees',
     'record/fines/index.html': '/weekly-fc/rules/#fees',
     'record/duty/index.html': '/weekly-fc/rules/#duty',
-    'tactics/index.html': '/weekly-fc/squad/',
   };
   for (const [p, to] of Object.entries(cases)) assert.ok(read(p).includes(`url=${to}"`), `${p} → ${to}`);
 });
@@ -179,4 +178,11 @@ test('등급 카드 배경이 그라디언트에서 단색으로 바뀐다(1a단
   const css = readFileSync(hit, 'utf8');
   assert.ok(!css.includes('linear-gradient(160deg'), '옛 등급 그라디언트가 아직 남아 있음');
   assert.ok(css.includes('--metal-gold:var(--gold)'), '--metal-gold 가 var(--gold) 를 참조하지 않음');
+});
+
+test('전술 페이지 — 법칙 34개가 빌드 때 그려지고(JS 섬 없음), 사람 이름이 없다', () => {
+  const html = read('tactics/index.html');
+  assert.equal((html.match(/class="tl-card"/g) ?? []).length, 34);
+  assert.ok(html.includes('<svg'), '보드 SVG 가 정적으로 들어 있다');
+  for (const n of ['현서', '동훈', '준영', '효종', '찬우']) assert.ok(!html.includes(n), `이름 ${n}`);
 });
