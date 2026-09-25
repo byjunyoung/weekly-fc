@@ -587,7 +587,8 @@ a.card:hover { background: var(--charcoal); }
 @media (max-width: 899px) { .bd-share-row { width: 100%; } .bd-share-row button { width: 100%; } }
 .bd-share-title { display: flex; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
 .bd-share-title input { flex: 1; }
-.bd-share-img { width: 100%; aspect-ratio: 4 / 5; border-radius: var(--r-md); background: var(--charcoal); }
+/* 미리보기 — 비율은 이미지가 정한다(팀 나누기는 내용만큼만 높다). 아직 안 그려졌을 땐 자리만. */
+.bd-share-img { display: block; width: 100%; min-height: 200px; border-radius: var(--r-md); background: var(--charcoal); }
 /* 피치가 넉넉해지는 폭부터 카드도 키운다 — 아바타는 정확히 2배(64px)라 도트가 안 뭉갠다.
    **분기를 1120px 아래로 내리면 안 된다.** 가장 빡빡한 배치는 기본값 4-3-3 이 아니라
    다섯 명이 한 줄에 서는 모양(3-5-2·4-5-1·5-3-1…)이다 — 1000px 에서 카드가 겹쳤다.

@@ -1,7 +1,7 @@
 // 팀 나누기 공유 이미지(2026-09-25) — 가짜 컨텍스트로 실제로 그려 보고 검사한다(tier-image.test 와 같은 방식).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { drawTeamsImage, teamsLayout } from '../../src/components/teams-image.ts';
+import { drawTeamsImage, IMG_H_MIN, layoutBottom, teamsLayout } from '../../src/components/teams-image.ts';
 import { IMG_W, IMG_H } from '../../src/components/share-image.ts';
 import { nameMapOf } from '../../src/lib/teams.ts';
 
@@ -57,11 +57,15 @@ test('teamsLayout — 줄은 조끼 순서, 칩은 폭이 차면 다음 줄, 세
 
 test('drawTeamsImage — 1080×1350, 조끼 색 점, 칩 테두리, 이름은 화면처럼 전체 이름, 용병 표시, 숫자 없음, undefined 없음', () => {
   const f = fakeCanvas();
-  drawTeamsImage(f.canvas, LINEUP, PLAYERS, '팀 나누기', '9월 27일 (일) · 5명');
-  assert.equal(f.canvas.width, IMG_W); assert.equal(f.canvas.height, IMG_H);
+  const lay = drawTeamsImage(f.canvas, LINEUP, PLAYERS, '9월 27일 (일) · 5명', 'WEEKLY FC 팀 나누기');
+  assert.equal(f.canvas.width, IMG_W);
+  assert.equal(f.canvas.height, Math.max(IMG_H_MIN, layoutBottom(lay) + 60), '높이는 내용만큼(컴팩트)');
+  assert.ok(f.canvas.height < IMG_H, '다섯 명이면 1350 보다 낮다');
+  const big = f.texts.find((t) => t.t === '9월 27일 (일) · 5명');
+  assert.ok(big && /60px/.test(big.font), '매치 날짜·인원이 메인 제목(60px)');
   for (const c of ['#e5e5e5', '#e67e22', '#c8ff3d']) assert.ok(f.rects.some((r) => r.fill === c && r.w === 20 && r.h === 20), `조끼 점 ${c}`);
   assert.ok(f.rects.filter((r) => r.fill === '#3a3d44' && r.h === 96).length >= 5, '칩 테두리 다섯');
-  for (const t of ['노조끼', '주황조끼', '야광조끼', '김현서', '김준영', '강준영', '이동훈', '오준 용병+2', '용병', '팀 나누기']) assert.ok(f.texts.some((x) => x.t === t), t);
+  for (const t of ['노조끼', '주황조끼', '야광조끼', '김현서', '김준영', '강준영', '이동훈', '오준 용병+2', '용병', 'WEEKLY FC 팀 나누기']) assert.ok(f.texts.some((x) => x.t === t), t);
   assert.ok(!f.texts.some((x) => /^\d{2}$/.test(x.t)), '두 자리 숫자(OVR) 없음');
   for (const t of f.texts) assert.ok(!/undefined|NaN/.test(t.font + t.t), JSON.stringify(t));
   const sizes = new Set(f.fonts.map((x) => Number(/(\d+)px/.exec(x)?.[1])));

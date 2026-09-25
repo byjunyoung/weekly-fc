@@ -12,6 +12,6 @@ export default function TeamsShareModal({ open, onClose, lineup, players, date }
   return (
     <ImageShareModal open={open} onClose={onClose} title="팀 나누기 이미지" shareTitle="WEEKLY FC 팀 나누기"
       fileName={`weeklyfc-teams-${date || seoulToday()}.png`} alt="팀 나누기 이미지 미리보기"
-      draw={(c) => { drawTeamsImage(c, lineup, players, '팀 나누기', `${matchLabel(date)} · ${n}명`); }} />
+      draw={(c) => { drawTeamsImage(c, lineup, players, `${matchLabel(date)} · ${n}명`, 'WEEKLY FC 팀 나누기'); }} />
   );
 }

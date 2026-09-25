@@ -47,11 +47,12 @@ export function teamsLayout(lineup: MatchTeam[], textW: (text: string, font: num
   const bottom = (l: TeamsLayout) => (l.rows.length ? l.rows[l.rows.length - 1].y + l.rows[l.rows.length - 1].h : TOP);
   let lay = build(SIZES[0]);
   for (const sz of SIZES) { lay = build(sz); if (bottom(lay) <= BOTTOM) break; }
-  // 남는 세로는 위아래로 나눠 가운데에.
-  const shift = Math.max(0, Math.floor((BOTTOM - bottom(lay)) / 2));
-  if (shift) for (const r of lay.rows) { r.y += shift; for (const c of r.chips) c.y += shift; }
-  return lay;
+  return lay;   // 세로는 내용만큼만 — 캔버스 높이를 여기에 맞춘다(컴팩트, 2026-09-25)
 }
+
+/** 내용 아래 끝. 캔버스 높이 = 이것 + 아래 여백. */
+export const layoutBottom = (l: TeamsLayout): number => (l.rows.length ? l.rows[l.rows.length - 1].y + l.rows[l.rows.length - 1].h : TOP);
+export const IMG_H_MIN = 640;
 
 /** 얼굴+어깨 정사각(화면 avatarFaceSvg 와 같은 영역)을 칸칸이 찍는다. 스펙이 없으면 회색 칸 + 번호. */
 function drawFace(ctx: CanvasRenderingContext2D, spec: ReturnType<typeof avatarPixels>, x: number, y: number, cell: number, num: number, muted: string): void {
@@ -75,21 +76,23 @@ function drawFace(ctx: CanvasRenderingContext2D, spec: ReturnType<typeof avatarP
   }
 }
 
+/** 제목은 **매치 날짜·인원**(메인), 부제는 'WEEKLY FC 팀 나누기'. 캔버스 높이는 내용만큼(최소 640, 최대 1350). */
 export function drawTeamsImage(c: HTMLCanvasElement, lineup: MatchTeam[], players: Player[], title: string, sub: string): TeamsLayout {
-  c.width = IMG_W; c.height = IMG_H;
   const ctx = c.getContext('2d');
   if (!ctx) throw new Error('캔버스를 만들 수 없습니다');
+  c.width = IMG_W;
+  const textW = (t: string, font: number): number => { ctx.font = pixelFont(font); return ctx.measureText(t).width; };
+  const lay = teamsLayout(lineup, textW);
+  c.height = Math.max(IMG_H_MIN, Math.min(IMG_H, layoutBottom(lay) + 60));
   const fg = tok('--fg', '#ffffff');
   const muted = tok('--muted', 'rgba(229, 229, 229, .55)');
   const line = tok('--line', '#3a3d44');
   const card = tok('--card', '#1b1d22');
-  ctx.fillStyle = tok('--canvas', '#000000'); ctx.fillRect(0, 0, IMG_W, IMG_H);
+  ctx.fillStyle = tok('--canvas', '#000000'); ctx.fillRect(0, 0, c.width, c.height);
   ctx.textAlign = 'left';
   ctx.fillStyle = fg; ctx.font = pixelFont(60); ctx.fillText(fit(ctx, title, IMG_W - M * 2), M, 150);
   ctx.fillStyle = muted; ctx.font = pixelFont(30); ctx.fillText(fit(ctx, sub, IMG_W - M * 2), M, 200);
 
-  const textW = (t: string, font: number): number => { ctx.font = pixelFont(font); return ctx.measureText(t).width; };
-  const lay = teamsLayout(lineup, textW);
   for (const row of lay.rows) {
     const vest = vestOf(row.vest as MatchTeam['vest']);
     // 줄 머리 — 화면의 .mt-team-head 처럼 색 점 + 조끼 이름 + 인원, 아래 3px 선
