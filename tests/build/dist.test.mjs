@@ -186,3 +186,15 @@ test('전술 페이지 — 법칙 34개가 빌드 때 그려지고(JS 섬 없음
   assert.ok(html.includes('<svg'), '보드 SVG 가 정적으로 들어 있다');
   for (const n of ['현서', '동훈', '준영', '효종', '찬우']) assert.ok(!html.includes(n), `이름 ${n}`);
 });
+
+test('링크 미리보기 — 셸 페이지마다 og:image 가 절대 주소로 있고, 그 파일이 dist 에 있다(2026-09-26)', () => {
+  for (const p of SHELL_PAGES) {
+    const html = read(p);
+    const m = /property="og:image" content="(https:\/\/byjunyoung\.github\.io\/weekly-fc\/[^"]+)"/.exec(html);
+    assert.ok(m, `${p}: og:image 절대 주소`);
+    assert.ok(existsSync(`dist/${m[1].replace('https://byjunyoung.github.io/weekly-fc/', '')}`), `${p}: ${m[1]} 파일`);
+    assert.ok(html.includes('property="og:title"') && html.includes('name="twitter:card"'), `${p}: og:title/twitter:card`);
+  }
+  assert.ok(read('tactics/index.html').includes('/weekly-fc/og-tactics.png'), '전술은 자기 그림');
+  assert.ok(read('teams/index.html').includes('property="og:image"'), '넘김 페이지도 미리보기');
+});

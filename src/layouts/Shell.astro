@@ -2,8 +2,12 @@
 import '../styles/tokens.css';
 import { href } from '../lib/url';
 import TopbarActions from '../react/shell/TopbarActions.tsx';
-interface Props { title: string; index?: boolean; wide?: boolean; description?: string }
-const { title, index = false, wide = false, description = 'WEEKLY FC — 매주 모이는 풋살 팀의 포탈' } = Astro.props;
+interface Props { title: string; index?: boolean; wide?: boolean; description?: string; ogImage?: string }
+const { title, index = false, wide = false, description = 'WEEKLY FC — 매주 모이는 풋살 팀의 포탈', ogImage = '/og.png' } = Astro.props;
+// 카톡·슬랙 링크 미리보기(2026-09-26 "링크에 썸네일이 없다"). og:image 는 절대 주소여야 한다 — 상대 경로는 카톡이 못 읽는다.
+const SITE = 'https://byjunyoung.github.io';
+const ogUrl = SITE + href(Astro.url.pathname.startsWith('/weekly-fc') ? Astro.url.pathname.slice('/weekly-fc'.length) || '/' : Astro.url.pathname);
+const ogImg = SITE + href(ogImage);
 const nav = [
   { href: href('/'), label: '홈' },
   { href: href('/squad/'), label: '명단' },
@@ -23,6 +27,18 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{title} · WEEKLY FC</title>
   <meta name="description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="WEEKLY FC" />
+  <meta property="og:title" content={`${title} · WEEKLY FC`} />
+  <meta property="og:description" content={description} />
+  <meta property="og:image" content={ogImg} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:url" content={ogUrl} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={`${title} · WEEKLY FC`} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImg} />
   {!index && <meta name="robots" content="noindex" />}
   <link rel="icon" href={href('/favicon.svg')} type="image/svg+xml" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
