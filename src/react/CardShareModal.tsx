@@ -20,6 +20,7 @@ export default function CardShareModal({ open, onClose, player, tier, opts, titl
   const fileRef = useRef<File | null>(null);
   const [imgUrl, setImgUrl] = useState<string | undefined>(undefined);
   const [method, setMethod] = useState<ShareMethod>('download');
+  const [sharing, setSharing] = useState(false);
   const fileName = `weeklyfc-${fileTag}-${seoulToday()}.png`;
 
   useEffect(() => {
@@ -40,9 +41,11 @@ export default function CardShareModal({ open, onClose, player, tier, opts, titl
   }, [open, player?.num]);
 
   async function onShare(): Promise<void> {
-    if (!fileRef.current) return;
+    if (!fileRef.current || sharing) return;
+    setSharing(true);
     try { await navigator.share({ files: [fileRef.current], title }); }
     catch (e) { if ((e as DOMException).name !== 'AbortError') setMethod(fallbackMethod(shareEnv(null))); }
+    finally { setSharing(false); }
   }
 
   const note = method === 'longpress' ? '이미지를 길게 눌러 사진에 저장하세요'
@@ -53,7 +56,7 @@ export default function CardShareModal({ open, onClose, player, tier, opts, titl
     <Modal title={title} open={open} onCancel={onClose} width={560} footer={[
       <Button key="close" onClick={onClose}>닫기</Button>,
       method === 'download' ? <a key="dl" className="btn" href={imgUrl} download={fileName}>내려받기</a> : null,
-      method === 'share' ? <Button key="go" type="primary" onClick={onShare}>공유하기</Button> : null,
+      method === 'share' ? <Button key="go" type="primary" onClick={onShare} loading={sharing}>공유하기</Button> : null,
     ]}>
       <img className="bd-share-img" alt={`${title} 미리보기`} src={imgUrl} />
       <p className="muted">{note}</p>

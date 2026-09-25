@@ -38,34 +38,30 @@ test('nameMapOf — 준영이 둘이면 둘 다 성을 붙이고, 용병은 그�
   assert.equal(m.get('오준 용병+2'), '오준 용병+2');
 });
 
-test('teamsLayout — 줄은 조끼 순서, 한 줄 6명, 세로 안에 들어간다', () => {
-  const lay = teamsLayout(LINEUP);
+const TW = (t, font) => [...t].length * font;   // 가짜 글자 폭
+
+test('teamsLayout — 줄은 조끼 순서, 칩은 폭이 차면 다음 줄, 세로 안에 들어간다', () => {
+  const lay = teamsLayout(LINEUP, TW);
   assert.deepEqual(lay.rows.map((r) => r.vest), ['none', 'orange', 'neon']);
-  assert.deepEqual(lay.rows.map((r) => r.slots.length), [2, 2, 1]);
-  const big = [{ vest: 'none', members: Array.from({ length: 14 }, (_, i) => ({ num: i + 1, name: `선수${i + 1}` })) },
-    { vest: 'orange', members: Array.from({ length: 14 }, (_, i) => ({ num: i + 20, name: `선수${i + 20}` })) },
-    { vest: 'neon', members: Array.from({ length: 14 }, (_, i) => ({ num: i + 40, name: `선수${i + 40}` })) }];
-  const lay2 = teamsLayout(big);
+  assert.deepEqual(lay.rows.map((r) => r.chips.length), [2, 2, 1]);
+  assert.equal(lay.rows[0].chips[0].cell, 4, '적으면 큰 칩');
+  const big = ['none', 'orange', 'neon', 'black'].map((v, k) => ({ vest: v, members: Array.from({ length: 12 }, (_, i) => ({ num: k * 20 + i + 1, name: `선수${k * 20 + i + 1}` })) }));
+  const lay2 = teamsLayout(big, TW);
   const last = lay2.rows[lay2.rows.length - 1];
   assert.ok(last.y + last.h <= IMG_H - 60, '세로 안');
-  assert.ok(lay2.rows[0].slots[0].cell < 4, '많으면 아바타를 줄인다');
-  assert.equal(teamsLayout(LINEUP).rows[0].slots[0].cell, 7, '적으면 가장 크게');
-  const per = lay2.rows[0].slots.filter((s) => s.y === lay2.rows[0].slots[0].y).length;
-  assert.ok(per >= 6, '한 줄에 여섯 이상');
-  if (per < lay2.rows[0].slots.length) assert.ok(lay2.rows[0].slots[per].y > lay2.rows[0].slots[0].y, '한 줄이 차면 다음 줄');
-  // 7명·7명 두 팀이면 한 줄에 7명씩 — 7번째가 혼자 떨어지지 않는다
-  const seven = [0, 1].map((k) => ({ vest: k ? 'orange' : 'none', members: Array.from({ length: 7 }, (_, i) => ({ num: k * 10 + i + 1, name: `선수${k * 10 + i + 1}` })) }));
-  const lay3 = teamsLayout(seven);
-  for (const r of lay3.rows) assert.equal(new Set(r.slots.map((s) => s.y)).size, 1, '한 줄');
-  assert.ok(lay3.rows[0].slots[0].cell >= 5, '그러면서도 아바타는 크게');
+  const first = lay2.rows[0].chips;
+  const perLine = first.filter((c) => c.y === first[0].y).length;
+  assert.ok(perLine >= 3 && first[perLine].y > first[0].y, '폭이 차면 다음 줄');
+  for (const r of lay2.rows) for (const c of r.chips) assert.ok(c.x + c.w <= IMG_W - 64, '칩이 오른쪽 여백을 안 넘는다');
 });
 
-test('drawTeamsImage — 1080×1350, 조끼 색 띠, 이름(짧게)·용병 표시, 숫자 없음, undefined 없음', () => {
+test('drawTeamsImage — 1080×1350, 조끼 색 점, 칩 테두리, 이름은 화면처럼 전체 이름, 용병 표시, 숫자 없음, undefined 없음', () => {
   const f = fakeCanvas();
   drawTeamsImage(f.canvas, LINEUP, PLAYERS, '팀 나누기', '9월 27일 (일) · 5명');
   assert.equal(f.canvas.width, IMG_W); assert.equal(f.canvas.height, IMG_H);
-  for (const c of ['#e5e5e5', '#e67e22', '#c8ff3d']) assert.ok(f.rects.some((r) => r.fill === c && r.w === 16), `조끼 띠 ${c}`);
-  for (const t of ['노조끼', '주황조끼', '야광조끼', '현서', '김준영', '강준영', '동훈', '오준 용병+2', '용병', '팀 나누기']) assert.ok(f.texts.some((x) => x.t === t), t);
+  for (const c of ['#e5e5e5', '#e67e22', '#c8ff3d']) assert.ok(f.rects.some((r) => r.fill === c && r.w === 20 && r.h === 20), `조끼 점 ${c}`);
+  assert.ok(f.rects.filter((r) => r.fill === '#3a3d44' && r.h === 96).length >= 5, '칩 테두리 다섯');
+  for (const t of ['노조끼', '주황조끼', '야광조끼', '김현서', '김준영', '강준영', '이동훈', '오준 용병+2', '용병', '팀 나누기']) assert.ok(f.texts.some((x) => x.t === t), t);
   assert.ok(!f.texts.some((x) => /^\d{2}$/.test(x.t)), '두 자리 숫자(OVR) 없음');
   for (const t of f.texts) assert.ok(!/undefined|NaN/.test(t.font + t.t), JSON.stringify(t));
   const sizes = new Set(f.fonts.map((x) => Number(/(\d+)px/.exec(x)?.[1])));

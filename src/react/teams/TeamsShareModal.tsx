@@ -18,6 +18,7 @@ export default function TeamsShareModal({ open, onClose, lineup, players, date }
   const fileRef = useRef<File | null>(null);
   const [imgUrl, setImgUrl] = useState<string | undefined>(undefined);
   const [method, setMethod] = useState<ShareMethod>('download');
+  const [sharing, setSharing] = useState(false);   // 두 번 눌려 두 번 나가지 않게
   const fileName = `weeklyfc-teams-${date || seoulToday()}.png`;
 
   useEffect(() => {
@@ -38,9 +39,11 @@ export default function TeamsShareModal({ open, onClose, lineup, players, date }
   }, [open]);
 
   async function onShare(): Promise<void> {
-    if (!fileRef.current) return;
+    if (!fileRef.current || sharing) return;
+    setSharing(true);
     try { await navigator.share({ files: [fileRef.current], title: 'WEEKLY FC 팀 나누기' }); }
     catch (e) { if ((e as DOMException).name !== 'AbortError') setMethod(fallbackMethod(shareEnv(null))); }
+    finally { setSharing(false); }
   }
   const note = method === 'longpress' ? '이미지를 길게 눌러 사진에 저장한 뒤 카톡으로 보내세요'
     : method === 'download' ? '내려받은 이미지를 카톡으로 보내세요'
@@ -50,7 +53,7 @@ export default function TeamsShareModal({ open, onClose, lineup, players, date }
     <Modal title="팀 나누기 이미지" open={open} onCancel={onClose} width={560} footer={[
       <Button key="close" onClick={onClose}>닫기</Button>,
       method === 'download' ? <a key="dl" className="btn" href={imgUrl} download={fileName}>내려받기</a> : null,
-      method === 'share' ? <Button key="go" type="primary" onClick={onShare}>공유하기</Button> : null,
+      method === 'share' ? <Button key="go" type="primary" onClick={onShare} loading={sharing}>공유하기</Button> : null,
     ]}>
       <img className="bd-share-img" alt="팀 나누기 이미지 미리보기" src={imgUrl} />
       <p className="muted">{note}</p>

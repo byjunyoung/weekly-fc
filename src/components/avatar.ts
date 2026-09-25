@@ -19,9 +19,9 @@ import { PARTS, isUnsetAvatar, type AvatarSpec } from '../lib/avatar.ts';
 const GRID_W = 24;
 const GRID_H = 32;
 // 얼굴 크롭 창 — 머리(0~12행)와 어깨 윗부분까지 정사각으로 잘라낸다.
-const FACE_X = 4;
-const FACE_Y = 0;
-const FACE_SIZE = 16;
+export const FACE_X = 4;
+export const FACE_Y = 0;
+export const FACE_SIZE = 16;
 
 const TINT = 'var(--tint, #333a45)';
 const LINE = 'var(--line, #565f6f)';
