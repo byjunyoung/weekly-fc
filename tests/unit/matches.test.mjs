@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, applyPotm, attendees, currentPotm, deadline, fromMatch, isVideoUrl, matchLabel, potmOf, shortDate, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
+import { addDays, applyPotm, attendees, currentPotm, deadline, fromMatch, potmShareText, isVideoUrl, matchLabel, potmOf, shortDate, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
 import { addGuest, initialTeams, moveTo, playerKey, guestKey, togglePicked } from '../../src/lib/teams.ts';
 import { normalizeMatch, normalizeData, EMPTY } from '../../src/lib/api.ts';
 
@@ -44,23 +44,22 @@ test('potmOf: 최다 득표, 동점이면 공동(번호순), 표가 없으면 �
 test('attendees 는 용병을 뺀 명단 선수만, 팀 순서대로', () => {
   assert.deepEqual(attendees(M()).map((x) => x.num), [2, 3]);
 });
-test('voteOpen: 매치 날짜부터 7일째까지 열리고 8일째 닫힌다', () => {
+test('voteOpen: 매치 당일만 열린다(2026-09-26)', () => {
   const m = M();
-  assert.equal(deadline(m), '2026-10-04');
+  assert.equal(deadline(m), '2026-09-27');
   assert.equal(voteOpen(m, '2026-09-26'), false, '경기 전날은 닫힘');
   assert.equal(voteOpen(m, '2026-09-27'), true);
-  assert.equal(voteOpen(m, '2026-10-04'), true);
-  assert.equal(voteOpen(m, '2026-10-05'), false);
+  assert.equal(voteOpen(m, '2026-09-28'), false, '다음 날은 닫힘');
   assert.equal(addDays('2026-12-30', 7), '2027-01-06', '해 넘김');
 });
 test('voteBlock: 경기 전 → 마감 → 로그인 → 이름 차지 → 그날 뛴 사람 순으로 이유를 낸다', () => {
   const m = M();
   assert.equal(voteBlock(m, { login: true, num: 2 }, '2026-09-26'), '경기 뒤에 투표할 수 있습니다');
-  assert.equal(voteBlock(m, { login: false, num: null }, '2026-10-05'), '투표가 끝났습니다');
-  assert.equal(voteBlock(m, { login: false, num: null }, '2026-09-28'), '로그인하면 투표할 수 있습니다');
-  assert.equal(voteBlock(m, { login: true, num: null }, '2026-09-28'), '먼저 내 이름을 골라 주세요');
-  assert.equal(voteBlock(m, { login: true, num: 4 }, '2026-09-28'), '그날 뛴 사람만 투표합니다');
-  assert.equal(voteBlock(m, { login: true, num: 2 }, '2026-09-28'), null);
+  assert.equal(voteBlock(m, { login: false, num: null }, '2026-09-28'), '투표는 경기 당일 자정까지였습니다');
+  assert.equal(voteBlock(m, { login: false, num: null }, '2026-09-27'), '로그인하면 투표할 수 있습니다');
+  assert.equal(voteBlock(m, { login: true, num: null }, '2026-09-27'), '먼저 내 이름을 골라 주세요');
+  assert.equal(voteBlock(m, { login: true, num: 4 }, '2026-09-27'), '그날 뛴 사람만 투표합니다');
+  assert.equal(voteBlock(m, { login: true, num: 2 }, '2026-09-27'), null);
 });
 test('matchLabel: 월 일 (요일), 다른 해면 해를 앞에', () => {
   assert.equal(matchLabel('2026-09-27'), '9월 27일 (일)');
@@ -135,4 +134,9 @@ test('fromMatch — 저장된 매치를 팀짜기 상태로: 조끼 순서 칸, 
   const snap = snapshot(st, ROSTER);
   assert.equal(snap.ok, true);
   assert.deepEqual(snap.lineup.map((t) => [t.vest, t.members.map((x) => x.name)]), [['none', ['김현서', '오준 용병+2']], ['neon', ['김준영', '강준영']]]);
+});
+
+test('potmShareText — 날짜·인원·자정까지가 들어간다', () => {
+  const t = potmShareText(M(), 2026);
+  assert.ok(t.includes('9월 27일 (일)') && t.includes('2명') && t.includes('자정'), t);
 });

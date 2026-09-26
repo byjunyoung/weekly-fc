@@ -1,0 +1,8 @@
+---
+// POTM 투표 페이지(2026-09-26) — /matches/potm/?m=ID. 카톡에 링크만 던지면 바로 뽑는다. 미리보기 그림은 전용.
+import Shell from '../../../layouts/Shell.astro';
+import PotmApp from '../../../react/matches/PotmApp.tsx';
+---
+<Shell title="POTM 투표" description="오늘 경기 최고의 선수를 뽑아 주세요 — 매치 당일 자정까지" ogImage="/og-potm.png">
+  <PotmApp client:load />
+</Shell>

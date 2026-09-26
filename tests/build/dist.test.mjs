@@ -10,6 +10,7 @@ export const PAGES = [
   'teams/index.html',
   'matches/index.html',
   'matches/new/index.html',
+  'matches/potm/index.html',
   'squad/9/index.html',
   'squad/99/index.html',
   'rules/index.html',
@@ -196,5 +197,6 @@ test('링크 미리보기 — 셸 페이지마다 og:image 가 절대 주소로 
     assert.ok(html.includes('property="og:title"') && html.includes('name="twitter:card"'), `${p}: og:title/twitter:card`);
   }
   assert.ok(read('tactics/index.html').includes('/weekly-fc/og-tactics.png'), '전술은 자기 그림');
+  assert.ok(read('matches/potm/index.html').includes('/weekly-fc/og-potm.png'), 'POTM 투표는 자기 그림');
   assert.ok(read('teams/index.html').includes('property="og:image"'), '넘김 페이지도 미리보기');
 });

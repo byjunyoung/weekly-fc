@@ -7,7 +7,8 @@
 import { MIN_TEAMS, VESTS, guestKey, membersOf, playerKey, teamViews, unassigned, type TeamsState } from './teams.ts';
 import type { Data, Match, MatchMember, MatchTeam, Player, VestKey } from './types.ts';
 
-export const VOTE_DAYS = 7;
+/** 투표 창 — 매치 당일만(2026-09-26). 7일 → 경기 전 차단 → 당일만 순으로 좁아졌다. */
+export const VOTE_DAYS = 0;
 
 /** 'YYYY-MM-DD' 에 며칠을 더한다. 시간대에 안 흔들리게 UTC 자정으로 센다. */
 export function addDays(ymd: string, n: number): string {
@@ -42,16 +43,16 @@ export function potmOf(m: Match): { nums: number[]; votes: number } {
   return { nums: entries.filter(([, v]) => v === top).map(([n]) => n).sort((a, b) => a - b), votes: top };
 }
 
-export const deadline = (m: Match): string => addDays(m.date, VOTE_DAYS);
-/** 투표 창 — 매치 날짜 **당일부터** 7일째까지(둘 다 포함). 경기 전엔 못 한다(2026-09-25). today 는 'YYYY-MM-DD'(서울). */
-export const voteOpen = (m: Match, today: string): boolean => today >= m.date && today <= deadline(m);
+export const deadline = (m: Match): string => addDays(m.date, VOTE_DAYS);   // = 매치 날짜
+/** 투표 창 — 매치 **당일만**. today 는 'YYYY-MM-DD'(서울). */
+export const voteOpen = (m: Match, today: string): boolean => today === m.date;
 
 export type Voter = { login: boolean; num: number | null };
 
 /** 투표 못 하는 이유. 할 수 있으면 null. 마감이 먼저다 — 끝난 매치에 로그인을 권할 이유가 없다. */
 export function voteBlock(m: Match, me: Voter, today: string): string | null {
   if (today < m.date) return '경기 뒤에 투표할 수 있습니다';
-  if (!voteOpen(m, today)) return '투표가 끝났습니다';
+  if (!voteOpen(m, today)) return '투표는 경기 당일 자정까지였습니다';
   if (!me.login) return '로그인하면 투표할 수 있습니다';
   if (me.num == null) return '먼저 내 이름을 골라 주세요';
   if (!attendees(m).some((x) => x.num === me.num)) return '그날 뛴 사람만 투표합니다';
@@ -116,4 +117,10 @@ export function fromMatch(m: Match, players: Player[], guestId: (i: number) => s
     }
   });
   return st;
+}
+
+/** 카톡에 붙일 투표 안내 글. 링크는 부르는 쪽이 붙인다. */
+export function potmShareText(m: Match, todayYear?: number): string {
+  const n = attendees(m).length;
+  return `🏆 ${matchLabel(m.date, todayYear)} 매치 POTM 투표\n오늘 뛴 ${n}명 중 최고를 뽑아 주세요. 오늘 자정까지, 한 표!`;
 }

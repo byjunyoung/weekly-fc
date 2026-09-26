@@ -56,6 +56,7 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
       <div className="card-head">
         <h2>{M.matchLabel(m.date, year)}</h2>
         <div className="card-head-act">
+          {M.voteOpen(m, today) && <Button size="small" type="primary" href={href(`/matches/potm/?m=${m.id}`)}>🏆 POTM 투표</Button>}
           <Button size="small" onClick={() => onTeamsImage(m)}>이미지 저장</Button>
           {admin && <Button size="small" onClick={() => { location.href = href(`/matches/new/?edit=${m.id}`); }}>팀 수정</Button>}
           {admin && <Button size="small" danger onClick={onDelete}>삭제</Button>}
@@ -103,7 +104,7 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
           ? <p className="muted mt-vote-hint">{block}{block.startsWith('로그인') && <> · <button type="button" className="linklike" onClick={() => window.dispatchEvent(new Event('wfc:open-me'))}>로그인</button></>}</p>
           : (
             <>
-              <p className="mt-vote-hint"><b>POTM 뽑기</b> <span className="muted">— {M.matchLabel(M.deadline(m), year)}까지 · 다시 누르면 표를 옮깁니다</span></p>
+              <p className="mt-vote-hint"><b>POTM 뽑기</b> <span className="muted">— 오늘 자정까지 · 다시 누르면 표를 옮깁니다</span></p>
               <div className="tm-chips mt-ballot" role="group" aria-label="POTM 후보">
                 {M.attendees(m).filter((x) => x.num !== me.num).map((x) => (
                   <button type="button" key={x.num!} className={`tm-chip${mine === x.num ? ' is-on' : ''}`}
