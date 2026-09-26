@@ -6,7 +6,7 @@ import { App, Button, Modal } from 'antd';
 import { useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
-import { deleteMatch, votePotm } from '../../lib/api';
+import { deleteMatch } from '../../lib/api';
 import { LINKS } from '../../lib/rules';
 import { seoulToday } from '../../lib/html';
 import { href } from '../../lib/url';
@@ -19,7 +19,6 @@ import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
-import { useMeInfo } from '../useMe';
 
 function Face({ num, players, size = 24 }: { num: number; players: Player[]; size?: number }) {
   return <span className="tm-face" aria-hidden="true"
@@ -28,21 +27,10 @@ function Face({ num, players, size = 24 }: { num: number; players: Player[]; siz
 
 function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Match; players: Player[]; today: string; admin: boolean; onPotmImage: (m: Match, num: number) => void; onTeamsImage: (m: Match) => void }) {
   const { message } = App.useApp();
-  const me = useMeInfo();
-  const [busy, setBusy] = useState(false);
   const potm = M.potmOf(m);
   const nameOf = (num: number): string => M.attendees(m).find((x) => x.num === num)?.name ?? players.find((p) => p.num === num)?.name ?? `${num}번`;
-  const block = M.voteBlock(m, { login: me.login, num: me.num ?? null }, today);
-  const mine = me.potm?.[String(m.id)] ?? null;
   const year = Number(today.slice(0, 4));
 
-  async function onVote(num: number): Promise<void> {
-    if (busy || num === mine) return;
-    setBusy(true);
-    try { await votePotm(m.id, num); message.success(`${nameOf(num)} 에게 한 표`); }
-    catch (e) { message.error((e as Error).message); }
-    finally { setBusy(false); }
-  }
   function onDelete(): void {
     Modal.confirm({
       title: `${M.matchLabel(m.date, year)} 매치를 지울까요?`, content: '팀 구성과 POTM 표가 함께 사라집니다.',
@@ -99,24 +87,7 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
         })}
       </div>
 
-      <div className="mt-vote">
-        {block
-          ? <p className="muted mt-vote-hint">{block}{block.startsWith('로그인') && <> · <button type="button" className="linklike" onClick={() => window.dispatchEvent(new Event('wfc:open-me'))}>로그인</button></>}</p>
-          : (
-            <>
-              <p className="mt-vote-hint"><b>POTM 뽑기</b> <span className="muted">— 오늘 자정까지 · 다시 누르면 표를 옮깁니다</span></p>
-              <div className="tm-chips mt-ballot" role="group" aria-label="POTM 후보">
-                {M.attendees(m).filter((x) => x.num !== me.num).map((x) => (
-                  <button type="button" key={x.num!} className={`tm-chip${mine === x.num ? ' is-on' : ''}`}
-                    aria-pressed={mine === x.num} disabled={busy} onClick={() => onVote(x.num!)}>
-                    <Face num={x.num!} players={players} /><b>{x.name}</b>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        <p className="muted mt-vote-count">{M.attendees(m).length}명 중 {m.voters}명 투표</p>
-      </div>
+      <p className="muted mt-vote-count">{M.attendees(m).length}명 중 {m.voters}명 투표{M.voteOpen(m, today) ? ' · 투표는 위 [POTM 투표] 버튼에서' : ''}</p>
     </section>
   );
 }
