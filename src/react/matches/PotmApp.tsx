@@ -53,11 +53,12 @@ function Potm() {
   }
   async function onShare(): Promise<void> {
     const url = `${location.origin}${href(`/matches/potm/?m=${m!.id}`)}`;
-    const text = M.potmShareText(m!, year);
+    // url 을 따로 주면 OS 가 글 뒤에 띄어쓰기로 붙여 버린다 — 글 안에 빈 줄 뒤 한 줄로 넣고 text 만 보낸다.
+    const text = M.potmShareText(m!, url, year);
     try {
-      if (typeof navigator.share === 'function') { await navigator.share({ title: 'WEEKLY FC POTM 투표', text, url }); return; }
+      if (typeof navigator.share === 'function') { await navigator.share({ text }); return; }
     } catch (e) { if ((e as DOMException).name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(`${text}\n${url}`); message.success('투표 링크를 복사했습니다 — 카톡에 붙여넣으세요'); }
+    try { await navigator.clipboard.writeText(text); message.success('투표 링크를 복사했습니다 — 카톡에 붙여넣으세요'); }
     catch { message.info(url); }
   }
 
