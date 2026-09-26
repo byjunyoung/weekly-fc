@@ -136,8 +136,8 @@ test('fromMatch — 저장된 매치를 팀짜기 상태로: 조끼 순서 칸, 
   assert.deepEqual(snap.lineup.map((t) => [t.vest, t.members.map((x) => x.name)]), [['none', ['김현서', '오준 용병+2']], ['neon', ['김준영', '강준영']]]);
 });
 
-test('potmShareText — 담백하게 두 줄, 링크는 빈 줄 뒤 마지막 줄', () => {
+test('potmShareText — 제목 한 줄, 빈 줄, 링크', () => {
   const t = potmShareText(M(), 'https://x/y', 2026);
-  assert.deepEqual(t.split('\n'), ['9월 27일 (일) 매치 POTM 투표', '오늘 자정까지, 한 사람만.', '', 'https://x/y']);
+  assert.deepEqual(t.split('\n'), ['9월 27일 (일) 매치 POTM 투표', '', 'https://x/y']);
   assert.ok(!/[🏆!]/.test(t), '이모지·느낌표 없음');
 });

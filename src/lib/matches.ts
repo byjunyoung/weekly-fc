@@ -121,5 +121,5 @@ export function fromMatch(m: Match, players: Player[], guestId: (i: number) => s
 
 /** 카톡에 붙일 투표 안내 글 — 담백하게, 링크는 빈 줄 뒤 한 줄로(2026-09-26 "오글거린다·줄바꿈"). */
 export function potmShareText(m: Match, url: string, todayYear?: number): string {
-  return `${matchLabel(m.date, todayYear)} 매치 POTM 투표\n오늘 자정까지, 한 사람만.\n\n${url}`;
+  return `${matchLabel(m.date, todayYear)} 매치 POTM 투표\n\n${url}`;
 }
