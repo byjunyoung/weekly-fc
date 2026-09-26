@@ -907,3 +907,10 @@ details.year[open] > summary::before { content: "▾ "; }
 .pv-bar i { display: block; height: 100%; background: var(--gold); transition: width var(--dur-fast) var(--ease-std); }
 .pv-votes { min-height: 1.2em; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
 .pv-foot { margin: var(--s-md) 0 0; font-size: var(--fs-xs); text-align: center; }
+
+/* 매치 카드 머리 — 버튼이 셋이라 폰에서 한 줄에 안 들어간다. 줄바꿈을 허용하고 제목은 한 줄로 두어
+   페이지가 옆으로 밀리지 않게(2026-09-26 폰 스크린샷: 카드가 화면 폭을 넘겨 전체가 잘렸다). */
+.mt-card .card-head { flex-wrap: wrap; align-items: center; row-gap: var(--s-xs); }
+.mt-card .card-head h2 { white-space: nowrap; margin-right: auto; }
+.mt-card .card-head-act { flex-wrap: wrap; max-width: 100%; }
+.mt-potm { flex-wrap: wrap; }
