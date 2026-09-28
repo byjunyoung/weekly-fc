@@ -1000,3 +1000,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .st-act-hot { color: var(--val-a); } .st-act-week { color: var(--fg); } .st-act-month { color: var(--muted); } .st-act-none { color: var(--muted); }
 .st-chips { display: flex; flex-wrap: wrap; gap: var(--s-xxs); margin: 0; }
 @media (max-width: 899px) { .st-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .st-charts { grid-template-columns: 1fr; } }
+
+/* 관리자 모드면 상단 버튼이 셋(이름·관리자·통계)이라 폰 폭 한 줄에 안 들어간다 — 버튼끼리 줄을 넘긴다(2026-09-28).
+   699px 규칙의 height: 56px 보다 뒤에 둬야 이긴다. */
+@media (max-width: 459px) { .topbar-act { flex-wrap: wrap; justify-content: flex-end; max-width: 100%; height: auto; min-height: 56px; row-gap: var(--s-xxs); padding-block: var(--s-xxs); } }
