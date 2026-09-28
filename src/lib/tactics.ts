@@ -97,3 +97,11 @@ export function lawsByTopic(): Array<{ topic: Topic; laws: Array<Law & { n: numb
   const numbered = LAWS.map((l, i) => ({ ...l, n: i + 1 }));
   return TOPICS.map((topic) => ({ topic, laws: numbered.filter((l) => l.topic === topic) })).filter((g) => g.laws.length > 0);
 }
+
+/** 오늘의 전술(2026-09-28, 라커룸) — 서울 날짜로 하루에 하나, 날마다 다음 법칙으로 돈다. n 은 전술 페이지의 번호(#law-n). */
+export function lawOfDay(ymd: string): Law & { n: number } {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const days = Math.floor(Date.UTC(y || 1970, (m || 1) - 1, d || 1) / 864e5);
+  const i = ((days % LAWS.length) + LAWS.length) % LAWS.length;
+  return { ...LAWS[i], n: i + 1 };
+}

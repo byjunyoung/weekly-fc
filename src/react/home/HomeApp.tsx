@@ -9,7 +9,14 @@ import { tierByNum } from '../../lib/card';
 import { currentPotm } from '../../lib/matches';
 import PlayerCard from '../PlayerCard';
 import { getMe } from '../../lib/me';
-import { fetchTodayStats, type TodayStats } from '../../lib/api';
+import { fetchRecentGuestbook, fetchStatHistory, fetchTodayStats, type RecentGuest, type TodayStats } from '../../lib/api';
+import { change, series } from '../../lib/history';
+import { tierRows } from '../../lib/tier';
+import { lawOfDay, BOARDS } from '../../lib/tactics';
+import { tacticsBoardSvg } from '../../components/tactics-board';
+import { seoulToday } from '../../lib/html';
+import { ovr } from '../../lib/stats';
+import type { StatLogRow } from '../../lib/types';
 import { LINKS } from '../../lib/rules';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
@@ -100,14 +107,14 @@ function MyLocker({ player, card }: { player: Player; card: ReactNode }) {
   );
 }
 
-function LinkTile({ to, children }: { to: string; children: ReactNode }) {
+function LinkTile({ to, wide, children }: { to: string; wide?: boolean; children: ReactNode }) {
   const isExternal = to.startsWith('http');
   // 부모 <a> 는 display:contents 라 포커스를 받을 수 없다(CSS 스펙 — 박스 없는 요소는 포커스 대상이 될 수 없다).
   // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 이름을 안 고른 라커룸(버튼)과 같은 패턴.
   const go = () => { if (isExternal) window.open(to, '_blank', 'noopener'); else location.assign(to); };
   return (
     <a href={to} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined} style={{ display: 'contents' }}>
-      <Card className="tile" variant="borderless" style={TILE_STYLE} styles={TILE_BODY}
+      <Card className={wide ? 'tile tile-wide' : 'tile'} variant="borderless" style={TILE_STYLE} styles={TILE_BODY}
         role="link" tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
         {children}
@@ -150,6 +157,15 @@ function App() {
     return () => window.clearInterval(t);
   }, []);
 
+  // 최근 방명록(팀 전체)·내 능력치 기록(이번 주 변화) — 2026-09-28 명단·라인업 타일을 바꾼 자리.
+  const [guests, setGuests] = useState<RecentGuest[] | null>(null);
+  useEffect(() => { fetchRecentGuestbook(2).then(setGuests).catch(() => setGuests([])); }, []);
+  const [myHist, setMyHist] = useState<StatLogRow[] | null>(null);
+  useEffect(() => {
+    if (me == null) { setMyHist(null); return; }
+    fetchStatHistory(me).then(setMyHist).catch(() => setMyHist([]));
+  }, [me]);
+
   if (!data) return <Loading title="라커룸" />;
 
   const s = computeHomeSummary(data, me, new Date());
@@ -158,6 +174,12 @@ function App() {
   const tiers = tierByNum(data.players);
   const potm = currentPotm(data.matches);
   const side = neighbors(data.players, meNum);
+  // 내 티어 — 종합 순위(티어표와 같은 줄 세우기), 이번 주 종합 변화.
+  const ranked = tierRows(data.players, 'ovr').flatMap((r) => r.players);
+  const myRank = mePlayer ? ranked.findIndex((p) => p.num === mePlayer.num) + 1 : 0;
+  const myTier = mePlayer ? tiers.get(mePlayer.num) : undefined;
+  const wk = mePlayer && myHist ? change(series(myHist, mePlayer, 'ovr'), Date.now(), 7) : null;
+  const law = lawOfDay(seoulToday());
 
   return (
     <>
@@ -185,8 +207,30 @@ function App() {
             </Card>
           )
           : <EmptyMeTile onOpen={openMe} side={side} />}
-        <LinkTile to={href('/squad/')}><span className="tile-label">명단</span><b className="tile-big">{s.squadCount}</b><span className="tile-sub">{s.posSummary}</span></LinkTile>
-        <LinkTile to={href('/lineup/')}><span className="tile-label">라인업</span><b className="tile-big">짜서 공유</b><span className="tile-sub">선수를 골라 자리 잡고 이미지로</span></LinkTile>
+        {/* 명단·라인업 타일은 뺐다(2026-09-28 "의미가 없다" — 상단 탭으로 충분). 대신 내 티어·최근 방명록·오늘의 전술. */}
+        {mePlayer ? (
+          <LinkTile to={href(`/squad/${mePlayer.num}/#stathist`)}>
+            <span className="tile-label">내 티어</span>
+            {ovr(mePlayer) > 0 ? (
+              <>
+                <b className="tile-big hm-tier">{myTier && <span className={`hm-tier-badge tier-${myTier}`}>{myTier}</span>}{ovr(mePlayer)}</b>
+                <span className="tile-sub">{data.players.length}명 중 {myRank}위{wk != null ? ` · 이번 주 ${wk > 0 ? `▲${wk}` : wk < 0 ? `▼${-wk}` : '±0'}` : ''}</span>
+              </>
+            ) : <span className="tile-sub">아직 능력치 배치 전입니다</span>}
+          </LinkTile>
+        ) : (
+          <LinkTile to={href('/tier/')}><span className="tile-label">내 티어</span><b className="tile-big">티어표</b><span className="tile-sub">로그인하고 이름을 고르면 내 순위가 보입니다</span></LinkTile>
+        )}
+        <LinkTile to={href(guests?.[0] ? `/squad/${guests[0].num}/` : '/squad/')}>
+          <span className="tile-label">최근 방명록</span>
+          {guests && guests.length > 0 ? (
+            <ul className="hm-guests">
+              {guests.map((g) => (
+                <li key={g.id}><span className="muted">{g.authorName || '누군가'} → {g.toName}</span><span className="hm-guest-text">{g.text}</span></li>
+              ))}
+            </ul>
+          ) : <span className="tile-sub">{guests ? '아직 방명록이 없습니다 — 선수 페이지 아래에 한 줄 남겨 보세요' : '불러오는 중…'}</span>}
+        </LinkTile>
         {/* 봉사는 이번 달·다음 달 두 칸이던 걸 한 칸으로(2026-09-28 "봉사에 영역을 너무 많이 배정"). 다음 달은 아래 한 줄. */}
         <LinkTile to={href('/rules/#duty')}>
           <span className="tile-label">{s.duty.monthLabel.replace(/^\d+년 /, '')} 봉사</span>{dutyBody(s.duty)}
@@ -194,6 +238,14 @@ function App() {
         </LinkTile>
         {/* 미납 벌금 타일은 뺐다 — 벌금은 운영 규칙에서만 본다(2026-09-23 사용자 결정). */}
         <LinkTile to={LINKS.youtube}><span className="tile-label">매치 영상</span><b className="tile-big">유튜브</b><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span></LinkTile>
+        {/* 오늘의 전술 — 날마다 34개 중 하나(lawOfDay). 두 칸 폭. */}
+        <LinkTile to={href(`/tactics/#law-${law.n}`)} wide>
+          <span className="tile-label">오늘의 전술</span>
+          <span className="hm-law">
+            <span className="hm-law-board" aria-hidden="true" dangerouslySetInnerHTML={{ __html: tacticsBoardSvg(BOARDS[law.art], law.title) }} />
+            <span className="hm-law-text"><b>{law.n}. {law.title}</b><span className="muted">{law.desc}</span></span>
+          </span>
+        </LinkTile>
       </div>
     </>
   );

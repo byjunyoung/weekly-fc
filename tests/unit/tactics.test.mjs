@@ -26,3 +26,11 @@ test('사람 이름이 없다', () => {
   const all = JSON.stringify(LAWS);
   for (const n of ['현서', '동훈', '준영', '효종', '찬우', '민준', '태영']) assert.ok(!all.includes(n), n);
 });
+
+test('lawOfDay — 하루에 하나, 다음 날은 다음 법칙, 끝나면 처음으로', async () => {
+  const { lawOfDay, LAWS: LS } = await import('../../src/lib/tactics.ts');
+  const a = lawOfDay('2026-09-28'), b = lawOfDay('2026-09-29');
+  assert.equal(b.n, a.n % LS.length + 1);
+  assert.equal(lawOfDay('2026-09-28').title, a.title);
+  assert.ok(a.n >= 1 && a.n <= LS.length);
+});

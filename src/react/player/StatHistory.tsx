@@ -104,7 +104,7 @@ export default function StatHistory({ player }: { player: Player }) {
   const wk = change(pts, Date.now(), 7);
   const label = KEYS.find((k) => k.value === key)!.label;
   return (
-    <div className="card stathist">
+    <div className="card stathist" id="stathist">
       <div className="card-head">
         <h2>능력치 기록</h2>
         <Segmented<HistKey> className="chips sh-keys" size="small" value={key} onChange={setKey} options={KEYS} />

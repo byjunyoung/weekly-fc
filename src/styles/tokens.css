@@ -315,13 +315,15 @@ a.card:hover { background: var(--charcoal); }
 .stack { display: flex; flex-direction: column; gap: var(--s-xl); }
 
 /* ══ 메인 메뉴(홈) ══════════════════════════════════════════ */
-.rail { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: repeat(2, minmax(200px, 1fr));
+.rail { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: repeat(3, minmax(150px, auto));
   grid-auto-rows: minmax(150px, 1fr); gap: var(--s-sm); }
 /* 「내 선수」 칸이 왼쪽 절반(2fr = 오른쪽 두 칸 합)을 쓰고 두 행을 가로지른다 — 오른쪽은 타일 넷이 2×2(2026-09-28
    "선수 카드를 더 넓게, 영역 절반까지"). 칸 높이는 --locker-h 한 곳에서 정한다. */
-.tile-locker { grid-row: 1 / span 2; --locker-h: 440px; }
+.tile-locker { grid-row: 1 / span 3; --locker-h: 520px; }
+/* 오른쪽 타일 다섯 — 내 티어·최근 방명록 / 봉사·매치 영상 / 오늘의 전술(두 칸 폭)(2026-09-28). */
+.tile-wide { grid-column: span 2; }
 /* 1200px 아래에선 칸 높이만 조금 줄인다. */
-@media (max-width: 1199px) { .tile-locker { --locker-h: 400px; } }
+@media (max-width: 1199px) { .tile-locker { --locker-h: 460px; } }
 /* 좌우로 세울 폭이 안 나오면 라커룸이 위에 가로로 눕고 타일은 2열로 내려간다. 이때 행 높이를
    1fr 로 두면 안 된다 — 높이가 정해지지 않은 그리드에서 fr 행은 전부 같은 높이가 돼, 라커룸
    행(약 450px)이 나머지 타일까지 그만큼 늘린다. */
@@ -1015,3 +1017,16 @@ details.year[open] > summary::before { content: "▾ "; }
 @keyframes wfc-spin { to { transform: rotate(360deg); } }
 @keyframes wfc-shadow { 0% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(.5); opacity: .4; } }
 @media (prefers-reduced-motion: reduce) { .loading-ball, .loading-spin, .loading-shadow { animation: none; } }
+
+/* 라커룸 새 타일(2026-09-28) — 내 티어(티어 글자 + 종합), 최근 방명록 두 줄, 오늘의 전술(보드 그림 + 제목·설명). */
+.hm-tier { display: flex; align-items: center; gap: var(--s-xs); }
+.hm-tier-badge { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: #000;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.hm-guests { list-style: none; margin: auto 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-xxs); min-width: 0; }
+.hm-guests li { display: flex; flex-direction: column; min-width: 0; font-size: var(--fs-xs); }
+.hm-guest-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.hm-law { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: var(--s-sm); align-items: center; margin-top: var(--s-xs); }
+.hm-law-board svg { display: block; width: 100%; height: auto; }
+.hm-law-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-xs); }
+.hm-law-text b { font-size: var(--fs-sm); font-weight: 600; }
+@media (max-width: 479px) { .hm-law { grid-template-columns: 96px minmax(0, 1fr); } }

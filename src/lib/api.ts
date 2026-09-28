@@ -345,3 +345,9 @@ export async function setMatchScore(id: number, us: number | null, them: number 
   if (inflight) await inflight.catch(() => {});
   await refresh();
 }
+/** 라커룸 「최근 방명록」 — 팀 전체 최근 글(받는 선수 이름 포함). 누구나. */
+export type RecentGuest = GuestbookRow & { toName: string };
+export async function fetchRecentGuestbook(limit = 2): Promise<RecentGuest[]> {
+  const r = await rpc('recent_guestbook', { p_limit: limit });
+  return (Array.isArray(r) ? (r as Raw[]) : []).flatMap((x) => { const g = normalizeGuestbook(x); return g ? [{ ...g, toName: String(x.to_name ?? '') }] : []; });
+}
