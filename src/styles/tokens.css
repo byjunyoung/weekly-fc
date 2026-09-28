@@ -320,12 +320,11 @@ a.card:hover { background: var(--charcoal); }
    더하거나 빼면 grid-auto-rows 가 받아 주긴 하지만 라커룸 아래로 한 칸이 흘러내리니 같이 손본다. */
 .rail { display: grid; grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: repeat(3, minmax(150px, 1fr));
   grid-auto-rows: minmax(150px, 1fr); gap: var(--s-sm); }
-/* 라커룸 아바타 크기는 여기 한 곳에서 정한다 — 무대(.locker-stage)가 아바타에 맞춰 늘고,
+/* 라커룸 칸 높이는 여기 한 곳에서 정한다(--locker-h) — 사물함 장면(.lk-scene)이 이만큼 서고,
    라커룸이 3행을 가로지르므로 오른쪽 타일들도 같이 키가 는다. */
 .tile-locker { grid-row: 1 / span 3; --locker-h: 420px; }
 /* 두 칸 폭 타일 — 타일이 홀수(5)가 되며 생긴 격자 구멍을 메운다(미납 벌금 타일을 뺀 뒤). */
 .tile-wide { grid-column: span 2; }
-.locker-sprite svg { width: auto; height: var(--locker-h); }
 /* 1200px 아래에선 라커룸 칸을 더 크게 가져간다 — 이름표가 왼쪽 아래에 박혀 있어, 무대가 좁아지면
    가운데 선 선수의 왼발과 이름표가 겹친다(900px 에서 실측으로 겹침 확인). */
 @media (max-width: 1199px) { .rail { grid-template-columns: 1.6fr 1fr 1fr; } .tile-locker { --locker-h: 380px; } }
@@ -334,15 +333,10 @@ a.card:hover { background: var(--charcoal); }
    행(약 450px)이 나머지 타일까지 그만큼 늘린다. */
 @media (max-width: 899px) {
   .rail { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: minmax(148px, auto); }
-  /* 라커룸이 한 줄을 다 쓰는 구간. 아바타 폭은 높이의 0.75 배인데, 무대 폭은 화면에서 68px
-     (좌우 여백·타일 안쪽 여백·테두리)을 뺀 값이고 왼쪽 88px 은 이름표 자리로 비워 둔다.
-     그래서 높이가 (화면 − 156) ÷ 0.75 를 넘으면 오른팔부터 잘린다 — 실제로 375px 에서 3px,
-     320px 에서 31px 잘리고 있었다(2026-09-22 실측). 고정값 대신 화면에서 끌어낸다. */
-  .tile-locker { grid-column: 1 / -1; grid-row: auto; min-height: 340px;
-    --locker-h: min(340px, calc((100vw - 156px) / 0.75)); }
+  /* 라커룸이 한 줄을 다 쓰는 구간. 높이는 고정 — 뒤집은 선수 카드가 가운데 칸에 들어가야 한다(2026-09-28). */
+  .tile-locker { grid-column: 1 / -1; grid-row: auto; --locker-h: 380px; }
 }
 /* 폰 폭에선 무대가 가장 좁다 — 가운데 정렬을 오른쪽으로 밀어 이름표 자리를 비운다. */
-@media (max-width: 639px) { .tile-locker .locker-stage { padding-left: 88px; } }
 /* game-tile: 면 #121314, 각진 2px 테두리. hover 는 테두리가 켜진다(2단계 도트 톤). */
 .tile { display: flex; flex-direction: column; text-align: left; padding: var(--s-md); border: 2px solid var(--line); border-radius: 0;
   background: var(--elevated); color: inherit; font-weight: var(--fw-body); cursor: pointer;
@@ -353,26 +347,6 @@ a.card:hover { background: var(--charcoal); }
 .tile-sub { margin-top: var(--s-xxs); font-size: var(--fs-xs); color: var(--muted); }
 /* 봉사 두 명 — 같은 크기로 나란히. 좁은 타일에서는 줄바꿈해도 크기는 같다. */
 .tile-duo { display: flex; flex-wrap: wrap; gap: 0 var(--s-sm); margin-top: auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-num); font-synthesis: none; letter-spacing: 0; line-height: 1.25; }
-/* ── 라커룸(홈) ── 사물함 벽·나무 바닥은 순수 CSS 격자·띠로 그린다(그림 파일 없음).
-   무대는 타일 안에서 남는 높이를 전부 먹고, 스프라이트는 바닥 띠 위에 선다. */
-/* 바닥 두께는 --floor-h 하나로 잰다. 퍼센트로 두면 안 된다 — 세로 margin 의 퍼센트는 높이가
-   아니라 **폭** 기준이라, 바닥(높이 기준)과 어긋나 무대 비율에 따라 선수가 뜨거나 잠겼다. */
-.tile-locker .locker-stage { --floor-h: 64px; position: relative; flex: 1; display: flex; align-items: flex-end; justify-content: center;
-  overflow: hidden; background: var(--canvas); border: 2px solid var(--line); }
-.locker-wall { position: absolute; inset: 0 0 var(--floor-h) 0;
-  background: repeating-linear-gradient(90deg, #16181c 0 54px, #0e1013 54px 58px), linear-gradient(180deg, rgba(255, 255, 255, .05), transparent 45%); }
-.locker-wall::after { content: ""; position: absolute; left: 0; right: 0; top: 24%; height: 4px; background: #0e1013; }
-.locker-floor { position: absolute; left: 0; right: 0; bottom: 0; height: var(--floor-h); background: #26160f; box-shadow: inset 0 4px 0 #3a2216; }
-/* 스프라이트 맨 아랫줄은 빈 칸이라(24×32 중 한 행) 그만큼 더 내려야 발이 바닥에 닿는다.
-   빈 줄 높이는 아바타 크기에 비례하므로 9px 로 박아 두면 안 된다 — 크기를 키우면 발이 뜬다. */
-.locker-sprite { position: relative; display: flex; margin-bottom: calc(var(--floor-h) - var(--locker-h) / 32); }
-/* 이름표 — 무대 왼쪽 아래에 박아 둔다. 도트 규약(10의 배수·합성 없음)은 각 줄에서 선언한다. */
-.locker-plate { position: absolute; left: var(--s-sm); bottom: var(--s-sm); display: flex; flex-direction: column;
-  padding: var(--s-xs) var(--s-sm); background: rgba(0, 0, 0, .72); border: 2px solid var(--line); }
-.locker-plate b { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
-.locker-plate span { margin-top: 2px; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
-.locker-plate i { margin-top: 2px; font-style: normal; font-size: var(--fs-xs); color: var(--muted); }
-.locker-plate-empty { padding: var(--s-xs) var(--s-sm); font-size: var(--fs-xs); color: var(--muted); }
 .tile-go { color: var(--link); }
 
 /* ══ 아바타 타일 · 선수 머리 ═════════════════════════════════ */
@@ -844,6 +818,45 @@ details.year[open] > summary::before { content: "▾ "; }
 .fcard-link .fcard { flex: 1; }
 .fcard-link:hover { transform: translateY(-4px); }
 .fcard-link:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+/* ── 라커룸 사물함 칸 셋(2026-09-28) ── 가운데 내 칸(붉은 패널·위에서 떨어지는 빛), 양옆은 번호 앞뒤 팀원(어둡게).
+   유니폼 크기는 --px(도트 한 칸)로 잰다 — 14×16 칸이라 폭 14·px, 높이 16·px. 등번호는 도트 폰트 규약대로 30·60 만. */
+.tile-locker.is-static:hover { background: var(--elevated); border-color: var(--line); }
+.lk-scene { position: relative; flex: 1; display: flex; min-height: var(--locker-h); background: #0d0a08; border: 2px solid var(--line); }
+.lk-cub { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; border-inline: 4px solid #0d0a08; --px: 6px; }
+.lk-cub.is-main { flex: 1.9 1 0; --px: 11px; }
+.lk-panel { height: 34px; margin: 8px 8px 0; display: flex; align-items: center; justify-content: center; background: #6e1c1c; }
+.lk-panel span { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: rgba(255, 255, 255, .55); }
+.is-main .lk-panel { background: #b52828; box-shadow: 0 0 14px rgba(220, 50, 40, .4); }
+.is-main .lk-panel span { color: #fff; }
+.lk-recess { position: relative; flex: 1; margin: 8px 8px 0; display: flex; align-items: center; justify-content: center; background: #0b0806; overflow: hidden; }
+.is-main .lk-recess { background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(255, 226, 170, .45), rgba(255, 200, 120, .08) 50%, rgba(0, 0, 0, 0) 78%), #120d0a; }
+.lk-seat { height: 40px; background: linear-gradient(180deg, #26221f, #151210); border-top: 3px solid #3a3430; }
+.lk-jersey { display: flex; flex-direction: column; align-items: center; }
+.lk-hanger { width: calc(var(--px) * 5); height: var(--px); border: 3px solid #8a8f98; border-bottom: 0; }
+.lk-shirt { position: relative; display: block; }
+.lk-shirt svg { display: block; width: calc(var(--px) * 14); height: calc(var(--px) * 16); }
+.lk-cub:not(.is-main) .lk-shirt { filter: brightness(.4); }
+.lk-jname { position: absolute; left: 0; right: 0; top: calc(var(--px) * 3.1); overflow: hidden; text-align: center; white-space: nowrap;
+  font-size: max(10px, calc(var(--px) * 1.3)); font-weight: 700; color: #fff; }
+.lk-jnum { position: absolute; left: 0; right: 0; top: calc(var(--px) * 5.3); text-align: center; color: #fff;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
+.is-main .lk-jnum { font-size: var(--fs-pixel-xl); }
+.lk-empty { margin-top: var(--s-sm); text-align: center; font-size: var(--fs-xs); color: var(--muted); }
+/* 뒤집기 — 앞 유니폼, 뒤 선수 카드. 움직임 줄이기 설정이면 바로 바뀐다. */
+.lk-flip { position: absolute; inset: 0; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; perspective: 900px; }
+.lk-flip:focus-visible { outline: 3px solid var(--fg); outline-offset: -3px; }
+.lk-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; backface-visibility: hidden;
+  transition: transform .5s var(--ease-std); }
+.lk-back { transform: rotateY(180deg); }
+.lk-flip.is-flipped .lk-front { transform: rotateY(-180deg); }
+.lk-flip.is-flipped .lk-back { transform: rotateY(0); }
+.lk-back .locker-card { margin: 0; max-width: none; transform: scale(var(--card-s, .82)); }
+@media (prefers-reduced-motion: reduce) { .lk-face { transition: none; } }
+.lk-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s-xxs) var(--s-sm); }
+/* 폰 — 뒤집은 카드가 들어가게 가운데 칸을 넓히고 옆 칸은 좁게.
+   카드 원래 폭은 약 222px — 가운데 칸 폭에 맞춰 줄이고, 아주 좁으면(<360px) 옆 칸을 걷는다. */
+@media (max-width: 639px) { .lk-cub { flex-grow: .75; --px: 4px; } .lk-cub.is-main { flex-grow: 3; --px: 10px; } .lk-back .locker-card { --card-s: .72; } }
+@media (max-width: 359px) { .lk-cub:not(.is-main) { display: none; } .lk-back .locker-card { --card-s: .8; } }
 /* 라커룸 — 카드가 바닥 띠 위에 선다. */
 .locker-card { position: relative; margin-bottom: calc(var(--floor-h) - 12px); max-width: calc(100% - var(--s-md)); }
 /* 선수 페이지 — 카드가 머리 칸을 채운다(--phero-w). 꾸미기 중 폰에선 아바타만 남긴 띠로. */

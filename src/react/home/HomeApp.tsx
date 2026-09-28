@@ -2,7 +2,9 @@
 import { Card } from 'antd';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { avatarSvg } from '../../components/avatar';
+import { jerseySvg } from '../../components/jersey';
+import { avatarSpecFor } from '../../lib/avatar';
+import type { Player } from '../../lib/types';
 import { tierByNum } from '../../lib/card';
 import { currentPotm } from '../../lib/matches';
 import PlayerCard from '../PlayerCard';
@@ -23,30 +25,71 @@ const TILE_BODY = { body: { padding: 0, display: 'contents' as const } };
 // 라커룸은 세로로 길게 서는 칸이라 gap 만 더한다 — TILE_STYLE 과 같은 이유로 캐스케이드
 // 순서에 기대지 않는다(antd Card 가 자기 규칙을 얹는다).
 const LOCKER_STYLE = { ...TILE_STYLE, gap: 'var(--s-sm)' };
-// 이름을 고르기 전 자리지킴 — 회색 유니폼의 일반 선수. 상수라 렌더마다 같은 그림이 나온다.
-const PLACEHOLDER_SPEC = { face: 0, hair: 1, skin: 2, eyes: 0, kit: '#565f6f' };
-const LOCKER_SPRITE_H = 300;
 
-/** 라커룸 무대 — 사물함 벽·바닥 띠는 순수 CSS. 그 위에 선수 카드(피파식, 2026-09-25)가 선다.
- *  로그인 전엔 회색 유니폼 스프라이트만(카드로 만들 데이터가 없다). */
-function LockerStage({ children }: { children: ReactNode }) {
+/** 사물함 칸 셋(2026-09-28, 레퍼런스: 조명 받는 가운데 칸에 이름·등번호가 보이는 유니폼 뒷면).
+ *  가운데가 내 칸 — 위에 붉게 빛나는 패널, 위에서 떨어지는 빛. 양옆은 번호 앞뒤 팀원 유니폼을 어둡게.
+ *  예전 줄무늬 벽·갈색 바닥은 "뭘 그린 건지 모르겠다"(사용자)라 이걸로 바꿨다. */
+/** 크기(도트 한 칸 --px)는 CSS 가 칸·화면 폭에 맞춰 정한다 — 여기선 기준값으로만 그린다. */
+function Jersey({ p }: { p: Player }) {
   return (
-    <div className="locker-stage">
-      <div className="locker-wall" />
-      <div className="locker-floor" />
-      {children}
+    <span className="lk-jersey">
+      <i className="lk-hanger" aria-hidden="true" />
+      <span className="lk-shirt">
+        <span dangerouslySetInnerHTML={{ __html: jerseySvg(avatarSpecFor(p.num, p.avatar).kit, 10) }} />
+        <b className="lk-jname">{p.name}</b>
+        <b className="lk-jnum">{p.num}</b>
+      </span>
+    </span>
+  );
+}
+function Cubby({ main, children }: { main?: boolean; children: ReactNode }) {
+  return (
+    <div className={`lk-cub${main ? ' is-main' : ''}`}>
+      <div className="lk-panel" aria-hidden="true"><span>WFC</span></div>
+      <div className="lk-recess">{children}</div>
+      <div className="lk-seat" aria-hidden="true" />
     </div>
   );
 }
+function LockerScene({ side, children }: { side: [Player | undefined, Player | undefined]; children: ReactNode }) {
+  return (
+    <div className="lk-scene">
+      <Cubby>{side[0] && <Jersey p={side[0]} />}</Cubby>
+      <Cubby main>{children}</Cubby>
+      <Cubby>{side[1] && <Jersey p={side[1]} />}</Cubby>
+    </div>
+  );
+}
+/** 번호 순으로 선 명단에서 내 앞뒤 사람(끝이면 반대쪽 끝으로 돈다). */
+function neighbors(players: Player[], num: number | null): [Player | undefined, Player | undefined] {
+  const line = [...players].sort((a, b) => a.num - b.num);
+  if (!line.length) return [undefined, undefined];
+  const i = num == null ? -1 : line.findIndex((p) => p.num === num);
+  if (i < 0) return [line[0], line[1]];
+  return [line[(i - 1 + line.length) % line.length], line[(i + 1) % line.length]];
+}
 
-function LinkTile({ to, locker, wide, children }: { to: string; locker?: boolean; wide?: boolean; children: ReactNode }) {
+/** 내 칸 — 평소엔 유니폼(등번호), 누르면 뒤집혀 선수 카드(OVR·능력치). 다시 누르면 유니폼.
+ *  "등번호 보이는 게 멋있다" + "카드도 볼 수 있게"(2026-09-28) 둘을 한 자리에서. */
+function MyLocker({ player, card }: { player: Player; card: ReactNode }) {
+  const [flipped, setFlipped] = useState(false);
+  return (
+    <button type="button" className={`lk-flip${flipped ? ' is-flipped' : ''}`} aria-pressed={flipped}
+      aria-label={flipped ? '유니폼으로 돌리기' : '선수 카드 보기'} onClick={() => setFlipped((x) => !x)}>
+      <span className="lk-face lk-front"><Jersey p={player} /></span>
+      <span className="lk-face lk-back">{card}</span>
+    </button>
+  );
+}
+
+function LinkTile({ to, wide, children }: { to: string; wide?: boolean; children: ReactNode }) {
   const isExternal = to.startsWith('http');
   // 부모 <a> 는 display:contents 라 포커스를 받을 수 없다(CSS 스펙 — 박스 없는 요소는 포커스 대상이 될 수 없다).
   // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 이름을 안 고른 라커룸(버튼)과 같은 패턴.
   const go = () => { if (isExternal) window.open(to, '_blank', 'noopener'); else location.assign(to); };
   return (
     <a href={to} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined} style={{ display: 'contents' }}>
-      <Card className={locker ? 'tile tile-locker' : wide ? 'tile tile-wide' : 'tile'} variant="borderless" style={locker ? LOCKER_STYLE : TILE_STYLE} styles={TILE_BODY}
+      <Card className={wide ? 'tile tile-wide' : 'tile'} variant="borderless" style={TILE_STYLE} styles={TILE_BODY}
         role="link" tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
         {children}
@@ -54,16 +97,15 @@ function LinkTile({ to, locker, wide, children }: { to: string; locker?: boolean
     </a>
   );
 }
-function EmptyMeTile({ onOpen }: { onOpen: () => void }) {
+function EmptyMeTile({ onOpen, side }: { onOpen: () => void; side: [Player | undefined, Player | undefined] }) {
   return (
     <Card className="tile tile-locker" variant="borderless" style={LOCKER_STYLE} styles={TILE_BODY}
       role="button" tabIndex={0} onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
       <span className="tile-label">내 선수</span>
-      <LockerStage>
-        <div className="locker-sprite" aria-hidden="true" dangerouslySetInnerHTML={{ __html: avatarSvg(PLACEHOLDER_SPEC, LOCKER_SPRITE_H, undefined, true) }} />
-        <span className="locker-plate locker-plate-empty">로그인하면 내 선수가 섭니다</span>
-      </LockerStage>
+      <LockerScene side={side}>
+        <span className="lk-jersey"><i className="lk-hanger" aria-hidden="true" /><span className="lk-empty">로그인하면<br />내 유니폼이 걸립니다</span></span>
+      </LockerScene>
       <span className="tile-sub tile-go">눌러서 로그인 ›</span>
     </Card>
   );
@@ -89,6 +131,7 @@ function App() {
   const mePlayer = meNum != null ? data.players.find((p) => p.num === meNum) : undefined;
   const tiers = tierByNum(data.players);
   const potm = currentPotm(data.matches);
+  const side = neighbors(data.players, meNum);
 
   return (
     <>
@@ -96,15 +139,17 @@ function App() {
       <div className="rail">
         {s.meTile.kind === 'picked' && mePlayer
           ? (
-            <LinkTile to={href(`/squad/${s.meTile.num}/`)} locker>
+            // 칸 전체가 링크였는데, 가운데 유니폼을 눌러 뒤집게 되면서 링크는 아래 글줄로 옮겼다.
+            <Card className="tile tile-locker is-static" variant="borderless" style={{ ...LOCKER_STYLE, cursor: 'default' }} styles={TILE_BODY}>
               <span className="tile-label">내 선수</span>
-              <LockerStage>
-                <PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />
-              </LockerStage>
-              <span className="tile-sub tile-go">눌러서 내 선수 보기 · 꾸미기 ›</span>
-            </LinkTile>
+              <LockerScene side={side}>
+                <MyLocker player={mePlayer}
+                  card={<PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />} />
+              </LockerScene>
+              <span className="tile-sub lk-foot"><span>유니폼을 누르면 카드</span><a className="tile-go" href={href(`/squad/${s.meTile.num}/`)}>내 선수 보기 · 꾸미기 ›</a></span>
+            </Card>
           )
-          : <EmptyMeTile onOpen={openMe} />}
+          : <EmptyMeTile onOpen={openMe} side={side} />}
         <LinkTile to={href('/squad/')}><span className="tile-label">명단</span><b className="tile-big">{s.squadCount}</b><span className="tile-sub">{s.posSummary}</span></LinkTile>
         <LinkTile to={href('/lineup/')}><span className="tile-label">라인업</span><b className="tile-big">짜서 공유</b><span className="tile-sub">선수를 골라 자리 잡고 이미지로</span></LinkTile>
         <LinkTile to={href('/rules/#duty')}><span className="tile-label">{s.duty.monthLabel} 봉사</span>{dutyBody(s.duty)}</LinkTile>
