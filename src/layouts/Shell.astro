@@ -65,11 +65,12 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
   </main>
 
   <script>
-    import { refresh } from '../lib/api';
+    import { hit, refresh } from '../lib/api';
     import { detectInApp, escapeUrl } from '../lib/inapp';
     const $ = (id: string) => document.getElementById(id) as HTMLElement;
     const loadErr = $('load-err');
     $('load-err-retry').onclick = () => { refresh().catch(() => {}); };
+    hit();   // 오늘 방문 세기 — 기기마다 하루 한 번(2026-09-28)
     window.addEventListener('wfc:error', () => { loadErr.hidden = false; });
     window.addEventListener('wfc:data', () => { loadErr.hidden = true; });
 

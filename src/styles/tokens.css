@@ -388,10 +388,6 @@ a.card:hover { background: var(--charcoal); }
 .player-side .card-head, .player-side .card-head-act { flex-wrap: wrap; row-gap: var(--s-xs); }
 .card-sub { margin-top: var(--s-lg); }
 /* 능력치를 누가 고쳤는지 — 막는 장치가 없으니 이 줄이 유일한 제동이다(2026-09-22). */
-.statlog { list-style: none; margin: var(--s-sm) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-xs); }
-.statlog li { display: flex; align-items: baseline; gap: var(--s-xs); font-size: var(--fs-xs); }
-.statlog li b { font-weight: var(--fw-body); }
-.statlog-move { margin-left: auto; font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--muted); }
 
 /* ── 꾸미기 패널 (2026-09-23 고도화) ─────────────────────────
    모양 부위는 옵션을 입힌 작은 그림, 색 부위는 색 칸. 고른 칸은 안쪽 링 — 바깥 링은
@@ -737,8 +733,8 @@ details.year[open] > summary::before { content: "▾ "; }
 .duel-me .duel-me-pick { width: 100%; max-width: 320px; }
 /* 항목 일곱 칸은 폰 폭에 안 들어간다 — 제 줄로 내리고 가로로 민다. */
 .tier-head { flex-wrap: wrap; }
-.tier-keys { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-.tier-keys::-webkit-scrollbar { display: none; }
+.tier-keys, .sh-keys { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.tier-keys::-webkit-scrollbar, .sh-keys::-webkit-scrollbar { display: none; }
 @media (max-width: 479px) { .duel-sprite svg { width: 96px; height: 128px; } .duel-pick { padding: var(--s-sm) var(--s-xxs); } }
 
 /* 라이벌 딱지(2026-09-24) — 종합이 이웃한 짝. 선수 페이지 이름 아래, 대결에서 라이벌끼리 붙으면 질문 위. */
@@ -941,3 +937,42 @@ details.year[open] > summary::before { content: "▾ "; }
 .mt-card .card-head h2 { white-space: nowrap; margin-right: auto; }
 .mt-card .card-head-act { flex-wrap: wrap; max-width: 100%; }
 .mt-potm { flex-wrap: wrap; }
+
+/* ── 선수 페이지 「능력치 기록」(2026-09-28) ── 주가 차트 + 팬/천적 + 날짜별 게임 로그.
+   선 하나라 범례 없음(제목 칩이 이름). 오르면 --val-a, 내리면 --val-d — 숫자 옆 ▲▼ 글자가 같이 가서 색만으로 구분하지 않는다. */
+.stathist .card-head { flex-wrap: wrap; row-gap: var(--s-xs); }
+.sh-head { display: flex; align-items: baseline; gap: var(--s-xs); }
+.sh-now { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
+.sh-wk, .sh-delta, .sh-judge-n { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; color: var(--muted); }
+.stathist .is-up { color: var(--val-a); } .stathist .is-down { color: var(--val-d); }
+.sh-chart { margin-top: var(--s-xs); }
+.sh-chart svg { display: block; max-width: 100%; touch-action: pan-y; cursor: crosshair; }
+.sh-grid { stroke: var(--hairline); stroke-width: 1; }
+.sh-axis { fill: var(--muted); font-size: 11px; }
+.sh-line { fill: none; stroke: var(--link); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.sh-dot { fill: var(--link); stroke: var(--card); stroke-width: 2; }
+.sh-cross { stroke: var(--hairline-strong); stroke-width: 1; }
+.sh-tip { min-height: 1.6em; margin: var(--s-xxs) 0 0; font-size: var(--fs-xs); }
+.sh-tip b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; }
+.sh-judges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-xs); margin-top: var(--s-md); }
+.sh-judge { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; align-items: baseline; gap: 2px var(--s-xs);
+  padding: var(--s-sm); border: 2px solid var(--line); color: var(--fg); text-decoration: none; }
+.sh-judge:hover { border-color: var(--fg); }
+.sh-judge.is-fan { border-color: color-mix(in srgb, var(--val-a) 45%, var(--line)); }
+.sh-judge.is-rival { border-color: color-mix(in srgb, var(--val-d) 45%, var(--line)); }
+.sh-judge-tag { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.sh-judge .muted { grid-column: 1 / -1; font-size: var(--fs-xs); }
+.sh-log { margin-top: var(--s-md); display: flex; flex-direction: column; gap: var(--s-sm); align-items: flex-start; }
+.sh-log section { align-self: stretch; }
+.sh-day { margin: 0 0 var(--s-xxs); font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.sh-log ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.sh-log li { display: grid; grid-template-columns: 3.2em 3.6em minmax(0, 1fr) auto; align-items: baseline; gap: var(--s-xs);
+  padding: 4px 0; border-bottom: 1px solid var(--hairline); font-size: var(--fs-xs); }
+.sh-log li:last-child { border-bottom: 0; }
+.sh-why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-move { font-variant-numeric: tabular-nums; }
+@media (max-width: 479px) { .sh-judges { grid-template-columns: 1fr; } }
+/* 라커룸 제목 옆 오늘 숫자(2026-09-28) — 방문(기기 수)·대결·방명록, POTM 표는 있을 때만. */
+.today-stats { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 var(--s-sm); margin: 0; font-size: var(--fs-xs); color: var(--muted); }
+.today-stats b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--fg); }
+@media (max-width: 639px) { .today-stats { justify-content: flex-start; } }

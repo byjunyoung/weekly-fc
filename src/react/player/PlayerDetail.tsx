@@ -7,7 +7,6 @@ import NumberPicker from '../squad/NumberPicker';
 import type { CSSProperties } from 'react';
 import { adminMembers, adminRelease, fetchFull, serializePlayer, write, writeAvatar, type MemberRow } from '../../lib/api';
 import { maskEmail } from '../../lib/auth';
-import { fmtLogAt } from '../../lib/html';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { rivalPairs } from '../../lib/tier';
@@ -18,6 +17,7 @@ import PlayerCard from '../PlayerCard';
 import { avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import AvatarEditor from './AvatarEditor';
 import Guestbook from './Guestbook';
+import StatHistory from './StatHistory';
 import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
 import type { Player } from '../../lib/types';
@@ -111,10 +111,8 @@ function Detail({ num }: { num: number }) {
     catch (e) { message.error((e as Error).message); setDeleting(false); }
   };
 
-  // 이 선수 기록만, 최신 여덟 줄(서버도 선수마다 여덟 줄만 보낸다).
   // 라이벌 — 종합이 이웃한 짝(src/lib/tier.ts rivalPairs). 대결로 숫자가 움직이면 바뀐다.
   const rival = player && data ? data.players.find((p) => p.num === rivalPairs(data.players).get(player.num)) : undefined;
-  const myLog = player ? (data?.statLog ?? []).filter((r) => r.num === player.num).slice(0, 8) : [];
 
   // OVR 카운트업 — [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
   const cardRef = useRef<HTMLDivElement>(null);
@@ -269,26 +267,13 @@ function Detail({ num }: { num: number }) {
                     {admin && <Button type="primary" href={href(`/squad/place/?num=${player.num}`)}>배치 대결 시작</Button>}
                   </div>
                 )}
-                {myLog.length > 0 && (
-                  <>
-                    <h2 className="card-sub">고친 기록</h2>
-                    <ul className="statlog">
-                      {myLog.map((r, i) => (
-                        <li key={`${r.ts}-${r.field}-${i}`}>
-                          <span className="muted">{fmtLogAt(r.ts)}</span>
-                          <b>{r.via === 'potm' ? 'POTM 보상' : r.byName || '누군지 모름'}</b>
-                          <span>{STAT_KO[r.field]}</span>
-                          <span className="statlog-move">{r.before} → {r.after}{r.via === 'game' ? ' · 대결' : r.via === 'place' ? ' · 배치' : ''}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
               </div>
               )}
             </div>
           </div>
           {/* 방명록(2026-09-25) — 카드 아래 한 줄씩. 꾸미는 중엔 숨긴다(옵션 목록이 길다). */}
+          {/* 능력치 기록(2026-09-28) — 차트·팬/천적·게임 로그. 옛 「고친 기록」 여덟 줄 목록을 대신한다. */}
+          {!avatarOpen && <StatHistory player={player} />}
           {!avatarOpen && data && <Guestbook player={player} players={data.players} />}
         </div>
       )}

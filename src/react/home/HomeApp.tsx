@@ -9,6 +9,7 @@ import { tierByNum } from '../../lib/card';
 import { currentPotm } from '../../lib/matches';
 import PlayerCard from '../PlayerCard';
 import { getMe } from '../../lib/me';
+import { fetchTodayStats, type TodayStats } from '../../lib/api';
 import { LINKS } from '../../lib/rules';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
@@ -140,6 +141,14 @@ function App() {
     return () => window.removeEventListener('wfc:me', read);
   }, []);
   const openMe = () => window.dispatchEvent(new Event('wfc:open-me'));
+  // 오늘 숫자(2026-09-28 "오늘 방문자 수·활동 횟수") — 누구에게나. 1분마다 다시 읽는다.
+  const [today, setToday] = useState<TodayStats | null>(null);
+  useEffect(() => {
+    const read = () => fetchTodayStats().then(setToday).catch(() => {});
+    read();
+    const t = window.setInterval(read, 60_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   if (!data) return <Loading title="라커룸" />;
 
@@ -152,7 +161,16 @@ function App() {
 
   return (
     <>
-      <div className="page-head"><h1>라커룸 <span className="muted" id="stamp">{s.stamp}</span></h1><div className="actions" /></div>
+      <div className="page-head"><h1>라커룸 <span className="muted" id="stamp">{s.stamp}</span></h1>
+        <div className="actions">{today && (
+          <p className="today-stats" aria-label="오늘 활동">
+            <span>오늘 <b>{today.visitors}</b>명 방문</span>
+            <span>대결 <b>{today.duels}</b>판</span>
+            <span>방명록 <b>{today.guestbook}</b></span>
+            {today.potm > 0 && <span>POTM 표 <b>{today.potm}</b></span>}
+          </p>
+        )}</div>
+      </div>
       <div className="rail">
         {s.meTile.kind === 'picked' && mePlayer
           ? (

@@ -296,3 +296,26 @@ export async function writeGuestbook(playerNum: number, text: string): Promise<G
   return r;
 }
 export async function deleteGuestbook(id: number): Promise<void> { await rpc('guestbook_delete', { p_id: id }); }
+
+// ── 능력치 기록 전체 · 오늘 활동 (2026-09-28) ─────────────────
+/** 한 선수의 능력치 기록 전부(오래된 것부터). get_all 은 선수마다 8줄만 싣는다 — 선수 페이지에서 따로 읽는다. */
+export async function fetchStatHistory(playerNum: number): Promise<StatLogRow[]> {
+  const r = await rpc('stat_history', { p_num: playerNum });
+  return (Array.isArray(r) ? (r as Raw[]) : []).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null);
+}
+export type TodayStats = { visitors: number; members: number; duels: number; guestbook: number; potm: number };
+export async function fetchTodayStats(): Promise<TodayStats> {
+  const r = await rpc('today_stats');
+  return { visitors: num(r.visitors), members: num(r.members), duels: num(r.duels), guestbook: num(r.guestbook), potm: num(r.potm) };
+}
+/** 방문 한 번 — 기기마다 하루 한 번만 보낸다(기기 id 는 이 브라우저가 만든 난수, 누구인지 알 수 없다).
+ *  실패해도 화면엔 아무 영향이 없게 조용히 넘긴다. 로그인 중이면 서버가 선수 번호를 같이 남긴다. */
+export function hit(): void {
+  try {
+    const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+    if (localStorage.getItem('wfc_hit_day') === day) return;
+    let dev = localStorage.getItem('wfc_device');
+    if (!dev) { dev = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join(''); localStorage.setItem('wfc_device', dev); }
+    rpc('hit', { p_device: dev }).then(() => { try { localStorage.setItem('wfc_hit_day', day); } catch { /* 다음에 다시 */ } }).catch(() => {});
+  } catch { /* 저장소가 막힌 브라우저 — 세지 않는다 */ }
+}
