@@ -6,8 +6,8 @@ import DutyLive from '../react/rules/DutyLive.tsx';
 import { FINE_EXEMPT, MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS, DUTY_PER_MONTH } from '../lib/rules.ts';
 const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '비용·벌금'], ['duty', '봉사'], ['bank', '모임 통장'], ['manner', '에티켓']];
 ---
-<Shell title="운영 규칙" description="WEEKLY FC 운영 규칙 — 매주 토요일 풋살. 참여 방법·비용·벌금·봉사·모임 통장.">
-  <div class="page-head"><h1>운영 규칙</h1><div class="actions"><a class="chip" href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡 →</a></div></div>
+<Shell title="규칙" description="WEEKLY FC 규칙 — 매주 토요일 풋살. 참여 방법·비용·벌금·봉사·모임 통장.">
+  <div class="page-head"><h1>규칙</h1><div class="actions"><a class="chip" href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡 →</a></div></div>
   <nav class="tabs">{toc.map(([id, l]) => <a href={`#${id}`}>{l}</a>)}</nav>
   <article class="prose stack">
     <section id="when"><h2>언제 어디서</h2><ul><li>매주 카톡 투표, {MATCH_MIN}인 이상 모이면 진행</li><li>시간: {MATCH_TIME}</li><li>장소: {PLACES.join(' / ')}</li><li>대관 실패 시 일정·장소를 유연하게 조정</li><li>비가 오면 논의 후 진행 여부 결정</li></ul></section>

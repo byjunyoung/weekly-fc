@@ -42,9 +42,9 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 홈·명단·라인업·매치·티어·전술·운영 규칙 일곱 갈래 — 팀짜기는 매치 아래 기능(2026-09-25), 전술은 2026-09-26', () => {
+test('상단 탭은 홈·명단·라인업·매치·티어·전술·규칙 일곱 갈래(2026-09-28 운영 규칙 → 규칙) — 팀짜기는 매치 아래 기능(2026-09-25), 전술은 2026-09-26', () => {
   const html = read('index.html');
-  for (const l of ['라커룸', '명단', '라인업', '매치', '티어', '전술', '운영 규칙']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['라커룸', '명단', '라인업', '매치', '티어', '전술', '규칙']) assert.ok(html.includes(`<span>${l}</span>`), l);
   for (const l of ['스쿼드', '기록', '소개', '팀짜기']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
 test('옛 /teams/ 는 /matches/new/ 로 넘긴다(카톡에 남은 링크)', () => {
