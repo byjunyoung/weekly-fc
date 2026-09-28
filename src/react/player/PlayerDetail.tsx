@@ -276,7 +276,7 @@ function Detail({ num }: { num: number }) {
                       {myLog.map((r, i) => (
                         <li key={`${r.ts}-${r.field}-${i}`}>
                           <span className="muted">{fmtLogAt(r.ts)}</span>
-                          <b>{r.byName || '누군지 모름'}</b>
+                          <b>{r.via === 'potm' ? 'POTM 보상' : r.byName || '누군지 모름'}</b>
                           <span>{STAT_KO[r.field]}</span>
                           <span className="statlog-move">{r.before} → {r.after}{r.via === 'game' ? ' · 대결' : r.via === 'place' ? ' · 배치' : ''}</span>
                         </li>
