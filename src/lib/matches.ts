@@ -30,6 +30,33 @@ export function snapshot(st: TeamsState, players: Player[]): Snapshot {
   return { ok: true, lineup };
 }
 
+/** 상대팀 매치용 — 온 사람(명단+용병) 전부를 우리 팀 하나로. 팀 나누기는 필요 없다(2026-09-28). */
+export function snapshotSquad(st: TeamsState, players: Player[]): Snapshot {
+  const members = membersOf(st, players);
+  if (members.length === 0) return { ok: false, error: '온 사람이 없습니다' };
+  return { ok: true, lineup: [{ vest: 'none', members: members.map((m) => ({ num: m.num, name: m.name })) }] };
+}
+
+export type Result = 'W' | 'D' | 'L';
+export const RESULT_KO: Record<Result, string> = { W: '승', D: '무', L: '패' };
+export const isExternal = (m: Match): boolean => !!m.opponent;
+/** 상대팀 매치 결과. 자체전이거나 스코어 전이면 null. */
+export function resultOf(m: Match): Result | null {
+  if (!isExternal(m) || m.scoreUs == null || m.scoreThem == null) return null;
+  return m.scoreUs > m.scoreThem ? 'W' : m.scoreUs < m.scoreThem ? 'L' : 'D';
+}
+/** 상대팀 전적 — 스코어가 들어간 경기만. */
+export function record(matches: Match[]): { w: number; d: number; l: number; gf: number; ga: number; played: number } {
+  const r = { w: 0, d: 0, l: 0, gf: 0, ga: 0, played: 0 };
+  for (const m of matches) {
+    const x = resultOf(m);
+    if (!x) continue;
+    r.played += 1; r.gf += m.scoreUs!; r.ga += m.scoreThem!;
+    if (x === 'W') r.w += 1; else if (x === 'D') r.d += 1; else r.l += 1;
+  }
+  return r;
+}
+
 export const vestOf = (key: VestKey): (typeof VESTS)[number] => VESTS.find((v) => v.key === key) ?? VESTS[0];
 
 /** 그날 뛴 명단 선수(용병 제외) — 팀 순서대로. 투표 후보이자 투표 자격의 기준. */

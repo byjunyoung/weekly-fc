@@ -976,3 +976,14 @@ details.year[open] > summary::before { content: "▾ "; }
 .today-stats { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 var(--s-sm); margin: 0; font-size: var(--fs-xs); color: var(--muted); }
 .today-stats b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--fg); }
 @media (max-width: 639px) { .today-stats { justify-content: flex-start; } }
+/* 상대팀 매치(2026-09-28) — 제목 옆 상대 이름, 스코어·결과 뱃지, 전적 한 줄. 결과는 글자(승·무·패)가 같이 가서 색만으로 구분하지 않는다. */
+.mt-vs { color: var(--body); }
+.mt-score { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs) var(--s-sm); margin-bottom: var(--s-sm); }
+.mt-score-num { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
+.mt-result { padding: 2px var(--s-xs); border: 2px solid currentColor; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
+.mt-result.is-w { color: var(--val-a); } .mt-result.is-d { color: var(--muted); } .mt-result.is-l { color: var(--val-d); }
+.mt-score-edit { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
+.mt-score-edit .ant-input-number { width: 64px; }
+.mt-record { margin: 0 0 var(--s-sm); font-size: var(--fs-sm); }
+.mt-record b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.tm-squad .tm-head { cursor: default; }

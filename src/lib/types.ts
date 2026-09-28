@@ -15,7 +15,9 @@ export type StatLogRow = { ts: string; by: number | null; byName: string; num: n
 export type VestKey = 'none' | 'orange' | 'neon' | 'black';
 export type MatchMember = { num: number | null; name: string };   // num 없으면 용병
 export type MatchTeam = { vest: VestKey; members: MatchMember[] };
-export type Match = { id: number; date: string; lineup: MatchTeam[]; tally: Record<number, number>; voters: number; video: string };
+/** opponent = '' 이면 자체전(조끼 팀 둘 이상), 이름이 있으면 상대팀전(lineup 은 우리 팀 하나). 스코어는 경기 뒤 관리자가 — 없으면 null(2026-09-28). */
+export type Match = { id: number; date: string; lineup: MatchTeam[]; tally: Record<number, number>; voters: number; video: string;
+  opponent: string; scoreUs: number | null; scoreThem: number | null };
 export type Data = { players: Player[]; rotation: RotationRow[]; fines: Fine[]; statLog: StatLogRow[]; matches: Match[] };
 export const STAT_KEYS = ['pace', 'dribble', 'pass', 'shoot', 'defend', 'stamina'] as const;
 export type StatKey = (typeof STAT_KEYS)[number];

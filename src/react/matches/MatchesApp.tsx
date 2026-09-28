@@ -2,11 +2,11 @@
 //
 // 카드 하나가 매치 하루. 팀은 팀짜기와 같은 칩 모양으로(같은 손버릇), POTM 은 맨 위에 아바타로.
 // 투표는 그날 뛴 로그인 회원만 — 못 누르는 이유는 lib 가 정한 한 줄을 그대로 보여 준다.
-import { App, Button, Popconfirm } from 'antd';
+import { App, Button, InputNumber, Popconfirm } from 'antd';
 import { useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
-import { deleteMatch } from '../../lib/api';
+import { deleteMatch, setMatchScore } from '../../lib/api';
 import { LINKS } from '../../lib/rules';
 import { seoulToday } from '../../lib/html';
 import { href } from '../../lib/url';
@@ -31,6 +31,20 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
   const nameOf = (num: number): string => M.attendees(m).find((x) => x.num === num)?.name ?? players.find((p) => p.num === num)?.name ?? `${num}번`;
   const year = Number(today.slice(0, 4));
 
+  // 상대팀 매치 스코어(2026-09-28) — 경기 뒤 관리자가 카드에서 넣는다.
+  const ext = M.isExternal(m);
+  const res = M.resultOf(m);
+  const [scoring, setScoring] = useState(false);
+  const [us, setUs] = useState<number | null>(m.scoreUs);
+  const [them, setThem] = useState<number | null>(m.scoreThem);
+  const [savingScore, setSavingScore] = useState(false);
+  async function onSaveScore(): Promise<void> {
+    if ((us == null) !== (them == null)) { message.info('두 팀 점수를 모두 넣어 주세요'); return; }
+    setSavingScore(true);
+    try { await setMatchScore(m.id, us, them); setScoring(false); message.success('스코어 저장됨'); }
+    catch (e) { message.error((e as Error).message); }
+    finally { setSavingScore(false); }
+  }
   // 지우기 확인은 다른 관리자 삭제(선수·벌금·방명록)와 같은 Popconfirm 으로(2026-09-28 일관성 정리).
   const [deleting, setDeleting] = useState(false);
   async function onDelete(): Promise<void> {
@@ -41,11 +55,12 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
   return (
     <section className="card mt-card" aria-label={`${M.matchLabel(m.date, year)} 매치`}>
       <div className="card-head">
-        <h2>{M.matchLabel(m.date, year)}</h2>
+        <h2>{M.matchLabel(m.date, year)}{ext && <span className="mt-vs"> vs {m.opponent}</span>}</h2>
         <div className="card-head-act">
           {M.voteOpen(m, today) && <Button size="small" type="primary" href={href(`/matches/potm/?m=${m.id}`)}>🏆 POTM 투표</Button>}
-          <Button size="small" onClick={() => onTeamsImage(m)}>이미지 저장</Button>
-          {admin && <Button size="small" onClick={() => { location.href = href(`/matches/new/?edit=${m.id}`); }}>팀 수정</Button>}
+          {!ext && <Button size="small" onClick={() => onTeamsImage(m)}>이미지 저장</Button>}
+          {admin && ext && <Button size="small" onClick={() => setScoring((x) => !x)}>{res ? '스코어 고치기' : '스코어 입력'}</Button>}
+          {admin && <Button size="small" onClick={() => { location.href = href(`/matches/new/?edit=${m.id}`); }}>{ext ? '명단 수정' : '팀 수정'}</Button>}
           {admin && (
             <Popconfirm title="이 매치를 지울까요?" description="팀 구성과 POTM 표가 함께 사라집니다." okText="삭제" cancelText="취소" okButtonProps={{ danger: true, loading: deleting }} onConfirm={onDelete}>
               <Button size="small" danger loading={deleting}>삭제</Button>
@@ -53,6 +68,22 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
           )}
         </div>
       </div>
+
+      {ext && (
+        <div className="mt-score">
+          {res ? (
+            <><b className="mt-score-num">{m.scoreUs} : {m.scoreThem}</b>
+              <span className={`mt-result is-${res.toLowerCase()}`}>{M.RESULT_KO[res]}</span></>
+          ) : <span className="muted">결과 입력 전</span>}
+          {admin && scoring && (
+            <span className="mt-score-edit">
+              <span className="muted">우리</span><InputNumber size="small" min={0} max={99} value={us} onChange={(v) => setUs(v ?? null)} aria-label="우리 팀 점수" />
+              <span className="muted">{m.opponent}</span><InputNumber size="small" min={0} max={99} value={them} onChange={(v) => setThem(v ?? null)} aria-label="상대팀 점수" />
+              <Button size="small" type="primary" loading={savingScore} onClick={onSaveScore}>저장</Button>
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="mt-potm" aria-live="polite">
         <span className="mt-potm-label">POTM</span>
@@ -74,7 +105,7 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
           const vest = M.vestOf(t.vest);
           return (
             <div key={`${t.vest}-${i}`} className="mt-team">
-              <div className="mt-team-head"><span className="tm-dot" style={{ background: vest.color }} aria-hidden="true" /><b>{vest.label}</b><span className="muted">{t.members.length}명</span></div>
+              <div className="mt-team-head">{ext ? <b>우리 팀</b> : <><span className="tm-dot" style={{ background: vest.color }} aria-hidden="true" /><b>{vest.label}</b></>}<span className="muted">{t.members.length}명</span></div>
               <div className="tm-chips">
                 {t.members.map((x, j) => (
                   <span key={`${x.num ?? 'g'}-${j}`} className="tm-chip mt-chip">
@@ -104,6 +135,7 @@ function Matches() {
   const matches = data.matches ?? [];
   const today = seoulToday();
   const tiers = tierByNum(data.players);
+  const rec = M.record(matches);
   const sharePlayer = share ? data.players.find((p) => p.num === share.num) ?? null : null;
   const shareVotes = share ? (share.m.tally[share.num] ?? 0) : 0;
   return (
@@ -112,11 +144,14 @@ function Matches() {
         <h1>매치</h1>
         <div className="actions">
           <Button href={LINKS.youtube} target="_blank" rel="noopener">▶ 유튜브 채널</Button>
-          <Button type="primary" onClick={() => { location.href = href('/matches/new/'); }}>팀 짜기</Button>
+          <Button type="primary" onClick={() => { location.href = href('/matches/new/'); }}>새 매치</Button>
         </div>
       </div>
       {matches.length === 0 && (
-        <div className="card"><h2>아직 저장된 매치가 없습니다</h2><p className="muted">[팀 짜기]에서 온 사람을 조끼 팀으로 가르고, 관리자 모드로 날짜를 골라 저장하면 여기에 쌓입니다.</p></div>
+        <div className="card"><h2>아직 저장된 매치가 없습니다</h2><p className="muted">[새 매치]에서 자체전(조끼 팀 나누기)이나 상대팀전을 고르고, 관리자 모드로 날짜를 골라 저장하면 여기에 쌓입니다.</p></div>
+      )}
+      {rec.played > 0 && (
+        <p className="mt-record">상대팀 전적 <b>{rec.w}</b>승 <b>{rec.d}</b>무 <b>{rec.l}</b>패 <span className="muted">· 득 {rec.gf} 실 {rec.ga}</span></p>
       )}
       <div className="stack">
         {matches.map((m) => <Card key={m.id} m={m} players={data.players} today={today} admin={admin} onPotmImage={(mm, n) => setShare({ m: mm, num: n })} onTeamsImage={setTeamsShare} />)}

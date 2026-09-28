@@ -62,7 +62,8 @@ export function normalizeMatch(r: Raw): Match | null {
   });
   const tally: Record<number, number> = {};
   for (const [k, v] of Object.entries((r.tally as Raw) ?? {})) { const n = num(k); if (n > 0 && num(v) > 0) tally[n] = num(v); }
-  return { id, date: day(r.date), lineup, tally, voters: num(r.voters), video: String(r.video ?? '').trim() };
+  return { id, date: day(r.date), lineup, tally, voters: num(r.voters), video: String(r.video ?? '').trim(),
+    opponent: String(r.opponent ?? '').trim(), scoreUs: numOrNull(r.score_us), scoreThem: numOrNull(r.score_them) };
 }
 
 export function normalizeData(d: Raw): Data {
@@ -240,10 +241,10 @@ export async function writeAvatar(num: number, avatar: string): Promise<Raw> {
 
 // ── 매치 · POTM (2026-09-25) ──────────────────────────────────
 /** 팀짜기 결과를 그날 매치로 저장(관리자). 같은 날짜면 서버가 덮어쓴다. 끝나면 다시 읽는다. */
-export async function saveMatch(date: string, lineup: MatchTeam[], video: string | null = null): Promise<number> {
+export async function saveMatch(date: string, lineup: MatchTeam[], video: string | null = null, opponent: string | null = null): Promise<number> {
   if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
-  // video 가 null 이면 서버가 이미 있던 링크를 지킨다(팀만 다시 저장할 때).
-  const r = await rpc('save_match', { p_date: date, p_lineup: lineup, p_video: video });
+  // video·opponent 가 null 이면 서버가 이미 있던 값을 지킨다. opponent '' = 자체전, 이름 = 상대팀전(2026-09-28).
+  const r = await rpc('save_match', { p_date: date, p_lineup: lineup, p_video: video, p_opponent: opponent });
   if (inflight) await inflight.catch(() => {});
   await refresh();
   return num(r.id);
@@ -318,4 +319,12 @@ export function hit(): void {
     if (!dev) { dev = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join(''); localStorage.setItem('wfc_device', dev); }
     rpc('hit', { p_device: dev }).then(() => { try { localStorage.setItem('wfc_hit_day', day); } catch { /* 다음에 다시 */ } }).catch(() => {});
   } catch { /* 저장소가 막힌 브라우저 — 세지 않는다 */ }
+}
+
+/** 상대팀 매치 스코어(관리자, 2026-09-28). 둘 다 null 이면 지운다. */
+export async function setMatchScore(id: number, us: number | null, them: number | null): Promise<void> {
+  if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
+  await rpc('set_match_score', { p_id: id, p_us: us, p_them: them });
+  if (inflight) await inflight.catch(() => {});
+  await refresh();
 }

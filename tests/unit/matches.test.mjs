@@ -85,8 +85,10 @@ test('normalizeMatch: 모르는 조끼·이름 없는 사람은 버리고, 집�
   const m = normalizeMatch({ id: '5', date: '2026-09-27T00:00:00', voters: '2',
     lineup: [{ vest: 'none', members: [{ num: '2', name: ' 김현서 ' }, { name: '' }] }, { vest: 'pink', members: [{ name: 'x' }] }, { vest: 'neon', members: [] }],
     tally: { '3': 2, '0': 1, '2': '0' } });
-  assert.deepEqual(m, { id: 5, date: '2026-09-27', voters: 2, tally: { 3: 2 }, video: '',
+  assert.deepEqual(m, { id: 5, date: '2026-09-27', voters: 2, tally: { 3: 2 }, video: '', opponent: '', scoreUs: null, scoreThem: null,
     lineup: [{ vest: 'none', members: [{ num: 2, name: '김현서' }] }] });
+  const ext = normalizeMatch({ id: 7, opponent: ' FC A ', score_us: 3, score_them: '2' });
+  assert.deepEqual([ext.opponent, ext.scoreUs, ext.scoreThem], ['FC A', 3, 2]);
   assert.equal(normalizeMatch({ id: 6, video: ' https://youtu.be/x ' }).video, 'https://youtu.be/x');
   assert.equal(normalizeMatch({ date: '2026-09-27' }), null, 'id 없으면 버린다');
 });
@@ -140,4 +142,25 @@ test('potmShareText — 제목 한 줄, 빈 줄, 링크', () => {
   const t = potmShareText(M(), 'https://x/y', 2026);
   assert.deepEqual(t.split('\n'), ['9월 27일 (일) 매치 POTM 투표', '', 'https://x/y']);
   assert.ok(!/[🏆!]/.test(t), '이모지·느낌표 없음');
+});
+
+test('상대팀 매치 — 결과·전적·우리 팀 하나 스냅샷(2026-09-28)', async () => {
+  const M2 = await import('../../src/lib/matches.ts');
+  const base = { lineup: [], tally: {}, voters: 0, video: '' };
+  const ms = [
+    { ...base, id: 1, date: '2026-09-01', opponent: 'FC A', scoreUs: 3, scoreThem: 2 },
+    { ...base, id: 2, date: '2026-09-08', opponent: 'FC B', scoreUs: 1, scoreThem: 1 },
+    { ...base, id: 3, date: '2026-09-15', opponent: 'FC C', scoreUs: 0, scoreThem: 2 },
+    { ...base, id: 4, date: '2026-09-22', opponent: 'FC D', scoreUs: null, scoreThem: null },
+    { ...base, id: 5, date: '2026-09-26', opponent: '', scoreUs: null, scoreThem: null },
+  ];
+  assert.deepEqual(ms.map(M2.resultOf), ['W', 'D', 'L', null, null]);
+  assert.deepEqual(M2.record(ms), { w: 1, d: 1, l: 1, gf: 4, ga: 5, played: 3 });
+  const players = [{ num: 2, name: '김준영', pos: 'DF', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70 }];
+  const st = { teams: 2, picked: [2], guests: [{ id: 'g', name: '용병A' }], assign: {} };
+  const snap = M2.snapshotSquad(st, players);
+  assert.equal(snap.ok, true);
+  assert.equal(snap.lineup.length, 1);
+  assert.deepEqual(snap.lineup[0].members.map((m) => m.name), ['김준영', '용병A']);
+  assert.equal(M2.snapshotSquad({ teams: 2, picked: [], guests: [], assign: {} }, players).ok, false);
 });

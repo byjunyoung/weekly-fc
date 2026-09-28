@@ -9,7 +9,7 @@ import { avatarFaceSvg } from '../../components/avatar';
 import { saveMatch } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
 import { seoulToday } from '../../lib/html';
-import { fromMatch, matchLabel, snapshot } from '../../lib/matches';
+import { fromMatch, matchLabel, snapshot, snapshotSquad } from '../../lib/matches';
 import * as T from '../../lib/teams';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
@@ -33,6 +33,10 @@ function Teams() {
   const [editId, setEditId] = useState<number | null>(null);
   useEffect(() => { const n = Number(new URLSearchParams(location.search).get('edit')); if (Number.isInteger(n) && n > 0) setEditId(n); }, []);
   const [editing, setEditing] = useState<{ id: number; date: string } | null>(null);
+  // 자체전 / 상대팀전(2026-09-28). 상대팀전은 온 사람 전부가 우리 팀 하나 — 조끼 나누기는 안 쓴다.
+  const [kind, setKind] = useState<'internal' | 'external'>('internal');
+  const [opponent, setOpponent] = useState('');
+  const external = kind === 'external';
 
   // 초안은 명단과 무관하게 한 번만 불러온다 — 예전엔 명단을 기다렸다 그걸로 걸렀는데,
   // 첫 값이 비었거나 낡으면 초안이 잘린 채 저장됐다(2026-09-22 리뷰). 안 온 사람을 거르는 건
@@ -44,6 +48,8 @@ function Teams() {
     if (!m) { message.error('그 매치를 찾지 못했습니다'); return; }
     setSt(fromMatch(m, data.players));
     setDate(m.date);
+    setKind(m.opponent ? 'external' : 'internal');
+    setOpponent(m.opponent);
     setEditing({ id: m.id, date: m.date });
     setPicked(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,7 +64,7 @@ function Teams() {
   if (!data) return <Loading title="팀짜기" />;
 
   const players = data.players;
-  const snap = snapshot(st, players);   // 저장 가능 여부(안 정한 사람 없음·팀 둘 이상)
+  const snap = external ? snapshotSquad(st, players) : snapshot(st, players);   // 저장 가능 여부(자체전: 안 정한 사람 없음·팀 둘 이상)
   const views = T.teamViews(st, players);
   const rest = T.unassigned(st, players);
   const total = T.membersOf(st, players).length;
@@ -69,7 +75,7 @@ function Teams() {
     commit((prev) => T.addGuest(prev, `${Date.now().toString(36)}`, name));
     setGuestName('');
   }
-  function onMemberTap(key: string): void { setPicked(picked === key ? null : key); }
+  function onMemberTap(key: string): void { if (external) return; setPicked(picked === key ? null : key); }   // 상대팀전엔 옮길 팀이 없다
   function onTeamTap(team: number | null): void {
     if (picked == null) return;
     commit((prev) => T.moveTo(prev, picked, team));
@@ -79,10 +85,11 @@ function Teams() {
   async function onSaveMatch(): Promise<void> {
     if (!snap.ok) { message.info(snap.error); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { message.info('날짜를 골라 주세요'); return; }
+    if (external && !opponent.trim()) { message.info('상대팀 이름을 넣어 주세요'); return; }
     const run = async () => {
       setSaving(true);
       try {
-        await saveMatch(date, snap.lineup);
+        await saveMatch(date, snap.lineup, null, external ? opponent.trim() : '');
         message.success(`${matchLabel(date)} 매치에 저장했습니다`);
         location.href = href('/matches/');   // 매치 탭의 기능이니 저장하면 목록으로 돌아간다
       } catch (e) { message.error((e as Error).message); }
@@ -108,18 +115,23 @@ function Teams() {
   return (
     <>
       <div className="page-head">
-        <h1>{editing ? `${matchLabel(editing.date)} 팀 수정` : '팀짜기'} <span className="muted">{total}명</span></h1>
+        <h1>{editing ? `${matchLabel(editing.date)} 매치 수정` : external ? '상대팀 매치' : '팀짜기'} <span className="muted">{total}명</span></h1>
         <div className="actions">
           <Button onClick={() => { location.href = href('/matches/'); }}>매치 목록</Button>
         </div>
       </div>
 
+      <div className="bd-controls" role="group" aria-label="매치 종류">
+        <Segmented value={kind} onChange={(v) => { setPicked(null); setKind(v as 'internal' | 'external'); }}
+          options={[{ label: '자체전', value: 'internal' }, { label: '상대팀전', value: 'external' }]} />
+        {external && <span className="muted">온 사람 전부가 우리 팀 하나로 뜁니다</span>}
+      </div>
       <div className="bd-controls" role="group" aria-label="팀 나누기 설정">
-        <div className="bd-field"><span className="label">팀</span>
+        {!external && <div className="bd-field"><span className="label">팀</span>
           <Segmented value={st.teams} onChange={(v) => { setPicked(null); commit((prev) => T.setTeams(prev, Number(v))); }}
             options={Array.from({ length: T.MAX_TEAMS - T.MIN_TEAMS + 1 }, (_, i) => T.MIN_TEAMS + i)} />
-        </div>
-        <Button onClick={() => { setPicked(null); commit((prev) => T.autoBalance(prev, players, Math.random)); }}>자동 배치</Button>
+        </div>}
+        {!external && <Button onClick={() => { setPicked(null); commit((prev) => T.autoBalance(prev, players, Math.random)); }}>자동 배치</Button>}
         <label className="bd-field"><span className="label">용병</span>
           <Input className="w-search" placeholder="이름 (예: 오준 용병+2)" value={guestName} maxLength={20}
             onChange={(e) => setGuestName(e.target.value)} onPressEnter={onAddGuest} />
@@ -131,11 +143,22 @@ function Teams() {
           <label className="bd-field"><span className="label">날짜</span>
             <Input type="date" className="w-date" value={date} max="2099-12-31" onChange={(e) => setDate(e.target.value)} />
           </label>
+          {external && (
+            <label className="bd-field"><span className="label">상대팀</span>
+              <Input className="w-search" placeholder="예: FC 강남" value={opponent} maxLength={30} onChange={(e) => setOpponent(e.target.value)} />
+            </label>
+          )}
           <Button onClick={onSaveMatch} loading={saving}>매치로 저장</Button>
-          <span className="muted tm-save-hint">그날 팀 구성이 매치 탭에 남고, 뛴 사람들이 POTM 을 뽑습니다</span>
+          <span className="muted tm-save-hint">{external ? '스코어는 경기 뒤 매치 목록에서 넣습니다 · 뛴 사람들이 POTM 을 뽑습니다' : '그날 팀 구성이 매치 탭에 남고, 뛴 사람들이 POTM 을 뽑습니다'}</span>
         </div>
       )}
 
+      {external ? (
+        <section className="tm-team tm-squad">
+          <div className="tm-head"><b>우리 팀</b><span className="muted">{total}명{opponent.trim() ? ` · vs ${opponent.trim()}` : ''}</span></div>
+          <div className="tm-chips">{T.membersOf(st, players).map(chip)}</div>
+        </section>
+      ) : (<>
       <p className="muted tm-hint" aria-live="polite">
         {picked ? '옮길 팀을 누르세요 · 다시 누르면 취소' : '이름을 누르고 팀을 누르면 옮겨집니다'}
         {editing && <> · 저장된 매치를 불러왔습니다. [매치로 저장]을 누르면 그 매치가 이걸로 바뀝니다(표는 남습니다)</>}
@@ -168,6 +191,8 @@ function Teams() {
         </button>
         <div className="tm-chips">{rest.map(chip)}</div>
       </section>
+
+      </>)}
 
       <div className="card tm-roster">
         <h2>온 사람 고르기</h2>
