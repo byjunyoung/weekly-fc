@@ -58,6 +58,9 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
         <h2>{M.matchLabel(m.date, year)}{ext && <span className="mt-vs"> vs {m.opponent}</span>}</h2>
         <div className="card-head-act">
           {M.voteOpen(m, today) && <Button size="small" type="primary" href={href(`/matches/potm/?m=${m.id}`)}>🏆 POTM 투표</Button>}
+          {/* 경기 영상(2026-09-28) — 링크는 /weekly-fc 스킬이 유튜브 게시 직후 자동으로 건다. 손으로 넣는 칸은 두지 않는다
+              (2026-09-25 "일일이 넣기 번거롭다"로 걷었던 입력 UI). */}
+          {M.isVideoUrl(m.video) && <Button size="small" href={m.video} target="_blank" rel="noopener">▶ 영상</Button>}
           {!ext && <Button size="small" onClick={() => onTeamsImage(m)}>이미지 저장</Button>}
           {admin && ext && <Button size="small" onClick={() => setScoring((x) => !x)}>{res ? '스코어 고치기' : '스코어 입력'}</Button>}
           {admin && <Button size="small" onClick={() => { location.href = href(`/matches/new/?edit=${m.id}`); }}>{ext ? '명단 수정' : '팀 수정'}</Button>}
