@@ -181,6 +181,13 @@ export async function write(action: string, payload: unknown): Promise<Raw> {
   await refresh();
   return r;
 }
+/** 배치 대결 결과(2026-09-28) — 여섯 항목을 한 번에. 관리자만, 기록엔 via = 'place' 로 남는다. */
+export async function placePlayer(num: number, stats: Record<StatKey, number>): Promise<void> {
+  if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
+  await rpc('place_player', { p_num: num, p_stats: stats });
+  if (inflight) await inflight.catch(() => {});
+  await refresh();
+}
 export async function fetchFull(): Promise<Data> { return normalizeData(await rpc('get_all_full')); }
 
 /** 대결 한 판의 서버 응답(public.vote). */

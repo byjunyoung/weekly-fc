@@ -2,7 +2,7 @@
 //
 // 카드 하나가 매치 하루. 팀은 팀짜기와 같은 칩 모양으로(같은 손버릇), POTM 은 맨 위에 아바타로.
 // 투표는 그날 뛴 로그인 회원만 — 못 누르는 이유는 lib 가 정한 한 줄을 그대로 보여 준다.
-import { App, Button, Modal } from 'antd';
+import { App, Button, Popconfirm } from 'antd';
 import { useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
@@ -31,12 +31,11 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
   const nameOf = (num: number): string => M.attendees(m).find((x) => x.num === num)?.name ?? players.find((p) => p.num === num)?.name ?? `${num}번`;
   const year = Number(today.slice(0, 4));
 
-  function onDelete(): void {
-    Modal.confirm({
-      title: `${M.matchLabel(m.date, year)} 매치를 지울까요?`, content: '팀 구성과 POTM 표가 함께 사라집니다.',
-      okText: '지우기', okButtonProps: { danger: true }, cancelText: '취소',
-      onOk: async () => { try { await deleteMatch(m.id); message.success('지웠습니다'); } catch (e) { message.error((e as Error).message); } },
-    });
+  // 지우기 확인은 다른 관리자 삭제(선수·벌금·방명록)와 같은 Popconfirm 으로(2026-09-28 일관성 정리).
+  const [deleting, setDeleting] = useState(false);
+  async function onDelete(): Promise<void> {
+    setDeleting(true);
+    try { await deleteMatch(m.id); message.success('지웠습니다'); } catch (e) { message.error((e as Error).message); } finally { setDeleting(false); }
   }
 
   return (
@@ -47,7 +46,11 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
           {M.voteOpen(m, today) && <Button size="small" type="primary" href={href(`/matches/potm/?m=${m.id}`)}>🏆 POTM 투표</Button>}
           <Button size="small" onClick={() => onTeamsImage(m)}>이미지 저장</Button>
           {admin && <Button size="small" onClick={() => { location.href = href(`/matches/new/?edit=${m.id}`); }}>팀 수정</Button>}
-          {admin && <Button size="small" danger onClick={onDelete}>삭제</Button>}
+          {admin && (
+            <Popconfirm title="이 매치를 지울까요?" description="팀 구성과 POTM 표가 함께 사라집니다." okText="삭제" cancelText="취소" okButtonProps={{ danger: true, loading: deleting }} onConfirm={onDelete}>
+              <Button size="small" danger loading={deleting}>삭제</Button>
+            </Popconfirm>
+          )}
         </div>
       </div>
 

@@ -26,3 +26,16 @@ export function nextFreeNum(players: Player[]): number {
   while (used.has(n)) n++;
   return n;
 }
+
+/** 포지션 칩 — 빈 값은 '미정'. */
+export const POS_OPTIONS: Array<{ label: string; value: Player['pos'] }> = [
+  { label: '미정', value: '' }, { label: 'GK', value: 'GK' }, { label: 'DF', value: 'DF' }, { label: 'MF', value: 'MF' }, { label: 'FW', value: 'FW' },
+];
+
+/** 추가 모달 값 → 새 선수(2026-09-28). 능력치는 0(= 배치 전 — 티어표·라이벌·대결이 알아서 뺀다),
+ *  봉사 순번은 지금 최댓값 + 1 이라 봉사표 자동 계산 맨 뒤에 선다. */
+export function newPlayer(players: Player[], v: { name: string; num: number; pos: Player['pos']; foot: string }): Player {
+  const rot = Math.max(0, ...players.map((p) => p.rot ?? 0)) + 1;
+  return { num: v.num, name: v.name.trim(), pos: v.pos, detail: '', foot: v.foot, vest: null, note: '', rot, avatar: '', phone: '',
+    pace: 0, dribble: 0, pass: 0, shoot: 0, defend: 0, stamina: 0 };
+}

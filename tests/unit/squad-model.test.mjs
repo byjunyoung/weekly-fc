@@ -48,3 +48,11 @@ test('nextFreeNum: 비어 있는 가장 작은 번호', () => {
   assert.equal(nextFreeNum([P(1, '가'), P(2, '나'), P(4, '다')]), 3);
   assert.equal(nextFreeNum([]), 1);
 });
+
+test('newPlayer — 능력치 0(배치 전), 봉사 순번은 맨 뒤', async () => {
+  const { newPlayer } = await import('../../src/react/squad/model.ts');
+  const p = newPlayer([P(1, 'a', { rot: 3 }), P(2, 'b', { rot: null })], { name: ' 새사람 ', num: 7, pos: 'FW', foot: '왼발' });
+  assert.equal(p.name, '새사람');
+  assert.equal(p.rot, 4);
+  assert.equal(p.pace + p.stamina, 0);
+});
