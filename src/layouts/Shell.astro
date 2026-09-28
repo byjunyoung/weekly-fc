@@ -46,6 +46,33 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
   <!-- antd 부품 CSS — prebuild 가 테마를 넣어 뽑는다. 화면은 zeroRuntime 이라 이게 첫 페인트의 antd 스타일 전부다. -->
   <link rel="stylesheet" href={href('/antd.css')} />
   <slot name="head" />
+  <!-- 배포 직후 옛 페이지 구하기(2026-09-29 "명단이 무한 로딩"). GitHub Pages 는 HTML 을 10분 저장해 두는데, 배포마다 화면 코드
+       파일 이름(해시)이 바뀌어 옛 HTML 이 없어진 파일을 부르면 섬이 붙지 못하고 "불러오는 중"에 멈춘다. 페이지가 열리면 첫 섬의
+       코드 파일이 서버에 있는지 한 번 보고, 404 면 주소에 ?v= 를 붙여 **한 번만** 새로 받는다(같은 경로는 세션에 한 번).
+       별도 파일로 두면 그 파일도 옛 이름이라 같이 404 가 나므로 여기 인라인으로 둔다. -->
+  <script is:inline>
+    (function () {
+      try {
+        var KEY = 'wfc_stale_reload';
+        document.addEventListener('DOMContentLoaded', function () {
+          var island = document.querySelector('astro-island[component-url]');
+          var u = new URL(location.href);
+          if (!island) return;
+          fetch(island.getAttribute('component-url'), { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+            if (r.status !== 404) {
+              sessionStorage.removeItem(KEY);
+              if (u.searchParams.has('v')) { u.searchParams.delete('v'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
+              return;
+            }
+            if (sessionStorage.getItem(KEY) === location.pathname) return;
+            sessionStorage.setItem(KEY, location.pathname);
+            u.searchParams.set('v', Date.now().toString(36));
+            location.replace(u.toString());
+          }).catch(function () {});
+        });
+      } catch (e) { /* 저장소가 막힌 브라우저 — 손으로 새로고침 */ }
+    })();
+  </script>
 </head>
 <body class:list={[{ wide }]}>
   <header class="topbar">
