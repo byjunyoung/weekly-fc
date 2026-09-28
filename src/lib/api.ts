@@ -309,16 +309,33 @@ export async function fetchTodayStats(): Promise<TodayStats> {
   const r = await rpc('today_stats');
   return { visitors: num(r.visitors), members: num(r.members), duels: num(r.duels), guestbook: num(r.guestbook), potm: num(r.potm) };
 }
-/** 방문 한 번 — 기기마다 하루 한 번만 보낸다(기기 id 는 이 브라우저가 만든 난수, 누구인지 알 수 없다).
- *  실패해도 화면엔 아무 영향이 없게 조용히 넘긴다. 로그인 중이면 서버가 선수 번호를 같이 남긴다. */
+/** 페이지를 볼 때마다 한 번 — 서버는 기기·하루 한 줄에 페이지뷰를 더한다(관리자 통계, 2026-09-28).
+ *  기기 id 는 이 브라우저가 만든 난수라 누구인지 알 수 없다. 로그인 중이면 서버가 선수 번호를 같이 남긴다.
+ *  실패해도 화면엔 아무 영향이 없게 조용히 넘긴다. */
 export function hit(): void {
   try {
-    const day = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
-    if (localStorage.getItem('wfc_hit_day') === day) return;
     let dev = localStorage.getItem('wfc_device');
     if (!dev) { dev = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join(''); localStorage.setItem('wfc_device', dev); }
-    rpc('hit', { p_device: dev }).then(() => { try { localStorage.setItem('wfc_hit_day', day); } catch { /* 다음에 다시 */ } }).catch(() => {});
+    rpc('hit', { p_device: dev }).catch(() => {});
   } catch { /* 저장소가 막힌 브라우저 — 세지 않는다 */ }
+}
+
+// ── 관리자 통계 (2026-09-28) ─────────────────────────────────
+export type StatDay = { day: string; devices: number; members: number; views: number; duels: number };
+export type StatPerson = { num: number; name: string; claimedAt: string | null; lastVisit: string | null; visitDays: number; views: number;
+  duels: number; duels7d: number; lastDuel: string | null; guestbook: number; potmVotes: number };
+export type AdminStats = { today: string; days: StatDay[]; people: StatPerson[] };
+export async function fetchAdminStats(): Promise<AdminStats> {
+  const r = await rpc('admin_stats');
+  const arr = (v: unknown): Raw[] => (Array.isArray(v) ? (v as Raw[]) : []);
+  const str = (v: unknown): string | null => (v == null || v === '' ? null : String(v));
+  return {
+    today: String(r.today ?? ''),
+    days: arr(r.days).map((d) => ({ day: String(d.day ?? ''), devices: num(d.devices), members: num(d.members), views: num(d.views), duels: num(d.duels) })),
+    people: arr(r.people).map((p) => ({ num: num(p.num), name: String(p.name ?? ''), claimedAt: str(p.claimed_at), lastVisit: str(p.last_visit),
+      visitDays: num(p.visit_days), views: num(p.views), duels: num(p.duels), duels7d: num(p.duels_7d), lastDuel: str(p.last_duel),
+      guestbook: num(p.guestbook), potmVotes: num(p.potm_votes) })),
+  };
 }
 
 /** 상대팀 매치 스코어(관리자, 2026-09-28). 둘 다 null 이면 지운다. */

@@ -9,6 +9,7 @@ import { adminOn, cachedMe, logout, sendCode, setAdminOn, verifyCode, type Me } 
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 import { adminLabel, meLabel, pickOrder } from './labels';
+import { href } from '../../lib/url';
 
 type Step = 'email' | 'code' | 'claim' | 'account';
 
@@ -101,6 +102,8 @@ function Actions() {
       {me.admin && (
         <Button size="small" id="admin-btn" type={on ? 'primary' : 'default'} onClick={() => setAdminOn(!on)}>{adminLabel(on)}</Button>
       )}
+      {/* 관리자 통계(2026-09-28) — 관리자 모드를 켰을 때만 상단에 */}
+      {me.admin && on && <Button size="small" href={href('/stats/')}>통계</Button>}
 
       <Modal title={title} open={open} width={460} onCancel={() => setOpen(false)} destroyOnHidden
         footer={step === 'email' ? [

@@ -987,3 +987,16 @@ details.year[open] > summary::before { content: "▾ "; }
 .mt-record { margin: 0 0 var(--s-sm); font-size: var(--fs-sm); }
 .mt-record b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .tm-squad .tm-head { cursor: default; }
+/* ── 관리자 통계(2026-09-28) ── 요약 넷, 날짜별 막대 둘(단위가 달라 따로), 선수별 표. 막대는 선 차트와 같은 --link 하나. */
+.st-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-sm); }
+.st-kpi { display: flex; flex-direction: column; gap: 2px; }
+.st-kpi b { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.1; }
+.st-kpi .muted { font-size: var(--fs-xs); }
+.st-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-sm); }
+.st-chart svg { display: block; max-width: 100%; touch-action: pan-y; }
+.st-bar { fill: var(--link); opacity: .75; }
+.st-bar.is-on { opacity: 1; }
+.st-note { margin: 0; font-size: var(--fs-xs); }
+.st-act-hot { color: var(--val-a); } .st-act-week { color: var(--fg); } .st-act-month { color: var(--muted); } .st-act-none { color: var(--muted); }
+.st-chips { display: flex; flex-wrap: wrap; gap: var(--s-xxs); margin: 0; }
+@media (max-width: 899px) { .st-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .st-charts { grid-template-columns: 1fr; } }
