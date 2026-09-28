@@ -1,6 +1,6 @@
 // 라커룸(홈, 2026-09-28 "홈을 라커룸이라고 정의") — 왼쪽 절반이 「내 선수」 칸(내 아바타), 오른쪽에 타일 격자(antd Card).
 import { Card } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { jerseySvg } from '../../components/jersey';
 import { avatarSpecFor } from '../../lib/avatar';
@@ -73,8 +73,25 @@ function neighbors(players: Player[], num: number | null): [Player | undefined, 
  *  "등번호 보이는 게 멋있다" + "카드도 볼 수 있게"(2026-09-28) 둘을 한 자리에서. */
 function MyLocker({ player, card }: { player: Player; card: ReactNode }) {
   const [flipped, setFlipped] = useState(false);
+  // 카드 크기 맞추기 — 칸 폭은 화면마다 달라 고정 배율로는 좌우 테두리가 잘렸다(2026-09-28 "양옆이 짤린다").
+  // 칸(버튼) 크기와 카드 원래 크기(offset 은 transform 을 무시한다)를 재서, 여백 12px 을 두고 들어가는 배율을 건다.
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const box = ref.current;
+    const fcard = box?.querySelector<HTMLElement>('.lk-back .fcard');
+    if (!box || !fcard) return;
+    const fit = () => {
+      const s = Math.min(1, (box.clientWidth - 24) / fcard.offsetWidth, (box.clientHeight - 24) / fcard.offsetHeight);
+      if (s > 0) fcard.style.setProperty('--card-s', s.toFixed(3));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(box);
+    ro.observe(fcard);   // 도트 폰트가 늦게 붙어 카드 크기가 바뀌어도 다시 잰다
+    return () => ro.disconnect();
+  }, []);
   return (
-    <button type="button" className={`lk-flip${flipped ? ' is-flipped' : ''}`} aria-pressed={flipped}
+    <button type="button" ref={ref} className={`lk-flip${flipped ? ' is-flipped' : ''}`} aria-pressed={flipped}
       aria-label={flipped ? '유니폼으로 돌리기' : '선수 카드 보기'} onClick={() => setFlipped((x) => !x)}>
       <span className="lk-face lk-front"><Jersey p={player} /></span>
       <span className="lk-face lk-back">{card}</span>
@@ -82,14 +99,14 @@ function MyLocker({ player, card }: { player: Player; card: ReactNode }) {
   );
 }
 
-function LinkTile({ to, wide, children }: { to: string; wide?: boolean; children: ReactNode }) {
+function LinkTile({ to, children }: { to: string; children: ReactNode }) {
   const isExternal = to.startsWith('http');
   // 부모 <a> 는 display:contents 라 포커스를 받을 수 없다(CSS 스펙 — 박스 없는 요소는 포커스 대상이 될 수 없다).
   // 마우스 클릭은 그대로 <a> 가 처리하고(그대로 둔다), 키보드는 Card 자신에 얹는다 — 이름을 안 고른 라커룸(버튼)과 같은 패턴.
   const go = () => { if (isExternal) window.open(to, '_blank', 'noopener'); else location.assign(to); };
   return (
     <a href={to} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener' : undefined} style={{ display: 'contents' }}>
-      <Card className={wide ? 'tile tile-wide' : 'tile'} variant="borderless" style={TILE_STYLE} styles={TILE_BODY}
+      <Card className="tile" variant="borderless" style={TILE_STYLE} styles={TILE_BODY}
         role="link" tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}>
         {children}
@@ -152,11 +169,13 @@ function App() {
           : <EmptyMeTile onOpen={openMe} side={side} />}
         <LinkTile to={href('/squad/')}><span className="tile-label">명단</span><b className="tile-big">{s.squadCount}</b><span className="tile-sub">{s.posSummary}</span></LinkTile>
         <LinkTile to={href('/lineup/')}><span className="tile-label">라인업</span><b className="tile-big">짜서 공유</b><span className="tile-sub">선수를 골라 자리 잡고 이미지로</span></LinkTile>
-        <LinkTile to={href('/rules/#duty')}><span className="tile-label">{s.duty.monthLabel} 봉사</span>{dutyBody(s.duty)}</LinkTile>
-        <LinkTile to={href('/rules/#duty')}><span className="tile-label">다음 봉사</span>{dutyBody(s.dutyNext)}</LinkTile>
-        {/* 미납 벌금 타일은 뺐다 — 벌금은 운영 규칙에서만 본다(2026-09-23 사용자 결정). 다섯 칸이 되어
-            마지막 타일을 두 칸 폭으로 펴 격자의 구멍을 메운다. */}
-        <LinkTile to={LINKS.youtube} wide><span className="tile-label">매치 영상</span><b className="tile-big">유튜브</b><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span></LinkTile>
+        {/* 봉사는 이번 달·다음 달 두 칸이던 걸 한 칸으로(2026-09-28 "봉사에 영역을 너무 많이 배정"). 다음 달은 아래 한 줄. */}
+        <LinkTile to={href('/rules/#duty')}>
+          <span className="tile-label">{s.duty.monthLabel.replace(/^\d+년 /, '')} 봉사</span>{dutyBody(s.duty)}
+          <span className="tile-sub">다음 {s.dutyNext.monthLabel.replace(/^\d+년 /, '')} {s.dutyNext.p1} · {s.dutyNext.p2}</span>
+        </LinkTile>
+        {/* 미납 벌금 타일은 뺐다 — 벌금은 운영 규칙에서만 본다(2026-09-23 사용자 결정). */}
+        <LinkTile to={LINKS.youtube}><span className="tile-label">매치 영상</span><b className="tile-big">유튜브</b><span className="tile-sub">채널에서 보기 · 매주 토요일 기록</span></LinkTile>
       </div>
     </>
   );
