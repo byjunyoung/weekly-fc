@@ -1,4 +1,4 @@
-// 홈 대시보드 — 왼쪽 절반이 라커룸(내 아바타), 오른쪽에 타일 격자(antd Card).
+// 라커룸(홈, 2026-09-28 "홈을 라커룸이라고 정의") — 왼쪽 절반이 「내 선수」 칸(내 아바타), 오른쪽에 타일 격자(antd Card).
 import { Card } from 'antd';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -59,7 +59,7 @@ function EmptyMeTile({ onOpen }: { onOpen: () => void }) {
     <Card className="tile tile-locker" variant="borderless" style={LOCKER_STYLE} styles={TILE_BODY}
       role="button" tabIndex={0} onClick={onOpen}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}>
-      <span className="tile-label">라커룸</span>
+      <span className="tile-label">내 선수</span>
       <LockerStage>
         <div className="locker-sprite" aria-hidden="true" dangerouslySetInnerHTML={{ __html: avatarSvg(PLACEHOLDER_SPEC, LOCKER_SPRITE_H, undefined, true) }} />
         <span className="locker-plate locker-plate-empty">로그인하면 내 선수가 섭니다</span>
@@ -82,7 +82,7 @@ function App() {
   }, []);
   const openMe = () => window.dispatchEvent(new Event('wfc:open-me'));
 
-  if (!data) return <Loading title="홈" />;
+  if (!data) return <Loading title="라커룸" />;
 
   const s = computeHomeSummary(data, me, new Date());
   const meNum = s.meTile.kind === 'picked' ? s.meTile.num : null;
@@ -92,12 +92,12 @@ function App() {
 
   return (
     <>
-      <div className="page-head"><h1>홈 <span className="muted" id="stamp">{s.stamp}</span></h1><div className="actions" /></div>
+      <div className="page-head"><h1>라커룸 <span className="muted" id="stamp">{s.stamp}</span></h1><div className="actions" /></div>
       <div className="rail">
         {s.meTile.kind === 'picked' && mePlayer
           ? (
             <LinkTile to={href(`/squad/${s.meTile.num}/`)} locker>
-              <span className="tile-label">라커룸</span>
+              <span className="tile-label">내 선수</span>
               <LockerStage>
                 <PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />
               </LockerStage>
