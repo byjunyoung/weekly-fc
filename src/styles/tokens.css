@@ -953,7 +953,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .sh-dot { fill: var(--link); stroke: var(--card); stroke-width: 2; }
 .sh-cross { stroke: var(--hairline-strong); stroke-width: 1; }
 .sh-tip { min-height: 1.6em; margin: var(--s-xxs) 0 0; font-size: var(--fs-xs); }
-.sh-tip b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; }
+.sh-tip b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .sh-judges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-xs); margin-top: var(--s-md); }
 .sh-judge { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; align-items: baseline; gap: 2px var(--s-xs);
   padding: var(--s-sm); border: 2px solid var(--line); color: var(--fg); text-decoration: none; }
