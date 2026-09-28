@@ -1,7 +1,8 @@
 // 상단바 오른쪽 — 로그인(이메일 코드)·이름 차지·관리자 버튼, 토스트(window.wfcToast).
 // 2026-09-24 본인인증: 자칭 "나" 고르기와 관리자 PIN 을 걷고 로그인으로 바꿨다. 설계: specs/2026-09-24-email-auth-design.md
 // 옛 화면이 듣는 wfc:me · wfc:admin 은 auth.ts 가 계속 보낸다. 홈 「라커룸」 빈 자리는 wfc:open-me 로 이 창을 연다.
-import { App, Button, Input, Modal } from 'antd';
+import { App, Button, Dropdown, Input, Modal } from 'antd';
+import type { MenuProps } from 'antd';
 import type { InputRef } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { claim, claimedNums, refreshMe } from '../../lib/api';
@@ -94,16 +95,30 @@ function Actions() {
   const onLogout = () => run(async () => { await logout(); setOpen(false); });
 
   const label = !me.login ? '로그인' : me.num ? meLabel(players, me.num) : '이름 고르기';
+  const adminMenu: MenuProps['items'] = [
+    { key: 'admin', label: adminLabel(on) },
+    { key: 'stats', label: '통계' },
+    { type: 'divider' },
+    { key: 'account', label: '내 계정' },
+  ];
+  const onAdminMenu: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'admin') { setAdminOn(!on); message.success(on ? '관리자 모드를 껐습니다' : '관리자 모드를 켰습니다'); }
+    else if (key === 'stats') { if (!on) setAdminOn(true); location.href = href('/stats/'); }
+    else openFlow();
+  };
   const title = step === 'email' || step === 'code' ? '로그인' : step === 'claim' ? '나는 누구?' : '내 계정';
 
   return (
     <>
-      <Button size="small" id="me-btn" onClick={openFlow}>{label}</Button>
-      {me.admin && (
-        <Button size="small" id="admin-btn" type={on ? 'primary' : 'default'} onClick={() => setAdminOn(!on)}>{adminLabel(on)}</Button>
+      {/* 관리자는 이름을 누르면 작은 메뉴(2026-09-28 "관리자 모드는 김준영 눌렀을 때") — 관리자 전환·통계·내 계정이 한 곳에.
+          관리자 모드가 켜져 있으면 이름 버튼이 파랗다. 팀원은 전처럼 누르면 바로 내 계정 창. */}
+      {me.admin ? (
+        <Dropdown trigger={['click']} placement="bottomRight" menu={{ items: adminMenu, onClick: onAdminMenu }}>
+          <Button size="small" id="me-btn" type={on ? 'primary' : 'default'}>{label}{on ? ' · 관리자' : ''} ▾</Button>
+        </Dropdown>
+      ) : (
+        <Button size="small" id="me-btn" onClick={openFlow}>{label}</Button>
       )}
-      {/* 관리자 통계(2026-09-28) — 관리자 모드를 켰을 때만 상단에 */}
-      {me.admin && on && <Button size="small" href={href('/stats/')}>통계</Button>}
 
       <Modal title={title} open={open} width={460} onCancel={() => setOpen(false)} destroyOnHidden
         footer={step === 'email' ? [

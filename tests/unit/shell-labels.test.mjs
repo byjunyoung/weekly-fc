@@ -10,7 +10,7 @@ test('meLabel: 고른 번호의 이름, 없거나 명단에 없으면 "이름"',
 });
 test('adminLabel', () => {
   assert.equal(adminLabel(true), '관리자 모드 끄기');
-  assert.equal(adminLabel(false), '관리자');
+  assert.equal(adminLabel(false), '관리자 모드 켜기');
 });
 test('pickOrder 는 번호순이고 원본을 바꾸지 않는다', () => {
   const src = [P(9, '박'), P(2, '이'), P(7, '김')];

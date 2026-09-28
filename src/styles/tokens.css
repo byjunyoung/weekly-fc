@@ -1001,6 +1001,17 @@ details.year[open] > summary::before { content: "▾ "; }
 .st-chips { display: flex; flex-wrap: wrap; gap: var(--s-xxs); margin: 0; }
 @media (max-width: 899px) { .st-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .st-charts { grid-template-columns: 1fr; } }
 
-/* 관리자 모드면 상단 버튼이 셋(이름·관리자·통계)이라 폰 폭 한 줄에 안 들어간다 — 버튼끼리 줄을 넘긴다(2026-09-28).
+/* 폰 폭에서 상단 오른쪽 버튼이 넘치면 줄을 넘긴다(2026-09-28 — 관리자 버튼들은 이름 메뉴로 모였지만 긴 이름·로그인 문구 대비).
    699px 규칙의 height: 56px 보다 뒤에 둬야 이긴다. */
 @media (max-width: 459px) { .topbar-act { flex-wrap: wrap; justify-content: flex-end; max-width: 100%; height: auto; min-height: 56px; row-gap: var(--s-xxs); padding-block: var(--s-xxs); } }
+/* 불러오는 중 — 도트 축구공(2026-09-28). 위아래로 튀고(바닥에서 살짝 찌그러짐) 90°씩 끊어 돈다 — 도트라 매끈한 회전보다 계단이 어울린다.
+   그림자는 공이 높을수록 작고 옅다. 움직임 줄이기면 멈춘 공만. */
+.loading { display: flex; flex-direction: column; align-items: center; gap: var(--s-xs); padding: var(--s-xl) 0; }
+.loading-ball { display: block; animation: wfc-bounce .7s cubic-bezier(.33, 0, .66, 1) infinite alternate; transform-origin: 50% 100%; }
+.loading-spin { display: block; animation: wfc-spin 1.4s steps(4) infinite; }
+.loading-spin svg { display: block; }
+.loading-shadow { width: 40px; height: 6px; background: rgba(255, 255, 255, .14); animation: wfc-shadow .7s cubic-bezier(.33, 0, .66, 1) infinite alternate; }
+@keyframes wfc-bounce { 0% { transform: translateY(0) scale(1.12, .88); } 15% { transform: translateY(-6px) scale(1, 1); } 100% { transform: translateY(-40px); } }
+@keyframes wfc-spin { to { transform: rotate(360deg); } }
+@keyframes wfc-shadow { 0% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(.5); opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { .loading-ball, .loading-spin, .loading-shadow { animation: none; } }
