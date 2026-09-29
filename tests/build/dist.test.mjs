@@ -48,6 +48,14 @@ test('상단 탭은 홈·명단·라인업·매치·티어·전술·규칙·자�
   for (const l of ['라커룸', '명단', '라인업', '매치', '티어', '전술', '규칙', '자료']) assert.ok(html.includes(`<span>${l}</span>`), l);
   for (const l of ['스쿼드', '기록', '소개', '팀짜기']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
+test('푸터 — 셸 페이지마다 인스타·오픈카톡·유튜브 링크(2026-09-30)', () => {
+  for (const p of SHELL_PAGES) {
+    const html = read(p);
+    const foot = html.slice(html.indexOf('<footer class="site-foot"'));
+    assert.ok(foot.startsWith('<footer'), `${p}: 푸터 없음`);
+    for (const u of ['instagram.com/weeklyfootballclub', 'open.kakao.com/o/gQLPdm5f', 'youtube.com/@WEEKLYFC2020']) assert.ok(foot.includes(u), `${p}: ${u}`);
+  }
+});
 test('옛 /teams/ 는 /matches/new/ 로 넘긴다(카톡에 남은 링크)', () => {
   assert.ok(read('teams/index.html').includes('url=/weekly-fc/matches/new/'));
   // [팀 짜기] 버튼은 React 섬이 브라우저에서 그리므로 정적 HTML 엔 없다 — 페이지 존재는 PAGES 가 본다.

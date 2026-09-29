@@ -199,6 +199,15 @@ input:where(:not(.wfc, .wfc *)):focus, select:where(:not(.wfc, .wfc *)):focus, t
 .topbar-act { display: flex; align-items: center; gap: var(--s-xs); }
 .main { max-width: var(--max); margin: 0 auto; padding: var(--s-xl); }
 body.wide .main { max-width: none; padding: var(--s-md); }
+/* 푸터(2026-09-30) — 팀 채널 링크. 헤더처럼 가운데 폭에 맞추고, 위에 옅은 선 하나. */
+.site-foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-sm) var(--s-lg); max-width: var(--max); margin: var(--s-xl) auto 0; padding: var(--s-lg) var(--s-xl) var(--s-xl); border-top: 1px solid var(--hairline); }
+.foot-mark { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--fg); text-decoration: none; }
+.foot-mark b { font-weight: var(--fw-body); color: var(--muted); }
+.foot-links { display: flex; flex-wrap: wrap; gap: var(--s-md); }
+.foot-links a { color: var(--muted); text-decoration: none; }
+.foot-links a:hover { color: var(--fg); }
+.site-foot > .muted { margin-left: auto; }
+@media (max-width: 899px) { .site-foot { padding: var(--s-md); } .site-foot > .muted { margin-left: 0; flex-basis: 100%; } }
 
 /* 화면 머리 — 큰 가벼운 제목. 액센트 슬래브·기울임은 쓰지 않는다. */
 .page-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;

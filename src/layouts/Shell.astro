@@ -1,6 +1,7 @@
 ---
 import '../styles/tokens.css';
 import { href } from '../lib/url';
+import { LINKS, MATCH_TIME } from '../lib/rules';
 import TopbarActions from '../react/shell/TopbarActions.tsx';
 interface Props { title: string; index?: boolean; wide?: boolean; description?: string; ogImage?: string }
 const { title, index = false, wide = false, description = 'WEEKLY FC — 매주 모이는 풋살 팀의 포탈', ogImage = '/og.png' } = Astro.props;
@@ -91,6 +92,16 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
     <p class="warn load-err" id="load-err" hidden>데이터를 불러오지 못했습니다 · <button id="load-err-retry">다시 시도</button><button id="load-err-open" hidden>기본 브라우저로 열기</button></p>
     <slot />
   </main>
+  <!-- 푸터(2026-09-30 "최하단에 인스타·오픈채팅·유튜브 채널 다 적어두자") — 모든 페이지 공통. 주소는 lib/rules.ts LINKS 한 곳. -->
+  <footer class="site-foot">
+    <a class="foot-mark" href={href('/')}>WEEKLY<b>FC</b></a>
+    <nav class="foot-links" aria-label="팀 채널">
+      <a href={LINKS.instagram} target="_blank" rel="noopener">인스타그램</a>
+      <a href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡</a>
+      <a href={LINKS.youtube} target="_blank" rel="noopener">유튜브</a>
+    </nav>
+    <span class="muted">매주 {MATCH_TIME} · 성남 · 광주</span>
+  </footer>
 
   <script>
     import { hit, refresh } from '../lib/api';
