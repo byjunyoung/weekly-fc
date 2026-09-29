@@ -2,12 +2,12 @@
 // 위: 요약 숫자 넷. 가운데: 날짜별 막대 둘(방문 기기 · 대결 판수) — 단위가 달라 한 차트에 겹치지 않는다.
 // 아래: 선수별 표(계정 연결·최근 활동·방문·대결·방명록·POTM 표)와 아직 계정을 안 붙인 선수.
 // 방문 기록은 2026-09-28 부터 쌓인다 — 로그인 안 한 방문은 기기 수로만 잡히고 누구인지 모른다.
-import { Button, Table } from 'antd';
+import { Button, Segmented, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { fetchAdminStats, type AdminStats, type StatDay, type StatPerson } from '../../lib/api';
-import { ACTIVITY_KO, activityOf, ago, kpis, lastActive, type Activity } from '../../lib/adminStats';
+import { ACTIVITY_KO, activityOf, ago, kpis, lastActive, PERIODS, type Activity } from '../../lib/adminStats';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
@@ -64,17 +64,26 @@ function Stats() {
   const [s, setS] = useState<AdminStats | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const load = () => { setErr(null); fetchAdminStats().then((x) => { setS(x); setNow(Date.now()); }).catch((e) => setErr((e as Error).message)); };
-  useEffect(() => { if (admin) load(); }, [admin]);
+  // 기간 필터(2026-09-29 "기간 필터는 상단에") — 기본 7일. 표·요약·막대 전부 이 기간을 따른다.
+  const [period, setPeriod] = useState<string>('7일');
+  const days = PERIODS.find((p) => p.label === period)?.days ?? 7;
+  const load = () => { setErr(null); fetchAdminStats(days).then((x) => { setS(x); setNow(Date.now()); }).catch((e) => setErr((e as Error).message)); };
+  useEffect(() => { if (admin) load(); }, [admin, period]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const head = (
-    <div className="page-head"><h1>통계</h1><div className="actions">{admin && <Button onClick={load}>새로고침</Button>}</div></div>
+    <div className="page-head"><h1>통계</h1><div className="actions">{admin && (
+      <>
+        <Segmented className="chips" value={period} onChange={(v) => setPeriod(String(v))} options={PERIODS.map((p) => p.label)} />
+        <Button onClick={load}>새로고침</Button>
+      </>
+    )}</div></div>
   );
   if (!admin) return <>{head}<div className="card"><p className="muted">관리자 모드에서만 볼 수 있습니다.</p></div></>;
   if (err) return <>{head}<div className="card"><p className="muted">{err}</p></div></>;
   if (!s) return <Loading title="통계" />;
 
-  const k = kpis(s, now);
+  const k = kpis(s);
+  const pl = period === '오늘' ? '오늘' : period === '전체' ? '전체' : `최근 ${period}`;
   const people = [...s.people].sort((a, b) => (Date.parse(lastActive(b) ?? '0') || 0) - (Date.parse(lastActive(a) ?? '0') || 0) || a.num - b.num);
   const unclaimed = s.people.filter((p) => !p.claimedAt);
   const cols: TableColumnsType<StatPerson> = [
@@ -83,10 +92,9 @@ function Stats() {
       render: (_, p) => { const a: Activity = activityOf(p, now); return <span className={`st-act st-act-${a}`}>{a === 'none' && !lastActive(p) ? ACTIVITY_KO.none : ago(lastActive(p), now)}</span>; } },
     { title: '계정', key: 'claimed', sorter: (a, b) => Number(!!a.claimedAt) - Number(!!b.claimedAt),
       render: (_, p) => (p.claimedAt ? <span>연결</span> : <span className="muted">미연결</span>) },
-    { title: '방문일(30일)', dataIndex: 'visitDays', align: 'right', sorter: (a, b) => a.visitDays - b.visitDays },
-    { title: '페이지뷰(30일)', dataIndex: 'views', align: 'right', sorter: (a, b) => a.views - b.views },
+    { title: '방문일', dataIndex: 'visitDays', align: 'right', sorter: (a, b) => a.visitDays - b.visitDays },
+    { title: '페이지뷰', dataIndex: 'views', align: 'right', sorter: (a, b) => a.views - b.views },
     { title: '대결', dataIndex: 'duels', align: 'right', sorter: (a, b) => a.duels - b.duels },
-    { title: '대결(7일)', dataIndex: 'duels7d', align: 'right', sorter: (a, b) => a.duels7d - b.duels7d },
     { title: '방명록', dataIndex: 'guestbook', align: 'right', sorter: (a, b) => a.guestbook - b.guestbook },
     { title: 'POTM 표', dataIndex: 'potmVotes', align: 'right', sorter: (a, b) => a.potmVotes - b.potmVotes },
   ];
@@ -96,9 +104,9 @@ function Stats() {
       {head}
       <div className="stack">
         <div className="st-kpis">
-          <div className="card st-kpi"><span className="label">오늘 방문</span><b>{k.todayDevices}</b><span className="muted">기기 · 페이지뷰 {k.todayViews}</span></div>
-          <div className="card st-kpi"><span className="label">오늘 접속 팀원</span><b>{k.todayMembers}</b><span className="muted">로그인한 사람만</span></div>
-          <div className="card st-kpi"><span className="label">7일 활동 팀원</span><b>{k.active7}</b><span className="muted">/ {k.total}명 · 대결 {k.duels7}판</span></div>
+          <div className="card st-kpi"><span className="label">{pl} 방문</span><b>{k.devices}</b><span className="muted">기기 · 페이지뷰 {k.views}</span></div>
+          <div className="card st-kpi"><span className="label">{pl} 접속 팀원</span><b>{k.members}</b><span className="muted">로그인한 사람만</span></div>
+          <div className="card st-kpi"><span className="label">{pl} 활동 팀원</span><b>{k.active}</b><span className="muted">/ {k.total}명 · 대결 {k.duels}판</span></div>
           <div className="card st-kpi"><span className="label">계정 연결</span><b>{k.claimed}</b><span className="muted">/ {k.total}명 ({Math.round((k.claimed / Math.max(1, k.total)) * 100)}%)</span></div>
         </div>
 
@@ -113,7 +121,7 @@ function Stats() {
         <p className="muted st-note">방문 기록은 9/28부터 쌓입니다. 로그인 안 한 방문은 기기 수로만 잡혀 누구인지 모릅니다. 폰과 PC로 들어오면 기기 둘로 셉니다.</p>
 
         <div className="card">
-          <div className="card-head"><h2>선수별 현황</h2><span className="muted">최근 활동 순 · 머리를 누르면 정렬</span></div>
+          <div className="card-head"><h2>선수별 현황</h2><span className="muted">{pl} 기준 · 최근 활동 순 · 머리를 누르면 정렬</span></div>
           <Table<StatPerson> size="small" rowKey="num" pagination={false} columns={cols} dataSource={people} scroll={{ x: 'max-content' }} showSorterTooltip={false} />
         </div>
 

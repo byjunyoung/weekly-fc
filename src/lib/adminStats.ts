@@ -17,17 +17,17 @@ export function activityOf(p: StatPerson, nowMs: number): Activity {
   return d < 1 ? 'hot' : d < 7 ? 'week' : d < 30 ? 'month' : 'none';
 }
 
-export function kpis(s: AdminStats, nowMs: number) {
-  const today = s.days[s.days.length - 1];
-  const act = s.people.map((p) => activityOf(p, nowMs));
+/** 기간 필터(2026-09-29) — 값은 서버 p_days(null = 전체). */
+export const PERIODS: Array<{ label: string; days: number | null }> = [
+  { label: '오늘', days: 1 }, { label: '7일', days: 7 }, { label: '30일', days: 30 }, { label: '전체', days: null },
+];
+
+/** 요약 넷 — 방문·팀원·활동은 서버 기간 요약 그대로, 계정 연결은 기간과 무관. */
+export function kpis(s: AdminStats) {
   return {
-    todayDevices: today?.devices ?? 0,
-    todayMembers: today?.members ?? 0,
-    todayViews: today?.views ?? 0,
-    active7: act.filter((a) => a === 'hot' || a === 'week').length,
-    claimed: s.people.filter((p) => p.claimedAt).length,
-    total: s.people.length,
-    duels7: s.days.slice(-7).reduce((a, d) => a + d.duels, 0),
+    devices: s.summary.devices, members: s.summary.members, views: s.summary.views,
+    active: s.summary.active, duels: s.summary.duels,
+    claimed: s.people.filter((p) => p.claimedAt).length, total: s.people.length,
   };
 }
 

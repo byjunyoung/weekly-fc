@@ -324,17 +324,22 @@ export function hit(): void {
 // ── 관리자 통계 (2026-09-28) ─────────────────────────────────
 export type StatDay = { day: string; devices: number; members: number; views: number; duels: number };
 export type StatPerson = { num: number; name: string; claimedAt: string | null; lastVisit: string | null; visitDays: number; views: number;
-  duels: number; duels7d: number; lastDuel: string | null; guestbook: number; potmVotes: number };
-export type AdminStats = { today: string; days: StatDay[]; people: StatPerson[] };
-export async function fetchAdminStats(): Promise<AdminStats> {
-  const r = await rpc('admin_stats');
+  duels: number; lastDuel: string | null; guestbook: number; potmVotes: number };
+/** 기간 요약(서버 계산) — 방문 기기(서로 다른)·접속 팀원·페이지뷰·대결·활동 팀원(방문 또는 대결). */
+export type StatSummary = { devices: number; members: number; views: number; duels: number; active: number };
+export type AdminStats = { today: string; from: string; summary: StatSummary; days: StatDay[]; people: StatPerson[] };
+/** days: 1 = 오늘, 7, 30, null = 전체(2026-09-29 기간 필터). */
+export async function fetchAdminStats(days: number | null = 7): Promise<AdminStats> {
+  const r = await rpc('admin_stats', { p_days: days });
+  const sm = (r.summary ?? {}) as Raw;
   const arr = (v: unknown): Raw[] => (Array.isArray(v) ? (v as Raw[]) : []);
   const str = (v: unknown): string | null => (v == null || v === '' ? null : String(v));
   return {
-    today: String(r.today ?? ''),
+    today: String(r.today ?? ''), from: String(r.from ?? ''),
+    summary: { devices: num(sm.devices), members: num(sm.members), views: num(sm.views), duels: num(sm.duels), active: num(sm.active) },
     days: arr(r.days).map((d) => ({ day: String(d.day ?? ''), devices: num(d.devices), members: num(d.members), views: num(d.views), duels: num(d.duels) })),
     people: arr(r.people).map((p) => ({ num: num(p.num), name: String(p.name ?? ''), claimedAt: str(p.claimed_at), lastVisit: str(p.last_visit),
-      visitDays: num(p.visit_days), views: num(p.views), duels: num(p.duels), duels7d: num(p.duels_7d), lastDuel: str(p.last_duel),
+      visitDays: num(p.visit_days), views: num(p.views), duels: num(p.duels), lastDuel: str(p.last_duel),
       guestbook: num(p.guestbook), potmVotes: num(p.potm_votes) })),
   };
 }
