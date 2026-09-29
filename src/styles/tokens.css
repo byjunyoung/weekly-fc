@@ -777,34 +777,36 @@ details.year[open] > summary::before { content: "▾ "; }
   border: 3px solid var(--fc-frame); background: var(--card); color: var(--fg); text-align: left; }
 .fcard-tier-S { --fc-frame: var(--gold); } .fcard-tier-A { --fc-frame: var(--val-a); } .fcard-tier-B { --fc-frame: var(--val-b); }
 .fcard-tier-C { --fc-frame: var(--val-c); } .fcard-tier-D { --fc-frame: var(--val-d); }
-.fcard-top { display: flex; align-items: flex-end; gap: var(--s-xs); padding: var(--s-xs) var(--s-xs) 0; }
-.fcard-col { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-xxs); align-self: flex-start; }
+.fcard-top { display: flex; align-items: flex-end; gap: var(--s-xxs); padding: var(--s-xxs) var(--s-xs) 0; }
+.fcard-col { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; align-self: flex-start; }
 .fcard-tier { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 4px; color: var(--ink);
   font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
 .fcard-tier.tier-none { background: var(--elevated); color: var(--muted); }
-.fcard-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
+.fcard-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
 .fcard-pos { min-width: 0; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
 .fcard-flag, .fcard-feet { display: flex; margin-top: 2px; }
 .fcard-flag svg { outline: 1px solid var(--line); }
 .fcard-avatar { display: flex; margin-left: auto; }
 .fcard-avatar .avatar-svg, .fcard-sprite { display: block; }
 /* 아바타 맨 아랫줄은 빈 칸(24×32 중 한 행) — 이름 줄에 발이 닿게 그만큼 내린다. */
-.fcard-lg .fcard-avatar { margin-bottom: -6px; } .fcard-sm .fcard-avatar { margin-bottom: -4px; }
-.fcard-name { display: flex; align-items: baseline; justify-content: center; gap: var(--s-xs); padding: var(--s-xxs) var(--s-xs);
+.fcard-lg .fcard-avatar { margin-bottom: -5px; } .fcard-sm .fcard-avatar { margin-bottom: -3px; }
+.fcard-name { display: flex; align-items: baseline; justify-content: center; gap: var(--s-xs); padding: 2px var(--s-xs);
   border-top: 2px solid var(--fc-frame); border-bottom: 2px solid var(--fc-frame); }
 .fcard-name b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
 .fcard-name span { font-family: var(--font); font-size: var(--fs-xs); color: var(--muted); }
-.fcard-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--s-sm); padding: var(--s-xs); }
+.fcard-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--s-sm); padding: var(--s-xxs) var(--s-xs) var(--s-xs); }
 .fcard-stat { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-xxs); min-width: 0; }
 .fcard-stat-label { font-family: var(--font); font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
 .fcard-stat-val { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
 .fcard-stat-val.val-a { color: var(--val-a); } .fcard-stat-val.val-b { color: var(--val-b); }
 .fcard-stat-val.val-c { color: var(--val-c); } .fcard-stat-val.val-d { color: var(--val-d); }
-/* sm: 아바타 90×120, 폭은 내용이 정한다. OVR 은 30px 로. */
-.fcard-sm .fcard-ovr { font-size: var(--fs-pixel-md); }
+/* sm: 아바타 96×128, 폭은 내용이 정한다. OVR·포지션·티어는 한 단계 작게(2026-09-29 "빽빽"). */
+.fcard-sm .fcard-ovr { font-size: var(--fs-pixel-sm); }
+.fcard-sm .fcard-pos, .fcard-sm .fcard-tier { font-size: var(--fs-pixel-xs); }
+.fcard-sm .fcard-tier { min-width: 14px; height: 14px; }
 .fcard-sm .fcard-stats { gap: 0 var(--s-xs); padding: var(--s-xxs) var(--s-xs) var(--s-xs); }
-/* 명단 카드 보기 — 카드가 칸을 채운다. 360px 폰에서 두 칸(160×2 + 16). */
-.fcard-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--s-md) var(--s-sm); }
+/* 명단 카드 보기 — 카드가 칸을 채운다. 넓은 화면은 최소 180(칭호·숫자 먼저 능력치가 들어가게), 폰은 두 칸 유지(아래 479px 규칙). */
+.fcard-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s-md) var(--s-sm); }
 .fcard-link { display: flex; color: inherit; text-decoration: none; transition: transform var(--dur-fast) var(--ease-std); }
 .fcard-link .fcard { flex: 1; }
 .fcard-link:hover { transform: translateY(-4px); }
@@ -853,7 +855,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .locker-card { position: relative; margin-bottom: calc(var(--floor-h) - 12px); max-width: calc(100% - var(--s-md)); }
 /* 선수 페이지 — 카드가 머리 칸을 채운다(--phero-w). 꾸미기 중 폰에선 아바타만 남긴 띠로. */
 .phero .fcard { width: 100%; }
-.phero .fcard .avatar-btn .avatar-svg { display: block; width: 144px; height: 192px; }   /* 옛 .phero .avatar-svg 240×320 규칙을 이긴다 — 카드 안 아바타는 격자 6배 고정 */
+.phero .fcard .avatar-btn .avatar-svg { display: block; width: 144px; height: 192px; }   /* 옛 .phero .avatar-svg 240×320 규칙을 이긴다 — 카드 안 아바타는 격자 6배 */
 @media (max-width: 799px) {
   .player-hero.is-dressing .phero .fcard { border: 0; background: none; }
   .player-hero.is-dressing .phero .fcard-col, .player-hero.is-dressing .phero .fcard-name, .player-hero.is-dressing .phero .fcard-stats { display: none; }
@@ -1021,3 +1023,62 @@ details.year[open] > summary::before { content: "▾ "; }
 .hm-law-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-xs); }
 .hm-law-text b { font-size: var(--fs-sm); font-weight: 600; }
 @media (max-width: 479px) { .hm-law { grid-template-columns: 96px minmax(0, 1fr); } }
+/* 칭호(2026-09-29) — 명단 표 한 칸. 카드 안 뱃지는 .fcard-badge. */
+.cell-title { white-space: nowrap; }
+/* 피파 본가 배치(2026-09-29) — 기둥: 종합·포지션·국기·티어. 이름 줄 오른쪽에 칭호, 능력치는 숫자 먼저. 팀 1위 항목은 라벨 앞 ★·금색. */
+.fcard-name .fcard-badge { padding: 1px 5px; border: 2px solid var(--gold); color: var(--gold); white-space: nowrap;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; align-self: center; }
+.fcard-lg .fcard-name .fcard-badge { font-size: var(--fs-pixel-sm); }   /* .fcard-name span(번호 스타일)보다 세게 — 안 그러면 회색 본문 글꼴이 된다 */
+.fcard-name b, .fcard-name > span:not(.fcard-badge) { white-space: nowrap; }
+.fcard-stat { justify-content: flex-start; gap: 6px; }
+.fcard-stat.is-best .fcard-stat-label { color: var(--gold); }
+.fcard-stat.is-best .fcard-stat-label i { font-style: normal; margin-right: 1px; }
+.fcard-sm .fcard-stat.is-best .fcard-stat-label i { display: none; }   /* 작은 카드는 폭이 모자라 ★ 없이 금색만 */
+/* 작은 카드 넘침 막기(2026-09-29) — 이름 줄에 칭호가 붙고 능력치가 숫자 먼저가 되며 칸보다 넓어졌다.
+   글자는 자르지 않는다: 카드는 칸 폭을 넘지 않고(min-width 0), 이름 줄은 칭호가 안 들어가면 다음 줄로 넘기고,
+   명단 카드 칸을 조금 넓힌다(160 → 180). 작은 카드에선 칭호가 있으면 번호(#)는 뺀다. */
+.fcard { min-width: 0; }
+.fcard-name { min-width: 0; flex-wrap: wrap; row-gap: 2px; }
+.fcard-sm .fcard-name.has-badge > span:not(.fcard-badge) { display: none; }
+.fcard-name { column-gap: 6px; }
+.fcard-stats { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.fcard-sm .fcard-stats { gap: 0 6px; }
+.fcard-sm .fcard-stat { gap: 3px; }
+@media (max-width: 479px) { .fcard-wall { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* 폰 두 칸 작은 카드 — 칸이 ~150px 라 "숫자 + 라벨"이 안 들어간다. 라벨만 도트 10px 로(2026-09-29). */
+@media (max-width: 479px) {
+  .fcard-sm .fcard-stat-label { font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+  .fcard-sm .fcard-stats { gap: 0 4px; padding-inline: 6px; }
+  .fcard-sm .fcard-stat { gap: 2px; }
+}
+/* 아바타 옆 기둥 키우기(2026-09-29 "아바타 옆 요소들 좀 더 크게") — 종합·포지션·티어 한 단계씩. 국기·발자국은 PlayerCard 가 배율로. */
+.fcard-lg .fcard-ovr { font-size: var(--fs-pixel-lg); }
+.fcard-lg .fcard-pos { padding: 2px 6px; }
+.fcard-lg .fcard-tier { min-width: 28px; height: 28px; }
+.fcard-sm .fcard-ovr { font-size: var(--fs-pixel-md); }
+.fcard-sm .fcard-pos, .fcard-sm .fcard-tier { font-size: var(--fs-pixel-sm); }
+.fcard-sm .fcard-tier { min-width: 20px; height: 20px; }
+.fcard-col { gap: 4px; }
+/* 능력치 카드 아래 칭호 칸 + (?) 칭호 목록 풍선(2026-09-29) */
+.title-box { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--s-xs); margin-top: var(--s-sm); padding-top: var(--s-sm); border-top: 1px solid var(--hairline); }
+.title-box-empty { flex: 1 1 200px; min-width: 0; font-size: var(--fs-xs); }
+/* 칭호가 있을 때 — 금색 테두리·옅은 금빛 바탕 띠, 이름은 금색 도트 30px */
+.title-box.is-on { gap: var(--s-xs) var(--s-md); padding: var(--s-sm) var(--s-md); border: 2px solid var(--gold); border-top-width: 2px;
+  background: linear-gradient(90deg, rgba(255, 206, 33, .14), rgba(255, 206, 33, .03) 70%); }
+.title-box-name { display: flex; flex-direction: column; gap: 2px; }
+.title-box-tag { font-size: var(--fs-xs); color: var(--gold); opacity: .8; }
+.title-box-name b { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; color: var(--gold);
+  text-shadow: 0 0 12px rgba(255, 206, 33, .35); }
+.title-box-text { flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.title-box-desc { font-size: var(--fs-sm); color: var(--fg); }
+.title-box-why { font-size: var(--fs-xs); color: var(--muted); }
+.title-help { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 1px solid var(--hairline-strong);
+  background: none; color: var(--muted); font-size: var(--fs-xs); cursor: help; }
+.title-help:hover, .title-help:focus-visible { color: var(--fg); border-color: var(--fg); }
+.title-box.is-on .title-help { align-self: flex-start; border-color: rgba(255, 206, 33, .6); color: var(--gold); }
+.title-catalog { width: min(720px, calc(100vw - 48px)); font-size: var(--fs-xs); }   /* 가로로 넓게 — 스크롤 없이 한눈에(2026-09-29) */
+.title-catalog > p { margin: 0 0 var(--s-xs); }
+.title-catalog h4 { margin: var(--s-xs) 0 4px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.title-catalog ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px var(--s-sm); }
+.title-catalog li { display: flex; flex-direction: column; min-width: 0; }
+.title-catalog li b { color: var(--gold); font-weight: 600; }

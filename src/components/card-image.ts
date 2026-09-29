@@ -6,7 +6,7 @@ import { avatarSpecFor } from '../lib/avatar.ts';
 import { cardModel, type CardModel } from '../lib/card.ts';
 import { shortDate } from '../lib/matches.ts';
 import type { Tier } from '../lib/tier.ts';
-import type { Player } from '../lib/types.ts';
+import type { Player, StatKey } from '../lib/types.ts';
 import { avatarPixels } from './avatar.ts';
 import { feetPixels, flagKrPixels } from './pixel-icons.ts';
 import { IMG_H, IMG_W, drawAvatar, fit, pixelFont, tok } from './share-image.ts';
@@ -27,6 +27,8 @@ export type CardImageOpts = {
   sub?: string;                         // 그 아래 작은 글씨
   potmDate?: string | null;             // 있으면 카드 위에 금색 띠 "★ POTM 9/27"
   caption?: string;                     // 카드 아래 한 줄
+  badge?: string;                       // 칭호(이름 줄 아래 뱃지, 2026-09-29) — 없으면 그 줄은 비워 둔다
+  bests?: StatKey[];                    // 팀 1위 항목 — 이름 앞 ★, 금색
 };
 
 function frameColor(tier: Tier | null): string {
@@ -52,13 +54,9 @@ export function drawCardImage(c: HTMLCanvasElement, player: Player, tier: Tier |
   ctx.fillStyle = frame; ctx.fillRect(CARD_X, CARD_Y, CARD_W, CARD_H);
   ctx.fillStyle = card; ctx.fillRect(CARD_X + FRAME, CARD_Y + FRAME, CARD_W - FRAME * 2, CARD_H - FRAME * 2);
 
-  // 왼쪽 기둥: 티어 · OVR · 포지션 · 태극기 · 축구화
+  // 왼쪽 기둥 — 피파 본가 순서(2026-09-29): 종합 · 포지션 · 태극기 · 주발 발자국 · 티어(클럽 엠블럼 자리)
   const colX = CARD_X + FRAME + PAD;
   let y = CARD_Y + FRAME + PAD;
-  ctx.fillStyle = m.tier ? frame : tok('--elevated', '#2a2d33'); ctx.fillRect(colX, y, 60, 60);
-  ctx.fillStyle = m.tier ? '#111111' : muted; ctx.font = pixelFont(30); ctx.textAlign = 'center';
-  ctx.fillText(m.tier ?? '–', colX + 30, y + 40);
-  y += 76;
   ctx.fillStyle = fg; ctx.font = pixelFont(60); ctx.textAlign = 'left';
   ctx.fillText(m.ovr ? String(m.ovr) : '–', colX, y + 52);
   y += 76;
@@ -69,31 +67,43 @@ export function drawCardImage(c: HTMLCanvasElement, player: Player, tier: Tier |
   y += 60;
   const flag = flagKrPixels(); drawAvatar(ctx, flag, colX, y, 4, 0);
   y += flag.h * 4 + 16;
-  const feet = feetPixels(m.foot); drawAvatar(ctx, feet, colX, y, 4, 0);
-
+  const feet = feetPixels(m.foot); drawAvatar(ctx, feet, colX, y, 5, 0);   // 신발 밑창 한 쌍(2026-09-29)
+  y += feet.h * 5 + 16;
+  ctx.fillStyle = m.tier ? frame : tok('--elevated', '#2a2d33'); ctx.fillRect(colX, y, 60, 60);
+  ctx.fillStyle = m.tier ? '#111111' : muted; ctx.font = pixelFont(30); ctx.textAlign = 'center';
+  ctx.fillText(m.tier ?? '–', colX + 30, y + 40);
   // 아바타(오른쪽, 이름 띠 위에 발이 닿게)
   const nameY = CARD_Y + FRAME + PAD + 448 + 8;
   const avX = CARD_X + CARD_W - FRAME - PAD - 24 * AVATAR_CELL;
   drawAvatar(ctx, avatarPixels(avatarSpecFor(player.num, player.avatar)), avX, nameY - 32 * AVATAR_CELL + AVATAR_CELL, AVATAR_CELL, player.num);
 
-  // 이름 띠
+  // 이름 띠 — 이름 · 번호 · 칭호 알약을 한 덩어리로 가운데(화면 카드와 같게, 2026-09-29)
   ctx.fillStyle = frame; ctx.fillRect(CARD_X + FRAME, nameY, CARD_W - FRAME * 2, 4);
-  ctx.fillStyle = fg; ctx.font = pixelFont(60); ctx.textAlign = 'center';
-  ctx.fillText(fit(ctx, m.name, CARD_W - PAD * 2 - 120), CARD_X + CARD_W / 2, nameY + 72);
-  ctx.fillStyle = muted; ctx.font = pixelFont(30); ctx.textAlign = 'right';
-  ctx.fillText(`#${m.num}`, CARD_X + CARD_W - FRAME - PAD, nameY + 72);
+  ctx.font = pixelFont(60); const nm = fit(ctx, m.name, CARD_W - PAD * 2 - 300); const nw = ctx.measureText(nm).width;
+  ctx.font = pixelFont(30); const numT = `#${m.num}`; const numW = ctx.measureText(numT).width;
+  const bt = opts.badge ? fit(ctx, opts.badge, 240) : ''; const bw = bt ? ctx.measureText(bt).width + 24 : 0;
+  const total = nw + 12 + numW + (bt ? 20 + bw : 0);
+  let nx = CARD_X + CARD_W / 2 - total / 2;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = fg; ctx.font = pixelFont(60); ctx.fillText(nm, nx, nameY + 72); nx += nw + 12;
+  ctx.fillStyle = muted; ctx.font = pixelFont(30); ctx.fillText(numT, nx, nameY + 72); nx += numW + 20;
+  if (bt) {
+    ctx.strokeStyle = POTM_GOLD; ctx.lineWidth = 4; ctx.strokeRect(nx, nameY + 26, bw, 44);
+    ctx.fillStyle = POTM_GOLD; ctx.fillText(bt, nx + 12, nameY + 60);
+  }
   ctx.fillStyle = frame; ctx.fillRect(CARD_X + FRAME, nameY + 96, CARD_W - FRAME * 2, 4);
 
-  // 여섯 칸 2열×3행
+  // 여섯 칸 2열×3행 — 피파처럼 숫자 먼저, 라벨 뒤
   const statsY = nameY + 100 + 28;
   const colW = (CARD_W - FRAME * 2 - PAD * 2) / 2;
   m.stats.forEach((s, i) => {
     const cx = CARD_X + FRAME + PAD + (i % 2) * colW;
     const cy = statsY + Math.floor(i / 2) * 64 + 40;
-    ctx.fillStyle = muted; ctx.font = pixelFont(30); ctx.textAlign = 'left';
-    ctx.fillText(s.label, cx, cy);
-    ctx.fillStyle = tok(`--val-${s.band}`, '#f4f4f4'); ctx.font = pixelFont(60); ctx.textAlign = 'right';
-    ctx.fillText(s.value ? String(s.value) : '–', cx + colW - 24, cy + 8);
+    const best = (opts.bests ?? []).includes(s.key);
+    ctx.fillStyle = tok(`--val-${s.band}`, '#f4f4f4'); ctx.font = pixelFont(60); ctx.textAlign = 'left';
+    ctx.fillText(s.value ? String(s.value) : '–', cx, cy + 8);
+    ctx.fillStyle = best ? POTM_GOLD : muted; ctx.font = pixelFont(30);
+    ctx.fillText(best ? `★${s.label}` : s.label, cx + 96, cy);
   });
 
   // POTM 띠 — 카드 위 가장자리에 수평으로(도트 글자는 기울이면 뭉개진다)

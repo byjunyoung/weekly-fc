@@ -41,7 +41,7 @@ function Squad() {
         <div className="actions">{admin && <Button id="add" onClick={() => setAdding(true)}>선수 추가</Button>}</div>
       </div>
       <RosterList tiers={tiers} potm={potm} view={view} onViewChange={onViewChange} views={SQUAD_VIEWS} pos={pos} onPosChange={setPos}
-        q={q} onQChange={setQ} rows={rows} />
+        q={q} onQChange={setQ} rows={rows} allPlayers={data.players} />
       {admin && <AddPlayerModal open={adding} onClose={() => setAdding(false)} players={data.players} />}
     </>
   );

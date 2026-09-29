@@ -48,17 +48,19 @@ export const flagKrPixels = (): { map: string[]; palette: Record<string, string>
 /** 태극기. `scale` 은 한 칸의 픽셀 수(1·2·3…). */
 export const flagKrSvg = (scale = 1): string => svg(FLAG_KR, FLAG_KR_PALETTE, FLAG_KR_W, FLAG_KR_H, scale, '대한민국');
 
-// ── 축구화 둘 (각 7×5, 사이 2칸 = 16×5) ── 왼쪽이 왼발. 주발은 밝게, 아닌 쪽은 흐리게.
-export const FEET_W = 16;
-export const FEET_H = 5;
-const BOOT_L = ['.LLLL..', '.LLLLL.', 'LLLLLLL', 'LLLLLLL', 'lllllll'];
-const BOOT_R = ['..RRRR.', '.RRRRR.', 'RRRRRRR', 'RRRRRRR', 'rrrrrrr'];
-const FEET: string[] = BOOT_L.map((l, i) => `${l}..${BOOT_R[i]}`);
-const ON = '#f4f4f4', ON_SOLE = '#111111', OFF = '#4a4f57', OFF_SOLE = '#2b2e33';
+// ── 신발 밑창 둘 (각 5×9, 사이 1칸 = 11×9) ── 왼쪽이 왼발, 허리가 들어간 쪽이 안쪽. 주발은 밝게, 아닌 쪽은 흐리게.
+// 2026-09-29: 옆모습 축구화(7×5) "발 같지 않다" → 발가락 발자국(6×10) "너무 디테일" → 뭉친 발바닥(4×7) "여전히 발 같지 않다,
+// 신발 밑창처럼" — 앞코가 둥글고 허리가 들어가고 뒤꿈치가 좁은 밑창 윤곽(스터드 없이).
+export const FEET_W = 11;
+export const FEET_H = 9;
+const FOOT_R = ['.XXX.', 'XXXXX', 'XXXXX', 'XXXXX', 'XXXXX', 'XXXX.', '.XXX.', '.XXX.', '.XXX.'];
+const FOOT_L = FOOT_R.map((row) => [...row].reverse().join(''));
+const FEET: string[] = FOOT_L.map((l, i) => `${l.replace(/X/g, 'L')}.${FOOT_R[i].replace(/X/g, 'R')}`);
+const ON = '#f4f4f4', OFF = '#4a4f57';
 function feetPalette(mode: FootMode): Record<string, string> {
   const left = mode === 'left' || mode === 'both';
   const right = mode === 'right' || mode === 'both';
-  return { L: left ? ON : OFF, l: left ? ON_SOLE : OFF_SOLE, R: right ? ON : OFF, r: right ? ON_SOLE : OFF_SOLE };
+  return { L: left ? ON : OFF, R: right ? ON : OFF };
 }
 export const feetPixels = (mode: FootMode): { map: string[]; palette: Record<string, string>; w: number; h: number } =>
   ({ map: FEET, palette: feetPalette(mode), w: FEET_W, h: FEET_H });

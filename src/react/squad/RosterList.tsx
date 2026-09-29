@@ -16,6 +16,7 @@ import { STAT_KEYS, type Player } from '../../lib/types';
 import type { Tier } from '../../lib/tier';
 import type { CurrentPotm } from '../../lib/matches';
 import PlayerCard from '../PlayerCard';
+import { titleOf } from '../../lib/titles';
 import { ALL_VIEWS, byOvr, type View } from './model';
 
 // 보기 이름만 '아바타'로 바꾸고 키(card)는 그대로 둔다 — 기기에 저장된 보기 설정이
@@ -43,7 +44,7 @@ export function RosterFilters({ view, onViewChange, views = ALL_VIEWS, pos, onPo
   );
 }
 
-export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick, bodyOnly = false, tiers, potm = null }: {
+export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick, bodyOnly = false, tiers, potm = null, allPlayers }: {
   view: View; onViewChange: (v: View) => void;
   /** 이 화면이 고를 수 있는 보기. 하나뿐이면 전환 칩을 아예 그리지 않는다(라인업은 목록 고정). */
   views?: View[];
@@ -54,7 +55,10 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
   st?: LineupState; onPick?: (num: number) => void;
   /** 필터 줄을 여기서 안 그린다 — 라인업처럼 그 줄을 다른 자리에 이미 놓은 화면용. */
   bodyOnly?: boolean; tiers?: Map<number, Tier>; potm?: CurrentPotm | null;
+  /** 칭호 계산용 팀 전체 — rows 는 필터·검색으로 줄어 있다. */
+  allPlayers?: Player[];
 }) {
+  const titleName = new Map(rows.map((p) => [p.num, titleOf(p, allPlayers ?? rows)?.name ?? '']));
   const starter = (num: number): boolean => (st != null && isStarter(st, num));
   // 목록 뷰의 「선발/넣기」 버튼은 옛 문자열 템플릿 안 data-pick 속성으로 남아 있다 — 행마다
   // 리스너를 안 붙이고 바깥 한 곳에서 위임으로 받는다(옛 코드와 같은 이유: 다시 그릴 때마다 innerHTML 이
@@ -74,6 +78,9 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
     { title: '#', dataIndex: 'num', key: 'num', align: 'right', sorter: (a, b) => a.num - b.num },
     { title: '이름', dataIndex: 'name', key: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'ko'),
       render: (_, p) => <a href={href(`/squad/${p.num}/`)}><b>{p.name}</b></a> },
+    // 칭호(2026-09-29) — 능력치 모양으로(lib/titles.ts). 정렬은 가나다순.
+    { title: '칭호', key: 'title', sorter: (a, b) => (titleName.get(a.num) ?? '').localeCompare(titleName.get(b.num) ?? '', 'ko'),
+      render: (_, p) => <span className="cell-title">{titleName.get(p.num) || '–'}</span> },
     { title: '포지션', dataIndex: 'pos', key: 'pos', sorter: (a, b) => a.pos.localeCompare(b.pos, 'ko'),
       render: (_, p) => <span className="cell-pos"><span className={`pos pos-${p.pos.toLowerCase()}`}>{p.pos || '–'}</span><span className="muted">{p.detail}</span></span> },
     ...STAT_KEYS.map((k) => ({
@@ -98,7 +105,7 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
           // (티어·포지션·주발·국기·여섯 칸). 값은 lib/card.ts, 모양은 PlayerCard.
           rows.length ? byOvr(rows).map((p) => (
             <a className="fcard-link" key={p.num} href={href(`/squad/${p.num}/`)} aria-label={`${p.name} 선수 페이지`}>
-              <PlayerCard player={p} tier={tiers?.get(p.num)} size="sm" potmDate={potm && potm.nums.includes(p.num) ? potm.date : null} />
+              <PlayerCard player={p} tier={tiers?.get(p.num)} size="sm" team={allPlayers ?? rows} potmDate={potm && potm.nums.includes(p.num) ? potm.date : null} />
             </a>
           )) : <p className="list-empty">명단이 비어 있습니다</p>
         ) : rows.length ? (

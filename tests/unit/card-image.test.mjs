@@ -23,6 +23,7 @@ function fakeCanvas() {
     fillText: (t, x, y) => texts.push({ t: String(t), x, y, font, align: textAlign, fill: fillStyle }),
     measureText: (t) => ({ width: [...String(t)].length * (Number(/(\d+)px/.exec(font)?.[1]) || 10) }),
     save() {}, restore() {},
+    set strokeStyle(v) {}, set lineWidth(v) {}, strokeRect() {},   // 칭호 알약 테두리(2026-09-29)
   };
   return { canvas: { width: 0, height: 0, getContext: () => ctx }, rects, texts, fonts };
 }
@@ -49,11 +50,12 @@ test('카드 이미지 — 1080×1350, 티어 색 테두리, OVR 60px, 여섯 �
   for (const px of sizes) assert.ok([20, 30, 60].includes(px), `미리 불러오는 크기만: ${px}`);
 });
 
-test('카드 이미지 — 태극기·축구화 격자가 찍히고, 티어 없으면 회색 테두리', () => {
+test('카드 이미지 — 태극기, 칭호 알약(이름 줄), 티어 없으면 회색 테두리 · 주발·축구화는 2026-09-29 뺌', () => {
   const f = fakeCanvas();
-  drawCardImage(f.canvas, P(3, 70, { foot: '왼발' }), null);
+  drawCardImage(f.canvas, P(3, 70, { foot: '왼발' }), null, { badge: '철벽' });
   assert.ok(f.rects.some((r) => r.fill === '#cd2e3a') && f.rects.some((r) => r.fill === '#0f4fa8'), '태극기 빨강·파랑');
-  assert.ok(f.rects.some((r) => r.fill === '#f4f4f4' && r.h === 4), '밝은 축구화 칸(왼발)');
+  assert.ok(!f.texts.some((t) => t.t === '왼발'), '주발은 카드에 없다');
+  assert.ok(f.texts.some((t) => t.t === '철벽'), '칭호');
   const frame = f.rects.find((r) => r.w === CARD_W && r.h === CARD_H);
   assert.equal(frame.fill, '#3a3d44');
   assert.ok(f.texts.some((t) => t.t === '–' && /30px/.test(t.font)), '티어 자리는 –');

@@ -1,7 +1,7 @@
 // 선수 상세 — 아바타·능력치(고친 기록)·편집·꾸미기.
 // 벌금·봉사는 이 화면에 두지 않는다 — 요약은 2026-09-22, 내역은 2026-09-23 에 뺐다. 운영 탭에 같은 내용이 있고, 홈 라커룸에서 들어오는
 // 이 화면은 "내 선수를 보고 꾸미는" 자리라 재정 정보가 끼어들 이유가 없다(사용자 지시).
-import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Select } from 'antd';
+import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Popover, Segmented, Select } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import NumberPicker from '../squad/NumberPicker';
 import type { CSSProperties } from 'react';
@@ -10,6 +10,7 @@ import { maskEmail } from '../../lib/auth';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { rivalPairs } from '../../lib/tier';
+import { teamBests, titleCatalog, titleDetail, titleOf } from '../../lib/titles';
 import { FOOT_OPTIONS, tierByNum } from '../../lib/card';
 import { currentPotm, matchLabel } from '../../lib/matches';
 import CardShareModal from '../CardShareModal';
@@ -153,6 +154,9 @@ function Detail({ num }: { num: number }) {
   }
 
   const placed = !!player && ovr(player) > 0; // 능력치 0 = 배치 전(2026-09-28)
+  const myTitle = player && data ? titleOf(player, data.players) : null;
+  const myTitleWhy = player && data ? titleDetail(player, data.players) : null;
+  const myBests = player && data ? teamBests(player, data.players) : [];
   const attrRows = player ? STAT_KEYS.map((k) => {
     const v = player[k], b = band(v, STAT_CUTS);
     return (
@@ -163,6 +167,53 @@ function Detail({ num }: { num: number }) {
       </div>
     );
   }) : null;
+
+  /** 능력치 카드 아래 칭호 칸(2026-09-29) — 이 선수 칭호·설명·받은 까닭, (?)에 칭호 전체 목록. */
+  function titleBox() {
+    const catalog = (
+      <div className="title-catalog">
+        <p className="muted">한 능력치가 팀 상위 약 5% 수준이고 그게 그 선수 안에서도 두드러질 때만 붙습니다. 능력치가 바뀌면 생기거나 사라집니다.</p>
+        {titleCatalog().map((g) => (
+          <section key={g.group}>
+            <h4>{g.group}</h4>
+            <ul>
+              {g.items.map((it) => (
+                <li key={it.title.name + it.need.join()}>
+                  <b>{it.title.name}</b>
+                  <span className="muted">{it.need.length === 6 ? '전 항목' : it.need.map((k) => STAT_KO[k]).join(' + ')} · {it.title.desc}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    );
+    const help = (
+      <Popover content={catalog} title="칭호 목록" trigger={['hover', 'click']} placement="bottomRight">
+        <button type="button" className="title-help" aria-label="칭호 목록 보기">?</button>
+      </Popover>
+    );
+    // 칭호가 있으면 금색 띠로 강조(2026-09-29 "강조해서 멋있게") — 큰 이름 왼쪽, 설명·까닭 오른쪽 가로로.
+    if (myTitle && myTitleWhy) {
+      return (
+        <div className="title-box is-on">
+          <div className="title-box-name"><span className="title-box-tag">칭호</span><b>{myTitle.name}</b></div>
+          <div className="title-box-text">
+            <span className="title-box-desc">{myTitle.desc}</span>
+            <span className="title-box-why">{myTitleWhy.keys.length === 6 ? '전 항목 · 팀 상위권' : `${myTitleWhy.keys.map((k) => STAT_KO[k]).join(' + ')} · 팀 상위 5%`}</span>
+          </div>
+          {help}
+        </div>
+      );
+    }
+    return (
+      <div className="title-box">
+        <span className="label">칭호</span>
+        <span className="muted title-box-empty">없음 · 한 능력치가 팀 상위 5% 수준이면 생깁니다</span>
+        {help}
+      </div>
+    );
+  }
 
   function editModal() {
     return (
@@ -238,7 +289,7 @@ function Detail({ num }: { num: number }) {
             <div className="phero" ref={cardRef}>
               {/* 피파식 카드(2026-09-25). 아바타 자리가 꾸미기 버튼 — 꾸미는 중엔 고르는 스펙을 그 자리에 미리 보여 준다. */}
               <PlayerCard player={avatarOpen && avatarSpec ? { ...player, avatar: serializeAvatar(avatarSpec) } : player}
-                tier={tierByNum(data?.players ?? []).get(player.num)} size="lg" potmDate={myPotmDate}
+                tier={tierByNum(data?.players ?? []).get(player.num)} size="lg" potmDate={myPotmDate} team={data?.players}
                 avatar={(svg) => (
                   <button type="button" id="avatar-edit-btn" className="avatar-btn" title={canDress ? '아바타 편집' : undefined}
                     disabled={!canDress} onClick={() => openAvatar(player)} dangerouslySetInnerHTML={{ __html: svg }} />
@@ -261,7 +312,7 @@ function Detail({ num }: { num: number }) {
                     {admin && placed && <Button size="small" href={href(`/squad/place/?num=${player.num}`)}>재배치</Button>}
                   </span>
                 </div>
-                {placed ? <div className="attr-list">{attrRows}</div> : (
+                {placed ? <><div className="attr-list">{attrRows}</div>{titleBox()}</> : (
                   <div className="place-empty">
                     <p className="muted">아직 능력치 배치 전입니다. 배치가 끝나야 티어표·라이벌·대결에 나옵니다.</p>
                     {admin && <Button type="primary" href={href(`/squad/place/?num=${player.num}`)}>배치 대결 시작</Button>}
@@ -281,7 +332,8 @@ function Detail({ num }: { num: number }) {
       <CardShareModal open={shareOpen} onClose={() => setShareOpen(false)} player={player ?? null}
         tier={player ? tierByNum(data?.players ?? []).get(player.num) : null}
         title={player ? `${player.name} 카드` : '카드'} fileTag={`card-${num}`}
-        opts={{ sub: myPotmDate ? `${matchLabel(myPotmDate)} 매치 POTM` : undefined, potmDate: myPotmDate }} />
+        opts={{ sub: myPotmDate ? `${matchLabel(myPotmDate)} 매치 POTM` : undefined, potmDate: myPotmDate,
+          badge: myTitle?.name, bests: myBests }} />
     </>
   );
 }

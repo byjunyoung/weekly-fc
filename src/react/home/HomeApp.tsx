@@ -201,7 +201,7 @@ function App() {
               <span className="tile-label">내 선수</span>
               <LockerScene side={side}>
                 <MyLocker player={mePlayer}
-                  card={<PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />} />
+                  card={<PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" team={data.players} potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />} />
               </LockerScene>
               <span className="tile-sub lk-foot"><span>유니폼을 누르면 카드</span><a className="tile-go" href={href(`/squad/${s.meTile.num}/`)}>내 선수 보기 · 꾸미기 ›</a></span>
             </Card>
