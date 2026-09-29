@@ -1,4 +1,4 @@
-// src/react/rules/model.ts — 운영 탭(벌금·봉사) 계산. 화면(FeesLive·DutyLive)과 떨어뜨려 단위 테스트한다.
+// src/react/rules/model.ts — 운영 탭(벌금·봉사) 계산. 화면(DutyLive)과 떨어뜨려 단위 테스트한다.
 // Node 단위 테스트가 바로 불러오므로 값 import 에는 .ts 를 붙인다.
 import { FINE_AMOUNT, FINE_TYPES } from '../../lib/rules.ts';
 import type { Fine, FineType, Player, RotationRow } from '../../lib/types.ts';

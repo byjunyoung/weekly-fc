@@ -322,6 +322,19 @@ a.card:hover { background: var(--charcoal); }
 .tile-locker { grid-row: 1 / span 3; --locker-h: 520px; }
 /* 오른쪽 타일 다섯 — 내 티어·최근 방명록 / 봉사·매치 영상 / 오늘의 전술(두 칸 폭)(2026-09-28). */
 .tile-wide { grid-column: span 2; }
+/* 라커룸 맨 위 단체 사진 칸(2026-09-30) — 칸 전체가 팀 자료 링크. 그림은 도트라 확대해도 뭉개지지 않게. */
+.hm-squad { display: flex; flex-direction: column; gap: var(--s-xs); margin-bottom: var(--s-sm); padding: var(--s-md); border: 2px solid var(--line); border-radius: 0; color: inherit; text-decoration: none; }
+.hm-squad:hover { border-color: var(--fg); }
+.hm-squad-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-sm); flex-wrap: wrap; }
+.hm-squad-img { display: block; width: 100%; background: #05060f; }
+.hm-squad-img img, .kit-preview img { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+/* 팀 자료(/kit/) */
+.kit-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s-sm); flex-wrap: wrap; margin-bottom: var(--s-sm); }
+.kit-preview { display: grid; place-items: center; height: min(70vh, 720px); max-width: 100%; margin-bottom: var(--s-xs); background: #05060f; }
+.kit-logos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s-sm); }
+.kit-logos li { display: flex; flex-direction: column; gap: var(--s-xxs); }
+.kit-logos img { width: 100%; aspect-ratio: 1; border: 2px solid var(--line); background: #000000; image-rendering: pixelated; }
+.kit-dl { display: flex; gap: var(--s-sm); }
 /* 1200px 아래에선 칸 높이만 조금 줄인다. */
 @media (max-width: 1199px) { .tile-locker { --locker-h: 460px; } }
 /* 좌우로 세울 폭이 안 나오면 라커룸이 위에 가로로 눕고 타일은 2열로 내려간다. 이때 행 높이를

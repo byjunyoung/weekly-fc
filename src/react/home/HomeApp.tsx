@@ -24,6 +24,7 @@ import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 import { computeHomeSummary } from './model';
 import type { DutyTile } from './model';
+import SquadBanner from './SquadBanner';
 
 // 링크 타일 — antd Card 로 그리되, 앵커를 display:contents 로 감싸 그리드 자리·클릭을
 // Card 가 그대로 물려받게 한다(astro-island 와 같은 기법). 배경(--elevated)·정렬은 인라인
@@ -194,6 +195,7 @@ function App() {
           </p>
         )}</div>
       </div>
+      {data.players.length > 0 && <SquadBanner players={data.players} />}
       <div className="rail">
         {s.meTile.kind === 'picked' && mePlayer
           ? (

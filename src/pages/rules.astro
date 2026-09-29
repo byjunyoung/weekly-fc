@@ -1,7 +1,6 @@
 ---
 import Shell from '../layouts/Shell.astro';
 import FineRulesTable from '../react/rules/FineRulesTable.tsx';
-import FeesLive from '../react/rules/FeesLive.tsx';
 import DutyLive from '../react/rules/DutyLive.tsx';
 import { FINE_EXEMPT, MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS, DUTY_PER_MONTH } from '../lib/rules.ts';
 const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '비용·벌금'], ['duty', '봉사'], ['bank', '모임 통장'], ['manner', '에티켓']];
@@ -20,7 +19,6 @@ const toc = [['when', '언제 어디서'], ['join', '참여 방법'], ['fees', '
       <FineRulesTable />
       <p class="muted">{FINE_EXEMPT}</p>
       <ul><li>대관비·음료비는 참석자(용병 포함) 정산</li><li>벌금은 당일 구장비·음료비 정산에 우선 사용</li><li>잔액은 모임 통장 공금 → 대관비 선납·공용 물품</li></ul>
-      <FeesLive client:load />
     </section>
     <section id="duty"><h2>봉사</h2>
       <ul><li>대관비·음료비 선납</li><li>음료 구매, 조끼 대여·반납</li><li>매치 종료 후 채팅방에서 정산 진행</li><li>매월 {DUTY_PER_MONTH}명 로테이션</li></ul>

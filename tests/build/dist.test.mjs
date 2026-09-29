@@ -18,6 +18,7 @@ export const PAGES = [
   'record/fines/index.html',
   'record/duty/index.html',
   'tactics/index.html',
+  'kit/index.html',
   'about/index.html',
 ];
 export const INDEXABLE = [];
@@ -96,18 +97,21 @@ test('상단바 로그인 버튼은 React 섬으로 그려지고, 관리자 버�
     assert.ok(/\bclass="[^"]*\bwfc\b[^"]*"/.test(meBtn[0]), `${p}: 빌드 때 그린 버튼에 wfc 변수 클래스가 없다(빌드 CSS와 어긋남)`);
   }
 });
-test('운영 탭 벌금 — 기준표는 빌드 때 그린 antd 표, 현황·내역은 FeesLive 섬, 옛 벌금 모달 없음', () => {
+test('운영 탭 벌금 — 기준표만 빌드 때 그린 antd 표, 미납·내역 표는 없다(2026-09-30 "규칙 페이지 간소화")', () => {
   const html = read('rules/index.html');
   const fees = html.slice(html.indexOf('<section id="fees"'), html.indexOf('<section id="duty"'));
   assert.ok(fees.includes('ant-table'), '벌금 기준표가 antd 표가 아니다');
   for (const s of ['지각', '시작 후 도착', '30,000원', '노쇼', '종료까지 미참', '50,000원']) assert.ok(fees.includes(s), `기준표 내용: ${s}`);
   assert.ok(!/component-url="[^"]*FineRulesTable/.test(html), '기준표가 섬이 됐다 — 정적이어야 JS 가 안 붙는다');
-  const island = fees.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/FeesLive\.[^"]+\.js"[^>]*>/);
-  assert.ok(island, 'FeesLive 섬 없음');
-  assert.ok(island[0].includes('client="load"'), 'FeesLive 가 client:load 아님');
-  // 기존 CDP 시나리오(t10)가 찾는 자리 — 데이터가 오기 전(빌드 때)에도 있어야 한다
-  for (const id of ['fees-total', 'fees-unpaid', 'fees-app']) assert.ok(fees.includes(`id="${id}"`), id);
+  assert.ok(!/component-url="[^"]*FeesLive/.test(html), '벌금 미납·내역 섬이 남았다');
   assert.ok(!html.includes('id="fine-modal"'), '옛 벌금 모달(wa-dialog)이 남음');
+});
+test('팀 자료 — /kit/ 은 KitApp 섬, 로고 PNG 여섯 개가 dist/brand 에 있다(2026-09-30)', () => {
+  const html = read('kit/index.html');
+  assert.ok(/component-url="\/weekly-fc\/_astro\/KitApp\.[^"]+\.js"/.test(html), 'KitApp 섬 없음');
+  for (const v of ['word', 'stack', 'ball']) for (const t of ['', '-transparent']) {
+    assert.ok(existsSync(`dist/brand/weeklyfc-logo-${v}${t}.png`), `로고 ${v}${t}`);
+  }
 });
 test('운영 탭 봉사 — 봉사표는 DutyLive 섬, 이 페이지엔 옛 페이지 스크립트·Web Awesome 대화상자가 없다', () => {
   const html = read('rules/index.html');
