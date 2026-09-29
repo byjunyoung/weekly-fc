@@ -89,7 +89,8 @@ function MyLocker({ player, card }: { player: Player; card: ReactNode }) {
     const fcard = box?.querySelector<HTMLElement>('.lk-back .fcard');
     if (!box || !fcard) return;
     const fit = () => {
-      const s = Math.min(1, (box.clientWidth - 24) / fcard.offsetWidth, (box.clientHeight - 24) / fcard.offsetHeight);
+      // 명단과 같은 작은 카드(sm)를 칸에 맞춰 키운다(2026-09-29 "라커룸 카드도 명단 카드랑 동일하게") — 최대 1.8배.
+      const s = Math.min(1.8, (box.clientWidth - 24) / fcard.offsetWidth, (box.clientHeight - 24) / fcard.offsetHeight);
       if (s > 0) fcard.style.setProperty('--card-s', s.toFixed(3));
     };
     fit();
@@ -201,7 +202,7 @@ function App() {
               <span className="tile-label">내 선수</span>
               <LockerScene side={side}>
                 <MyLocker player={mePlayer}
-                  card={<PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="lg" className="locker-card" team={data.players} potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />} />
+                  card={<PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="sm" className="locker-card" team={data.players} potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />} />
               </LockerScene>
               <span className="tile-sub lk-foot"><span>유니폼을 누르면 카드</span><a className="tile-go" href={href(`/squad/${s.meTile.num}/`)}>내 선수 보기 · 꾸미기 ›</a></span>
             </Card>
