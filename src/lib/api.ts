@@ -45,7 +45,8 @@ export function normalizeStatLog(r: Raw): StatLogRow | null {
   const who = num(r.num);
   if (who <= 0) return null;
   return { ts: String(r.ts ?? ''), by: numOrNull(r.by), byName: String(r.by_name ?? '').trim(),
-    num: who, field, before: num(r.before), after: num(r.after), via: String(r.via ?? '') };
+    num: who, field, before: num(r.before), after: num(r.after), via: String(r.via ?? ''),
+    ...(numOrNull(r.opp) != null ? { opp: numOrNull(r.opp)!, oppName: String(r.opp_name ?? '').trim() } : {}) };
 }
 
 const VEST_KEYS: VestKey[] = ['none', 'orange', 'neon', 'black'];

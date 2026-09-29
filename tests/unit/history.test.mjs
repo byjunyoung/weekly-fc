@@ -50,3 +50,11 @@ test('change — 최근 7일 변화', () => {
   assert.equal(change(pts, Date.parse('2026-09-28T00:00:00Z'), 7), 4);
   assert.equal(change(pts, Date.parse('2026-09-28T00:00:00Z'), 2), 2);   // 9/26 0시 직전 값 78 → 지금 80
 });
+
+test('normalizeStatLog — 대결 상대는 있을 때만 붙는다(2026-09-29)', async () => {
+  const { normalizeStatLog } = await import('../../src/lib/api.ts');
+  const a = normalizeStatLog({ ts: 't', by: 4, by_name: 'P4', num: 2, field: 'pace', before: 70, after: 72, via: 'game', opp: 5, opp_name: ' 이동훈 ' });
+  assert.equal(a.opp, 5); assert.equal(a.oppName, '이동훈');
+  const b = normalizeStatLog({ ts: 't', by: 4, by_name: 'P4', num: 2, field: 'pace', before: 70, after: 72, via: 'game' });
+  assert.equal('opp' in b, false);
+});

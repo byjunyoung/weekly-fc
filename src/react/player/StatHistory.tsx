@@ -19,7 +19,12 @@ const hhmm = (ts: string): string => { const t = Date.parse(ts); if (Number.isNa
 function why(r: StatLogRow): string {
   if (r.via === 'potm') return 'POTM 보상';
   if (r.via === 'place') return `${r.byName || '관리자'} · 배치`;
-  if (r.via === 'game') return `${r.byName || '누군가'}의 판정`;
+  if (r.via === 'game') {
+    const who = r.byName || '누군가';
+    if (!r.oppName) return `${who}의 판정`;
+    // 판정자가 자기 대결을 판정한 경우(본인 대결도 된다) — "방오준의 판정 · vs 방오준" 대신
+    return r.by != null && r.by === r.opp ? `vs ${r.oppName} · 본인 판정` : `vs ${r.oppName} · ${who}의 판정`;
+  }
   return `${r.byName || '누군지 모름'} · 직접 고침`;
 }
 const signed = (n: number): string => (n > 0 ? `▲${n}` : n < 0 ? `▼${-n}` : '±0');
