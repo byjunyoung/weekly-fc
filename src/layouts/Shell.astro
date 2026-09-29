@@ -16,6 +16,7 @@ const nav = [
   { href: href('/tier/'), label: '티어' },
   { href: href('/tactics/'), label: '전술' },
   { href: href('/rules/'), label: '규칙' },
+  { href: href('/kit/'), label: '자료' },   // 팀 자료 — 단체 사진·로고(2026-09-30 "진입점이 라커룸뿐")
 ];
 const path = Astro.url.pathname;
 const isActive = (h: string) => (h === href('/') ? path === href('/') : path.startsWith(h));

@@ -12,6 +12,8 @@ import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 
 const SNS: SquadFormat[] = ['feed', 'square', 'story', 'wide'];
+// 고르는 줄은 짧은 이름만 — 비율까지 붙이면 폰 폭(390px)을 넘는다. 비율·크기는 미리보기 아래 한 줄에.
+const SHORT: Partial<Record<SquadFormat, string>> = { feed: '피드', square: '정사각', story: '스토리', wide: '가로' };
 const LOGOS: Array<{ id: string; label: string }> = [
   { id: 'word', label: '한 줄' }, { id: 'stack', label: '두 줄' }, { id: 'ball', label: '두 줄 + 공' },
 ];
@@ -46,13 +48,13 @@ function Kit() {
           <div className="card-head"><h2>단체 사진</h2><span className="muted">{year} SQUAD · {data.players.length}명 · 지금 명단과 아바타로 그립니다</span></div>
           <div className="kit-bar">
             <Segmented className="chips" value={fmt} onChange={(v) => setFmt(v as SquadFormat)}
-              options={SNS.map((f) => ({ value: f, label: SQUAD_FORMATS[f].label }))} />
+              options={SNS.map((f) => ({ value: f, label: SHORT[f] }))} />
             <Button type="primary" onClick={() => setOpen(true)}>저장 · 공유</Button>
           </div>
           <div className="kit-preview" style={{ aspectRatio: `${S.w} / ${S.h}` }}>
             {preview ? <img src={preview} alt={`WEEKLY FC 단체 사진 ${S.label} 미리보기`} /> : <span className="muted">그리는 중…</span>}
           </div>
-          <p className="muted">{S.w}×{S.h}px · 선수 이름·등번호가 들어갑니다</p>
+          <p className="muted">{S.label} · {S.w}×{S.h}px · 선수 이름·등번호가 들어갑니다</p>
         </section>
         <section className="card">
           <div className="card-head"><h2>로고</h2><span className="muted">1080×1080 PNG · 검은 바탕 / 투명 바탕</span></div>
