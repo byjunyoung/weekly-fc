@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { series, judges, byDay, change, seoulDay } from '../../src/lib/history.ts';
+import { series, byDay, change, seoulDay } from '../../src/lib/history.ts';
 
 const P = { num: 2, name: '나', pos: 'DF', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '',
   pace: 80, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70 };
@@ -27,14 +27,6 @@ test('series — 종합은 여섯 값 평균, 안 바뀐 줄은 건너뛰고 마
 test('series — 0(배치 전) 점은 뺀다', () => {
   const placed = [R('2026-09-28T01:00:00Z', 'pace', 0, 85, 2, 'place')];
   assert.deepEqual(series(placed, { ...P, pace: 85 }, 'pace').map((p) => p.value), [85]);
-});
-
-test('judges — 팬은 순합 +, 천적은 순합 −, 나 자신은 빼고 대결만', () => {
-  const j = judges([...rows, R('2026-09-28T01:00:00Z', 'pace', 80, 90, 7, 'potm', '')], 2);
-  assert.equal(j.fan.num, 4); assert.equal(j.fan.net, 4); assert.equal(j.fan.up, 2);
-  assert.equal(j.rival.num, 5); assert.equal(j.rival.net, -3); assert.equal(j.rival.down, 2);
-  assert.equal(j.all.length, 2);
-  assert.equal(judges([], 2).fan, null);
 });
 
 test('byDay — 최신 날짜부터, 서울 날짜로 묶는다', () => {

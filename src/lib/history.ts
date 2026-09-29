@@ -1,4 +1,4 @@
-// src/lib/history.ts — 선수 한 명의 능력치 기록을 차트·팬/천적·게임 로그로(2026-09-28 "고친 기록 좀 더 재밌게").
+// src/lib/history.ts — 선수 한 명의 능력치 기록을 차트·게임 로그로(2026-09-28 "고친 기록 좀 더 재밌게").
 // 입력은 서버 stat_history(p_num) 의 줄들(오래된 것부터). 순수 계산만 — 화면은 react/player/StatHistory.tsx.
 import { ovr } from './stats.ts';
 import { STAT_KEYS, type Player, type StatKey, type StatLogRow } from './types.ts';
@@ -21,27 +21,6 @@ export function series(rows: StatLogRow[], now: Player, key: HistKey): Point[] {
     pts.push({ ts: r.ts, value: v, row: r });
   }
   return pts.filter((p) => p.value > 0);
-}
-
-export type Judge = { num: number; name: string; net: number; up: number; down: number };
-/** 팬·천적 — 티어 게임 대결에서 나를 올려 준/깎은 합계. 내가 나를 판정한 줄은 뺀다(본인 대결도 된다).
- *  팬 = 순합이 가장 큰 +, 천적 = 가장 큰 −. 없으면 null. */
-export function judges(rows: StatLogRow[], self: number): { fan: Judge | null; rival: Judge | null; all: Judge[] } {
-  const m = new Map<number, Judge>();
-  for (const r of rows) {
-    if (r.via !== 'game' || r.by == null || r.by === self) continue;
-    const d = r.after - r.before;
-    const j = m.get(r.by) ?? { num: r.by, name: r.byName, net: 0, up: 0, down: 0 };
-    j.net += d;
-    if (d > 0) j.up += 1; else if (d < 0) j.down += 1;
-    if (r.byName) j.name = r.byName;
-    m.set(r.by, j);
-  }
-  const all = [...m.values()].sort((a, b) => b.net - a.net || a.num - b.num);
-  const fan = all[0] && all[0].net > 0 ? all[0] : null;
-  const last = all[all.length - 1];
-  const rival = last && last.net < 0 ? last : null;
-  return { fan, rival, all };
 }
 
 /** 로그 — 최신 날짜부터 날짜별로 묶는다(서울 날짜). */

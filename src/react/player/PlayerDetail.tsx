@@ -272,7 +272,7 @@ function Detail({ num }: { num: number }) {
             </div>
           </div>
           {/* 방명록(2026-09-25) — 카드 아래 한 줄씩. 꾸미는 중엔 숨긴다(옵션 목록이 길다). */}
-          {/* 능력치 기록(2026-09-28) — 차트·팬/천적·게임 로그. 옛 「고친 기록」 여덟 줄 목록을 대신한다. */}
+          {/* 능력치 기록(2026-09-28) — 차트·게임 로그(팬/천적은 2026-09-29 뺌). 옛 「고친 기록」 여덟 줄 목록을 대신한다. */}
           {!avatarOpen && <StatHistory player={player} />}
           {!avatarOpen && data && <Guestbook player={player} players={data.players} />}
         </div>

@@ -1,11 +1,11 @@
 // src/react/player/StatHistory.tsx — 선수 페이지 「능력치 기록」(2026-09-28 "고친 기록 보는 거 좀 더 재밌게").
-// 위: 항목 칩 + 주가 차트(선 하나, 마우스·손가락을 대면 그 시점 값과 누가 바꿨는지). 가운데: 팬 1호·천적(티어 게임 판정 합계).
+// 위: 항목 칩 + 주가 차트(선 하나, 마우스·손가락을 대면 그 시점 값과 무엇으로 바뀌었는지). 팬 1호·천적은 2026-09-29 뺐다(사용자).
 // 아래: 날짜별로 묶은 게임 로그(▲ 초록 / ▼ 빨강). 계산은 lib/history.ts, 데이터는 서버 stat_history(전체 기록).
 import { Button, Segmented } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { fetchStatHistory } from '../../lib/api';
-import { byDay, change, judges, series, type HistKey, type Point } from '../../lib/history';
+import { byDay, change, series, type HistKey, type Point } from '../../lib/history';
 import { STAT_KO } from '../../lib/stats';
 import { STAT_KEYS, type Player, type StatLogRow } from '../../lib/types';
 import { href } from '../../lib/url';
@@ -107,7 +107,6 @@ export default function StatHistory({ player }: { player: Player }) {
   }, [player.num, sig]);
 
   const pts = useMemo(() => (rows ? series(rows, player, key) : []), [rows, player, key]);
-  const j = useMemo(() => (rows ? judges(rows, player.num) : null), [rows, player.num]);
   const days_ = useMemo(() => (rows ? byDay(rows) : []), [rows]);
 
   if (rows == null) return <div className="card stathist"><h2>능력치 기록</h2><p className="muted">불러오는 중…</p></div>;
@@ -128,26 +127,6 @@ export default function StatHistory({ player }: { player: Player }) {
         <span className="muted">{label} · 최근 7일</span>
       </div>
       <Chart pts={pts} label={label} showJudge={admin} />
-
-      {/* 팬·천적은 판정자 이름이 곧 기능이라 관리자 모드에서만 */}
-      {admin && j && (j.fan || j.rival) && (
-        <div className="sh-judges">
-          {j.fan && (
-            <a className="sh-judge is-fan" href={href(`/squad/${j.fan.num}/`)}>
-              <span className="sh-judge-tag">팬 1호</span><b>{j.fan.name}</b>
-              <span className="sh-judge-n is-up">▲{j.fan.net}</span>
-              <span className="muted">올려 준 판 {j.fan.up} · 깎은 판 {j.fan.down}</span>
-            </a>
-          )}
-          {j.rival && (
-            <a className="sh-judge is-rival" href={href(`/squad/${j.rival.num}/`)}>
-              <span className="sh-judge-tag">천적</span><b>{j.rival.name}</b>
-              <span className="sh-judge-n is-down">▼{-j.rival.net}</span>
-              <span className="muted">올려 준 판 {j.rival.up} · 깎은 판 {j.rival.down}</span>
-            </a>
-          )}
-        </div>
-      )}
 
       <div className="sh-log">
         {days_.slice(0, days).map((g) => (
