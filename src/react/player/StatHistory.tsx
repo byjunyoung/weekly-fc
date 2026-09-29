@@ -9,15 +9,22 @@ import { byDay, change, judges, series, type HistKey, type Point } from '../../l
 import { STAT_KO } from '../../lib/stats';
 import { STAT_KEYS, type Player, type StatLogRow } from '../../lib/types';
 import { href } from '../../lib/url';
+import { useAdmin } from '../useAdmin';
 
 const KEYS: Array<{ value: HistKey; label: string }> = [{ value: 'ovr', label: '종합' }, ...STAT_KEYS.map((k) => ({ value: k as HistKey, label: STAT_KO[k] }))];
 const H = 180, PAD = { l: 34, r: 12, t: 12, b: 24 };
 
 const mmdd = (ts: string): string => { const t = Date.parse(ts); if (Number.isNaN(t)) return ''; const d = new Date(t + 9 * 3600e3); return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`; };
 const hhmm = (ts: string): string => { const t = Date.parse(ts); if (Number.isNaN(t)) return ''; const d = new Date(t + 9 * 3600e3); return `${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
-/** 이 줄이 왜 생겼나 — 누가 판정했는지, 배치인지, POTM 보상인지. */
-function why(r: StatLogRow): string {
+/** 이 줄이 왜 생겼나 — 대결 상대·배치·POTM 보상. 판정자 이름은 관리자에게만(2026-09-29 "팀원에겐 익명") —
+ *  서버가 관리자가 아니면 이름을 비워 보내고, 관리자도 관리자 모드를 켰을 때만 보여 준다. */
+function why(r: StatLogRow, showJudge: boolean): string {
   if (r.via === 'potm') return 'POTM 보상';
+  if (!showJudge || !r.byName) {
+    if (r.via === 'game') return r.oppName ? `vs ${r.oppName}` : '대결';
+    if (r.via === 'place') return '배치';
+    return '직접 고침';
+  }
   if (r.via === 'place') return `${r.byName || '관리자'} · 배치`;
   if (r.via === 'game') {
     const who = r.byName || '누군가';
@@ -29,7 +36,7 @@ function why(r: StatLogRow): string {
 }
 const signed = (n: number): string => (n > 0 ? `▲${n}` : n < 0 ? `▼${-n}` : '±0');
 
-function Chart({ pts, label }: { pts: Point[]; label: string }) {
+function Chart({ pts, label, showJudge }: { pts: Point[]; label: string; showJudge: boolean }) {
   const [hover, setHover] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   // 폭은 칸을 재서 그린다 — viewBox 를 늘리면 넓은 화면에서 글자·선까지 같이 커진다.
@@ -79,7 +86,7 @@ function Chart({ pts, label }: { pts: Point[]; label: string }) {
         )}
       </svg>
       <p className="sh-tip" aria-live="polite">
-        {hp ? <><b>{hp.value}</b> {hp.row ? <>{hp.row.after > hp.row.before ? '▲' : '▼'} {STAT_KO[hp.row.field]} · {why(hp.row)} · {mmdd(hp.ts)} {hhmm(hp.ts)}</> : '처음 값'}</>
+        {hp ? <><b>{hp.value}</b> {hp.row ? <>{hp.row.after > hp.row.before ? '▲' : '▼'} {STAT_KO[hp.row.field]} · {why(hp.row, showJudge)} · {mmdd(hp.ts)} {hhmm(hp.ts)}</> : '처음 값'}</>
           : <span className="muted">선을 누르거나 대 보면 그때 누가 바꿨는지 나옵니다</span>}
       </p>
     </div>
@@ -87,6 +94,7 @@ function Chart({ pts, label }: { pts: Point[]; label: string }) {
 }
 
 export default function StatHistory({ player }: { player: Player }) {
+  const admin = useAdmin();
   const [rows, setRows] = useState<StatLogRow[] | null>(null);
   const [key, setKey] = useState<HistKey>('ovr');
   const [days, setDays] = useState(3);
@@ -119,9 +127,10 @@ export default function StatHistory({ player }: { player: Player }) {
         <span className={`sh-wk ${wk > 0 ? 'is-up' : wk < 0 ? 'is-down' : ''}`}>{signed(wk)}</span>
         <span className="muted">{label} · 최근 7일</span>
       </div>
-      <Chart pts={pts} label={label} />
+      <Chart pts={pts} label={label} showJudge={admin} />
 
-      {j && (j.fan || j.rival) && (
+      {/* 팬·천적은 판정자 이름이 곧 기능이라 관리자 모드에서만 */}
+      {admin && j && (j.fan || j.rival) && (
         <div className="sh-judges">
           {j.fan && (
             <a className="sh-judge is-fan" href={href(`/squad/${j.fan.num}/`)}>
@@ -151,7 +160,7 @@ export default function StatHistory({ player }: { player: Player }) {
                   <li key={`${r.ts}-${r.field}-${i}`}>
                     <span className={`sh-delta ${dlt > 0 ? 'is-up' : 'is-down'}`}>{dlt > 0 ? `▲${dlt}` : `▼${-dlt}`}</span>
                     <span className="sh-field">{STAT_KO[r.field]}</span>
-                    <span className="sh-why">{why(r)}</span>
+                    <span className="sh-why">{why(r, admin)}</span>
                     <span className="sh-move muted">{r.before}→{r.after}</span>
                   </li>
                 );

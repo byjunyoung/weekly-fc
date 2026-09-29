@@ -171,7 +171,7 @@ function Tier() {
         {playing && !me.num && (
           <div className="card duel-me">
             <h2>{me.login ? '먼저 내 이름을 골라 주세요' : '로그인이 필요합니다'}</h2>
-            <p className="muted">대결은 로그인한 팀원만 할 수 있습니다. 누가 판정했는지 기록에 남고, 하루 {DAILY}판·같은 선수 {PER_PLAYER}번까지입니다.</p>
+            <p className="muted">대결은 로그인한 팀원만 할 수 있습니다. 누가 판정했는지는 관리자만 볼 수 있고(팀원에겐 익명), 하루 {DAILY}판·같은 선수 {PER_PLAYER}번까지입니다.</p>
             <Button type="primary" onClick={() => window.dispatchEvent(new Event('wfc:open-me'))}>{me.login ? '이름 고르기' : '로그인'}</Button>
           </div>
         )}
