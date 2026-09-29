@@ -30,7 +30,7 @@ begin
         'num', p.num, 'name', p.name,
         'claimed_at', m.claimed_at,
         'last_visit', (select max(v.last_ts) from public.visits v where v.member_num = p.num),
-        'visit_days', (select count(*) from public.visits v where v.member_num = p.num and v.day >= d0),
+        'visit_days', (select count(distinct v.day) from public.visits v where v.member_num = p.num and v.day >= d0),   -- 기기가 여럿이어도 하루는 하루
         'views', (select coalesce(sum(v.views), 0) from public.visits v where v.member_num = p.num and v.day >= d0),
         'duels', (select count(*) from public.votes x where x.voter = m.user_id and (x.ts at time zone 'Asia/Seoul')::date >= d0),
         'last_duel', (select max(x.ts) from public.votes x where x.voter = m.user_id),
