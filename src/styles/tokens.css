@@ -1075,6 +1075,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .title-help:hover, .title-help:focus-visible { color: var(--fg); border-color: var(--fg); }
 .title-box.is-on .title-help { align-self: flex-start; border-color: rgba(255, 206, 33, .6); color: var(--gold); }
 .title-catalog { width: min(720px, calc(100vw - 48px)); font-size: var(--fs-xs); }   /* 가로로 넓게 — 스크롤 없이 한눈에(2026-09-29) */
+.title-catalog-modal .title-catalog { width: auto; }   /* 모바일 모달 안에선 모달 폭을 따른다 */
 .title-catalog > p { margin: 0 0 var(--s-xs); }
 .title-catalog h4 { margin: var(--s-xs) 0 4px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
 .title-catalog ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px var(--s-sm); }

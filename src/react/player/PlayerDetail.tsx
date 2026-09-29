@@ -2,7 +2,7 @@
 // 벌금·봉사는 이 화면에 두지 않는다 — 요약은 2026-09-22, 내역은 2026-09-23 에 뺐다. 운영 탭에 같은 내용이 있고, 홈 라커룸에서 들어오는
 // 이 화면은 "내 선수를 보고 꾸미는" 자리라 재정 정보가 끼어들 이유가 없다(사용자 지시).
 import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Popover, Segmented, Select } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import NumberPicker from '../squad/NumberPicker';
 import type { CSSProperties } from 'react';
 import { adminMembers, adminRelease, fetchFull, serializePlayer, write, writeAvatar, type MemberRow } from '../../lib/api';
@@ -31,8 +31,19 @@ import { numClash, playerFormDefaults, playerFromForm } from './model';
 import { POS_OPTIONS } from '../squad/model';
 import type { PlayerFormValues } from './model';
 
+// 칭호 목록은 넓은 화면에선 (?) 풍선, 좁은 화면에선 모달(2026-09-29 "모바일 짤린다") — 풍선은 버튼에 붙어
+// 화면 밖으로 밀리고 세로로도 넘친다. 모달은 폭을 화면에 맞추고 길면 스크롤된다.
+const NARROW_QUERY = '(max-width: 640px)';
+const subscribeNarrow = (cb: () => void) => {
+  const m = window.matchMedia(NARROW_QUERY);
+  m.addEventListener('change', cb);
+  return () => m.removeEventListener('change', cb);
+};
+
 function Detail({ num }: { num: number }) {
   const { message } = App.useApp();
+  const narrow = useSyncExternalStore(subscribeNarrow, () => window.matchMedia(NARROW_QUERY).matches, () => false);
+  const [catOpen, setCatOpen] = useState(false);
   const { data } = useData();
   const admin = useAdmin();
   const me = useMe();
@@ -187,7 +198,12 @@ function Detail({ num }: { num: number }) {
         ))}
       </div>
     );
-    const help = (
+    const help = narrow ? (
+      <>
+        <button type="button" className="title-help" aria-label="칭호 목록 보기" onClick={() => setCatOpen(true)}>?</button>
+        <Modal open={catOpen} onCancel={() => setCatOpen(false)} footer={null} title="칭호 목록" className="title-catalog-modal">{catalog}</Modal>
+      </>
+    ) : (
       <Popover content={catalog} title="칭호 목록" trigger={['hover', 'click']} placement="bottomRight">
         <button type="button" className="title-help" aria-label="칭호 목록 보기">?</button>
       </Popover>
