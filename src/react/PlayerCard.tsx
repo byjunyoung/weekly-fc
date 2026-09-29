@@ -27,7 +27,7 @@ export default function PlayerCard({ player, tier, size, avatar, className = '',
   avatar?: (svg: string) => ReactNode; className?: string;
   /** 이 선수가 지금 POTM 이면 그 매치 날짜('YYYY-MM-DD'). 아니면 null. */
   potmDate?: string | null;
-  /** 팀 전체 — 주면 칭호 뱃지(이름 아래)와 팀 1위 항목 표시(★)를 붙인다(2026-09-29, lib/titles.ts). 칭호는 팀 안 상대 비교라 팀이 필요하다. */
+  /** 팀 전체 — 주면 칭호 뱃지(이름 옆)와 팀 1위 항목 금색 표시를 붙인다(2026-09-29, lib/titles.ts). 칭호는 팀 안 상대 비교라 팀이 필요하다. */
   team?: Player[];
 }) {
   const m = cardModel(player, tier);
@@ -63,7 +63,7 @@ export default function PlayerCard({ player, tier, size, avatar, className = '',
           <span className={`fcard-stat${bests.includes(s.key) ? ' is-best' : ''}`} key={s.key}>
             {/* 피파처럼 숫자 먼저, 라벨 뒤 */}
             <b className={`fcard-stat-val val-${s.band}`}>{s.value || '–'}</b>
-            <span className="fcard-stat-label">{bests.includes(s.key) && <i aria-label="팀 1위">★</i>}{s.label}</span>
+            <span className="fcard-stat-label" title={bests.includes(s.key) ? '팀 1위' : undefined}>{s.label}</span>
           </span>
         ))}
       </div>

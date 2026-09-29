@@ -28,7 +28,7 @@ export type CardImageOpts = {
   potmDate?: string | null;             // 있으면 카드 위에 금색 띠 "★ POTM 9/27"
   caption?: string;                     // 카드 아래 한 줄
   badge?: string;                       // 칭호(이름 줄 아래 뱃지, 2026-09-29) — 없으면 그 줄은 비워 둔다
-  bests?: StatKey[];                    // 팀 1위 항목 — 이름 앞 ★, 금색
+  bests?: StatKey[];                    // 팀 1위 항목 — 라벨 금색
 };
 
 function frameColor(tier: Tier | null): string {
@@ -103,7 +103,7 @@ export function drawCardImage(c: HTMLCanvasElement, player: Player, tier: Tier |
     ctx.fillStyle = tok(`--val-${s.band}`, '#f4f4f4'); ctx.font = pixelFont(60); ctx.textAlign = 'left';
     ctx.fillText(s.value ? String(s.value) : '–', cx, cy + 8);
     ctx.fillStyle = best ? POTM_GOLD : muted; ctx.font = pixelFont(30);
-    ctx.fillText(best ? `★${s.label}` : s.label, cx + 96, cy);
+    ctx.fillText(s.label, cx + 96, cy);   // 팀 1위는 금색만(★ 없음 — 모든 카드 같게, 2026-09-29)
   });
 
   // POTM 띠 — 카드 위 가장자리에 수평으로(도트 글자는 기울이면 뭉개진다)

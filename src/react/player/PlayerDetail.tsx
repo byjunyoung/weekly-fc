@@ -10,7 +10,7 @@ import { maskEmail } from '../../lib/auth';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { rivalPairs } from '../../lib/tier';
-import { teamBests, titleCatalog, titleDetail, titleOf } from '../../lib/titles';
+import { titleCatalog, titleDetail, titleOf } from '../../lib/titles';
 import { FOOT_OPTIONS, tierByNum } from '../../lib/card';
 import { currentPotm, matchLabel } from '../../lib/matches';
 import CardShareModal from '../CardShareModal';
@@ -156,7 +156,6 @@ function Detail({ num }: { num: number }) {
   const placed = !!player && ovr(player) > 0; // 능력치 0 = 배치 전(2026-09-28)
   const myTitle = player && data ? titleOf(player, data.players) : null;
   const myTitleWhy = player && data ? titleDetail(player, data.players) : null;
-  const myBests = player && data ? teamBests(player, data.players) : [];
   const attrRows = player ? STAT_KEYS.map((k) => {
     const v = player[k], b = band(v, STAT_CUTS);
     return (
@@ -332,8 +331,7 @@ function Detail({ num }: { num: number }) {
       <CardShareModal open={shareOpen} onClose={() => setShareOpen(false)} player={player ?? null}
         tier={player ? tierByNum(data?.players ?? []).get(player.num) : null}
         title={player ? `${player.name} 카드` : '카드'} fileTag={`card-${num}`}
-        opts={{ sub: myPotmDate ? `${matchLabel(myPotmDate)} 매치 POTM` : undefined, potmDate: myPotmDate,
-          badge: myTitle?.name, bests: myBests }} />
+        opts={{ sub: myPotmDate ? `${matchLabel(myPotmDate)} 매치 POTM` : undefined, potmDate: myPotmDate }} team={data?.players ?? []} />
     </>
   );
 }

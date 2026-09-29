@@ -162,7 +162,8 @@ function Matches() {
       <TeamsShareModal open={!!teamsShare} onClose={() => setTeamsShare(null)} lineup={teamsShare?.lineup ?? []} players={data.players} date={teamsShare?.date ?? today} />
       <CardShareModal open={!!share} onClose={() => setShare(null)} player={sharePlayer} tier={share ? tiers.get(share.num) : null}
         title={share ? `${M.matchLabel(share.m.date, Number(today.slice(0, 4)))} POTM` : 'POTM'} fileTag={share ? `potm-${share.num}` : 'potm'}
-        opts={share ? { title: 'POTM', sub: `${M.matchLabel(share.m.date, Number(today.slice(0, 4)))} 매치 · ${shareVotes}표`, potmDate: share.m.date } : undefined} />
+        opts={share ? { title: 'POTM', sub: `${M.matchLabel(share.m.date, Number(today.slice(0, 4)))} 매치 · ${shareVotes}표`, potmDate: share.m.date } : undefined}
+        team={data.players} />
     </>
   );
 }
