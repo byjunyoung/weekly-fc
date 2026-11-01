@@ -5,7 +5,7 @@ import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Popover, Segm
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import NumberPicker from '../squad/NumberPicker';
 import type { CSSProperties } from 'react';
-import { adminMembers, adminRelease, fetchFull, serializePlayer, write, writeAvatar, type MemberRow } from '../../lib/api';
+import { adminMembers, adminMove, adminRelease, fetchFull, serializePlayer, write, writeAvatar, type MemberRow } from '../../lib/api';
 import { maskEmail } from '../../lib/auth';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
@@ -49,13 +49,26 @@ function Detail({ num }: { num: number }) {
   const me = useMe();
   // 꾸미기는 본인과 관리자만(2026-09-24 본인인증). 서버도 같은 걸 다시 확인한다.
   const canDress = admin || (me != null && me === num);
-  // 관리자: 이 번호를 차지한 계정 — 잘못 차지됐으면 여기서 푼다.
+  // 관리자: 이 번호를 차지한 계정 — 잘못 차지됐으면 여기서 진짜 이름으로 옮기거나(기록도 같이) 푼다.
   const [member, setMember] = useState<MemberRow | null | undefined>(undefined);
+  const [claimed, setClaimed] = useState<number[]>([]);
+  const [moveTo, setMoveTo] = useState<number | null>(null);
   const [releasing, setReleasing] = useState(false);
   useEffect(() => {
     if (!admin) { setMember(undefined); return; }
-    adminMembers().then((rows) => setMember(rows.find((r) => r.num === num) ?? null)).catch(() => setMember(undefined));
+    adminMembers().then((rows) => { setMember(rows.find((r) => r.num === num) ?? null); setClaimed(rows.map((r) => r.num)); })
+      .catch(() => setMember(undefined));
   }, [admin, num]);
+  const move = async () => {
+    if (moveTo == null) return;
+    setReleasing(true);
+    try {
+      await adminMove(num, moveTo);
+      const to = data?.players.find((p) => p.num === moveTo)?.name ?? moveTo;
+      setMember(null); setMoveTo(null); message.success(`계정을 ${to}(으)로 옮겼습니다`);
+    } catch (e) { message.error((e as Error).message); }
+    finally { setReleasing(false); }
+  };
   const release = async () => {
     setReleasing(true);
     try { await adminRelease(num); setMember(null); message.success('연결을 풀었습니다'); }
@@ -261,7 +274,14 @@ function Detail({ num }: { num: number }) {
               <div className="full form-member">
                 <span className="label">연결된 계정</span>
                 {member ? <span>{maskEmail(member.email)}
-                  <Popconfirm title="이 계정과 선수의 연결을 풀까요?" okText="풀기" cancelText="취소" onConfirm={release}>
+                  <Select size="small" placeholder="진짜 이름" style={{ width: 120 }} value={moveTo ?? undefined} onChange={setMoveTo}
+                    showSearch optionFilterProp="label"
+                    options={(data?.players ?? []).filter((p) => !claimed.includes(p.num)).map((p) => ({ value: p.num, label: `${p.num} ${p.name}` }))} />
+                  <Popconfirm title="이 계정을 고른 선수로 옮길까요? 이 계정이 남긴 판정·방명록도 따라갑니다." okText="옮기기" cancelText="취소"
+                    onConfirm={move} disabled={moveTo == null}>
+                    <Button size="small" loading={releasing} disabled={moveTo == null}>옮기기</Button>
+                  </Popconfirm>
+                  <Popconfirm title="이 계정과 선수의 연결을 풀까요? 남긴 기록은 이 선수 이름에 그대로 남습니다." okText="풀기" cancelText="취소" onConfirm={release}>
                     <Button size="small" loading={releasing}>풀기</Button>
                   </Popconfirm></span> : <span className="muted">없음 — 본인이 로그인해 이름을 고르면 연결됩니다</span>}
               </div>

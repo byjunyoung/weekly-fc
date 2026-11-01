@@ -172,6 +172,10 @@ export async function claimedNums(): Promise<number[]> { const r = await rpc('cl
 export type MemberRow = { num: number; email: string; claimed_at: string };
 export async function adminMembers(): Promise<MemberRow[]> { const r = await rpc('admin_members'); return Array.isArray(r) ? (r as MemberRow[]) : []; }
 export async function adminRelease(num: number): Promise<void> { await rpc('admin_release', { p_num: num }); }
+/** 잘못 고른 이름 바꾸기 — 본인은 한 번만. 그 계정이 옛 이름으로 한 판정·방명록도 따라 옮겨진다. */
+export async function changeClaim(num: number): Promise<Me> { await rpc('change_claim', { p_num: num }); return refreshMe(); }
+/** 관리자: from 번에 붙은 계정을 to 번으로(기록도 같이). */
+export async function adminMove(from: number, to: number): Promise<void> { await rpc('admin_move', { p_from: from, p_to: to }); }
 
 /** 관리자 쓰기 → 성공하면 refresh()까지. 실패는 throw. 관리자인지는 서버가 토큰으로 다시 확인한다. */
 export async function write(action: string, payload: unknown): Promise<Raw> {

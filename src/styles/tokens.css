@@ -312,7 +312,7 @@ a.card:hover { background: var(--charcoal); }
 .form-sec:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
 .form-note { margin: 0; }
 .form-member { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
-.form-member > span:last-child { display: inline-flex; align-items: center; gap: var(--s-xs); }
+.form-member > span:last-child { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
 /* 등번호 격자 — 열 칸씩, 쓰는 번호는 흐리게(누르면 누가 쓰는지만 알려 준다) */
 .numpick-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
 .numpick-n { min-width: 0; height: 32px; padding: 0; border: 1px solid var(--hairline-strong); border-radius: var(--r-sm); background: none;
@@ -666,6 +666,9 @@ details.year[open] > summary::before { content: "▾ "; }
 }
 .pick-list button:not(.ant-btn):hover { background: rgba(255, 255, 255, .1); }
 .pick-list button:not(.ant-btn).primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+/* 이름 고르기 확인 — 고른 이름을 크게 한 번 더 보여 준다(옆 번호 잘못 누름 방지). */
+.pick-confirm-name { margin: 0 0 var(--s-xs); font-size: var(--fs-lg); font-weight: var(--fw-strong); }
+.pick-confirm-name b { margin-right: var(--s-xs); color: var(--primary); }
 
 /* 선수 편집 모달 — 삭제(위험)를 저장·취소와 반대쪽 끝으로 띄운다. antd 기본 footer 는 text-align:end 라 flex 스페이서가 안 먹는다. */
 .ant-modal-footer.modal-foot-split { display: flex; align-items: center; }
