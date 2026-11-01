@@ -28,7 +28,7 @@ export function squadRows(n: number, perRow: number): number[] {
 }
 
 // 광고판 글자 5×7
-const F57: Record<string, string[]> = {
+export const F57: Record<string, string[]> = {
   W: ['X...X', 'X...X', 'X...X', 'X.X.X', 'X.X.X', 'XX.XX', 'X...X'],
   E: ['XXXXX', 'X....', 'X....', 'XXXX.', 'X....', 'X....', 'XXXXX'],
   K: ['X...X', 'X..X.', 'X.X..', 'XX...', 'X.X..', 'X..X.', 'X...X'],
@@ -37,14 +37,14 @@ const F57: Record<string, string[]> = {
   F: ['XXXXX', 'X....', 'X....', 'XXXX.', 'X....', 'X....', 'X....'],
   C: ['.XXX.', 'X...X', 'X....', 'X....', 'X....', 'X...X', '.XXX.'],
 };
-const glyphW = (t: string) => [...t].reduce((s, ch) => s + (F57[ch] ? 6 : 4), 0) - 1;
+export const glyphW = (t: string) => [...t].reduce((s, ch) => s + (F57[ch] ? 6 : 4), 0) - 1;
 // 축구공 15×15 — X 외곽선 · w 흰 · s 흰 그늘 · B 검은 패치
-const BALL = ['.....XXXXX.....', '...XXwwwwwXX...', '..XwwwwwwwwwX..', '.XwwwwBBBwwwwX.', '.XBwwBBBBBwwBX.', 'XBBwwwBBBwwwBBX',
+export const BALL = ['.....XXXXX.....', '...XXwwwwwXX...', '..XwwwwwwwwwX..', '.XwwwwBBBwwwwX.', '.XBwwBBBBBwwBX.', 'XBBwwwBBBwwwBBX',
   'XBwwwwwwwwwwwBX', 'XwwwwwwwwwwwwsX', 'XwwBBwwwwwBBssX', 'XwBBBwwwwsBBBsX', '.XwBwwwBwwsBsX.', '.XwwwwBBBwssX..', '..XwwwBBBsssX..', '...XXwssssXX...', '.....XXXXX.....'];
-const BALL_C: Record<string, string> = { X: '#111111', w: '#ffffff', s: '#c9ced6', B: '#1b1b1b' };
-const SKY = ['#05060f', '#080b1c', '#0b1028', '#0f1533', '#131b3e', '#18224a'];
-const SHIRT = ['#c0392b', '#0070d1', '#ffce21', '#ecf0f1', '#27ae60', '#8e44ad', '#e67e22', '#2c3e50', '#16a085', '#d35400'];
-const SKIN = ['#f2c9a0', '#e0ac7e', '#c68642', '#8d5524', '#f5d5b8'];
+export const BALL_C: Record<string, string> = { X: '#111111', w: '#ffffff', s: '#c9ced6', B: '#1b1b1b' };
+export const SKY = ['#05060f', '#080b1c', '#0b1028', '#0f1533', '#131b3e', '#18224a'];
+export const SHIRT = ['#c0392b', '#0070d1', '#ffce21', '#ecf0f1', '#27ae60', '#8e44ad', '#e67e22', '#2c3e50', '#16a085', '#d35400'];
+export const SKIN = ['#f2c9a0', '#e0ac7e', '#c68642', '#8d5524', '#f5d5b8'];
 const AV_W = 24, AV_H = 32, LAB = 9, PITCH = AV_H + LAB + 1;
 
 export function drawSquadImage(canvas: HTMLCanvasElement, players: Player[], fmt: SquadFormat, year: number): void {
