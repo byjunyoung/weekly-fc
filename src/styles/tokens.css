@@ -741,6 +741,14 @@ details.year[open] > summary::before { content: "▾ "; }
 .tier-face { display: flex; }
 .tier-face svg { width: 48px; height: 48px; }
 .tier-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); }
+/* 배치 중(2026-11-02) — 티어 칸 아래 따로. 색 없는 점선 칸이라 티어로 읽히지 않는다. */
+.tier-pending { margin-top: var(--s-xs); padding-top: var(--s-xs); border-top: 1px dashed var(--hairline); }
+.tier-pending .tier-row { border-bottom: 0; }
+.tier-pending .tier-p { width: auto; min-width: 56px; }
+.tier-pending .tier-help { margin: var(--s-xs) 0 0; }
+.tier-pending-badge { background: transparent; color: var(--muted); border: 1px dashed var(--hairline); font-size: var(--fs-xs); }
+.tier-pending-n { font-size: var(--fs-xs); color: var(--fg); }
+.tier-pending-note { font-size: var(--fs-xs); color: var(--link); white-space: nowrap; }
 .tier-link { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-xs); margin-top: var(--s-xs); }
 .tier-link .label { display: inline; }
 .tier-link-url { font-size: var(--fs-xs); word-break: break-all; user-select: all; }

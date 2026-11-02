@@ -6,9 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import { avatarFaceSvg, avatarSvg } from '../../components/avatar';
 import { vote } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
-import { STAT_KO } from '../../lib/stats';
+import { ovr, STAT_KO } from '../../lib/stats';
 import { pairKey, pickPair, QUESTION, rivalPairs, tierRows, type TierKey } from '../../lib/tier';
-import { STAT_KEYS, type Player, type StatKey } from '../../lib/types';
+import { STAT_KEYS, type Placing, type Player, type StatKey } from '../../lib/types';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
@@ -37,6 +37,35 @@ function Board({ players, tierKey }: { players: Player[]; tierKey: TierKey }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/** 배치 중(2026-11-02) — 능력치가 아직 없는 선수. 팀원 판정이 기준 인원만큼 모여야 티어표에 들어온다. */
+function Pending({ players, placing, me, placed }: { players: Player[]; placing: Placing; me: number | null; placed: number[] }) {
+  const pending = players.filter((p) => ovr(p) === 0);
+  if (!pending.length) return null;
+  return (
+    <div className="tier-pending">
+      <div className="tier-row">
+        <b className="tier-badge tier-pending-badge">배치</b>
+        <div className="tier-people">
+          {pending.map((p) => {
+            const n = placing.count[p.num] ?? 0;
+            const note = p.num === me ? '본인' : placed.includes(p.num) ? '판정함' : '배치하기';
+            return (
+              <a className="tier-p" key={p.num} href={href(p.num === me ? `/squad/${p.num}/` : `/squad/place/?num=${p.num}`)}>
+                <span className="tier-face" aria-hidden="true"
+                  dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 48, p.num, true) }} />
+                <span className="tier-name">{p.name}</span>
+                <span className="tier-pending-n">{n}/{placing.need}</span>
+                <span className="tier-pending-note">{note}</span>
+              </a>
+            );
+          })}
+        </div>
+      </div>
+      <p className="muted tier-help">배치가 필요한 선수입니다. 팀원 {placing.need}명이 배치 대결로 판정하면 항목마다 가운데 값으로 능력치가 정해지고 티어표에 들어옵니다. 누르면 배치 대결로 갑니다.</p>
     </div>
   );
 }
@@ -188,6 +217,7 @@ function Tier() {
           </div>
           <p className="muted tier-help">둘 중 누가 더 나은지 고르면 그 자리에서 능력치가 바뀝니다. 칸은 순위 — 위에서부터 S 10% · A 20% · B 40% · C 20% · D 10%. 같은 숫자면 여섯 항목 합계로 가릅니다.</p>
           <Board players={players} tierKey={tierKey} />
+          <Pending players={players} placing={data.placing ?? { need: 3, count: {} }} me={me.num ?? null} placed={me.placed ?? []} />
         </div>
       </div>
       <TierShareModal open={shareOpen} onClose={() => setShareOpen(false)} players={players} tierKey={tierKey} />

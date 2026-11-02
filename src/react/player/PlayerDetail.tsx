@@ -25,7 +25,7 @@ import type { Player } from '../../lib/types';
 import { countUp } from '../../lib/motion';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
-import { useMe } from '../useMe';
+import { useMe, useMeInfo } from '../useMe';
 import { useData } from '../useData';
 import { numClash, playerFormDefaults, playerFromForm } from './model';
 import { POS_OPTIONS } from '../squad/model';
@@ -47,6 +47,7 @@ function Detail({ num }: { num: number }) {
   const { data } = useData();
   const admin = useAdmin();
   const me = useMe();
+  const myPlaced = useMeInfo().placed ?? [];
   // 꾸미기는 본인과 관리자만(2026-09-24 본인인증). 서버도 같은 걸 다시 확인한다.
   const canDress = admin || (me != null && me === num);
   // 관리자: 이 번호를 차지한 계정 — 잘못 차지됐으면 여기서 진짜 이름으로 옮기거나(기록도 같이) 푼다.
@@ -178,6 +179,9 @@ function Detail({ num }: { num: number }) {
   }
 
   const placed = !!player && ovr(player) > 0; // 능력치 0 = 배치 전(2026-09-28)
+  // 배치는 팀원 여럿이 판정(2026-11-02) — 기준 인원과 지금까지 낸 사람 수.
+  const need = data?.placing?.need ?? 3;
+  const count = (player && data?.placing?.count[player.num]) ?? 0;
   const myTitle = player && data ? titleOf(player, data.players) : null;
   const myTitleWhy = player && data ? titleDetail(player, data.players) : null;
   const attrRows = player ? STAT_KEYS.map((k) => {
@@ -349,8 +353,8 @@ function Detail({ num }: { num: number }) {
                 </div>
                 {placed ? <><div className="attr-list">{attrRows}</div>{titleBox()}</> : (
                   <div className="place-empty">
-                    <p className="muted">아직 능력치 배치 전입니다. 배치가 끝나야 티어표·라이벌·대결에 나옵니다.</p>
-                    {admin && <Button type="primary" href={href(`/squad/place/?num=${player.num}`)}>배치 대결 시작</Button>}
+                    <p className="muted">아직 능력치 배치 전입니다 — 팀원 {need}명 중 {count}명 판정. {need}명이 모이면 항목마다 가운데 값으로 정해지고, 그때부터 티어표·라이벌·대결에 나옵니다.</p>
+                    {me !== player.num && <Button type="primary" href={href(`/squad/place/?num=${player.num}`)}>{myPlaced.includes(player.num) ? '다시 판정하기' : '배치 대결 시작'}</Button>}
                   </div>
                 )}
               </div>

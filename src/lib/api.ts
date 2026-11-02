@@ -6,7 +6,7 @@
 import { accessToken, adminOn, cachedMe, session, setCachedMe, type Me } from './auth.ts';
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
 import { applyPotm } from './matches.ts';
-import { STAT_KEYS, type Data, type Fine, type GuestbookRow, type Match, type MatchTeam, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
+import { STAT_KEYS, type Data, type Fine, type GuestbookRow, type Match, type MatchTeam, type Placing, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
 
 // v3: matches 가 생겼다(2026-09-25) — 옛 캐시엔 그 칸이 없어 화면이 깨지므로 키를 올려 한 번 버린다.
 const CACHE_KEY = 'wfc_cache_v3';
@@ -73,7 +73,13 @@ export function normalizeData(d: Raw): Data {
     rotation: arr(d.rotation).map(normalizeRotation), fines: arr(d.fines).map(normalizeFine).filter((f) => f.id),
     // 최신이 위로 — 서버는 오래된 것부터 보낸다(옛 시트와 같은 순서)라 뒤집는다.
     statLog: arr(d.statLog).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null).reverse(),
-    matches: arr(d.matches).map(normalizeMatch).filter((m): m is Match => m !== null) };
+    matches: arr(d.matches).map(normalizeMatch).filter((m): m is Match => m !== null), placing: normalizePlacing(d.placing) };
+}
+/** 옛 캐시(v3)엔 이 칸이 없다 — 기본 기준 3명, 진행 없음으로 채운다. */
+export function normalizePlacing(v: unknown): Placing {
+  const r = (v && typeof v === 'object' ? v : {}) as Raw;
+  const c = (r.count && typeof r.count === 'object' ? r.count : {}) as Raw;
+  return { need: num(r.need) || 3, count: Object.fromEntries(Object.entries(c).map(([k, n]) => [Number(k), num(n)])) };
 }
 
 export const serializePlayer = (p: Player): Raw => ({ ...p, vest: p.vest ?? '', rot: p.rot ?? '', avatar: p.avatar ?? '' });
@@ -193,6 +199,13 @@ export async function placePlayer(num: number, stats: Record<StatKey, number>): 
   await rpc('place_player', { p_num: num, p_stats: stats });
   if (inflight) await inflight.catch(() => {});
   await refresh();
+}
+/** 팀원 배치 판정 하나(2026-11-02) — 기준 인원이 모이면 서버가 중앙값으로 확정한다. 로그인·이름 고르기가 필요하다. */
+export async function submitPlacement(num: number, stats: Record<StatKey, number>): Promise<{ count: number; need: number; done: boolean }> {
+  const r = await rpc('submit_placement', { p_num: num, p_stats: stats });
+  if (inflight) await inflight.catch(() => {});
+  await Promise.all([refresh(), refreshMe()]);
+  return { count: Number(r.count) || 0, need: Number(r.need) || 3, done: r.done === true };
 }
 export async function fetchFull(): Promise<Data> { return normalizeData(await rpc('get_all_full')); }
 

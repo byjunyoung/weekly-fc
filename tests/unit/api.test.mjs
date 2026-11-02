@@ -150,3 +150,11 @@ test3('applyVote — 끝에 막혀 안 바뀐 쪽은 기록을 남기지 않는�
   const n = applyVote(d, { ts: 't', field: 'pace', by: null, by_name: '', win: { num: 1, before: 99, after: 99 }, lose: { num: 2, before: 98, after: 96 } });
   assert3.deepEqual(n.statLog.map((x) => x.num), [2]);
 });
+
+// ── 배치 진행(2026-11-02) ────────────────────────────────────────
+import { normalizePlacing } from '../../src/lib/api.ts';
+test('normalizePlacing — 번호 키를 숫자로, 없으면 기준 3명·진행 없음', () => {
+  assert.deepEqual(normalizePlacing({ need: 4, count: { '33': 2, '34': '1' } }), { need: 4, count: { 33: 2, 34: 1 } });
+  assert.deepEqual(normalizePlacing(undefined), { need: 3, count: {} });
+  assert.deepEqual(normalizeData({}).placing, { need: 3, count: {} });
+});

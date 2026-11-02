@@ -20,7 +20,9 @@ export type MatchTeam = { vest: VestKey; members: MatchMember[] };
 /** opponent = '' 이면 자체전(조끼 팀 둘 이상), 이름이 있으면 상대팀전(lineup 은 우리 팀 하나). 스코어는 경기 뒤 관리자가 — 없으면 null(2026-09-28). */
 export type Match = { id: number; date: string; lineup: MatchTeam[]; tally: Record<number, number>; voters: number; video: string;
   opponent: string; scoreUs: number | null; scoreThem: number | null };
-export type Data = { players: Player[]; rotation: RotationRow[]; fines: Fine[]; statLog: StatLogRow[]; matches: Match[] };
+/** 배치 진행(2026-11-02) — 확정 기준 인원(need)과 배치 전 선수마다 판정을 낸 사람 수. 누가 냈는지는 안 온다. */
+export type Placing = { need: number; count: Record<number, number> };
+export type Data = { players: Player[]; rotation: RotationRow[]; fines: Fine[]; statLog: StatLogRow[]; matches: Match[]; placing?: Placing };
 export const STAT_KEYS = ['pace', 'dribble', 'pass', 'shoot', 'defend', 'stamina'] as const;
 export type StatKey = (typeof STAT_KEYS)[number];
 /** 선수 방명록 한 줄(2026-09-25). 이름은 쓴 시점의 것 — 서버가 붙인다. */
