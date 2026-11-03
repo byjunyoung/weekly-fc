@@ -208,6 +208,13 @@ export async function submitPlacement(num: number, stats: Record<StatKey, number
   return { count: Number(r.count) || 0, need: Number(r.need) || 3, done: r.done === true };
 }
 export async function fetchFull(): Promise<Data> { return normalizeData(await rpc('get_all_full')); }
+/** 번호별 연락처 — 이름을 고른 팀원·관리자만 받는다(2026-11-03). 그 밖엔 빈 객체. */
+export async function fetchPhones(): Promise<Record<number, string>> {
+  const r = await rpc('member_phones');
+  const out: Record<number, string> = {};
+  for (const [k, v] of Object.entries(r ?? {})) if (typeof v === 'string' && v.trim()) out[Number(k)] = v.trim();
+  return out;
+}
 
 /** 대결 한 판의 서버 응답(public.vote). */
 export type VoteResult = { ts: string; field: StatKey; by: number | null; by_name: string;

@@ -5,7 +5,7 @@ import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Popover, Segm
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import NumberPicker from '../squad/NumberPicker';
 import type { CSSProperties } from 'react';
-import { adminMembers, adminMove, adminRelease, fetchFull, serializePlayer, write, writeAvatar, type MemberRow } from '../../lib/api';
+import { adminMembers, adminMove, adminRelease, fetchFull, fetchPhones, serializePlayer, write, writeAvatar, type MemberRow } from '../../lib/api';
 import { maskEmail } from '../../lib/auth';
 import { href } from '../../lib/url';
 import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
@@ -50,6 +50,13 @@ function Detail({ num }: { num: number }) {
   const myPlaced = useMeInfo().placed ?? [];
   // 꾸미기는 본인과 관리자만(2026-09-24 본인인증). 서버도 같은 걸 다시 확인한다.
   const canDress = admin || (me != null && me === num);
+  // 연락처는 이름을 고른 팀원·관리자에게만(2026-11-03). 서버가 다시 가린다.
+  const isAdminAccount = !!useMeInfo().admin;
+  const [phone, setPhone] = useState('');
+  useEffect(() => {
+    if (me == null && !isAdminAccount) { setPhone(''); return; }
+    fetchPhones().then((m) => setPhone(m[num] ?? '')).catch(() => setPhone(''));
+  }, [me, isAdminAccount, num]);
   // 관리자: 이 번호를 차지한 계정 — 잘못 차지됐으면 여기서 진짜 이름으로 옮기거나(기록도 같이) 푼다.
   const [member, setMember] = useState<MemberRow | null | undefined>(undefined);
   const [claimed, setClaimed] = useState<number[]>([]);
@@ -272,7 +279,7 @@ function Detail({ num }: { num: number }) {
             <Form.Item name="num" label="등번호" className="full" rules={[{ required: true, message: '번호를 고르세요' }]}><NumberPicker players={data?.players ?? []} own={num} /></Form.Item>
             <h3 className="form-sec full">운영</h3>
             <Form.Item name="rot" label="봉사 순번 (빈칸=제외)"><InputNumber min={1} style={{ width: '100%' }} /></Form.Item>
-            <Form.Item name="phone" label="전화 (공개 안 됨)"><Input type="tel" /></Form.Item>
+            <Form.Item name="phone" label="전화 (이름 고른 팀원에게만 보임)"><Input type="tel" /></Form.Item>
             <Form.Item name="note" label="메모" className="full"><Input /></Form.Item>
             {member !== undefined && (
               <div className="full form-member">
@@ -340,6 +347,7 @@ function Detail({ num }: { num: number }) {
                 <p className="phero-sub">{[player.detail, player.foot].filter(Boolean).join(' · ')}</p>
               )}
               {player.note && <p className="phero-sub">{player.note}</p>}
+              {phone && <p className="phero-sub"><a href={`tel:${phone.replace(/[^\d+]/g, '')}`}>{phone}</a></p>}
             </div>
             <div className="player-side">
               {avatarOpen ? avatarPanel() : (
