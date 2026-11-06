@@ -4,17 +4,7 @@
 // 매치 하나 = 하루. 팀짜기(teams.ts)의 상태를 **이름까지 박은 스냅샷**으로 굳혀 저장한다 —
 // 명단에서 빠진 사람도 지난 매치엔 그대로 보여야 하니까.
 import { MIN_TEAMS, VESTS, guestKey, membersOf, playerKey, teamViews, unassigned, type TeamsState } from './teams.ts';
-import type { Match, MatchMember, MatchTeam, Player, VestKey } from './types.ts';
-
-/** 투표 창 — 매치 당일만(2026-09-26). 7일 → 경기 전 차단 → 당일만 순으로 좁아졌다. */
-export const VOTE_DAYS = 0;
-
-/** 'YYYY-MM-DD' 에 며칠을 더한다. 시간대에 안 흔들리게 UTC 자정으로 센다. */
-export function addDays(ymd: string, n: number): string {
-  const [y, m, d] = ymd.split('-').map(Number);
-  const t = new Date(Date.UTC(y, (m || 1) - 1, d || 1) + n * 86400000);
-  return t.toISOString().slice(0, 10);
-}
+import type { Match, MatchTeam, Player, VestKey } from './types.ts';
 
 export type Snapshot = { ok: true; lineup: MatchTeam[] } | { ok: false; error: string };
 
@@ -58,25 +48,6 @@ export function record(matches: Match[]): { w: number; d: number; l: number; gf:
 
 export const vestOf = (key: VestKey): (typeof VESTS)[number] => VESTS.find((v) => v.key === key) ?? VESTS[0];
 
-/** 그날 뛴 명단 선수(용병 제외) — 팀 순서대로. 투표 후보이자 투표 자격의 기준. */
-export const attendees = (m: Match): MatchMember[] => m.lineup.flatMap((t) => t.members).filter((x) => x.num != null);
-
-export const deadline = (m: Match): string => addDays(m.date, VOTE_DAYS);   // = 매치 날짜
-/** 투표 창 — 매치 **당일만**. today 는 'YYYY-MM-DD'(서울). */
-export const voteOpen = (m: Match, today: string): boolean => today === m.date;
-
-export type Voter = { login: boolean; num: number | null };
-
-/** 투표 못 하는 이유. 할 수 있으면 null. 마감이 먼저다 — 끝난 매치에 로그인을 권할 이유가 없다. */
-export function voteBlock(m: Match, me: Voter, today: string): string | null {
-  if (today < m.date) return '경기 뒤에 투표할 수 있습니다';
-  if (!voteOpen(m, today)) return '투표는 경기 당일 자정까지였습니다';
-  if (!me.login) return '로그인하면 투표할 수 있습니다';
-  if (me.num == null) return '먼저 내 이름을 골라 주세요';
-  if (!attendees(m).some((x) => x.num === me.num)) return '그날 뛴 사람만 투표합니다';
-  return null;
-}
-
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 /** '2026-09-27' → '9월 27일 (토)'. 해가 다르면 앞에 붙인다. */
 export function matchLabel(ymd: string, todayYear?: number): string {
@@ -89,12 +60,6 @@ export function matchLabel(ymd: string, todayYear?: number): string {
 
 /** 영상 링크로 쓸 수 있는 문자열인가 — 비면 false, http(s) 로 시작해야 true(서버도 같은 규칙). */
 export const isVideoUrl = (v: string): boolean => /^https?:\/\/\S+$/i.test((v ?? '').trim());
-
-/** '2026-09-27' → '9/27'. 카드 리본처럼 좁은 자리용. */
-export function shortDate(ymd: string): string {
-  const [, m, d] = ymd.split('-').map(Number);
-  return m && d ? `${m}/${d}` : ymd;
-}
 
 /** 저장된 매치를 팀짜기 상태로 되돌린다(2026-09-25 "수정도 가능하게"). 팀은 조끼 순서대로 0·1·2·3 번 칸.
  *  명단에서 빠진 사람(번호가 지금 명단에 없음)은 이름만 든 용병으로 옮겨 **한 명도 잃지 않는다** —

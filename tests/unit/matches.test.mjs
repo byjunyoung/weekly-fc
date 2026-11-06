@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, attendees, deadline, fromMatch, isVideoUrl, matchLabel, shortDate, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
+import { fromMatch, isVideoUrl, matchLabel, snapshot, vestOf } from '../../src/lib/matches.ts';
 import { addGuest, initialTeams, moveTo, playerKey, guestKey, togglePicked } from '../../src/lib/teams.ts';
 import { normalizeMatch, normalizeData, EMPTY } from '../../src/lib/api.ts';
 
@@ -35,27 +35,6 @@ test('snapshot: 온 사람이 없거나 팀이 하나면 저장하지 않는다'
   assert.deepEqual(snapshot(st, ROSTER), { ok: false, error: '팀이 둘 이상이어야 합니다' });
 });
 
-// ── 출석 ──────────────────────────────────────────────────────
-test('attendees 는 용병을 뺀 명단 선수만, 팀 순서대로', () => {
-  assert.deepEqual(attendees(M()).map((x) => x.num), [2, 3]);
-});
-test('voteOpen: 매치 당일만 열린다(2026-09-26)', () => {
-  const m = M();
-  assert.equal(deadline(m), '2026-09-27');
-  assert.equal(voteOpen(m, '2026-09-26'), false, '경기 전날은 닫힘');
-  assert.equal(voteOpen(m, '2026-09-27'), true);
-  assert.equal(voteOpen(m, '2026-09-28'), false, '다음 날은 닫힘');
-  assert.equal(addDays('2026-12-30', 7), '2027-01-06', '해 넘김');
-});
-test('voteBlock: 경기 전 → 마감 → 로그인 → 이름 차지 → 그날 뛴 사람 순으로 이유를 낸다', () => {
-  const m = M();
-  assert.equal(voteBlock(m, { login: true, num: 2 }, '2026-09-26'), '경기 뒤에 투표할 수 있습니다');
-  assert.equal(voteBlock(m, { login: false, num: null }, '2026-09-28'), '투표는 경기 당일 자정까지였습니다');
-  assert.equal(voteBlock(m, { login: false, num: null }, '2026-09-27'), '로그인하면 투표할 수 있습니다');
-  assert.equal(voteBlock(m, { login: true, num: null }, '2026-09-27'), '먼저 내 이름을 골라 주세요');
-  assert.equal(voteBlock(m, { login: true, num: 4 }, '2026-09-27'), '그날 뛴 사람만 투표합니다');
-  assert.equal(voteBlock(m, { login: true, num: 2 }, '2026-09-27'), null);
-});
 test('matchLabel: 월 일 (요일), 다른 해면 해를 앞에', () => {
   assert.equal(matchLabel('2026-09-27'), '9월 27일 (일)');
   assert.equal(matchLabel('2025-12-06', 2026), '2025년 12월 6일 (토)');
@@ -88,12 +67,6 @@ test('isVideoUrl — http(s) 로 시작하는 한 덩어리만', () => {
   assert.equal(isVideoUrl('youtu.be/abc'), false);
   assert.equal(isVideoUrl(''), false);
   assert.equal(isVideoUrl('https://a b'), false);
-});
-
-test('shortDate — 9/27, 깨진 값은 그대로', () => {
-  assert.equal(shortDate('2026-09-27'), '9/27');
-  assert.equal(shortDate('2026-12-06'), '12/6');
-  assert.equal(shortDate('없음'), '없음');
 });
 
 test('fromMatch — 저장된 매치를 팀짜기 상태로: 조끼 순서 칸, 명단에 없는 사람은 이름만 든 용병으로', () => {

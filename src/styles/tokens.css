@@ -799,8 +799,6 @@ details.year[open] > summary::before { content: "▾ "; }
 .mt-team .tm-chips { min-height: 0; }
 .mt-chip { cursor: default; }
 .mt-chip:hover { border-color: var(--line); }
-.mt-vote { margin-top: var(--s-md); }
-.mt-vote-hint { margin: 0 0 var(--s-xs); font-size: var(--fs-sm); }
 .mt-ballot { padding: 0; }
 .mt-ballot .tm-chip:disabled { opacity: .6; }
 .linklike { padding: 0; border: 0; background: none; color: var(--link); font: inherit; text-decoration: underline; cursor: pointer; }
