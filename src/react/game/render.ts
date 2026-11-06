@@ -167,7 +167,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, st: MatchState, config:
   ctx.imageSmoothingEnabled = false;
 
   const R = PITCH.playerR * view.scale;
-  const ballR = Math.max(PITCH.ballR * view.scale * 1.15, 4);
+  const ballR = Math.max(PITCH.ballR * view.scale, 3.5);   // 실제 크기 그대로 — 전엔 1.15배로 키워 그렸다("공 좀 더 작게")
 
   // 그림자 먼저(모든 몸 아래)
   ctx.fillStyle = 'rgba(0, 0, 0, .35)';

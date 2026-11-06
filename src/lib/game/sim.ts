@@ -20,7 +20,7 @@ export const PITCH = {
   w: 1200, h: 720,
   goalW: 200,        // 골문 폭. 선수 지름(44)의 4.5배 — 좁으면 골이 안 나고 넓으면 시시하다.
   goalDepth: 56,     // 골라인 뒤 공간 깊이. 공이 들어가 뒷벽에 맞고 멈출 만큼만.
-  playerR: 22, ballR: 12,
+  playerR: 22, ballR: 10,   // 공은 12 였다가 줄임(2026-11-06 "공 좀 더 작게")
   centerR: 90, postR: 6,
 };
 
