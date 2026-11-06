@@ -1,4 +1,4 @@
-// src/react/game/views/match3d/Solo.tsx — 입장 화면의 3D 경기 혼자 하기 칸(2026-11-07 게임 묶음 4단계). 예전 /game3d/ 설정 화면(Game3DApp)의 시간·시점에
+// src/react/game/views/match3d/Solo.tsx — 입장 화면의 3D 경기 혼자 연습 칸(2026-11-07 게임 묶음 4단계). 예전 /game3d/ 설정 화면(Game3DApp)의 시간·시점에
 // 방과 같은 인원·점수 제한을 더했다. 닫혀도 컴포넌트는 남아 고른 값을 기억한다(2D 혼자 연습 칸과 같다).
 import { Button, Segmented } from 'antd';
 import { useEffect, useState } from 'react';
@@ -25,7 +25,7 @@ export function Solo({ open, cardRef, players, num, onStart }: SoloProps<MatchCo
   if (!open) return null;
   return (
     <div className="card" ref={cardRef}>
-      <div className="card-head"><h2>혼자 하기 <span className="muted">봇과 한 판</span></h2></div>
+      <div className="card-head"><h2>혼자 연습 <span className="muted">봇과 한 판</span></h2></div>
       <div className="game-opts">
         <label className="game-opt"><span className="muted">인원</span>
           <Segmented<number> value={outfield} onChange={(v) => setOutfield(v as Outfield)}
