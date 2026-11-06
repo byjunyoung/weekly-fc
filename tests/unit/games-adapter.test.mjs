@@ -13,6 +13,7 @@ import { TICK_HZ as SIM_HZ } from '../../src/lib/game/sim.ts';
 import { BASE_PERF } from '../../src/lib/game/stats.ts';
 import { P2_CASES } from './fixtures/games-cases-p2.mjs';
 import { P3_CASES } from './fixtures/games-cases-p3.mjs';
+import { P5_CASES } from './fixtures/games-cases-p5.mjs';
 
 const cfg2d = (a, b, field = 'M', minutes = 2) => ({
   field, minutes, scoreLimit: 0,
@@ -79,6 +80,7 @@ const CASES = [
   },
   ...P2_CASES,
   ...P3_CASES,
+  ...P5_CASES,
 ];
 
 // ── 도구 ──

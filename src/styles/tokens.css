@@ -1319,3 +1319,41 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 /* 3D 말풍선 — 머리 위 이름표보다 조금 위. 2D 말풍선(캔버스)과 같은 흰 바탕 검은 글자 */
 .g3-bubble { position: absolute; left: 0; top: 0; display: none; padding: 1px var(--s-xs); border: 2px solid #000; background: #fff; color: #000; font-size: var(--fs-xs); white-space: nowrap; pointer-events: none; }
 .g3-bubble.is-on { display: block; }
+/* ══ 3D 미니게임(2026-11-07 게임 묶음 5단계) — 3D 승부차기(.p3-*)·3D 자유 훈련장(.f3-*). 3D 경기(.g3-*) 위에 더한 것만, 색은 토큰·팀 색만 인라인.
+   2D 승부차기 띠와 같은 내용(● 골 · ✕ 못 넣음 · ○ 남음, 점수, n번째 · 편 차례, 차기 → 막기, 5초 막대)을 DOM 으로. ✕·♪·한마디 줄 아래에 둔다(폰에서 안 겹치게). */
+.p3-top { position: absolute; z-index: 2; left: 0; right: 0; top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 48px); display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--s-xxs) var(--s-xs) 0; background: rgba(0, 0, 0, .45); pointer-events: none; }
+.p3-board { display: flex; align-items: center; justify-content: center; gap: var(--s-xs); font-size: var(--fs-xs); color: var(--fg); white-space: nowrap; }
+.p3-side { display: inline-flex; align-items: center; gap: 3px; }
+.p3-chip { display: inline-block; width: 12px; height: 12px; margin: 0 3px; }
+.p3-score { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; padding: 0 var(--s-xs); }
+.p3-mark { font-style: normal; color: rgba(255, 255, 255, .35); width: 12px; text-align: center; }
+.p3-mark.is-goal { color: var(--gold); }
+.p3-mark.is-no { color: var(--warn); }
+.p3-head { color: var(--body); font-size: var(--fs-xs); }
+.p3-who { display: flex; align-items: center; gap: var(--s-xxs); font-size: var(--fs-xs); color: var(--fg); white-space: nowrap; }
+.p3-who .is-me { color: var(--gold); }
+.p3-face { display: inline-flex; }
+.p3-face svg { width: 20px; height: 20px; }
+.p3-clock { align-self: stretch; height: 4px; margin-top: var(--s-xxs); background: rgba(255, 255, 255, .15); visibility: hidden; }
+.p3-clock.is-on { visibility: visible; }
+.p3-clock i { display: block; height: 100%; background: var(--fg); transform-origin: left center; }
+.p3-clock.is-low i { background: var(--warn); }
+.p3-banner { position: absolute; z-index: 2; left: 0; right: 0; top: 46%; transform: translateY(-50%); display: none; flex-direction: column; align-items: center; gap: var(--s-xxs);
+  padding: var(--s-sm) var(--s-md); background: rgba(0, 0, 0, .55); pointer-events: none; text-align: center; }
+.p3-banner.is-on { display: flex; }
+.p3-banner b { font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--fg); line-height: 1; }
+.p3-banner.is-goal b, .p3-banner.is-turn b { color: var(--gold); }
+.p3-banner.is-turn b { font-size: var(--fs-pixel-md); }
+.p3-banner.is-miss b { color: var(--muted); }
+.p3-banner span { color: var(--fg); font-size: var(--fs-xs); }
+.p3-hint { position: absolute; z-index: 2; left: var(--s-md); right: var(--s-md); bottom: max(var(--s-sm), env(safe-area-inset-bottom)); color: rgba(255, 255, 255, .85); font-size: var(--fs-xs);
+  text-align: center; text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
+@media (max-width: 520px) { .p3-hint { left: var(--s-sm); right: 128px; text-align: left; bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 4px); } }
+/* 훈련장 — 위 줄은 폰에선 ✕·♪ 줄 아래로, 시점 버튼은 [공 모으기] 아래로 */
+@media (max-width: 520px) { .f3-hud { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 48px); } }
+.g3-view.is-below-acts { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 96px); }
+.g3-goal b.f3-start { font-size: var(--fs-pixel-md); white-space: nowrap; }
+/* 훈련장 "골!" — 경기의 골 문구보다 작고 높이(골이 자주 나서 화면을 덮지 않게, 2D 훈련장의 작은 "골!"과 같은 뜻) */
+.g3-goal.f3-pop { top: 20%; padding: var(--s-xxs) var(--s-sm); }
+.g3-goal.f3-pop b { font-size: var(--fs-pixel-md); }

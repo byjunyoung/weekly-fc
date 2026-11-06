@@ -15,6 +15,7 @@ export function sceneOf(sf: Surface<unknown, unknown, unknown>, now: () => numbe
     },
     toInput: () => (sf.readInput ? sf.readInput() : null),
     camera: () => sf.camera(),
+    act: (id) => sf.act?.(id),
     dispose: () => sf.dispose(),
   };
 }

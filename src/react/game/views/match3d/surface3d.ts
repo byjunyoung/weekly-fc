@@ -276,3 +276,7 @@ export function createSurface3d(o: SurfaceIn<MatchConfig>): Surface<MatchState, 
     },
   };
 }
+
+// 3D 미니게임 그림판(2026-11-07 5단계) — 같은 묶음에 싣는다(3D 게임 셋이 three.js 를 한 번만 받게). 각 화면(views/<id>/index.tsx)이 이 파일을 동적으로 받는다.
+export { createPenaltySurface } from '../penalty3d/surface';
+export { createFreeSurface } from '../free3d/surface';
