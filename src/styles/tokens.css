@@ -1136,6 +1136,8 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .game-board.is-together { grid-template-columns: minmax(0, 1fr); }
 .game-board.is-together .game-col-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); min-height: 0; }
 .game-board.is-together .game-col-list > .game-hint { grid-column: 1 / -1; margin-top: 0; }
+/* 자유 훈련장 설정 요약 한 줄(방장 화면). */
+.free-sum { margin: 0; font-size: var(--fs-xs); }
 /* 승부차기 결과 — 선수별 성공/차기(등번호 이름 · 3/4). 결과 상자 폭 안에서 한 줄씩. */
 .pen-rows { display: flex; flex-direction: column; gap: 2px; width: 100%; margin: 0; padding: 0; list-style: none; text-align: left; }
 .pen-rows li { display: flex; align-items: center; gap: var(--s-xs); padding: 2px var(--s-xs); border-bottom: 1px solid var(--hairline); font-size: var(--fs-xs); }
