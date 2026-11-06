@@ -223,7 +223,11 @@ test('링크 미리보기 — 셸 페이지마다 og:image 가 절대 주소로 
 
 // cwd 를 저장소 루트로 못 박는다 — 다른 디렉터리에서 돌려도 src 를 못 찾아 조용히 통과하는 일이 없게.
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const grepSrc = (re) => execSync(`grep -rilE "${re}" src || true`, { encoding: 'utf8', cwd: ROOT }).trim().split('\n').filter(Boolean);
+// grep 은 못 찾으면 1, 오류면 2 로 끝난다 — 1 만 "없음"으로 치고 나머지는 그대로 던져 테스트가 헛통과하지 않게.
+const grepSrc = (re) => {
+  try { return execSync(`grep -rilE "${re}" src`, { encoding: 'utf8', cwd: ROOT }).trim().split('\n').filter(Boolean); }
+  catch (e) { if (e.status === 1) return []; throw e; }
+};
 test('방명록은 화면·코드에서 뺐다(2026-11-06) — src 어디에도 남지 않는다', () => {
   assert.deepEqual(grepSrc('guestbook|방명록'), []);
 });

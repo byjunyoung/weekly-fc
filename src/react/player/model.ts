@@ -1,9 +1,6 @@
 // src/react/player/model.ts — 선수 상세 계산. 화면(PlayerDetail)과 떨어뜨려 단위 테스트한다.
 import type { Player, StatLogRow } from '../../lib/types.ts';
 
-/** 이 선수의 벌금 내역. 표의 정렬은 antd Table 의 sorter 가 맡으므로 원본 순서를 그대로 돌려준다.
- *  미납·전체 합계도 같이 돌려줬었지만, 2026-09-22 에 선수 상세의 요약 줄이 빠지며 쓰는 곳이 없어졌다. */
-
 export type PlayerFormValues = {
   num: number; name: string; pos: Player['pos']; detail: string; foot: string; vest: number | null; rot: number | null; phone: string;
   pace: number; dribble: number; pass: number; shoot: number; defend: number; stamina: number; note: string;
@@ -29,8 +26,6 @@ export const playerFromForm = (v: PlayerFormValues, prevAvatar: string): Player 
 /** 번호를 바꾸려는 값이 이미 다른 선수 번호와 겹치는지. 번호를 안 바꾸면(newNum === currentNum) 겹침이 아니다. */
 export const numClash = (players: Player[], newNum: number, currentNum: number): Player | undefined =>
   newNum !== currentNum ? players.find((p) => p.num === newNum) : undefined;
-
-// 벌금 내역 표 정렬(스펙 §5 "정렬 포함"). 문자열은 한국어 순.
 
 /** 이 줄이 왜 생겼나 — 대결 상대·배치·POTM 보상. 판정자 이름은 관리자에게만(2026-09-29 "팀원에겐 익명") —
  *  서버가 관리자가 아니면 이름을 비워 보내고, 관리자도 관리자 모드를 켰을 때만 보여 준다. */

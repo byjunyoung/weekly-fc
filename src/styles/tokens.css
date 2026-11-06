@@ -338,9 +338,10 @@ a.card:hover { background: var(--charcoal); }
 .stack { display: flex; flex-direction: column; gap: var(--s-xl); }
 
 /* ══ 안내 > 처음 왔다면 ═══════════════════════════════════════ */
-/* 묶음 제목 — h2 보다 작고 흐린 라벨 + 윗줄 구분선. 색·면을 더하지 않고 두 묶음만 한눈에 나눈다. */
+/* 묶음 제목 — h2 보다 작고 흐린 라벨 + 윗줄 구분선. 색·면을 더하지 않고 두 묶음만 한눈에 나눈다.
+   도트 10px 은 390px 에서 안 읽혀 본문 글꼴로(2026-11-06 화면 확인). */
 .guide-part { max-width: var(--prose-max); padding-top: var(--s-sm); border-top: 1px solid var(--line-hi);
-  font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--muted); }
+  font-size: var(--fs-sm); color: var(--muted); }
 .guide-start { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-sm); margin: 0; }
 .guide-start p { margin: 0; }
 
