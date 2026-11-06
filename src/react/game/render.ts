@@ -18,6 +18,8 @@ const NET_BG = '#0b0d10', NET = 'rgba(244, 244, 244, .2)';
 const POST = '#f4f4f4';
 const VOID = '#000';
 const GOLD = '#ffce21';
+const KICK_RING = '#ffffff';   // 킥을 누르는 동안의 고리 색
+const FACE_FILL = 0.74;         // 원 반지름 대비 얼굴 반쪽 크기 — 1 이면 원에 꽉 찬다
 // 도트 글꼴은 격자에 맞는 크기에서만 또렷하다: 갈무리9 = 10px 의 배수, 갈무리14 = 14px 의 배수(tokens.css 와 같은 계약).
 const F9 = '"Galmuri9", "Galmuri14", "Pretendard Variable", Pretendard, system-ui, sans-serif';
 const F14 = '"Galmuri14", "Galmuri9", "Pretendard Variable", Pretendard, system-ui, sans-serif';
@@ -183,15 +185,19 @@ export function drawFrame(ctx: CanvasRenderingContext2D, st: MatchState, config:
     const face = sprites.faces[i];
     ctx.save();
     ctx.beginPath(); ctx.arc(s.x, s.y, R, 0, Math.PI * 2); ctx.clip();
-    if (face) { ctx.fillStyle = '#20242b'; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2); ctx.drawImage(face, s.x - R, s.y - R, R * 2, R * 2); }
+    // 얼굴은 원보다 작게 — 고리에 바짝 붙으면 답답하다(2026-11-06 "아바타 영역에 패딩이 좀 있어야"). 남는 둘레는 어두운 바탕.
+    const fr = R * FACE_FILL;
+    if (face) { ctx.fillStyle = '#20242b'; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2); ctx.drawImage(face, s.x - fr, s.y - fr, fr * 2, fr * 2); }
     else {
       ctx.fillStyle = '#2a2d33'; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2);
       ctx.fillStyle = '#ddd'; ctx.font = `10px ${F9}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(String(sprites.jerseys[i] ?? ''), s.x, s.y);
     }
     ctx.restore();
+    // 킥을 누르고 있는 동안 고리가 하얗게 밝아진다 — 눌렸다는 걸 눈으로 알 수 있게(2026-11-06 "키 누를 때 피드백이 없네").
+    const kicking = !!st.players[i].kicking;
     const ring = Math.max(2.5, R * 0.24);
-    ctx.lineWidth = ring; ctx.strokeStyle = team.color;
+    ctx.lineWidth = ring; ctx.strokeStyle = kicking ? KICK_RING : team.color;
     ctx.beginPath(); ctx.arc(s.x, s.y, R - ring / 2, 0, Math.PI * 2); ctx.stroke();
     if (human) {   // 내 선수 — 밝은 바깥 고리 + 머리 위 화살표
       ctx.lineWidth = 2; ctx.strokeStyle = '#fff';

@@ -84,7 +84,9 @@ export type Phase = 'kickoff' | 'play' | 'goal' | 'end';
 export type MatchState = {
   tick: number; phase: Phase; phaseTicks: number;
   score: [number, number]; ticksLeft: number;
-  ball: Body; players: (Body & { id: number; kickCooldown: number })[];
+  // kicking = 지금 킥을 누르고 있나. 화면이 고리를 밝혀 "눌렀다"를 보여 주는 데 쓴다(2026-11-06 "키 누를 때 피드백이 없네").
+  // 입력이 아니라 상태에 두는 이유: 2단계에서 다른 사람 화면에도 같은 표시가 떠야 한다.
+  ball: Body; players: (Body & { id: number; kickCooldown: number; kicking: boolean })[];
   kickoffSide: Side; lastTouch: number | null;
   /** 골 넣은 사람. 자책골이거나 마지막으로 공 만진 사람이 없으면 null(화면은 편 이름만 띄운다). */
   lastScorer: number | null; winner: Side | 'draw' | null;
@@ -145,7 +147,7 @@ function placeForKickoff(s: MatchState, config: MatchConfig): void {
     const p = s.players[i];
     p.x = spot.x;
     p.y = spot.y + (rand(s) - 0.5) * 2 * KICKOFF_JITTER;
-    p.vx = 0; p.vy = 0; p.kickCooldown = 0;
+    p.vx = 0; p.vy = 0; p.kickCooldown = 0; p.kicking = false;
   });
   s.lastTouch = null;
 }
@@ -155,7 +157,7 @@ export function createMatch(config: MatchConfig, seed: number): MatchState {
     tick: 0, phase: 'kickoff', phaseTicks: 0,
     score: [0, 0], ticksLeft: Math.max(1, Math.round(config.minutes * 60 * TICK_HZ)),
     ball: { x: 0, y: 0, vx: 0, vy: 0 },
-    players: config.players.map((mp) => ({ id: mp.id, x: 0, y: 0, vx: 0, vy: 0, kickCooldown: 0 })),
+    players: config.players.map((mp) => ({ id: mp.id, x: 0, y: 0, vx: 0, vy: 0, kickCooldown: 0, kicking: false })),
     kickoffSide: 0, lastTouch: null, lastScorer: null, winner: null,
     seed: seed >>> 0,
   };
@@ -268,6 +270,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
   for (let i = 0; i < n; i++) {
     const p = s.players[i];
     if (p.kickCooldown > 0) p.kickCooldown -= 1;
+    p.kicking = controlled && !!inputs[i]?.kick;
     steer(p, config.players[i].perf, controlled ? (inputs[i] ?? NO_INPUT) : NO_INPUT);
   }
 

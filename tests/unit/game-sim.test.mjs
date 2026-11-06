@@ -299,3 +299,17 @@ test('킥 사거리 — 가운데 3분의 1 끝(x=-200)에서 한 번 차면 골
   assert.equal(shootFrom(-200), 1);
   assert.equal(shootFrom(-450), 0);
 });
+
+test('킥을 누르고 있는 동안 kicking 이 켜진다 — 공이 멀어 차지 못해도, 세리머니·종료 중엔 꺼진다', () => {
+  const cfg = mk(1);
+  let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, players: AWAY });
+  const hold = [{ x: 0, y: 0, kick: true }, { ...NO_INPUT }];
+  s = step(s, cfg, hold);
+  assert.equal(s.players[0].kicking, true, '누르는 중');
+  assert.equal(s.players[1].kicking, false, '안 누른 사람');
+  assert.equal(s.players[0].kickCooldown, 0, '공이 멀어 실제로 차지는 않았다');
+  s = step(s, cfg, idle(cfg));
+  assert.equal(s.players[0].kicking, false, '떼면 꺼진다');
+  s = step(put(s, { state: { phase: 'goal' } }), cfg, hold);
+  assert.equal(s.players[0].kicking, false, '세리머니 중엔 입력을 안 받는다');
+});
