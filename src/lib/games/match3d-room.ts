@@ -86,7 +86,7 @@ export function setSettings3d(room: Room3d, patch: Partial<Room3dSettings>): Roo
 /** 채널에서 온 방 설정 검사 — 화면 범위보다 넉넉하게(2D okSettings 와 같은 태도). */
 export function okSettings3d(s: unknown): s is Room3dSettings {
   const isInt = (v: unknown, lo: number, hi: number): boolean => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
-  return isObj(s) && isInt(s.outfield, MIN_OUTFIELD, MAX_OUTFIELD) && isInt(s.minutes, 1, 60) && isInt(s.scoreLimit, 0, 99);
+  return isObj(s) && Object.keys(s).length === 3 && isInt(s.outfield, MIN_OUTFIELD, MAX_OUTFIELD) && isInt(s.minutes, 1, 60) && isInt(s.scoreLimit, 0, 99);   // 칸은 정확히 셋(2D 와 같게 — 리뷰 #11)
 }
 
 /** 필드 n 명 편성에서 사람을 세울 차례 — 앞줄(상대 골대 쪽)부터, 같은 줄이면 slot 번호 순. 4명이면 3, 4, 1, 2. */

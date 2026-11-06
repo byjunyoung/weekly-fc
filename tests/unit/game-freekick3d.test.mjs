@@ -1,7 +1,6 @@
 // 3D 프리킥(2026-11-07 게임 묶음 6단계) — 2D 와 같은 자리·점수·차례, 셋째 차원(벽 넘기기·크로스바·벽 뛰기·감기), 대본 키커 성공률, 조준 비밀.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { freekick3d, createFreekick3, stepFreekick3, FK3_SPOTS, FK_SCALE, fk3Path, fk3Wall, wallCapsules } from '../../src/lib/games/freekick3d.ts';
 import { FK_SPOTS, buildFreekick, fkGone, fkTurn } from '../../src/lib/games/freekick2d.ts';
 import { PEN3_CODES, PEN3_IDLE } from '../../src/lib/games/penalty3d.ts';
@@ -116,12 +115,7 @@ test('8명 판 스냅샷(pack) 2.5KB 이하 — 기록 40줄이 다 찬 끝까�
   assert.ok(max <= 2500, `${max}B`);
 });
 
-test('6단계 계산 소스에 삼각함수·시계·난수 함수가 없다', () => {
-  for (const f of ['src/lib/games/freekick3d.ts', 'src/lib/games/dribble3d.ts', 'src/lib/games/penalty3d.ts']) {
-    const code = readFileSync(f, 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    assert.doesNotMatch(code, /Math\.(sin|cos|tan|atan2?|hypot|pow|exp|log|random)\b|Date\.now|performance\.now|\*\*/, f);
-  }
-});
+// 소스 검사는 games-purity.test.mjs 가 폴더째로 한다(합치기에서 이 파일의 따로 검사는 뺐다).
 
 test('빈 자리(리뷰 #2) — 입력 정수 하나 더, 차례가 빠르게 넘어가고(점수 없음) 기록은 gone, pack 에 실린다', () => {
   const a = freekick3d;

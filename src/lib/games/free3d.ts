@@ -220,7 +220,7 @@ export const free3d: GameAdapter<Free3Config, Free3State, Free3Input> = {
 // ═══════════════════════════ 방 설정·시작 ═══════════════════════════
 export type Free3Settings = { bots: number };
 export const FREE3_DEFAULTS: Free3Settings = { bots: 2 };
-export function okFree3Settings(v: unknown): v is Free3Settings { return isObj(v) && isInt(v.bots, 0, MAX_BOTS); }
+export function okFree3Settings(v: unknown): v is Free3Settings { return isObj(v) && Object.keys(v).length === 1 && isInt(v.bots, 0, MAX_BOTS); }   // 칸은 정확히 하나(2D 와 같게 — 리뷰 #11)
 export function applyFree3Settings(cur: Free3Settings, given: unknown): Free3Settings {
   const p = isObj(given) ? given : {};
   const bots = typeof p.bots === 'number' && Number.isFinite(p.bots) ? Math.min(MAX_BOTS, Math.max(0, Math.round(p.bots))) : cur.bots;

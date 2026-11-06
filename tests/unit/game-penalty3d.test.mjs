@@ -1,7 +1,6 @@
 // 3D 승부차기(2026-11-07 게임 묶음 5단계) — 2D 와 같은 차례·끝 규칙, 셋째 차원(높이·크로스바·골대·키퍼 몸 부피), 봇 성공률.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import {
   penalty3d, createPenalty3, stepPenalty3, PEN3_IDLE, PEN3_CODES, KEEPER_X, SPOT_X, keeperCapsules, kickerPlan3,
 } from '../../src/lib/games/penalty3d.ts';
@@ -123,12 +122,7 @@ test('봇끼리 200판(무작위 능력치) — 성공률이 2D(68.6%)와 비슷
   assert.ok(SPOT_X < HW);
 });
 
-test('3D 미니게임 계산 소스에 삼각함수·시계·난수 함수가 없다', () => {
-  for (const f of ['src/lib/games/penalty3d.ts', 'src/lib/games/free3d.ts', 'src/lib/game3d/multiball3d.ts']) {
-    const code = readFileSync(f, 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    assert.doesNotMatch(code, /Math\.(sin|cos|tan|atan2?|hypot|pow|exp|log|random)\b|Date\.now|performance\.now|\*\*/, f);
-  }
-});
+// 소스 검사는 games-purity.test.mjs 가 폴더째로 한다(합치기에서 이 파일의 따로 검사는 뺐다).
 
 test('키커 화면 조준(aim3) — 모으는 동안엔 입력에 조준이 없고 떼는 틱에만, 키퍼 차례는 화면 좌우를 뒤집어 넘긴다', async () => {
   const { AIM3_START, pen3Input } = await import('../../src/react/game/views/penalty3d/aim3.ts');
