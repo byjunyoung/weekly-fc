@@ -138,8 +138,9 @@ function attack(state: MatchState, id: number, dir: number, ballProg: number, he
   }
 
   // 경기장 안(선수가 갈 수 있는 곳)으로 목표를 자른다
-  tx = clamp(tx, -HW + PITCH.playerR, HW - PITCH.playerR);
-  ty = clamp(ty, -HH + PITCH.playerR, HH - PITCH.playerR);
+  // 선 밖 여백까지 — 벽에 붙은 공 뒤로 돌아 들어갈 수 있다.
+  tx = clamp(tx, -HW - PITCH.marginX + PITCH.playerR, HW + PITCH.marginX - PITCH.playerR);
+  ty = clamp(ty, -HH - PITCH.marginY + PITCH.playerR, HH + PITCH.marginY - PITCH.playerR);
   const m = moveTo(me.x, me.y, tx, ty, 0);
   // 킥은 뗐다 눌러야 다시 나간다 — 방금 찼으면(쿨다운 중) 손을 뗀다.
   if (me.kickCooldown > 0) kick = false;

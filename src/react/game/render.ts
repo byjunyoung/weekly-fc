@@ -12,6 +12,7 @@ import { toScreen, clockText, type View } from './view.ts';
 
 // ── 팔레트(캔버스 그림 전용) ──
 const GRASS_A = '#0f2617', GRASS_B = '#173a23';   // pitch-view.ts 의 잔디 두 톤과 같은 계열
+const RUNOFF = '#0b1c13';   // 선 밖 여백(안쪽 잔디보다 어둡게)
 const GRAIN = 'rgba(255, 255, 255, .035)';
 const LINE = 'rgba(244, 244, 244, .82)';
 const NET_BG = '#0b0d10', NET = 'rgba(244, 244, 244, .2)';
@@ -95,6 +96,9 @@ function paintField(ctx: CanvasRenderingContext2D, v: View, dpr: number): void {
   ctx.scale(v.scale, v.scale);
   const hw = PITCH.w / 2, hh = PITCH.h / 2, gd = PITCH.goalDepth, gh = PITCH.goalW / 2;
 
+  // 선 밖 여백 — 선수가 나갈 수 있는 자리. 안쪽 잔디보다 어둡게 깔아 "여기까지 갈 수 있다"가 보이게.
+  const mx = PITCH.marginX, my = PITCH.marginY;
+  ctx.fillStyle = RUNOFF; ctx.fillRect(-hw - mx, -hh - my, PITCH.w + mx * 2, PITCH.h + my * 2);
   // 잔디 줄무늬 — 12줄(짝수라 하프라인이 줄 경계에 떨어진다) + 알갱이.
   const bands = 12, bw = PITCH.w / bands;
   for (let i = 0; i < bands; i++) { ctx.fillStyle = i % 2 ? GRASS_B : GRASS_A; ctx.fillRect(-hw + i * bw, -hh, bw + 0.5, PITCH.h); }

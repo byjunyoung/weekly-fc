@@ -22,6 +22,9 @@ export const PITCH = {
   goalDepth: 56,     // 골라인 뒤 공간 깊이. 공이 들어가 뒷벽에 맞고 멈출 만큼만.
   playerR: 22, ballR: 10,   // 공은 12 였다가 줄임(2026-11-06 "공 좀 더 작게")
   centerR: 90, postR: 6,
+  // 터치라인·골라인 밖 여백 — 선수는 여기까지 나갈 수 있고 공은 선 안에서 튕긴다(2026-11-07 "터치라인 밖 여백도 추가해줘").
+  // 벽에 붙은 공 뒤로 돌아 들어갈 자리가 생긴다. 골대 그물은 공만 막고 선수는 지나다닌다(기둥은 선수도 막는다).
+  marginX: 70, marginY: 40,
 };
 
 /** 능력치가 평균인 선수의 성능. stats.ts 의 BASE_PERF 가 이걸 그대로 쓴다(숫자는 한 곳에서만 고치려고).
@@ -109,6 +112,7 @@ export type MatchEvent =
   | { type: 'end'; winner: Side | 'draw' };
 
 const HW = PITCH.w / 2, HH = PITCH.h / 2, GH = PITCH.goalW / 2, GD = PITCH.goalDepth;
+const OW = HW + PITCH.marginX, OH = HH + PITCH.marginY;   // 선수가 갈 수 있는 바깥 테두리
 
 type Seg = [number, number, number, number];
 /** 공이 부딪치는 벽 — 바깥 사각형(골문 자리는 비움) + 양쪽 골대 상자(옆·뒤 벽). 기둥은 따로 POSTS. */
@@ -120,7 +124,7 @@ const BALL_WALLS: Seg[] = [
 ];
 const POSTS: [number, number][] = [[-HW, -GH], [-HW, GH], [HW, -GH], [HW, GH]];
 /** 선수가 부딪치는 벽 — 골문까지 막힌 통짜 사각형. 선수는 골대 상자에 못 들어간다(가장 단순하고 안정적인 방법). */
-const PLAYER_WALLS: Seg[] = [[-HW, -HH, HW, -HH], [-HW, HH, HW, HH], [-HW, -HH, -HW, HH], [HW, -HH, HW, HH]];
+const PLAYER_WALLS: Seg[] = [[-OW, -OH, OW, -OH], [-OW, OH, OW, OH], [-OW, -OH, -OW, OH], [OW, -OH, OW, OH]];
 
 /** 0 편 slot 번째 선수의 킥오프 자리. side 1 이면 좌우를 뒤집는다. 봇이 쉬는 자리를 잡을 때도 쓴다. */
 export function formationSpot(perSide: number, slot: number, side: Side): { x: number; y: number } {
@@ -329,7 +333,10 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
         p.x = s.ball.x + nx * min; p.y = s.ball.y + ny * min;
       }
     }
-    for (const p of s.players) for (const w of PLAYER_WALLS) collideSegment(p, R, w, E_PLAYER_WALL);
+    for (const p of s.players) {
+      for (const w of PLAYER_WALLS) collideSegment(p, R, w, E_PLAYER_WALL);
+      for (const [px, py] of POSTS) collidePoint(p, R, px, py, PITCH.postR, E_PLAYER_WALL);
+    }
     if (s.phase === 'kickoff') kickoffLimits(s, config);
   }
 
@@ -390,8 +397,8 @@ function guardBodies(s: MatchState): void {
   for (const p of s.players) {
     if (!Number.isFinite(p.x + p.y + p.vx + p.vy)) { p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; }
     const R = PITCH.playerR;
-    p.x = Math.min(HW - R, Math.max(-HW + R, p.x));
-    p.y = Math.min(HH - R, Math.max(-HH + R, p.y));
+    p.x = Math.min(OW - R, Math.max(-OW + R, p.x));
+    p.y = Math.min(OH - R, Math.max(-OH + R, p.y));
   }
 }
 

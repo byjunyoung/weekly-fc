@@ -4,8 +4,8 @@
 import { PITCH } from '../../lib/game/sim.ts';
 import { shuffle } from '../../lib/game/lineup.ts';
 
-/** 골 상자까지 포함한 경기장 전체의 논리 크기. 화면에 이게 통째로 들어와야 한다. */
-export const EXTENT = { w: PITCH.w + PITCH.goalDepth * 2, h: PITCH.h };
+/** 골 상자와 선 밖 여백까지 포함한 경기장 전체의 논리 크기. 화면에 이게 통째로 들어와야 한다. */
+export const EXTENT = { w: PITCH.w + Math.max(PITCH.goalDepth, PITCH.marginX) * 2, h: PITCH.h + PITCH.marginY * 2 };
 
 export type View = {
   /** 세로 화면이면 경기장을 세워 그린다(골대가 위아래, 사람 편은 위로 공격). 아니면 눕힌다(오른쪽으로 공격). */

@@ -141,17 +141,18 @@ test('가둠 — 4대4 봇 3000틱 동안 모든 몸이 유한하고 판 안에 
     if (Math.abs(b.x) > W) assert.ok(Math.abs(b.y) <= PITCH.goalW / 2, `상자 옆벽 밖 t=${t}`);
     for (const p of s.players) {
       assert.ok([p.x, p.y, p.vx, p.vy].every(ok), `선수 NaN t=${t}`);
-      assert.ok(Math.abs(p.x) <= W && Math.abs(p.y) <= H, `선수가 판 밖 t=${t}`);
+      assert.ok(Math.abs(p.x) <= W + PITCH.marginX && Math.abs(p.y) <= H + PITCH.marginY, `선수가 여백 밖 t=${t}`);
     }
   }
   assert.ok(s.tick === 3000);
 });
 
-test('선수는 골대 상자에 못 들어간다', () => {
+test('선수는 골문을 지나 그물 안까지 들어갈 수 있고(그물은 공만 막는다), 바깥 테두리에서 멈춘다', () => {
   const cfg = mk(1);
   let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: 0, y: 300 }, players: { 0: { x: 500, y: 0 }, 1: { x: -300, y: 300 } } });
-  for (let t = 0; t < 120; t++) s = step(s, cfg, [{ x: 1, y: 0, kick: false }, NO_INPUT]);
-  assert.ok(s.players[0].x <= PITCH.w / 2 - PITCH.playerR + 0.01, `x=${s.players[0].x}`);
+  for (let t = 0; t < 180; t++) s = step(s, cfg, [{ x: 1, y: 0, kick: false }, NO_INPUT]);
+  assert.ok(s.players[0].x > PITCH.w / 2, `골라인을 넘었다 x=${s.players[0].x}`);
+  assert.ok(s.players[0].x <= PITCH.w / 2 + PITCH.marginX - PITCH.playerR + 0.01, `바깥 테두리 x=${s.players[0].x}`);
 });
 
 test('킥 — 붙어 있는 공은 킥이 걷기보다 훨씬 빨리 보낸다', () => {
@@ -361,4 +362,24 @@ test('킥을 장전하고 있으면 몸이 굼떠진다', () => {
   let free = start, armed = start;
   for (let t = 0; t < 120; t++) { free = step(free, cfg, [{ x: 1, y: 0, kick: false }, NO_INPUT]); armed = step(armed, cfg, [{ x: 1, y: 0, kick: true }, NO_INPUT]); }
   assert.ok(armed.players[0].vx < free.players[0].vx * 0.8, `${armed.players[0].vx} vs ${free.players[0].vx}`);
+});
+
+test('선 밖 여백 — 선수는 터치라인을 넘어 여백까지 나가고 바깥 테두리에서 멈춘다, 공은 선 안에서 튕긴다', () => {
+  const cfg = mk(1);
+  const H = PITCH.h / 2, R = PITCH.playerR, BR = PITCH.ballR;
+  let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: 0, y: H - 60, vx: 0, vy: 400 }, players: { 0: { x: -200, y: H - 80 }, 1: { x: 400, y: -300 } } });
+  let maxBallY = 0, maxMeY = 0;
+  for (let t = 0; t < 180; t++) { s = step(s, cfg, [{ x: 0, y: 1, kick: false }, NO_INPUT]); maxBallY = Math.max(maxBallY, s.ball.y); maxMeY = Math.max(maxMeY, s.players[0].y); }
+  assert.ok(maxMeY > H + 5, `선수가 선을 넘었다: ${maxMeY}`);
+  assert.ok(maxMeY <= H + PITCH.marginY - R + 1e-6, `바깥 테두리에서 멈춘다: ${maxMeY}`);
+  assert.ok(maxBallY <= H - BR + 1e-6, `공은 선 안: ${maxBallY}`);
+});
+
+test('골대 기둥은 선수도 막는다 — 골라인을 따라 달려도 기둥을 뚫지 못한다', () => {
+  const cfg = mk(1);
+  const W = PITCH.w / 2, G = PITCH.goalW / 2, R = PITCH.playerR;
+  let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: 0, y: 300 }, players: { 0: { x: W, y: G + 120 }, 1: { x: -400, y: -300 } } });
+  let minDist = Infinity;
+  for (let t = 0; t < 150; t++) { s = step(s, cfg, [{ x: 0, y: -1, kick: false }, NO_INPUT]); const p = s.players[0]; minDist = Math.min(minDist, Math.hypot(p.x - W, p.y - G)); }
+  assert.ok(minDist >= R + PITCH.postR - 1.5, `기둥과 가장 가까웠던 거리 ${minDist}`);
 });
