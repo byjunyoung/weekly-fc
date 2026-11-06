@@ -36,7 +36,8 @@ export function createTags(layer: HTMLElement, names: string[], sides: (0 | 1 | 
   const bubbles = new Map<number, { el: HTMLSpanElement; shown: boolean }>();
   const vHead = V(), vFoot = V(), vCam = V();
   return {
-    update(sc: TagScene, w: number, h: number, show: (i: number) => boolean, said: { id: number; text: string }[], bigOnly = true): void {
+    /** show(i) = 이름표를 보일 몸, bubble(i) = 말풍선을 띄울 몸(없으면 show 와 같다). */
+    update(sc: TagScene, w: number, h: number, show: (i: number) => boolean, said: { id: number; text: string }[], bigOnly = true, bubble: (i: number) => boolean = show): void {
       const cam = sc.camera as unknown as import('three').PerspectiveCamera;
       const head = (i: number): { x: number; y: number; ok: boolean; big: boolean } => {
         const ahead = sc.headPoint(i, vCam).applyMatrix4(sc.camera.matrixWorldInverse).z < -0.3;
@@ -58,7 +59,7 @@ export function createTags(layer: HTMLElement, names: string[], sides: (0 | 1 | 
         let B = bubbles.get(b.id);
         if (!B) { B = { el: el('span', 'g3-bubble', box), shown: false }; bubbles.set(b.id, B); }
         if (B.el.textContent !== b.text) B.el.textContent = b.text;
-        const H = heads[b.id], on = show(b.id) && H.ok;
+        const H = heads[b.id], on = bubble(b.id) && H.ok;
         if (on !== B.shown) { B.el.classList.toggle('is-on', on); B.shown = on; }
         if (on) B.el.style.transform = `translate(${H.x.toFixed(1)}px, ${(H.y - BUBBLE_UP_PX).toFixed(1)}px) translate(-50%, -100%)`;
       }

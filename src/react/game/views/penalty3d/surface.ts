@@ -195,7 +195,8 @@ export function createPenaltySurface(o: SurfaceIn<PenConfig>): Surface<Pen3State
       // 이름표·말풍선 — 지금 차고 막는 둘만(다른 사람은 경기장에 없다)
       // 카메라 바로 앞의 몸(키커 화면의 키커, 키퍼 화면의 키퍼)은 등만 보이니 이름표를 뺀다.
       const near = role === 'keep' ? st.keeper : st.kicker;
-      tags.update(sc, w, h, (i) => (i === st.kicker || i === st.keeper) && i !== near, f.bubbles, false);
+      // 말풍선은 둘 다(내 한마디도 내 화면에 — 2D 와 같다)
+      tags.update(sc, w, h, (i) => (i === st.kicker || i === st.keeper) && i !== near, f.bubbles, false, (i) => i === st.kicker || i === st.keeper);
     },
 
     // 틱마다 한 번 — 키커면 조준을 옮기고(떼는 순간에만 싣는다), 키퍼면 화면 기준 그대로(좌우는 뒤집어) 넘긴다.
