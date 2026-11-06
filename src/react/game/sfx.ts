@@ -23,8 +23,22 @@ export function setMuted(m: boolean): void {
 }
 
 /** 사람의 누름 안에서 부른다 — 소리 장치를 만들고 깨운다. 여러 번 불러도 된다. */
+/** 다시 깨워야 하나(순수 — 테스트용으로 뗌). 아이폰은 앱을 바꿨다 오면 'interrupted' 가 되고, 'running' 이라고 해도 소리가 안 나는 일이 있어
+ *  화면이 다시 보이면 stale 로 표시해 다음 손짓에 한 번 더 resume 한다(2026-11-07 리뷰 #4). closed 면 새로 만든다. */
+export function needsWake(state: string | null, stale: boolean): 'create' | 'resume' | 'none' {
+  if (state === null || state === 'closed') return 'create';
+  return state !== 'running' || stale ? 'resume' : 'none';
+}
+let stale = false;
+/** 화면이 다시 보였다 — 다음 손짓에서 소리 장치를 한 번 더 깨운다. 부르기 싸다. */
+export function markStale(): void { stale = true; }
+
 export function unlock(): void {
   try {
+    const w = needsWake(ctx ? ctx.state : null, stale);
+    if (w === 'none') return;
+    stale = false;
+    if (w === 'create') { ctx = null; master = null; }
     if (!ctx) {
       const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AC) return;
@@ -33,7 +47,8 @@ export function unlock(): void {
       master.gain.value = muted ? 0 : 0.6;
       master.connect(ctx.destination);
     }
-    if (ctx.state === 'suspended') void ctx.resume();
+    if (ctx.state !== 'running') void ctx.resume();
+    else if (w === 'resume') void ctx.resume();   // running 이라도 다시 보인 뒤 첫 손짓엔 한 번 더(아이폰)
   } catch { ctx = null; master = null; }
 }
 
