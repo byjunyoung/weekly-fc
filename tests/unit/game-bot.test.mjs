@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { createMatch, step, eventsBetween, PITCH, NO_INPUT, pitchOf } from '../../src/lib/game/sim.ts';
 import { BASE_PERF } from '../../src/lib/game/stats.ts';
 import { botInput } from '../../src/lib/game/bot.ts';
-import { quantize } from '../../src/lib/game/net.ts';
-import { fieldFor } from '../../src/lib/game/room.ts';
+import { quantize } from '../../src/lib/game/quant.ts';
+import { fieldFor } from '../../src/lib/games/match2d-room.ts';
 
 const mk = (perSide, extra = {}) => {
   const players = [];
@@ -169,16 +169,18 @@ function measure(cfg, seed, quant) {
 }
 
 const FORMATS = [
-  // [편 0, 편 1, 찬 패스 경기당 최소(기준의 두 배), 몰림 비율 최대(기준)]
-  [1, 1, 0, 0.01],
-  [2, 2, 0, 0.05],
-  [3, 3, 6.4, 0.034],
-  [4, 4, 5.8, 0.085],
-  [5, 5, 6.8, 0.122],
-  [3, 5, 7.6, 0.099],
+  // [편 0, 편 1, 찬 패스 경기당 최소, 몰림 비율 최대(옛 봇 기준), 골 경기당 최소]
+  // 찬 패스 최소는 옛 봇의 2.5~3배(3대3 3.2·4대4 2.9·5대5 3.4·3대5 3.8 → 8·8.7·10·10). 골 최소 2 는 씨앗 넷의 흔들림을 넣은 하한이다 —
+  // 씨앗 48개 평균은 3대3 5.5, 4대4 4.3, 5대5 5.0, 3대5 4.4(보고서 표). 2026-11-07 "패스만 돌리고 골은 못 넣는다" 로 읽히지 않게 골 하한을 넣었다.
+  [1, 1, 0, 0.01, 4],
+  [2, 2, 0, 0.05, 2],
+  [3, 3, 8, 0.034, 2],
+  [4, 4, 8.7, 0.085, 2],
+  [5, 5, 10, 0.122, 1.5],
+  [3, 5, 10, 0.099, 2],
 ];
 const team = { goals: 0, assisted: 0 };   // 3대3 이상 골 전체 — 도움 비율은 맨 끝에서 한 번에 본다
-for (const [a, b, minPass, maxSwarm] of FORMATS) {
+for (const [a, b, minPass, maxSwarm, minGoals] of FORMATS) {
   test(`봇끼리 ${a}대${b}(${fieldFor(a + b)}) 3분 × 4경기 — 골이 나고, 패스하고, 슛하고, 서 버리지 않고, 몰리지 않는다`, () => {
     const cfg = mkSides(a, b);
     const tot = { goals: 0, assisted: 0, kpass: 0, shots: 0, stalls: 0, near: 0, swarm: 0, crowd: 0 };
@@ -187,7 +189,7 @@ for (const [a, b, minPass, maxSwarm] of FORMATS) {
       for (const k of Object.keys(tot)) tot[k] += m[k];
     }
     const per = (v) => v / 4;
-    assert.ok(tot.goals >= (a + b <= 2 ? 8 : 2), `골 ${tot.goals} (4경기)`);
+    assert.ok(per(tot.goals) >= minGoals, `골 경기당 ${per(tot.goals)} < ${minGoals}`);
     assert.ok(per(tot.goals) <= 12, `골이 너무 많다 경기당 ${per(tot.goals)}`);
     assert.equal(tot.stalls, 0, '공이 5초 넘게 선 채로 있었다');
     assert.ok(per(tot.shots) >= (a + b <= 4 ? 8 : 4), `슛 경기당 ${per(tot.shots)}`);
@@ -198,10 +200,11 @@ for (const [a, b, minPass, maxSwarm] of FORMATS) {
     if (a >= 3) { team.goals += tot.goals; team.assisted += tot.assisted; }
   });
 }
-test('3대3 이상 골 중 도움이 붙은 골이 있다(같은 편이 넘겨준 공으로 넣는다)', () => {
-  // 옛 봇은 이 값이 더 높았지만(3대3 42%) 같은 편끼리 몸으로 부딪친 것까지 도움으로 잡혔다. 여기선 하나도 없지는 않은지만 본다.
+test('3대3 이상 골의 다섯에 하나 넘게 도움이 붙는다(같은 편이 넘겨준 공으로 넣는다)', () => {
+  // 옛 봇은 이 값이 더 높았지만(3대3 48%) 같은 편끼리 몸으로 부딪친 것까지 도움으로 잡혔다. 새 봇은 씨앗 48개로 3대3 28%, 4대4 23%,
+  // 5대5 31%, 6대6 34% — 목표(30%)에 3대3·4대4 는 못 미친다(골문 앞 되튄 공·뺏은 공을 바로 넣는 골이 많다). 여기 하한은 0.2.
   assert.ok(team.goals > 0);
-  assert.ok(team.assisted / team.goals >= 0.1, `도움 ${team.assisted}/${team.goals}`);
+  assert.ok(team.assisted / team.goals >= 0.2, `도움 ${team.assisted}/${team.goals}`);
 });
 
 // ─── 장면 — 한 장면에서 봇이 해야 할 일을 하나씩. 틱은 5670 에서 시작한다: 이 창(45틱 × 5)은 여섯 봇 모두 머뭇거림 제비에 안 걸려

@@ -12,6 +12,11 @@
 //   3) 수비 — 가장 뒤(slot 0)는 공과 우리 골대 사이에 남는다(우리가 공을 가지면 조금 올라와 뒤로 받아 준다, 잡으면 내준다).
 //      한 명이 골대 쪽에서 버티며 붙고(가끔 발을 뻗어 옆으로 찔러 낸다), 나머지는 위험한 상대를 하나씩 맡는다 —
 //      골대 가까운 상대는 바짝, 먼 상대는 물러나 그 사이를 지킨다.
+//   2026-11-07 두 번째 손질("패스는 늘었는데 공격이 이빨이 빠졌다" — 3대3 골 6.5 → 2.5):
+//     - 슛을 아끼지 않는다: 지금 방향이 골문 안이고 그 길에 몸이 없으면 먼 데서도 때리고(chance), 공 가까이 길을 막고 선 몸으로는 안 찬다.
+//     - 골문 앞을 가로지르는 공은 받지 않고 한 번에 때릴 자리에 선다. 같은 편이 골문 길이 열린 자리에 있으면 슛 대신 그에게(컷백·스루).
+//     - 셋 이상인 편은 가장 앞의 하나(다섯 이상은 둘)가 상대 수비 둘 사이 높이에 남는다(넷은 빼야 패스·골이 같이 산다 — 실측).
+//     - 수비의 실수: 공을 가진 상대가 옆으로 꺾으면 늦게 따라가고(PRESS_LAG), 골키퍼는 가까운 슛엔 몸을 날리지 않고 제자리에서 막는다.
 //   4) 사람이 이길 수 있게 — 늦게 출발하고(REACT_TICKS), 가끔 머뭇거리고, 조준이 빗나가고, 같은 편을 가끔 못 본다.
 //
 // 조준은 "어디에 서서 차느냐" 다. sim 의 킥은 몸 중심 → 공 중심 방향으로 정해진 속도를 더한다. 그래서
@@ -47,9 +52,9 @@ const HESITATE_SPEED = 0.35;
  *  6 → 10, 머뭇거림 0.12 → 0.18 로 올린 값에서 옛 봇(사람이 이기던 수준)과 1대1 12경기 62:72 — 그보다 세지 않게 맞췄다. */
 const REACT_TICKS = 10;
 /** 같은 편 하나하나를 "본" 확률(AIM_HOLD 마다 새로 뽑는다). 못 본 같은 편에겐 그동안 패스하지 않는다. */
-const VISION_P = 0.85;
+const VISION_P = 0.95;
 /** 상대가 공 길을 막으러 움직이는 비율(최고 속도 대비). 크면 봇이 조심스럽게(덜) 패스·슛한다. */
-const LANE_REACT = 0.55;
+const LANE_REACT = 0.4;
 /** 슛에서는 이만큼만 본다 — 골문 앞 수비는 늘 막을 수 있어 보이니 덜 조심해야 슛이 나온다. */
 const SHOT_REACT = 0.2;
 /** 슛 길이 이만큼까지 막혀 보여도 찬다(가까울수록 SHOT_RISK_NEAR 까지). 크면 무리한 슛이 는다. */
@@ -64,8 +69,27 @@ const PRESSURE_R = 95;
 const COMMIT_BONUS = 60;
 /** 가장 뒤 봇이 공을 다투러 나올 때의 벌점(틱). 우리 3분의 1 안이면 0, 우리 진영이면 이만큼 더 가까워야, 상대 진영이면 안 나온다. */
 const KEEPER_PEN = 20;
+/** 가장 뒤 봇이 자리를 잡을 때 공을 늦게 보는 틱. 크면 슛이 잘 들어간다. */
+const KEEPER_LAG = 14;
+/** 공 가진 상대를 막을 때 공을 늦게 보는 틱 — 몰다가 방향을 꺾으면 이만큼 늦게 따라온다. 크면 빠져나가 슛하기 쉽다. */
+const PRESS_LAG = 80;
+/** 슛 거리 안에서, 몰고 간 자리에서 골문 길이 열리는 방향에 주는 덤. */
+const OPEN_LANE_BONUS = 60;
+/** 지금 방향이 골문 안으로 맞고 길에 몸이 없으면 이 거리(보통 경기장 기준)까지는 그냥 때린다(옛 봇처럼 망설이지 않는 슛). */
+const LONG_SHOT = 550;
+/** 상대가 찬 뒤 이 틱 동안은 그 공에 반응하지 못한다(하던 대로 움직인다). 최대 12(sim 의 찬 표시 길이). 크면 슛·패스가 잘 들어간다. */
+const KICK_FREEZE = 8;
+const KICK_FLASH = 12;   // sim 의 KICK_FLASH_TICKS
+/** 가장 뒤 봇이 따라 뛰지 않고 제자리에서 막는 「슛」의 속도(우리 골대 쪽 성분). 낮추면 골이 는다. */
+const SHOT_SPEED = 300;
+/** 그 「슛」이 골대 가운데에서 이 거리(보통 경기장 기준) 안일 때만 — 먼 슛은 따라가 막는다. */
+const KEEPER_BLOCK_R = 380;
+/** 골대에서 이보다 먼 데서 오는 슛만 골키퍼가 옆걸음으로 따라 옮긴다(먼 슛은 막히고 가까운 구석 슛은 들어간다). */
+const SIDESTEP_FAR = 340;
+/** 받는 자리에서 골문 길이 열린 패스(스루·컷백)에 주는 덤. 크면 도움 골이 늘고 혼자 넣는 골이 준다. */
+const ASSIST_BONUS = 200;
 /** 맡은 상대를 보는 늦음(초)과 그 상대와 우리 골대 사이에 서는 거리. 늦음이 크고 거리가 멀수록 패스가 잘 들어간다. */
-const MARK_LAG = 0.3, MARK_GAP = 60;
+const MARK_LAG = 0.5, MARK_GAP = 60;
 /** 우리 골대에서 경기장 길이의 절반보다 먼 상대는 늦게(초) 보고, 골대까지 거리의 이 비율만큼 물러나 막는다. */
 const MARK_LAG_FAR = 0.5, MARK_DROP = 0.3;
 /** 무작정 걷어내도 되는 우리 골문 앞(골대 가운데에서 반가로의 이 비율 안). 넓으면 공이 자꾸 상대에게 간다. */
@@ -131,18 +155,25 @@ function build(s: MatchState, cfg: MatchConfig): Ctx {
     path.push({ x: clamp(x, -HW - 40, HW + 40), y: clamp(y, -ly, ly) });
   }
   const reach = s.players.map((p, id) => reachTime(p, cfg.players[id].perf.maxSpeed, path));
+  // 가장 뒤 봇(골키퍼 노릇)은 슛에 한 박자 더 늦다 — 다 막아 내면 골이 안 난다.
+  for (const sd of [0, 1] as const) { const k = keeperOf({ cfg, slots: slotsOf(cfg) } as Ctx, sd); if (k >= 0) reach[k] = { t: reach[k].t + KEEPER_LAG, i: reach[k].i }; }
   let ctrl = -1, bestD = R_SUM + 14;
   s.players.forEach((p, id) => {
     const d = dist(p, b);
     const rel = len(p.vx - b.vx, p.vy - b.vy);
     if (d <= bestD && rel < 260) { bestD = d; ctrl = id; }
   });
-  const slots: number[][] = [[], []];
-  cfg.players.forEach((q) => slots[q.side === 1 ? 1 : 0].push(q.id));
+  const slots = slotsOf(cfg);
   return { s, cfg, pitch, HW, HH, GH, kx: HW / 600, ky: HH / 360, path, reach, ctrl, slots };
 }
 
 /** 이 선수가 공 길에 닿는 가장 이른 틱. 지금 속도로 0.25초 미끄러진 자리에서 잰다 — 공 쪽으로 뛰던 사람이 유리하다(떨지 않게). */
+function slotsOf(cfg: MatchConfig): number[][] {
+  const slots: number[][] = [[], []];
+  cfg.players.forEach((q) => slots[q.side === 1 ? 1 : 0].push(q.id));
+  return slots;
+}
+
 function reachTime(p: P, speed: number, path: V[]): { t: number; i: number } {
   const ex = p.x + p.vx * 0.25, ey = p.y + p.vy * 0.25;
   const perTick = speed * DT;
@@ -180,6 +211,11 @@ function chaserOf(c: Ctx, side: 0 | 1): number {
   for (const id of c.slots[side]) {
     let t = c.reach[id].t;
     if (id === keeper) {
+      // 우리 골대 쪽으로 빠르게 오는 공(슛)에는 몸을 날려 따라가지 않고 제자리(골대-공 선 위)에서 몸으로 막는다 —
+      // 공 길로 뛰어들게 두면 거의 다 막아 골이 안 났다(실측: 3대3 슛 53번 중 27번).
+      const b = c.s.ball;
+      if (b.vx * dir < -SHOT_SPEED && len(b.x + dir * c.HW, b.y) < KEEPER_BLOCK_R * c.kx
+        && Math.abs(b.y + (b.vy / b.vx) * (-dir * c.HW - b.x)) < c.GH + 20) continue;
       if (bp < -c.HW / 3) t += 0;
       else if (bp < 0) t += KEEPER_PEN;
       else continue;
@@ -231,6 +267,8 @@ function laneMargin(c: Ctx, side: 0 | 1, a: V, b: V, K: number, react = LANE_REA
     // 받는 자리 다툼(decide 의 도착 시간 비교)이 따로 본다.
     const t = Math.min(0.4, sc / Math.max(150, K - 0.3 * sc));
     const block = R + BR + react * c.cfg.players[id].perf.maxSpeed * t;
+    // 공 가까이(150 안) 길을 막고 선 몸은 "어쩌면 빠져나간다" 가 없다 — 슛 여유(SHOT_RISK)로 덮지 않게 크게 막힘으로 친다.
+    if (sc < 150 && perp < block) return -999;
     m = Math.min(m, perp - block);
   }
   return m;
@@ -264,8 +302,9 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
   const slot = mates.indexOf(id);
   const speed = mp.perf.maxSpeed;
   const hesitate = noise(id, Math.floor(state.tick / HESITATE_HOLD) + 1000) < -1 + 2 * HESITATE_P ? HESITATE_SPEED : 1;
-  const out = (v: V, kick: boolean): Input => {
+  const out = (v0: V, kick: boolean): Input => {
     const k = kick && me.kickCooldown === 0;   // 킥은 뗐다 눌러야 다시 나간다 — 쿨다운 중이면 손을 뗀다
+    const v = unstick(state, id, v0);
     return { x: clamp(v.x * hesitate, -1, 1), y: clamp(v.y * hesitate, -1, 1), kick: k };
   };
 
@@ -275,12 +314,24 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
     return out(steer(me, f.x, f.y, speed, 50), false);
   }
 
+  // 상대가 방금(KICK_FREEZE 틱 안) 찼으면 그 공에는 아직 반응하지 못한다 — 하던 움직임 그대로 간다.
+  // 슛·패스가 나간 순간 골키퍼·수비가 공 길로 바로 꺾어 들어가면 다 막힌다(실측: 3대3 슛 53번 중 27번을 골키퍼가 막음).
+  // 찬 지 몇 틱인지는 상태의 kickFlash(찬 뒤 12틱 동안 켜진 표시)로 안다 — 기억이 없어도 된다.
+  if (state.phase === 'play' && justKickedBy(state, config, side === 0 ? 1 : 0)) {
+    const v = len(me.vx, me.vy);
+    return out(v > 20 ? { x: me.vx / speed, y: me.vy / speed } : { x: 0, y: 0 }, false);
+  }
+
   const chaser = chaserOf(c, side);
   if (chaser === id) return out(...onBall(c, id));
 
   const keeper = keeperOf(c, side);
   if (id === keeper) return out(steer(me, ...keeperSpot(c, side), speed, 60), false);
-  let t = weHaveIt(c, side) ? supportSpot(c, side, id, chaser, keeper) : markSpot(c, side, id, chaser, keeper);
+  const att = weHaveIt(c, side);
+  const st = strikersOf(c, side, chaser, keeper);
+  const sk = st.slice().sort((a, z) => state.players[a].y - state.players[z].y || a - z).indexOf(id);
+  let t = sk >= 0 ? strikerSpot(c, side, att, sk, st.length)
+    : att ? supportSpot(c, side, id, chaser, keeper) : markSpot(c, side, id, chaser, keeper);
   // 공에 간 같은 편 옆에 붙어 있게 됐으면(공이 이쪽으로 몰려 왔다) 먼저 비켜 선다 — 한 공에 둘이 몰리지 않게.
   const b = state.ball, db = dist(me, b);
   if (db < 100 && chaser >= 0 && chaser !== id && sideOf(c, chaser) === side) {
@@ -319,7 +370,11 @@ function onBall(c: Ctx, id: number): [V, boolean] {
     // 압박 — 사람이 이길 수 있어야 한다. 늦게 본 공(REACT_TICKS 전 자리)을 보고, 공 속도를 앞질러 따라가지 않는다
     // (속도까지 따라 붙이면 공 가진 쪽이 영영 못 빠져나간다 — 실측: 그렇게 했더니 3대3 패스가 반으로 줄고 몸싸움만 남았다).
     // 상대가 공을 몸에 붙이고 있으면 우리 골대 쪽 한 걸음 앞(R_SUM + 30)에서 버티고, 가끔(해시 제비) 발을 뻗어 들어간다.
-    const L = { x: c.path[ri].x - ball.vx * REACT_TICKS * DT, y: c.path[ri].y - ball.vy * REACT_TICKS * DT };   // 늦게 본 공
+    // 늦게 본 공 — 골대 쪽으로 곧게 오는 몰기는 제때 따라가고, 옆으로 꺾는 움직임(골대-공 선에 수직인 성분)만 PRESS_LAG 만큼 늦게 본다.
+    // 곧은 몰기까지 늦게 보면 킥오프에서 그대로 뚫고 들어가 골이 났다.
+    const gl = unit(c.path[ri].x - ownGoal.x, c.path[ri].y - ownGoal.y);
+    const vpar = ball.vx * gl.x + ball.vy * gl.y, pvx = ball.vx - gl.x * vpar, pvy = ball.vy - gl.y * vpar;
+    const L = { x: c.path[ri].x - pvx * PRESS_LAG * DT, y: c.path[ri].y - pvy * PRESS_LAG * DT };
     const glued = dist(s.players[c.ctrl], ball) < R_SUM + 8;
     const lunge = noise(id + 50, Math.floor(s.tick / 30)) > 0.55;
     tackle = lunge;
@@ -333,7 +388,15 @@ function onBall(c: Ctx, id: number): [V, boolean] {
     const bs = len(ball.vx, ball.vy), ux = ball.vx / bs, uy = ball.vy / bs;
     const ahead = (me.x - ball.x) * ux + (me.y - ball.y) * uy;
     const M = dist(me, ball) > 120 ? c.path[c.reach[id].i] : { x: ball.x + ux * ahead, y: ball.y + uy * ahead };
-    const t = clampTarget(c, M);
+    let t = clampTarget(c, M);
+    // 골문 앞을 가로지르는 공이면 받지 말고 한 번에 때린다 — 공이 올 자리의 「골문 반대편」에 서서 닿는 순간 골문 쪽으로 나가게.
+    const gx = dir * c.HW;
+    if (progOf(dir, M.x) > 0 && len(gx - M.x, M.y) < SHOOT_RANGE * (1 + 0.6 * (c.kx - 1))) {
+      const ri2 = Math.min(c.reach[id].i, N), kv = KEEP_POW[ri2];
+      const aim = { x: gx, y: clamp(-M.y * 0.3, -c.GH * 0.6, c.GH * 0.6) };
+      const kd = kickDir(unit(aim.x - M.x, aim.y - M.y), ball.vx * kv, ball.vy * kv, K);
+      t = clampTarget(c, { x: M.x - kd.x * (R_SUM + 2), y: M.y - kd.y * (R_SUM + 2) });
+    }
     mv = steer(me, t.x, t.y, speed, 20);
   } else mv = approach(c, me, B, k, speed, mode === 'carry');
 
@@ -376,6 +439,32 @@ function onBall(c: Ctx, id: number): [V, boolean] {
   return [mv, kick];
 }
 
+/** 그 편이 KICK_FREEZE 틱 안에 찼나(공이 아직 그 사람 가까이에 있을 때만 — 오래된 표시로 굳지 않게). */
+function justKickedBy(s: MatchState, cfg: MatchConfig, side: 0 | 1): boolean {
+  for (let i = 0; i < s.players.length; i++) {
+    const p = s.players[i];
+    if (cfg.players[i]?.side === side && p.kickFlash > KICK_FLASH - KICK_FREEZE) return true;
+  }
+  return false;
+}
+
+/** 몸끼리 맞밀기 풀기 — 힘껏 가려는데 거의 서 있고 바로 앞에 다른 몸이 붙어 있으면 옆(id 마다 정해진 쪽)으로 비켜 간다.
+ *  둘이 서로 상대 자리로 가려고 머리를 맞대면 공이 5초 넘게 선 채로 있었다(실측 3대3 24경기 중 1번). */
+function unstick(s: MatchState, id: number, v: V): V {
+  const me = s.players[id], m = len(v.x, v.y);
+  if (m < 0.6 || len(me.vx, me.vy) > 25) return v;
+  const ux = v.x / m, uy = v.y / m;
+  for (let j = 0; j < s.players.length; j++) {
+    if (j === id) continue;
+    const o = s.players[j], dx = o.x - me.x, dy = o.y - me.y, d = len(dx, dy);
+    if (d < 2 * R + 8 && (dx * ux + dy * uy) / (d || 1) > 0.6) {
+      const sg = id % 2 === 0 ? 1 : -1;
+      return { x: (ux * 0.5 - uy * sg * 0.87) * m, y: (uy * 0.5 + ux * sg * 0.87) * m };
+    }
+  }
+  return v;
+}
+
 /** 공이 빠르게 나에게 오고 있나 — 공 길이 내 몸 가까이(몸 둘 + 여유) 지나가고, 아직 내 앞이다. */
 function receiving(me: P, ball: P): boolean {
   const bs = len(ball.vx, ball.vy);
@@ -396,10 +485,13 @@ function chance(c: Ctx, id: number, ax: number, ay: number): boolean {
   const side: 0 | 1 = mp.side === 1 ? 1 : 0, dir = side === 0 ? 1 : -1, K = mp.perf.kick;
   const w = unit(ball.vx + ax * K, ball.vy + ay * K);
   const gx = dir * c.HW;
-  if (w.x * dir > 0.3 && len(gx - ball.x, ball.y) < SHOOT_RANGE) {
+  if (s.phase === 'play' && w.x * dir > 0.3 && progOf(dir, ball.x) > 0 && len(gx - ball.x, ball.y) < LONG_SHOT * c.kx) {
     const y = ball.y + (w.y / w.x) * (gx - ball.x);
-    const toG = len(gx - ball.x, ball.y);
-    if (Math.abs(y) < c.GH - 10 && laneMargin(c, side, ball, { x: gx, y }, K, SHOT_REACT) > -(toG < NEAR_GOAL ? SHOT_RISK_NEAR : SHOT_RISK)) return true;
+    // 지금 이 방향이 골문 안(기둥 안쪽)이고, 지금 그 길 위에 몸이 서 있지 않으면 바로 찬다 — 막을지는 수비 몫(망설이지 않는 슛).
+    // 사정거리 밖의 먼 슛은 골키퍼가 따라올 시간까지 넣어 길이 열려야 한다(킥오프 직후 하프라인 슛이 그냥 들어가지 않게).
+    const far = len(gx - ball.x, ball.y) > SHOOT_RANGE * (1 + 0.6 * (c.kx - 1));
+    if (far && s.phaseTicks < 150) return false;   // 킥오프 직후 하프라인 근처에서 바로 때리는 슛은 안 한다(킥오프 한 번에 골이 너무 잦았다)
+    if (Math.abs(y) < c.GH - 12 && laneMargin(c, side, ball, { x: gx, y }, K, far ? SHOT_REACT : 0) > 2) return true;
   }
   const win = Math.floor(s.tick / AIM_HOLD);
   const bp = progOf(dir, ball.x);
@@ -428,7 +520,7 @@ function approach(c: Ctx, me: P, B: V, k: V, speed: number, push: boolean): V {
   const lat = rx * px + ry * py;
   let t: V;
   // 들어가는 각: 밀기는 25도 안이면 되지만 킥은 8도 안팎이어야 해서 더 뒤로 돌아 맞춘 뒤 들어간다(아니면 몸이 먼저 공에 닿는다).
-  if (cosE > (push ? 0.9 : 0.97)) {
+  if (cosE > (push ? (rd < 55 ? 0.7 : 0.9) : 0.97)) {   // 붙어 있는 몰기는 45도 안이면 그냥 민다(둘레를 돌다 둘이 맞서 공이 서 버렸다)
     const through = push ? 26 : 12;
     t = { x: B.x + k.x * through - px * lat * 0.8, y: B.y + k.y * through - py * lat * 0.8 };
     t = clampTarget(c, t);
@@ -481,15 +573,22 @@ function decide(c: Ctx, id: number, B: V): { mode: 'shoot' | 'pass' | 'carry' | 
   const pressured = nearOpp < PRESSURE_R;
   const bp = progOf(dir, B.x);
 
+  // 가장 뒤 봇이 공을 몰고 하프라인 가까이까지 왔으면 더 끌지 않고 앞으로 걷어 낸다(뒤를 비우지 않게 — 패스 각을 잡느라 넘어가기도 했다).
+  if (keeperOf(c, side) === id && bp > -0.15 * c.HW && !kickoff) {
+    const wy = (B.y !== 0 ? Math.sign(B.y) : (me.y >= 0 ? 1 : -1)) * c.HH * 0.6;
+    return { mode: 'clear', target: { x: B.x + dir * 450 * c.kx, y: wy } };
+  }
+
   // ① 슛 — 양 구석·가운데 중 길이 가장 열린 곳(가장 가까운 수비에서 먼 쪽이 이긴다). 조준 오차는 시간 창마다 바뀐다.
   let shot: V | null = null, shotScore = -Infinity;
   const gx = dir * c.HW;
   // 큰 경기장은 골문도 넓고 수비 사이가 멀다 — 사정거리를 조금(반가로 비례의 60%) 늘려 본다.
-  const toGoal = len(gx - B.x, B.y) / (1 + 0.6 * (c.kx - 1));
+  const realToGoal = len(gx - B.x, B.y);
+  const toGoal = realToGoal / (1 + 0.6 * (c.kx - 1));
   const risk = toGoal < NEAR_GOAL ? SHOT_RISK_NEAR : SHOT_RISK;
-  if (!kickoff && toGoal < SHOOT_RANGE && bp > 0 && (gx - B.x) * dir / (toGoal || 1) > 0.35) {   // 너무 비스듬하면(골라인 옆) 몰고 들어간다
+  if (!kickoff && toGoal < SHOOT_RANGE && bp > 0 && (gx - B.x) * dir / (realToGoal || 1) > 0.35) {   // 너무 비스듬하면(골라인 옆) 몰고 들어간다
     const err = noise(id, win) * AIM_ERR * c.GH;
-    for (const f of [-0.72, 0, 0.72]) {
+    for (const f of [-0.78, -0.4, 0, 0.4, 0.78]) {
       const t = { x: gx, y: clamp(f * c.GH + err, -c.GH - 15, c.GH + 15) };
       if (!turnOk(t)) continue;
       const m = laneMargin(c, side, B, t, K, SHOT_REACT);
@@ -498,11 +597,11 @@ function decide(c: Ctx, id: number, B: V): { mode: 'shoot' | 'pass' | 'carry' | 
       if (sc > shotScore) { shotScore = sc; shot = t; }
     }
   }
-  if (shot) return { mode: 'shoot', target: shot };
+
 
   // ② 패스 — 같은 편(사람 포함)마다 두 곳: 공이 닿을 때 그가 있을 자리(발밑), 그리고 붙은 상대 반대쪽 앞 빈 곳(공간 패스).
   //    못 본 같은 편은 건너뛴다. 뒤로 주는 패스는 압박받거나 우리 진영일 때만(점수는 낮게 — 막힌 몰기보다만 낫다).
-  let pass: V | null = null, passScore = -Infinity;
+  let pass: V | null = null, passScore = -Infinity, passToG = Infinity;
   const backFloor = pressured || bp < 0 ? -0.8 * c.HW : -260;
   for (const q of c.slots[side]) {
     if (q === id) continue;
@@ -536,16 +635,24 @@ function decide(c: Ctx, id: number, B: V): { mode: 'shoot' | 'pass' | 'carry' | 
       if (to - tq < (kind === 0 ? 4 : 12)) continue;
       if (kind === 1 && tq > D / 420 * TICK_HZ + 30) continue;
       const toG = len(gx - L.x, L.y);
-      let sc = 0.5 * clamp(gain, -0.8 * c.HW, 300) + 0.4 * Math.min(space, 200) + Math.min(m, 60) + (toG < SHOOT_RANGE ? 50 : 0) - 0.05 * D + COMMIT_BONUS * lined(L) - (kind === 1 ? 15 : 0);
+      // 받는 자리에서 골문 길이 열려 있으면(스루 패스·컷백) 크게 덤 — 도움이 붙는 골은 거의 이 패스에서 나온다.
+      const openShot = toG < SHOOT_RANGE * (1 + 0.6 * (c.kx - 1)) && progOf(dir, L.x) > 0 && laneMargin(c, side, L, { x: gx, y: 0 }, K, SHOT_REACT) > 0;
+      let sc = 0.5 * clamp(gain, -0.8 * c.HW, 300) + 0.4 * Math.min(space, 200) + Math.min(m, 60) + (toG < SHOOT_RANGE ? 50 : 0) + (openShot ? ASSIST_BONUS : 0) - 0.05 * D + COMMIT_BONUS * lined(L) - (kind === 1 ? 15 : 0);
       if (!c.cfg.players[q].bot) sc += 15;   // 사람에게 조금 더 — 같이 뛰는 맛
       // 앞으로 크게 나가는 열린 패스 — 압박이 없어도 준다(스펙: "더 앞에서 길이 열린 같은 편").
       if (gain >= 120 * c.kx && m >= 15 && to - tq >= 8) sc += 60;
       if (sc > passScore) {
-        passScore = sc;
+        passScore = sc; passToG = openShot ? toG : Infinity;
         const e = noise(id, win + 5) * PASS_ERR * D, u = unit(L.x - B.x, L.y - B.y);
         pass = { x: L.x - u.y * e, y: L.y + u.x * e };
       }
     }
+  }
+
+  // 슛 — 단, 같은 편이 골문에 훨씬 가깝고 길이 열린 자리에 있으면 그에게 준다(컷백·스루 패스).
+  if (shot) {
+    if (pass && passToG < realToGoal + (realToGoal > 200 * c.kx ? 130 : 0)) return { mode: 'pass', target: pass };
+    return { mode: 'shoot', target: shot };
   }
 
   // ③ 몰기 — 골 쪽, 위·아래로 비스듬히 셋 중 앞이 가장 빈 곳. 압박받을수록 몰기의 값이 깎인다.
@@ -553,7 +660,9 @@ function decide(c: Ctx, id: number, B: V): { mode: 'shoot' | 'pass' | 'carry' | 
   const g = unit(gx - B.x, -B.y);
   // 넷째 후보: 붙은 상대 반대쪽(등지고 지키기).
   const away = nearId >= 0 ? unit(B.x - s.players[nearId].x, B.y - s.players[nearId].y) : g;
-  for (const a of [0, 0.55, -0.55, 9]) {
+  // 슛 거리 안이면 골문과 나란히(옆으로) 꺾는 두 후보를 더 본다 — 앞을 막고 선 수비 옆으로 공을 빼 슛 길을 연다.
+  const inRange = bp > 0 && toGoal < SHOOT_RANGE * 1.15 && !kickoff;
+  for (const a of inRange ? [0, 0.55, -0.55, 9, 2.5, -2.5] : [0, 0.55, -0.55, 9]) {
     let ux = a === 9 ? away.x : g.x - g.y * a, uy = a === 9 ? away.y : g.y + g.x * a;
     if (a === 9 && (!pressured || ux * dir < -0.3)) continue;   // 우리 골대 쪽으로 등지지는 않는다
     const l = len(ux, uy); ux /= l; uy /= l;
@@ -562,7 +671,9 @@ function decide(c: Ctx, id: number, B: V): { mode: 'shoot' | 'pass' | 'carry' | 
     let space = 220;
     for (const o of opp) space = Math.min(space, dist(s.players[o], ahead));
     // 앞에 상대가 서 있으면(80 안) 그쪽으로 모는 건 공을 갖다 바치는 것 — 크게 깎는다.
-    const sc = 0.8 * space - (space < 80 ? 2 * (80 - space) : 0) + (a === 0 ? 25 : 0) + 0.5 * COMMIT_BONUS * Math.max(0, (sx * ux + sy * uy) / sl);
+    let sc = 0.8 * space - (space < 80 ? 2 * (80 - space) : 0) + (a === 0 ? 25 : 0) + 0.5 * COMMIT_BONUS * Math.max(0, (sx * ux + sy * uy) / sl);
+    // 거기서 골문 가운데로 길이 열리면 덤 — 몰고 들어가 찰 곳을 만든다.
+    if (inRange && laneMargin(c, side, { x: B.x + ux * 70, y: B.y + uy * 70 }, { x: gx, y: 0 }, K, SHOT_REACT) > 0) sc += OPEN_LANE_BONUS;
     if (sc > carryScore) { carryScore = sc; carry = { x: B.x + ux * 300, y: B.y + uy * 300 }; }
   }
   if (carryScore === -Infinity) carryScore = 0;
@@ -595,8 +706,19 @@ function keeperSpot(c: Ctx, side: 0 | 1): [number, number] {
     const prog = clamp(progOf(dir, b.x) - 330 * c.kx, -0.6 * c.HW, -40 * c.kx);
     return [dir * prog, clamp(b.y * 0.3, -c.HH * 0.4, c.HH * 0.4)];
   }
+  // 우리 골문으로 오는 슛 — 앞으로 뛰어나가 가로채지는 않고(chaserOf 에서 뺐다), 지금 깊이에서 공 길이 지나갈 자리로 옆걸음한다.
+  // 먼 슛은 닿고, 가까운 구석 슛은 못 닿는다.
+  // 공이 멀리서 출발했을수록(이미 멀리 와 있으면 덜) 옆걸음할 틈이 있다 — 골대에서 SIDESTEP_FAR 보다 먼 공만 따라 옮긴다.
+  const me = c.s.players[c.slots[side][0]];
+  if (b.vx * dir < -SHOT_SPEED && Math.abs(b.y + (b.vy / b.vx) * (-dir * c.HW - b.x)) < c.GH + 20
+    && len(b.x + dir * c.HW, b.y) > SIDESTEP_FAR * c.kx) {
+    const yc = b.y + (b.vy / b.vx) * (me.x - b.x);
+    return [me.x, clamp(yc, -(c.GH + 30), c.GH + 30)];
+  }
+  // 가장 뒤 봇은 공을 KEEPER_LAG 틱 늦게 본다 — 슛·방향이 바뀐 공에 한 박자 늦게 반응한다(사람 골키퍼처럼).
+  const lb = { x: b.x - b.vx * KEEPER_LAG * DT, y: b.y - b.vy * KEEPER_LAG * DT };
   const gx = -dir * c.HW;
-  const dx = b.x - gx, dy = b.y, d = len(dx, dy) || 1;
+  const dx = lb.x - gx, dy = lb.y, d = len(dx, dy) || 1;
   const k = clamp(0.32 * d, 70 * c.kx, 300 * c.kx);
   let x = gx + (dx / d) * k, y = (dy / d) * k;
   x = dir * Math.min(dir * x, -130 * c.kx);
@@ -604,11 +726,47 @@ function keeperSpot(c: Ctx, side: 0 | 1): [number, number] {
   return [x, y];
 }
 
+/** 가장 앞에 남는 봇(셋 이상인 편은 하나, 다섯 이상은 둘) — 가장 뒤·공에 간 사람을 뺀 봇 중 지금 가장 앞에 있는 봇. 앞에 있으니 앞 자리를 받고, 그래서 계속 가장 앞이다.
+ *  2026-11-07 "공격이 이빨이 빠졌다" — 모두가 받쳐 주러 내려오고 수비로 돌아가면 상대 골문 앞엔 아무도 없었다. */
+function strikersOf(c: Ctx, side: 0 | 1, chaser: number, keeper: number): number[] {
+  const ids = c.slots[side];
+  if (ids.length < 3 || ids.length === 4) return [];
+  const dir = side === 0 ? 1 : -1;
+  const cand = ids.filter((q) => q !== chaser && q !== keeper && c.cfg.players[q].bot);
+  cand.sort((a, z) => progOf(dir, c.s.players[z].x) - progOf(dir, c.s.players[a].x) || a - z);
+  return cand.slice(0, ids.length >= 5 ? 2 : 1);   // 다섯 이상이면 둘이 앞에 남는다(큰 경기장에서 하나로는 수비 사이가 너무 넓다)
+}
+
+/** 가장 앞 자리 — 상대 수비 가장 깊은 둘(가장 뒤 봇 빼고) 사이, 그 둘 중 덜 깊은 쪽 줄 높이. 우리가 공을 가지면 거기서 패스를 기다리고
+ *  (공간 패스로 뒤 공간에 들어간다), 상대가 가지면 하프라인 앞에 남아 역습을 기다린다. */
+function strikerSpot(c: Ctx, side: 0 | 1, attacking: boolean, k = 0, n = 1): V {
+  const s = c.s, dir = side === 0 ? 1 : -1, b = s.ball, bp = progOf(dir, b.x);
+  const oside = side === 0 ? 1 : 0, okeep = keeperOf(c, oside);
+  const deep = c.slots[oside].filter((o) => o !== okeep).map((o) => s.players[o]).sort((p, q) => progOf(dir, q.x) - progOf(dir, p.x));
+  let line = c.HW - 200 * c.kx, y = 0;
+  if (deep.length >= 2) { line = progOf(dir, deep[1].x); y = (deep[0].y + deep[1].y) / 2; }
+  else if (deep.length === 1) { line = progOf(dir, deep[0].x); y = deep[0].y > 0 ? deep[0].y - 120 * c.ky : deep[0].y + 120 * c.ky; }
+  if (attacking) {
+    const prog = clamp(Math.max(line + 10, bp + 60 * c.kx), -0.2 * c.HW, c.HW - 110 * c.kx);
+    // 둘이면 수비 둘 사이의 위·아래로 갈라 선다(지금 세로 순서대로).
+    const spread = n > 1 ? (k === 0 ? -1 : 1) * 0.22 * c.HH : 0;
+    let t = { x: dir * prog, y: clamp(y * 0.7 + b.y * 0.3 + spread, -0.55 * c.HH, 0.55 * c.HH) };
+    // 공 가진 같은 편 바로 옆엔 서지 않는다(공이 수비 줄까지 오면 앞 자리가 공에 붙어 둘이 몰려 보였다).
+    const db = dist(t, b);
+    if (db < 150) { const u = db > 1e-6 ? unit(t.x - b.x, t.y - b.y) : { x: dir, y: 0 }; t = { x: b.x + u.x * 150, y: b.y + u.y * 150 }; }
+    return clampTarget(c, t);
+  }
+  const prog = clamp(Math.max(bp + 280 * c.kx, 20 * c.kx), 20 * c.kx, 0.45 * c.HW);
+  const spread = n > 1 ? (k === 0 ? -1 : 1) * 0.3 * c.HH : 0;
+  return clampTarget(c, { x: dir * prog, y: clamp(b.y * 0.4 + spread, -0.55 * c.HH, 0.55 * c.HH) });
+}
+
 /** 받쳐 주기 — 공 가진 사람·가장 뒤를 뺀 봇들이 지금 세로 순서대로 폭을 나눠 공보다 앞·옆에 선다.
  *  상대가 공에서 그 자리로 가는 길을 가리고 있으면(그림자) 옆으로 비킨다. */
 function supportSpot(c: Ctx, side: 0 | 1, id: number, chaser: number, keeper: number): V {
   const s = c.s, dir = side === 0 ? 1 : -1, b = s.ball;
-  const sup = c.slots[side].filter((q) => q !== chaser && q !== keeper && c.cfg.players[q].bot);
+  const st = strikersOf(c, side, chaser, keeper);
+  const sup = c.slots[side].filter((q) => q !== chaser && q !== keeper && !st.includes(q) && c.cfg.players[q].bot);
   sup.sort((a, z) => s.players[a].y - s.players[z].y || a - z);
   const n = sup.length, j = sup.indexOf(id);
   const bp = progOf(dir, b.x);
@@ -655,7 +813,8 @@ function supportSpot(c: Ctx, side: 0 | 1, id: number, chaser: number, keeper: nu
 function markSpot(c: Ctx, side: 0 | 1, id: number, chaser: number, keeper: number): V {
   const s = c.s, dir = side === 0 ? 1 : -1, b = s.ball;
   const ownGoal = { x: -dir * c.HW, y: 0 };
-  const defs = c.slots[side].filter((q) => q !== chaser && q !== keeper && c.cfg.players[q].bot);
+  const st = strikersOf(c, side, chaser, keeper);
+  const defs = c.slots[side].filter((q) => q !== chaser && q !== keeper && !st.includes(q) && c.cfg.players[q].bot);
   const theirChaser = c.ctrl >= 0 && sideOf(c, c.ctrl) !== side ? c.ctrl : chaserOf(c, side === 0 ? 1 : 0);
   const threats = c.slots[side === 0 ? 1 : 0].filter((o) => o !== theirChaser);
   threats.sort((a, z) => dist(s.players[a], ownGoal) - dist(s.players[z], ownGoal) || a - z);

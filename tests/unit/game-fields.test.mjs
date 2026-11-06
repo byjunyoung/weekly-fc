@@ -134,7 +134,7 @@ test('봇 6대6(XL) — 실제로 차고, 한 편 봇들이 한 점에 몰리지
       }
     }
   }
-  assert.ok(kicks > 20, `킥 ${kicks}`);
+  assert.ok(kicks > 10, `킥 ${kicks}`);   // 20 → 10(2026-11-07): 봇이 닿을 때마다 차지 않고 몰다가 줄 곳이 보일 때 찬다 — 옛 봇에 맞춘 문턱이었다
   assert.ok(crowded / samples < 0.2, `공 옆 셋 이상 몰림 ${(crowded / samples).toFixed(2)}`);
   if (keeperSamples > 0) assert.ok(keeperOut / keeperSamples < 0.1, `수비가 상대 진영 ${keeperOut}/${keeperSamples}`);
 });
