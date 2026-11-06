@@ -45,10 +45,16 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 홈·명단·라인업·매치·티어·전술·규칙·자료 여덟 갈래(2026-09-28 운영 규칙 → 규칙, 2026-09-30 자료) — 팀짜기는 매치 아래 기능(2026-09-25), 전술은 2026-09-26', () => {
+test('상단 탭은 라커룸·명단·매치·티어·전술·안내 여섯 갈래(2026-11-06 여덟 → 여섯; 이전: 2026-09-28 운영 규칙 → 규칙, 2026-09-30 자료) — 라인업·규칙·자료는 하위 탭으로', () => {
   const html = read('index.html');
-  for (const l of ['라커룸', '명단', '라인업', '매치', '티어', '전술', '규칙', '자료']) assert.ok(html.includes(`<span>${l}</span>`), l);
-  for (const l of ['스쿼드', '기록', '소개', '팀짜기']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+  for (const l of ['라커룸', '명단', '매치', '티어', '전술', '안내']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['스쿼드', '기록', '소개', '팀짜기', '라인업', '규칙', '자료']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+});
+test('묶인 메뉴는 하위 탭 줄을 보인다(2026-11-06) — 규칙에선 안내 > 규칙, 라인업에선 매치 > 라인업 짜기', () => {
+  const rules = read('rules/index.html');
+  assert.match(rules, /class="subnav"[\s\S]*처음 왔다면[\s\S]*규칙[\s\S]*자료/);
+  assert.ok(!read('index.html').includes('class="subnav"'), '하위 탭 없는 메뉴엔 줄이 없다');
+  assert.match(read('lineup/index.html'), /class="subnav"[\s\S]*지난 경기[\s\S]*라인업 짜기/);
 });
 test('푸터 — 셸 페이지마다 인스타·오픈카톡·유튜브 링크(2026-09-30)', () => {
   for (const p of SHELL_PAGES) {

@@ -2,6 +2,7 @@
 import '../styles/tokens.css';
 import { href } from '../lib/url';
 import { LINKS, MATCH_TIME } from '../lib/rules';
+import { NAV, activeNav } from '../lib/nav';
 import TopbarActions from '../react/shell/TopbarActions.tsx';
 interface Props { title: string; index?: boolean; wide?: boolean; description?: string; ogImage?: string }
 const { title, index = false, wide = false, description = 'WEEKLY FC — 매주 모이는 풋살 팀의 포탈', ogImage = '/og.png' } = Astro.props;
@@ -9,18 +10,9 @@ const { title, index = false, wide = false, description = 'WEEKLY FC — 매주 
 const SITE = 'https://byjunyoung.github.io';
 const ogUrl = SITE + href(Astro.url.pathname.startsWith('/weekly-fc') ? Astro.url.pathname.slice('/weekly-fc'.length) || '/' : Astro.url.pathname);
 const ogImg = SITE + href(ogImage);
-const nav = [
-  { href: href('/'), label: '라커룸' },
-  { href: href('/squad/'), label: '명단' },
-  { href: href('/lineup/'), label: '라인업' },
-  { href: href('/matches/'), label: '매치' },
-  { href: href('/tier/'), label: '티어' },
-  { href: href('/tactics/'), label: '전술' },
-  { href: href('/rules/'), label: '규칙' },
-  { href: href('/kit/'), label: '자료' },   // 팀 자료 — 단체 사진·로고(2026-09-30 "진입점이 라커룸뿐")
-];
-const path = Astro.url.pathname;
-const isActive = (h: string) => (h === href('/') ? path === href('/') : path.startsWith(h));
+// base 를 뗀 경로로 켜질 메뉴를 고른다(ogUrl 과 같은 방식).
+const barePath = Astro.url.pathname.startsWith('/weekly-fc') ? Astro.url.pathname.slice('/weekly-fc'.length) || '/' : Astro.url.pathname;
+const { top, sub } = activeNav(barePath);
 ---
 <!doctype html>
 <html lang="ko">
@@ -80,8 +72,8 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
   <header class="topbar">
     <a class="mark" href={href('/')}>WEEKLY<b>FC</b></a>
     <nav class="topnav">
-      {nav.map((n) => (
-        <a href={n.href} class:list={[{ active: isActive(n.href) }]}><span>{n.label}</span></a>
+      {NAV.map((n) => (
+        <a href={href(n.to)} class:list={[{ active: n === top }]}><span>{n.label}</span></a>
       ))}
     </nav>
     <div class="topbar-act">
@@ -90,6 +82,11 @@ const isActive = (h: string) => (h === href('/') ? path === href('/') : path.sta
   </header>
   <main class="main">
     <p class="warn load-err" id="load-err" hidden>데이터를 불러오지 못했습니다 · <button id="load-err-retry">다시 시도</button><button id="load-err-open" hidden>기본 브라우저로 열기</button></p>
+    {top?.sub && (
+      <nav class="subnav" aria-label={`${top.label} 하위 메뉴`}>
+        {top.sub.map((s) => <a href={href(s.to)} class:list={[{ active: s === sub }]}>{s.label}</a>)}
+      </nav>
+    )}
     <slot />
   </main>
   <!-- 푸터(2026-09-30 "최하단에 인스타·오픈채팅·유튜브 채널 다 적어두자") — 모든 페이지 공통. 주소는 lib/rules.ts LINKS 한 곳. -->

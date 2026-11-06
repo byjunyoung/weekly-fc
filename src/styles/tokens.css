@@ -248,6 +248,15 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
 .tabs a:hover, .tabs button:hover { color: var(--fg); background: none; }
 .tabs a.active, .tabs button.active { color: var(--fg); border-bottom-color: var(--fg); }
 
+/* 하위 탭(2026-11-06) — 묶인 상단 메뉴(매치·안내) 아래 줄. 페이지 제목 위에 놓이므로 제목 아래 목차(.tabs)와
+   다른 층으로 읽히게 본문 글꼴·활성 밑줄은 링크 색. 좁은 폭에선 .topnav 처럼 접지 않고 가로로 민다. */
+.subnav { display: flex; gap: var(--s-lg); margin-bottom: var(--s-lg); border-bottom: 1px solid var(--hairline); overflow-x: auto; scrollbar-width: none; }
+.subnav::-webkit-scrollbar { display: none; }
+.subnav a { flex: none; padding: var(--s-xs) 0; margin-bottom: -1px; border-bottom: 2px solid transparent; background: none;
+  color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; transition: color var(--dur-micro) var(--ease-std); }
+.subnav a:hover { color: var(--fg); }
+.subnav a.active { color: var(--fg); border-bottom-color: var(--link); }
+
 /* ══ 표 ════════════════════════════════════════════════════ */
 .tbl-wrap { overflow-x: auto; background: var(--card); border-radius: var(--r-md); }
 .tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
@@ -799,8 +808,6 @@ details.year[open] > summary::before { content: "▾ "; }
 .mt-team .tm-chips { min-height: 0; }
 .mt-chip { cursor: default; }
 .mt-chip:hover { border-color: var(--line); }
-.mt-ballot { padding: 0; }
-.mt-ballot .tm-chip:disabled { opacity: .6; }
 .linklike { padding: 0; border: 0; background: none; color: var(--link); font: inherit; text-decoration: underline; cursor: pointer; }
 
 /* ══ 피파식 선수 카드 (2026-09-25) ══════════════════════════════
