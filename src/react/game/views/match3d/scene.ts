@@ -11,11 +11,11 @@ import {
   IcosahedronGeometry, InstancedMesh, LineBasicMaterial, LineSegments, Material, Matrix4, Mesh, MeshBasicMaterial, MeshLambertMaterial,
   Object3D, PerspectiveCamera, Quaternion, RingGeometry, Scene, Vector3, WebGLRenderer,
 } from 'three';
-import { avatarPixels } from '../../components/avatar.ts';
-import { avatarSpecFor, isUnsetAvatar, randomAvatar } from '../../lib/avatar.ts';
-import { PITCH3D, RULES3D, type MatchConfig, type MatchState } from '../../lib/game3d/sim.ts';
-import { VESTS } from '../../lib/teams.ts';
-import type { Player } from '../../lib/types.ts';
+import { avatarPixels } from '../../../../components/avatar.ts';
+import { avatarSpecFor, isUnsetAvatar, randomAvatar } from '../../../../lib/avatar.ts';
+import { PITCH3D, RULES3D, type MatchConfig, type MatchState } from '../../../../lib/game3d/sim.ts';
+import { VESTS } from '../../../../lib/teams.ts';
+import type { Player } from '../../../../lib/types.ts';
 import { cameraGoal, chaseGoal, firstPersonGoal, type ViewMode } from './view3d.ts';
 import { buildFigure, type Part } from './voxel.ts';
 

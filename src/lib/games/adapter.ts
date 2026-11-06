@@ -59,8 +59,17 @@ export type GameAdapter<C, S, I> = {
   botInput?(state: S, config: C, slot: number): I;
   /** 그리기용 몸 목록과 그 반대(순수). 있으면 세션이 틱 사이를 섞고 스냅샷 보정을 0.1초에 걸쳐 숨기며,
    *  손님 화면은 "몸은 예측, 나머지(점수·시계·단계)는 스냅샷"으로 조립된다. 없으면 그 상태를 그대로 그린다.
-   *  get 이 돌려주는 순서와 개수는 같은 판 안에서 늘 같아야 한다. */
-  bodies?: { get(s: S): Point[]; set(s: S, bodies: Point[]): S };
+   *  get 이 돌려주는 순서와 개수는 같은 판 안에서 늘 같아야 한다.
+   *  jump·snap(있으면) = 그 게임 좌표 단위의 "섞지 않을 한 틱 이동"·"따라가지 않고 바로 맞출 보정" 한계 — 없으면 2D 경기 값(120·90, 논리 단위).
+   *  3D 경기처럼 단위가 m 인 게임이 쓴다(2026-11-07 4단계 — 2D 값이면 36m 경기장의 킥오프 재배치가 미끄러져 보인다).
+   *  몸에 z(높이)가 있으면 틱 사이 섞기가 z 도 섞는다. */
+  bodies?: { get(s: S): Point[]; set(s: S, bodies: Point[]): S; jump?: number; snap?: number };
+  /** 스냅샷에 실을 모양과 그 반대(2026-11-07 4단계, 선택). 있으면 방장은 pack(state) 를 보내고, 손님은 unpack 으로 되돌린 뒤 okState 로 본다.
+   *  왜: 3D 경기 상태는 선수마다 칸이 많아 그대로 보내면 5대5 한 건이 4KB 를 넘는다 — 이름표(키)를 빼고 줄로 적어 절반으로.
+   *  지키는 선: 잃는 게 없어야 한다 — unpack(pack(s)) 는 s 와 같은 값(그래서 step 결과도 같다). pack 은 객체를 돌려준다(parseMsg 가 배열을 거른다).
+   *  unpack 은 바깥에서 온 값을 받으니 모양이 틀리면 던지지 말고 null. */
+  pack?(s: S): Record<string, unknown>;
+  unpack?(packed: unknown, config: C): S | null;
 };
 
 /** 등록부에 담을 때의 모양(게임마다 C·S·I 가 달라 한 목록에 넣으려면 풀어 둔다). */

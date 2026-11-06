@@ -98,6 +98,37 @@ export function okSettings(s: unknown): s is RoomSettings {
     && (FIELD_CHOICES as readonly unknown[]).includes(s.field);
 }
 
+/** 봇으로 뛸 선수 번호 — 편마다 need[편] 명, 그 편 봇 자리 차례대로(2026-11-07 "그리고 봇도 선수를 고를 수 있게 해줘").
+ *  편마다 고른 봇(room.botPicks)을 앞에서부터 쓰고, 모자란 만큼 명단에서 무작위(방에 있는 선수·고른 선수 제외, 중복 없음).
+ *  buildMatch 안에 있던 것을 그대로 꺼냈다(2026-11-07 4단계 — 3D 경기 방도 같은 규칙으로 봇을 뽑게, 베끼지 않으려고).
+ *  난수는 rnd 로만, 쓰는 순서는 예전과 같다(테스트 기준값 fixtures/match2d-buildmatch.json 이 지킨다). 모자라면 뒤가 undefined — 부르는 쪽이 startBlock 으로 먼저 막는다. */
+export function pickBotNums(room: RoomState<unknown>, roster: Player[], need: [number, number], rnd: () => number): [number[], number[]] {
+  const taken = new Set(room.members.map((m) => m.num));
+  // 고른 봇 — 편마다 봇 자리 수만큼 앞에서부터. 그새 못 쓰게 된 것(명단에 없음·방 사람이 잡음·겹침)은 건너뛴다. 남는 건 안 쓴다.
+  const inRoster = new Set(roster.map((p) => p.num));
+  const usedPick = new Set<number>();
+  const chosen = ([0, 1] as const).map((side) => {
+    const out: number[] = [];
+    for (const n of room.botPicks?.[side] ?? []) {
+      if (out.length >= need[side]) break;
+      if (!inRoster.has(n) || taken.has(n) || usedPick.has(n)) continue;
+      usedPick.add(n); out.push(n);
+    }
+    return out;
+  });
+  // 나머지는 지금처럼 무작위 — 고른 게 없으면 난수를 쓰는 순서까지 예전과 같다. 고른 선수는 자리가 모자라 안 쓰였어도 무작위에서 뺀다
+  // (주황 봇으로 고른 선수가 흰 편 무작위 봇으로 나오면 고른 뜻과 어긋난다).
+  const picked = new Set<number>([...(room.botPicks?.[0] ?? []), ...(room.botPicks?.[1] ?? [])]);
+  const seenNum = new Set<number>();
+  const uniqFree = roster.filter((p) => !taken.has(p.num) && !usedPick.has(p.num) && !seenNum.has(p.num) && (seenNum.add(p.num), true)).map((p) => p.num);
+  const needRandom = ([0, 1] as const).reduce<number>((t, side) => t + need[side] - chosen[side].length, 0);
+  const strict = uniqFree.filter((n) => !picked.has(n));
+  const free = strict.length >= needRandom ? strict : uniqFree;   // 명단이 빠듯하면 남는 고른 선수도 무작위에 넣는다(시작은 막지 않는다)
+  const pool = shuffle(free, rnd);
+  let k = 0;
+  return [0, 1].map((side) => [...chosen[side], ...Array.from({ length: need[side] - chosen[side].length }, () => pool[k++])]) as [number[], number[]];
+}
+
 /** 시작 — 두 팀 칸의 사람은 그 선수로(bot:false), 한 편이 perSide 보다 적으면 모자란 만큼 명단에서 무작위로 뽑은 봇으로(방에 있는 선수 제외, 중복 없음).
  *  사용자: "팀원 없으면 봇 추가해서 가능해야지", "최대 인원 같은거 헥스볼처럼 자유롭게" — 두 편 인원이 달라도 되고, 한 편이 0명이어도 된다.
  *  돌려주는 slots[i] = config.players[i] 를 조종하는 clientId(봇이면 null). 대기 칸 사람은 slots 에 없다(구경).
@@ -111,32 +142,9 @@ export function buildMatch(room: Room2d, roster: Player[], rnd: () => number): {
   if (why) throw new RangeError(why === 'empty' ? '두 편 모두 비어 있다' : why === 'humans' ? '사람이 너무 많다' : '명단이 모자라 봇을 채울 수 없다');
   const sizes = sideSizes(room);
   const humans: Member[][] = [0, 1].map((t) => room.members.filter((m) => m.team === t));
-  const taken = new Set(room.members.map((m) => m.num));
-  // 고른 봇 — 편마다 봇 자리 수만큼 앞에서부터. 그새 못 쓰게 된 것(명단에 없음·방 사람이 잡음·겹침)은 건너뛴다. 남는 건 안 쓴다.
-  const inRoster = new Set(roster.map((p) => p.num));
-  const usedPick = new Set<number>();
-  const chosen = ([0, 1] as const).map((side) => {
-    const need = Math.max(0, sizes[side] - humans[side].length);
-    const out: number[] = [];
-    for (const n of room.botPicks?.[side] ?? []) {
-      if (out.length >= need) break;
-      if (!inRoster.has(n) || taken.has(n) || usedPick.has(n)) continue;
-      usedPick.add(n); out.push(n);
-    }
-    return out;
-  });
-  // 나머지는 지금처럼 무작위 — 고른 게 없으면 난수를 쓰는 순서까지 예전과 같다. 고른 선수는 자리가 모자라 안 쓰였어도 무작위에서 뺀다
-  // (주황 봇으로 고른 선수가 흰 편 무작위 봇으로 나오면 고른 뜻과 어긋난다).
-  const picked = new Set<number>([...(room.botPicks?.[0] ?? []), ...(room.botPicks?.[1] ?? [])]);
-  const seenNum = new Set<number>();
-  const uniqFree = roster.filter((p) => !taken.has(p.num) && !usedPick.has(p.num) && !seenNum.has(p.num) && (seenNum.add(p.num), true)).map((p) => p.num);
-  const needRandom = ([0, 1] as const).reduce<number>((t, side) => t + Math.max(0, sizes[side] - humans[side].length) - chosen[side].length, 0);
-  const strict = uniqFree.filter((n) => !picked.has(n));
-  const free = strict.length >= needRandom ? strict : uniqFree;   // 명단이 빠듯하면 남는 고른 선수도 무작위에 넣는다(시작은 막지 않는다)
-  const pool = shuffle(free, rnd);
+  const bots = pickBotNums(room, roster, [Math.max(0, sizes[0] - humans[0].length), Math.max(0, sizes[1] - humans[1].length)], rnd);
   const players: MatchPlayer[] = [];
   const slots: (string | null)[] = [];
-  let k = 0;
   for (const side of [0, 1] as const) {
     const n = sizes[side];
     const humanOrder = [...Array.from({ length: Math.max(0, n - 1) }, (_, i) => i + 1), 0];   // 1, 2, …, n-1, 0
@@ -145,7 +153,7 @@ export function buildMatch(room: Room2d, roster: Player[], rnd: () => number): {
     let c = 0;
     for (let slot = 0; slot < n; slot++) {
       const m = bySlot[slot], id = players.length;
-      const num = m ? m.num : c < chosen[side].length ? chosen[side][c++] : pool[k++];
+      const num = m ? m.num : bots[side][c++];
       const r = roster.find((p) => p.num === num);
       players.push({ id, num, name: m ? m.name : (r?.name ?? String(num)), side, bot: !m, perf: r ? perfOf(r, roster) : { ...BASE_PERF } });
       slots.push(m ? m.clientId : null);

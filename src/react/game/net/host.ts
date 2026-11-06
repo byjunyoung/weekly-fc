@@ -80,6 +80,8 @@ export type HostSession = {
   getNet(): NetInfo;
   /** 경기 자리마다 누가 조종하나(디버그·테스트). bot = 봇이거나 그 손님이 4초 넘게 조용해 봇이 맡는 중. */
   getSlots(): { clientId: string | null; bot: boolean }[];
+  /** 디버그 전용(?debug=1 의 goalChance 등, 2026-11-07 4단계) — 지금 판의 상태를 한 번 바꾼다. 다음 스냅샷이 손님에게 그대로 간다. */
+  debugPatch(fn: (s: unknown) => unknown): void;
 };
 
 type Match = {
@@ -137,7 +139,9 @@ export function createHostSession(o: HostOptions): HostSession {
   const mySlot = (): number | null => { if (!match) return null; const i = match.slots.indexOf(me.clientId); return i < 0 ? null : i; };
   const alive = (cid: string, now: number): boolean => { const s = lastSeen.get(cid); return s !== undefined && now - s <= SILENCE_MS; };
   const sendSnap = (m: Match, paused: boolean): void => {
-    send({ t: 'snap', from: me.clientId, seed: m.seed, tick: m.adapter.tick(m.state), state: m.state, inputs: m.qs, paused });
+    // 줄여 보내는 게임(어댑터 pack — 3D 경기)은 줄인 모양으로. 손님이 readSnap 으로 되돌린다.
+    const state = m.adapter.pack ? m.adapter.pack(m.state) : m.state;
+    send({ t: 'snap', from: me.clientId, seed: m.seed, tick: m.adapter.tick(m.state), state, inputs: m.qs, paused });
   };
   const sendStart = (m: Match): void => send({ t: 'start', from: me.clientId, game: m.game, config: m.config, seed: m.seed });
   const entryOf = (): GameEntry | undefined => games(room.game);
@@ -379,6 +383,13 @@ export function createHostSession(o: HostOptions): HostSession {
     getConfig: () => match?.config ?? null,
     getRoom: () => room,
     getNet: () => ({ status: conn, rttMs: null, lead: null, myId: mySlot() }),
+    debugPatch(fn) {
+      if (!match) return;
+      const next = fn(match.state);
+      if (!match.adapter.okState(next, match.config)) return;   // 모양이 틀린 상태로 판을 깨지 않게
+      match.state = next; match.prev = next;
+      sendSnap(match, hidden);
+    },
     getSlots: () => {
       const m = match, now = o.now();
       if (!m) return [];

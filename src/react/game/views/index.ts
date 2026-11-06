@@ -3,8 +3,9 @@
 // 게임을 하나 만들면 여기에도 한 줄(그 게임의 views/<id>).
 import type { AnyView } from './types';
 import { match2dView } from './match2d';
+import { match3dView } from './match3d';
 
-const VIEWS: Record<string, AnyView> = { match2d: match2dView };
+const VIEWS: Record<string, AnyView> = { match2d: match2dView, match3d: match3dView };
 
 /** id → 그 게임의 화면. 모르면 undefined. */
 export function viewOf(id: string | null | undefined): AnyView | undefined {

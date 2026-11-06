@@ -50,6 +50,9 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
   // 옮기려고 집은 사람이 방에서 나가면 집은 것도 푼다.
   useEffect(() => { if (picked && !room?.members.some((m) => m.clientId === picked)) setPicked(null); }, [room, picked]);
 
+  // 방 게임의 그림판 묶음이 무거우면(3D) 방에서 미리 받아 둔다 — 시작하자마자 경기 화면이 열리게.
+  const surfaceKit = room ? viewOf(room.game)?.surface : undefined;
+  useEffect(() => { void surfaceKit?.load().catch(() => { /* 경기 화면이 다시 시도하고 안내한다 */ }); }, [surfaceKit]);
   const byNum = useMemo(() => new Map(players.map((p) => [p.num, p])), [players]);
   const held = useMemo(() => new Set((room?.members ?? []).filter((m) => m.clientId !== view.clientId).map((m) => m.num)), [room, view.clientId]);
   if (!room) return null;
@@ -128,7 +131,8 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
                   {c.team !== null && Array.from({ length: bots }, (_, i) => {
                     const side = c.team as 0 | 1;
                     const num = picks[side][i];
-                    return <BotSlot key={`bot${i}`} label={`${c.label} 봇 ${i + 1}`} player={num === undefined ? null : byNum.get(num) ?? null}
+                    const tag = entry.botSeatTag?.(room, side, i) ?? undefined;
+                    return <BotSlot key={`bot${i}`} label={`${c.label} ${tag ?? '봇'} ${i + 1}`} tag={tag} player={num === undefined ? null : byNum.get(num) ?? null}
                       onClick={editable ? () => { setPicked(null); setBotEdit({ side, slot: i }); } : undefined} />;
                   })}
                 </div>

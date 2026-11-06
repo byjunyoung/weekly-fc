@@ -15,7 +15,7 @@ import type { Player } from '../../../lib/types.ts';
 import type { AnyAdapter } from '../../../lib/games/adapter.ts';
 import type { GameLookup } from '../../../lib/games/entry.ts';
 import type { NetMsg } from '../../../lib/games/net.ts';
-import { acceptSnap, parseMsg } from '../../../lib/games/net.ts';
+import { parseMsg, readSnap } from '../../../lib/games/net.ts';
 import type { Predictor } from '../../../lib/games/predict.ts';
 import { advance, applySnapshot, createPredictor, leadTicks, setLead } from '../../../lib/games/predict.ts';
 import type { RoomState, Who } from '../../../lib/game/room.ts';
@@ -224,8 +224,10 @@ export function createGuestSession(o: GuestOptions): GuestSession {
         // 다른 경기의 스냅샷(start 를 놓쳤다) — 낡은 예측기를 버리고 hello 로 start 를 다시 받는다.
         if (pred && m.seed !== seed) { exitMatch(); }
         if (!pred) { if (now - lastHello >= HELLO_EVERY_MS - SLACK_MS) hello(now); return; }
-        if (!acceptSnap(pred.game, pred.config, m)) return;   // 모양이 어긋난 스냅샷은 버린다 — step·렌더가 프레임마다 예외를 던지지 않게
-        applySnap(m, now);
+        // 줄여 보낸 게임은 되돌리고(어댑터 unpack), 모양이 어긋난 스냅샷은 버린다 — step·렌더가 프레임마다 예외를 던지지 않게
+        const snap = readSnap(pred.game, pred.config, m);
+        if (!snap) return;
+        applySnap(snap, now);
         return;
       }
       case 'stop': {

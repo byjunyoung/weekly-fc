@@ -33,6 +33,8 @@ export type GameEntry<C = any, S = any, I = any, T = any> = {
   startBlock?(room: RoomState<T>, roster: Player[]): string | null;
   /** 방 화면의 팀 칸에 흐리게 보일 봇 자리 수(편마다). 편이 없는 게임은 두지 않는다(봇 칸을 안 그린다). */
   botSeats?(room: RoomState<T>): [number, number];
+  /** 봇 자리 i(편 안 차례, 0 부터)의 작은 표시 — 예: 3D 경기의 첫 봇 자리는 '키퍼'(2026-11-07 4단계). 없거나 null 이면 그냥 '봇'. */
+  botSeatTag?(room: RoomState<T>, side: 0 | 1, i: number): string | null;
 };
 
 /** id → 등록된 게임(없으면 undefined). 세션·메시지 검사는 이 함수만 받는다. */

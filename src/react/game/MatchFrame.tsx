@@ -6,16 +6,37 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PHRASES } from '../../lib/games/net';
 import { attachInput } from './input';
 import SoundToggle from './SoundToggle';
-import type { AnyView, Camera, ResultView, Scene } from './views/types';
+import type { AnyView, Camera, ResultView, Scene, Surface } from './views/types';
 
 /** 디버그 훅(?debug=1)과 경기 화면이 나눠 쓰는 살아 있는 값. 리액트 상태가 아니다. camera 는 경기 화면이 프레임마다 써 둔다.
- *  state·config 는 혼자 하기에서만(온라인은 세션이 들고 있다), override = 내 입력 덮어쓰기(그 게임의 입력 모양). */
-export type Live = { state: unknown; config: unknown; override: unknown; camera: Camera | null };
+ *  state·config 는 혼자 하기에서만(온라인은 세션이 들고 있다), override = 내 입력 덮어쓰기(그 게임의 입력 모양).
+ *  extra = 스스로 여닫는 화면(Surface.debug)이 내놓은 디버그 도구, patch = 혼자 하기에서 다음 틱 전에 상태를 한 번 바꾸기(디버그 전용 — 2026-11-07 4단계). */
+export type Live = {
+  state: unknown; config: unknown; override: unknown; camera: Camera | null;
+  extra?: Record<string, unknown> | null; patch?: ((s: unknown) => unknown) | null;
+};
 
 type Refs = {
   root: React.RefObject<HTMLDivElement | null>; canvas: React.RefObject<HTMLCanvasElement | null>;
   base: React.RefObject<HTMLDivElement | null>; knob: React.RefObject<HTMLDivElement | null>; kick: React.RefObject<HTMLButtonElement | null>;
+  layer: React.RefObject<HTMLDivElement | null>;
 };
+
+/** 스스로 여닫는 화면(Surface)을 루프가 쓰는 Scene 모양으로 — 루프(혼자·온라인)는 그대로 scene.draw 만 부른다. dt 는 여기서 잰다. */
+function sceneOf(sf: Surface<unknown, unknown, unknown>): Scene<unknown, unknown, unknown> {
+  let last = -1;
+  return {
+    draw(f) {
+      const now = performance.now();
+      const dt = last < 0 ? 0 : Math.min(0.25, (now - last) / 1000);
+      last = now;
+      sf.render({ ...f, dt });
+    },
+    toInput: () => (sf.readInput ? sf.readInput() : null),
+    camera: () => sf.camera(),
+    dispose: () => sf.dispose(),
+  };
+}
 
 /** 장면을 열고 조작을 단 뒤 run(루프)을 돌린다. 한 판 동안 한 번(부르는 쪽이 경기마다 key 로 새로 마운트한다).
  *  playing 이 거짓(구경)이면 조작을 달지 않는다 — 키·터치를 먹지 않게. readHuman = 디버그 덮어쓰기 > 화면 조작을 그 게임 입력으로. */
@@ -23,15 +44,56 @@ export function usePlaySurface(o: {
   view: AnyView; config: unknown; roster: Parameters<AnyView['mount']>[0]['roster']; playing: boolean;
   live: React.RefObject<Live>;
   run: (c: { scene: Scene<unknown, unknown, unknown>; readHuman: (() => unknown) | null }) => () => void;
-}): { refs: Refs; touch: boolean } {
-  const refs: Refs = { root: useRef(null), canvas: useRef(null), base: useRef(null), knob: useRef(null), kick: useRef(null) };
+  /** 내 자리(구경이면 null) — 스스로 여닫는 화면이 내 선수 표시·1인칭에 쓴다. 2D 는 프레임마다 받는다. */
+  myId?: number | null;
+}): { refs: Refs; touch: boolean; wait: boolean; fail: string | null } {
+  const refs: Refs = { root: useRef(null), canvas: useRef(null), base: useRef(null), knob: useRef(null), kick: useRef(null), layer: useRef(null) };
   const [touch, setTouch] = useState(false);
+  const [wait, setWait] = useState(false);
+  const [fail, setFail] = useState<string | null>(null);
   const { view, config, roster, playing, live, run } = o;
+  const myId = o.myId ?? null;
   const runRef = useRef(run);
   runRef.current = run;
   useEffect(() => {
-    const root = refs.root.current, canvas = refs.canvas.current;
-    if (config == null || !root || !canvas || !refs.base.current || !refs.knob.current || !refs.kick.current) return;
+    const root = refs.root.current, canvas = refs.canvas.current, layer = refs.layer.current;
+    if (config == null || !root || !canvas || !layer || !refs.base.current || !refs.knob.current || !refs.kick.current) return;
+    // 스스로 여닫는 화면(3D) — 묶음을 받고(그동안 "불러오는 중"), 만들고, 크기를 대 주고, 조작은 화면 것을 쓴다(2D 조이스틱·킥은 달지 않는다).
+    const kit = view.surface;
+    if (kit) {
+      let alive = true, stop: (() => void) | null = null;
+      setWait(true);
+      document.documentElement.classList.add('game-lock');
+      kit.load().then(() => {
+        if (!alive) return;
+        setWait(false);
+        const sf = kit.create({ root, canvas, layer, config, roster, myId, playing });
+        if (typeof sf === 'string') { setFail(sf); return; }
+        const scene = sceneOf(sf);
+        const resize = (): void => { if (root.clientWidth && root.clientHeight) sf.resize(root.clientWidth, root.clientHeight); };
+        resize();
+        const ro = new ResizeObserver(resize);
+        ro.observe(root);
+        window.addEventListener('orientationchange', resize);
+        live.current.extra = sf.debug ? sf.debug() : null;
+        const reader = sf.readInput;
+        const readHuman = playing && reader ? (): unknown => live.current.override ?? reader() : null;
+        const end = runRef.current({ scene, readHuman });
+        stop = () => {
+          end();
+          ro.disconnect();
+          window.removeEventListener('orientationchange', resize);
+          scene.dispose();
+          live.current.extra = null;
+        };
+      }).catch(() => { if (alive) { setWait(false); setFail('화면을 불러오지 못했습니다 — 연결을 확인하고 다시 열어 주세요.'); } });
+      return () => {
+        alive = false;
+        stop?.();
+        document.documentElement.classList.remove('game-lock');
+        live.current.camera = null;
+      };
+    }
     const scene = view.mount({ root, canvas, config, roster });
     if (!scene) return;
     // 페이지 스크롤 잠금(CSS 클래스) — 경기 중 배경이 밀리지 않게.
@@ -49,14 +111,14 @@ export function usePlaySurface(o: {
     };
     // 경기마다 새로 마운트(key)되므로 한 판 동안 view·config·playing 은 그대로다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, config, roster, playing, live]);
-  return { refs, touch };
+  }, [view, config, roster, playing, live, myId]);
+  return { refs, touch, wait, fail };
 }
 
 /** 결과 상자 아래 버튼·안내(혼자: 다시 하기/설정으로, 방장: 바로 방으로, 손님: 잠시 뒤 안내). */
 export type ResultBox = ResultView & { actions: ReactNode };
 
-export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickShown, result }: {
+export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickShown, result, wait, fail }: {
   refs: Refs;
   xLabel: string; onX: () => void;
   /** 한마디(온라인에서 뛰는 사람만). 없으면 버튼이 없다. */
@@ -67,12 +129,18 @@ export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickSho
   banner?: string | null;
   kickShown: boolean;
   result: ResultBox | null;
+  /** 화면 묶음을 받는 중(스스로 여닫는 화면 — 3D). */
+  wait?: boolean;
+  /** 화면을 못 열었다(WebGL 없음 등) — 이유 글. ✕ 로 나간다. */
+  fail?: string | null;
 }) {
   const [sayOpen, setSayOpen] = useState(false);
   const pick = (k: number): void => { say?.(k); setSayOpen(false); };
   return (
     <div className="game-overlay" ref={refs.root}>
       <canvas ref={refs.canvas} className="game-canvas" />
+      {/* 화면이 직접 다는 DOM 층(3D 의 점수판·이름표·말풍선·버튼) — ✕·한마디·결과보다 아래 */}
+      <div className="game-layer" ref={refs.layer} />
       {!result && <button type="button" className="game-x" aria-label={xLabel} onClick={onX}>✕</button>}
       {!result && <SoundToggle />}
       {!result && say && (
@@ -89,6 +157,8 @@ export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickSho
       )}
       {!result && watching && <div className="game-watch" role="status">구경 중</div>}
       {!result && banner && <div className="game-banner" role="status">{banner}</div>}
+      {!result && !banner && wait && <div className="game-banner" role="status">화면을 불러오는 중…</div>}
+      {!result && fail && <div className="game-banner" role="alert">{fail} 2D 게임은 그대로 할 수 있습니다.</div>}
       <div className="game-stick" ref={refs.base} aria-hidden="true"><div className="game-stick-knob" ref={refs.knob} /></div>
       <button type="button" ref={refs.kick} className={`game-kick${kickShown ? ' is-shown' : ''}`} aria-label="킥">킥</button>
       {result && (

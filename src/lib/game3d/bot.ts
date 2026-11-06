@@ -10,7 +10,7 @@
 // 골키퍼: 골대 앞 짧은 호 위에서 공을 따라 서고, 슛이 오면 반응 틱 뒤에 막으러 움직인다. 잡은 공은 잠깐 들고 있다 동료에게.
 // 일부러 틀리게 하는 값(조준·머뭇거림·결정)은 틱과 id 를 섞은 정수 해시에서 나온다 — 난수 함수·삼각함수는 안 쓴다.
 // 슛·패스는 "누름 → 뗌"이 필요한데 봇은 기억이 없다 — 상태의 charge·passHeld 를 보고 이어서 누르거나 뗀다.
-import { attackDir, formationSpot, NO_INPUT, passTarget, PITCH3D, RULES3D, slotOf, type Input, type MatchConfig, type MatchState, type Side } from './sim.ts';
+import { attackDir, NO_INPUT, passTarget, PITCH3D, RULES3D, spotOf, type Input, type MatchConfig, type MatchState, type Side } from './sim.ts';
 
 // ═══════════ 봇 조절 값 ═══════════
 const HOME_FOLLOW_X = 0.42;   // 자리가 공의 x 를 따라가는 비율
@@ -68,7 +68,7 @@ const inp = (v: { x: number; y: number }, extra: Partial<Input> = {}): Input => 
 function homeSpot(state: MatchState, config: MatchConfig, id: number): { x: number; y: number } {
   const mp = config.players[id];
   const dir = attackDir(mp.side);
-  const f = formationSpot(slotOf(config, id), mp.side);
+  const f = spotOf(config, id);
   const ball = state.ball;
   const ours = state.owner !== null && config.players[state.owner].side === mp.side;
   let x = f.x + ball.x * HOME_FOLLOW_X + (ours ? dir * ATTACK_PUSH : 0);
@@ -113,7 +113,7 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
 
   // 킥오프에서 차지 않는 편은 자기 자리
   if (state.phase === 'kickoff' && state.kickoffSide !== mp.side) {
-    const f = formationSpot(slotOf(config, id), mp.side);
+    const f = spotOf(config, id);
     return inp(moveTo(me.x, me.y, f.x, f.y, 1.5));
   }
 

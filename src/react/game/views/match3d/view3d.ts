@@ -3,7 +3,7 @@
 // 2D 의 view.ts 는 가져오지 않는다 — 그쪽은 2D 경기 계산을 끌고 와서 이 페이지 묶음이 무거워진다.
 //
 // 좌표: 경기 계산은 바닥 x·y + 높이 z, three.js 는 위가 y 라서 three(x, y, z) = 경기(x, z, y).
-import { PITCH3D, type Side } from '../../lib/game3d/sim.ts';
+import { PITCH3D, type Side } from '../../../../lib/game3d/sim.ts';
 
 /** 화면 위 스틱(오른쪽 +x, 아래 +y — 2D 와 같은 꼴) → 경기장 방향. fwdX·fwdY = 카메라가 보는 방향을 바닥에 눕힌 것(경기 좌표).
  *  화면 위 = 카메라 앞, 화면 오른쪽 = 앞을 오른쪽으로 돌린 것((−fy, fx) — three 의 forward × up 을 경기 좌표로 옮긴 값).

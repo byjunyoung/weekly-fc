@@ -8,15 +8,16 @@ import type { Player } from '../../lib/types';
 import { PlayerPicker } from './PlayerPicker';
 
 /** 봇 자리 칩. onClick 이 없으면 읽기만(손님). */
-export function BotSlot({ player, onClick, label }: { player: Player | null; onClick?: () => void; label: string }) {
+/** tag = 봇 표시 글자(없으면 '봇') — 3D 경기의 골키퍼 자리는 '키퍼'(2026-11-07 4단계). */
+export function BotSlot({ player, onClick, label, tag = '봇' }: { player: Player | null; onClick?: () => void; label: string; tag?: string }) {
   const inner = player ? (
     <>
       <span className="game-chip-face" aria-hidden="true"
         dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(player.num, player.avatar), 24, player.jersey, true) }} />
       <span className="game-chip-name">{player.name}</span>
-      <span className="game-bot-tag">봇</span>
+      <span className="game-bot-tag">{tag}</span>
     </>
-  ) : <span className="game-chip-name">봇 · 무작위</span>;
+  ) : <span className="game-chip-name">{tag} · 무작위</span>;
   const aria = `${label}: ${player ? `${player.name}(봇)` : '무작위 봇'}`;
   return onClick
     ? <button type="button" className={`game-chip is-bot${player ? ' is-picked-bot' : ''}`} aria-label={`${aria} — 바꾸기`} onClick={(e) => { e.stopPropagation(); onClick(); }}>{inner}</button>

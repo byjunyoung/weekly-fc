@@ -1,7 +1,7 @@
 // 3D 축구 시제품(2026-11-07 "3d도 당연히 효과음 있어야지 두 모드 다 일관성 갖추게해") — 소리 낼 사건 찾기(sfx3d.ts)와 도움 규칙.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectSfx3d } from '../../src/react/game3d/sfx3d.ts';
+import { detectSfx3d } from '../../src/react/game/views/match3d/sfx3d.ts';
 import { createMatch, step, eventsBetween, NO_INPUT, PITCH3D, RULES3D } from '../../src/lib/game3d/sim.ts';
 import { BASE_PERF } from '../../src/lib/game3d/stats.ts';
 

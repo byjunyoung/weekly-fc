@@ -1,8 +1,8 @@
 // 3D 축구 시제품(2026-11-07) — 화면 쪽 순수 계산(view3d.ts: 스틱 방향·카메라·라인업·시계, voxel.ts: 아바타 → 블록 입체).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cameraGoal, clockText, edgeArrow, firstPersonGoal, fpFov, nextView, pickLineup5, rngFrom, stickToWorld, tankStep } from '../../src/react/game3d/view3d.ts';
-import { buildFigure, FIGURE_H, legGap } from '../../src/react/game3d/voxel.ts';
+import { cameraGoal, clockText, edgeArrow, firstPersonGoal, fpFov, nextView, pickLineup5, rngFrom, stickToWorld, tankStep } from '../../src/react/game/views/match3d/view3d.ts';
+import { buildFigure, FIGURE_H, legGap } from '../../src/react/game/views/match3d/voxel.ts';
 import { avatarPixels } from '../../src/components/avatar.ts';
 import { avatarSpecFor } from '../../src/lib/avatar.ts';
 

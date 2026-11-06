@@ -1300,3 +1300,10 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
   border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-left: 22px solid var(--gold); filter: drop-shadow(0 0 2px rgba(0, 0, 0, .8)); }
 .g3-arrow.is-on { display: block; }
 .g3-opt + .g3-opt { margin-top: var(--s-sm); }
+/* 경기 화면 위 DOM 층(2026-11-07 게임 묶음 4단계) — 화면이 직접 다는 점수판·이름표·말풍선·버튼(3D). ✕·한마디·결과 상자(z 2~3)보다 아래.
+   층 자체는 누름을 통과시키고(조이스틱은 아래 캔버스·오버레이가 받는다), 버튼만 받는다. */
+.game-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.game-layer .g3-btn, .game-layer .g3-view { pointer-events: auto; }
+/* 3D 말풍선 — 머리 위 이름표보다 조금 위. 2D 말풍선(캔버스)과 같은 흰 바탕 검은 글자 */
+.g3-bubble { position: absolute; left: 0; top: 0; display: none; padding: 1px var(--s-xs); border: 2px solid #000; background: #fff; color: #000; font-size: var(--fs-xs); white-space: nowrap; pointer-events: none; }
+.g3-bubble.is-on { display: block; }

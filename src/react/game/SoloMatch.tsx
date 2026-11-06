@@ -25,8 +25,8 @@ export function SoloMatch({ run, adapter, view, live, onRestart, onExit }: {
   const [final, setFinal] = useState<unknown>(null);
   const { config, seed, myId, roster } = run;
 
-  const { refs, touch } = usePlaySurface({
-    view, config, roster, playing: true, live,
+  const { refs, touch, wait, fail } = usePlaySurface({
+    view, config, roster, playing: true, live, myId,
     run: ({ scene, readHuman }) => {
       const g = adapter, smooth = smootherFor(g.bodies);
       let state = g.create(config, seed);
@@ -49,9 +49,11 @@ export function SoloMatch({ run, adapter, view, live, onRestart, onExit }: {
           acc += Math.min(dt, MAX_CATCHUP * STEP_MS);
           let n = 0;
           while (acc >= STEP_MS && n < MAX_CATCHUP && !g.ended(state)) {
+            // 디버그 전용(?debug=1 의 goalChance 등): 다음 틱 전에 상태를 한 번 바꾼다 — 계산 밖, 화면 쪽에서만
+            if (live.current.patch) { state = live.current.patch(state); prev = state; live.current.patch = null; }
             const next = g.step(state, config, collectInputs(state));
             if (g.ended(next)) ended = true;
-            for (const fx of view.sfx(state, next)) playSfx(fx);   // 효과음(2026-11-07) — 틱마다 상태 변화로 알아낸다
+            for (const fx of view.sfx(state, next, config)) playSfx(fx);   // 효과음(2026-11-07) — 틱마다 상태 변화로 알아낸다
             prev = state; state = next; acc -= STEP_MS; n++;
           }
           if (n === MAX_CATCHUP) acc = 0;
@@ -94,5 +96,5 @@ export function SoloMatch({ run, adapter, view, live, onRestart, onExit }: {
     ),
   };
 
-  return <MatchOverlay refs={refs} xLabel="경기 나가기" onX={confirmExit} kickShown={touch && !result} result={result} />;
+  return <MatchOverlay refs={refs} xLabel="경기 나가기" onX={confirmExit} kickShown={touch && !result} result={result} wait={wait} fail={fail} />;
 }
