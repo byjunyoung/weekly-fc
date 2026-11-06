@@ -129,3 +129,19 @@ test('3D 미니게임 계산 소스에 삼각함수·시계·난수 함수가 �
     assert.doesNotMatch(code, /Math\.(sin|cos|tan|atan2?|hypot|pow|exp|log|random)\b|Date\.now|performance\.now|\*\*/, f);
   }
 });
+
+test('키커 화면 조준(aim3) — 모으는 동안엔 입력에 조준이 없고 떼는 틱에만, 키퍼 차례는 화면 좌우를 뒤집어 넘긴다', async () => {
+  const { AIM3_START, pen3Input } = await import('../../src/react/game/views/penalty3d/aim3.ts');
+  let l = { ...AIM3_START, kickNo: 0 };
+  const sent = [];
+  const tick = (h, phase = 'aim') => { const r = pen3Input(l, h, 'kick', phase); l = r.local; sent.push(r.input); };
+  for (let i = 0; i < 20; i++) tick({ x: 1, y: -1, kick: false });          // 오른쪽 위로 겨눔(화면 위 = −y)
+  for (let i = 0; i < 30; i++) tick({ x: 0, y: 0, kick: true });
+  assert.ok(sent.every((i) => i.aim === null), '떼기 전엔 어디에도 조준이 없다');
+  tick({ x: 0, y: 0, kick: false });
+  const last = sent.at(-1).aim;
+  assert.ok(last && last.y > 1 && last.z > 0.9, JSON.stringify(last));
+  const keep = pen3Input(AIM3_START, { x: 1, y: -1, kick: true }, 'keep', 'flight').input;
+  assert.deepEqual(keep, { x: -1, y: 1, kick: true, aim: null }, '골대 뒤 화면: 화면 오른쪽 = 경기 −y, 화면 위 = 높이');
+  assert.deepEqual(pen3Input(AIM3_START, { x: 1, y: 0, kick: true }, null, 'aim').input, PEN3_IDLE, '구경은 입력 없음');
+});
