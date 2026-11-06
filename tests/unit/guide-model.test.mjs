@@ -7,3 +7,5 @@ test('startView: 로그인만 함', () => assert.deepEqual(startView({ login: tr
   { kind: 'cta', button: '내 이름 고르기', hint: '명단에 이름이 없으면 단톡방에 알려 주세요' }));
 test('startView: 이름까지 고름', () => assert.deepEqual(startView({ login: true, num: 37, name: '송유림' }),
   { kind: 'linked', text: '송유림 님으로 연결됐습니다', to: '/squad/37/' }));
+test('startView: 이름이 비면 "N번" 은 등번호로 부른다', () => assert.deepEqual(startView({ login: true, num: 37, name: null }, 9),
+  { kind: 'linked', text: '9번 님으로 연결됐습니다', to: '/squad/37/' }));

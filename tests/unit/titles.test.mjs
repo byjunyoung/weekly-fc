@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { titleOf, teamBests, PAIR, SINGLE } from '../../src/lib/titles.ts';
 
-const P = (num, s) => ({ num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '',
+const P = (num, s) => ({ num, jersey: num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '',
   pace: s[0], dribble: s[1], pass: s[2], shoot: s[3], defend: s[4], stamina: s[5] });
 // 20명 보통(70) + 몇 명 튀는 선수 — 튀는 쪽만 칭호
 const base = Array.from({ length: 20 }, (_, i) => P(100 + i, [68 + (i % 5), 68 + ((i + 1) % 5), 68 + ((i + 2) % 5), 68 + ((i + 3) % 5), 68 + ((i + 4) % 5), 70]));

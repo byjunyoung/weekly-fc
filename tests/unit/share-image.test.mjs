@@ -9,7 +9,7 @@ import { SHAPES, MIN_COUNT, MAX_COUNT } from '../../src/lib/formation.ts';
 import { initial, setCount, setShape, setPitch, place } from '../../src/lib/lineup.ts';
 import { ovr } from '../../src/lib/stats.ts';
 
-const P = (num, name, pos, s = 70) => ({ num, name, pos, detail: '', foot: '', vest: null, note: '',
+const P = (num, name, pos, s = 70) => ({ num, jersey: num, name, pos, detail: '', foot: '', vest: null, note: '',
   pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '', phone: '' });
 
 /** 호출을 받아 적는 가짜 2d 컨텍스트. 실제 렌더 없이 "무엇을 어디에 그렸나"만 본다. */

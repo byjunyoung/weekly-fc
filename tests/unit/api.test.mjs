@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeData, normalizePlayer, normalizeRotation, serializeRotation, rpc, RPC_OF } from '../../src/lib/api.ts';
+import { normalizeData, normalizePlayer, normalizeRotation, serializeRotation, serializePlayer, pickJersey, rpc, RPC_OF } from '../../src/lib/api.ts';
 
 // ── 전달 통로(2026-09-24 Supabase RPC) ────────────────────────────
 test('rpc 는 POST 로 /rest/v1/rpc/<함수> 를 부르고 apikey 헤더만 싣는다', async () => {
@@ -128,7 +128,7 @@ test3('기록 줄의 via 를 그대로 받는다 — 대결로 바뀐 줄은 gam
   assert3.equal(normalizeStatLog({ ts: 't', num: '2', field: 'pace', before: 1, after: 2 }).via, '');
 });
 
-const pl = (num, pace) => ({ num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
+const pl = (num, pace) => ({ num, jersey: num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
   pace, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '' });
 
 test3('applyVote — 서버 응답으로 두 선수 숫자를 고치고 기록 두 줄을 맨 위에 얹는다(다시 읽지 않는다)', () => {
@@ -159,4 +159,45 @@ test('normalizeData: 매치의 tally·voters 같은 옛 칸이 와도 무시한�
   assert.equal(d.matches.length, 1);
   assert.equal('tally' in d.matches[0], false);
   assert.equal('voters' in d.matches[0], false);
+});
+
+// ── 등번호(2026-11-06) ─────────────────────────────────────────────
+test('normalizePlayer: jersey 는 서버 값, 없거나 깨졌으면 고유 번호로(옛 캐시도 읽힌다)', () => {
+  assert.equal(normalizePlayer({ num: '9', jersey: '31' }).jersey, 31);
+  assert.equal(normalizePlayer({ num: '9' }).jersey, 9);
+  assert.equal(normalizePlayer({ num: '9', jersey: null }).jersey, 9);
+  assert.equal(normalizePlayer({ num: '9', jersey: 0 }).jersey, 9);
+  assert.equal(normalizePlayer({ num: '9', jersey: 2.5 }).jersey, 9);
+  assert.equal(normalizePlayer({ num: '9', jersey: 'x' }).jersey, 9);
+});
+test('serializePlayer: jersey 를 함께 보낸다(서버는 새 선수일 때만 쓴다)', () => {
+  const p = normalizePlayer({ num: '9', jersey: '31', name: '김' });
+  const r = serializePlayer(p);
+  assert.equal(r.jersey, 31); assert.equal(r.num, 9);
+});
+test('pickJersey: pick_jersey 를 p_jersey·p_num 으로 부르고 끝나면 데이터를 다시 읽는다', async () => {
+  const orig = globalThis.fetch; const origWin = globalThis.window; const calls = [];
+  globalThis.window = { dispatchEvent() { return true; } };
+  globalThis.fetch = async (url, init) => {
+    calls.push({ fn: String(url).split('/rpc/')[1], body: JSON.parse(init.body) });
+    const fn = calls[calls.length - 1].fn;
+    return { ok: true, status: 200, text: async () => (fn === 'pick_jersey' ? '{"ok":true,"jersey":7,"swapped":"김현서"}' : '{"players":[]}') };
+  };
+  try {
+    const r = await pickJersey(7);
+    assert.deepEqual(r, { jersey: 7, swapped: '김현서' });
+    assert.deepEqual(calls[0], { fn: 'pick_jersey', body: { p_jersey: 7, p_num: null } });
+    assert.ok(calls.some((c) => c.fn === 'get_all'), '성공하면 모두가 보는 데이터를 새로 읽는다');
+    calls.length = 0;
+    await pickJersey(12, 4);
+    assert.deepEqual(calls[0].body, { p_jersey: 12, p_num: 4 });
+  } finally { globalThis.fetch = orig; globalThis.window = origWin; }
+});
+test('pickJersey: 서버 거절 문구를 그대로 던지고 데이터는 다시 읽지 않는다', async () => {
+  const orig = globalThis.fetch; const calls = [];
+  globalThis.fetch = async (url) => { calls.push(String(url)); return { ok: false, status: 400, text: async () => '{"message":"김현서 님(S)이 쓰는 번호입니다 — 내 티어(A)가 더 높아야 가져올 수 있습니다"}' }; };
+  try {
+    await assert.rejects(pickJersey(11), (e) => e.message === '김현서 님(S)이 쓰는 번호입니다 — 내 티어(A)가 더 높아야 가져올 수 있습니다');
+    assert.equal(calls.length, 1);
+  } finally { globalThis.fetch = orig; }
 });

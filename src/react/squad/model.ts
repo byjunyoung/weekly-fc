@@ -17,7 +17,8 @@ export function saveView(v: View): void {
   try { localStorage.setItem(VIEW_KEY, v); } catch { /* 저장 못 해도 화면은 돈다 */ }
 }
 
-export const byOvr = (rows: Player[]): Player[] => [...rows].sort((a, b) => ovr(b) - ovr(a) || a.num - b.num);
+/** 사람이 훑는 목록 순서 — 종합 높은 순, 같으면 등번호 순(2026-11-06 등번호를 고유 번호와 나눔). */
+export const byOvr = (rows: Player[]): Player[] => [...rows].sort((a, b) => ovr(b) - ovr(a) || a.jersey - b.jersey || a.num - b.num);
 
 /** 명단에 없는 가장 작은 번호 — 「선수 추가」가 이동할 새 선수 번호. */
 export function nextFreeNum(players: Player[]): number {
@@ -27,6 +28,13 @@ export function nextFreeNum(players: Player[]): number {
   return n;
 }
 
+/** 아무도 안 쓰는 가장 작은 등번호(1~99) — 「선수 추가」 격자의 처음 골라진 칸. 다 찼으면 null. */
+export function nextFreeJersey(players: Player[]): number | null {
+  const used = new Set(players.map((p) => p.jersey));
+  for (let n = 1; n <= 99; n++) if (!used.has(n)) return n;
+  return null;
+}
+
 /** 포지션 칩 — 빈 값은 '미정'. */
 export const POS_OPTIONS: Array<{ label: string; value: Player['pos'] }> = [
   { label: '미정', value: '' }, { label: 'GK', value: 'GK' }, { label: 'DF', value: 'DF' }, { label: 'MF', value: 'MF' }, { label: 'FW', value: 'FW' },
@@ -34,8 +42,9 @@ export const POS_OPTIONS: Array<{ label: string; value: Player['pos'] }> = [
 
 /** 추가 모달 값 → 새 선수(2026-09-28). 능력치는 0(= 배치 전 — 티어표·라이벌·대결이 알아서 뺀다),
  *  봉사 순번은 지금 최댓값 + 1 이라 봉사표 자동 계산 맨 뒤에 선다. */
-export function newPlayer(players: Player[], v: { name: string; num: number; pos: Player['pos']; foot: string }): Player {
+export function newPlayer(players: Player[], v: { name: string; jersey: number; pos: Player['pos']; foot: string }): Player {
   const rot = Math.max(0, ...players.map((p) => p.rot ?? 0)) + 1;
-  return { num: v.num, name: v.name.trim(), pos: v.pos, detail: '', foot: v.foot, vest: null, note: '', rot, avatar: '', phone: '',
+  // 고유 번호(num)는 남는 가장 작은 번호로 알아서 — 사람이 고르는 건 등번호(jersey)뿐이다(2026-11-06).
+  return { num: nextFreeNum(players), jersey: v.jersey, name: v.name.trim(), pos: v.pos, detail: '', foot: v.foot, vest: null, note: '', rot, avatar: '', phone: '',
     pace: 0, dribble: 0, pass: 0, shoot: 0, defend: 0, stamina: 0 };
 }

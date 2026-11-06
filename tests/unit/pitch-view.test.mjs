@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { pitchHtml, pitchLines, PITCH_DIM } from '../../src/components/pitch-view.ts';
 import { initial, place, moveSlot } from '../../src/lib/lineup.ts';
 
-const P = (num, name, pos, s = 70) => ({ num, name, pos, detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '' });
+const P = (num, name, pos, s = 70) => ({ num, jersey: num, name, pos, detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '' });
 const count = (html, needle) => html.split(needle).length - 1;
 
 test('슬롯마다 버튼 하나, 빈 자리는 라벨을 보여준다', () => {

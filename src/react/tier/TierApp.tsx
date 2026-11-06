@@ -30,7 +30,7 @@ function Board({ players, tierKey }: { players: Player[]; tierKey: TierKey }) {
             {row.players.length ? row.players.map((p) => (
               <a className="tier-p" key={p.num} href={href(`/squad/${p.num}/`)}>
                 <span className="tier-face" aria-hidden="true"
-                  dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 48, p.num, true) }} />
+                  dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 48, p.jersey, true) }} />
                 <span className="tier-name">{p.name}</span>
               </a>
             )) : <span className="muted">—</span>}
@@ -56,7 +56,7 @@ function Pending({ players, placing, me, placed }: { players: Player[]; placing:
             return (
               <a className="tier-p" key={p.num} href={href(p.num === me ? `/squad/${p.num}/` : `/squad/place/?num=${p.num}`)}>
                 <span className="tier-face" aria-hidden="true"
-                  dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 48, p.num, true) }} />
+                  dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 48, p.jersey, true) }} />
                 <span className="tier-name">{p.name}</span>
                 <span className="tier-pending-n">{n}/{placing.need}</span>
                 <span className="tier-pending-note">{note}</span>
@@ -143,7 +143,7 @@ function Duel({ players, used, today, focus, onExit }: { players: Player[]; used
       <button type="button" className={`duel-pick${d != null ? (d > 0 ? ' is-up' : d < 0 ? ' is-down' : ' is-still') : ''}`}
         disabled={busy} onClick={() => pick(p, other)}>
         <span className="duel-sprite" aria-hidden="true"
-          dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 160, p.num, true) }} />
+          dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 160, p.jersey, true) }} />
         <b className="duel-name">{p.name}</b>
         <span className="duel-delta" aria-live="polite">{d == null ? '' : d > 0 ? `+${d}` : d < 0 ? `−${-d}` : '±0'}</span>
       </button>

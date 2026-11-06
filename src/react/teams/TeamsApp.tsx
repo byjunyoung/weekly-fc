@@ -109,7 +109,7 @@ function Teams() {
     <button type="button" key={m.key} className={`tm-chip${picked === m.key ? ' is-picked' : ''}`}
       aria-pressed={picked === m.key} onClick={() => onMemberTap(m.key)}>
       {m.num != null && <span className="tm-face" aria-hidden="true"
-        dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(m.num, players.find((p) => p.num === m.num)?.avatar), 24, m.num) }} />}
+        dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(m.num, players.find((p) => p.num === m.num)?.avatar), 24, players.find((p) => p.num === m.num)?.jersey ?? m.num) }} />}
       <b>{m.name}</b>
       {m.ovr != null ? <span className="tm-ovr">{m.ovr}</span> : <span className="tm-guest">용병</span>}
     </button>
@@ -201,13 +201,13 @@ function Teams() {
       <div className="card tm-roster">
         <h2>온 사람 고르기</h2>
         <div className="tm-pool">
-          {players.map((p) => {
+          {[...players].sort((a, b) => a.jersey - b.jersey || a.num - b.num).map((p) => {
             const on = st.picked.includes(p.num);
             return (
               <button type="button" key={p.num} className={`tm-chip${on ? ' is-on' : ''}`} aria-pressed={on}
                 onClick={() => { setPicked(null); commit((prev) => T.togglePicked(prev, p.num)); }}>
                 <span className="tm-face" aria-hidden="true"
-                  dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 24, p.num) }} />
+                  dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 24, p.jersey) }} />
                 <b>{p.name}</b>
               </button>
             );

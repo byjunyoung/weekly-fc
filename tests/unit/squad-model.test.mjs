@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ALL_VIEWS, loadView, saveView, byOvr, nextFreeNum } from '../../src/react/squad/model.ts';
+import { ALL_VIEWS, loadView, saveView, byOvr, nextFreeNum, nextFreeJersey } from '../../src/react/squad/model.ts';
 
-const P = (num, name, over = {}) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '', ...over });
+const P = (num, name, over = {}) => ({ num, jersey: num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '', ...over });
 
 // localStorage 가 없는 Node 환경 — 파일 맨 위에서 한 번만 흉내낸다(단위 테스트 관례).
 const store = new Map();
@@ -51,8 +51,20 @@ test('nextFreeNum: 비어 있는 가장 작은 번호', () => {
 
 test('newPlayer — 능력치 0(배치 전), 봉사 순번은 맨 뒤', async () => {
   const { newPlayer } = await import('../../src/react/squad/model.ts');
-  const p = newPlayer([P(1, 'a', { rot: 3 }), P(2, 'b', { rot: null })], { name: ' 새사람 ', num: 7, pos: 'FW', foot: '왼발' });
+  const p = newPlayer([P(1, 'a', { rot: 3 }), P(2, 'b', { rot: null })], { name: ' 새사람 ', jersey: 77, pos: 'FW', foot: '왼발' });
   assert.equal(p.name, '새사람');
+  assert.equal(p.num, 3, '고유 번호는 남는 가장 작은 번호');
+  assert.equal(p.jersey, 77, '등번호는 고른 값');
   assert.equal(p.rot, 4);
   assert.equal(p.pace + p.stamina, 0);
+});
+
+test('byOvr: 같은 종합이면 등번호(jersey) 순 — 고유 번호가 아니라', () => {
+  const rows = [P(1, '가', { jersey: 30 }), P(2, '나', { jersey: 5 })];
+  assert.deepEqual(byOvr(rows).map((p) => p.num), [2, 1]);
+});
+test('nextFreeJersey: 안 쓰는 가장 작은 등번호, 다 차면 null', () => {
+  assert.equal(nextFreeJersey([P(1, '가', { jersey: 1 }), P(2, '나', { jersey: 3 })]), 2);
+  assert.equal(nextFreeJersey([P(1, '가', { jersey: 2 })]), 1);
+  assert.equal(nextFreeJersey(Array.from({ length: 99 }, (_, i) => P(i + 1, 'x', { jersey: 99 - i }))), null);
 });

@@ -31,12 +31,12 @@ export const CARD_STAT_ORDER: StatKey[] = ['pace', 'dribble', 'shoot', 'defend',
 
 export type CardStat = { key: StatKey; label: string; value: number; band: 'a' | 'b' | 'c' | 'd' };
 export type CardModel = {
-  num: number; name: string; ovr: number; tier: Tier | null; pos: string; foot: FootMode; stats: CardStat[];
+  num: number; jersey: number; name: string; ovr: number; tier: Tier | null; pos: string; foot: FootMode; stats: CardStat[];
 };
 
 export function cardModel(p: Player, tier: Tier | null | undefined): CardModel {
   return {
-    num: p.num, name: p.name, ovr: ovr(p), tier: tier ?? null, pos: p.pos || '', foot: footMode(p.foot),
+    num: p.num, jersey: p.jersey, name: p.name, ovr: ovr(p), tier: tier ?? null, pos: p.pos || '', foot: footMode(p.foot),
     stats: CARD_STAT_ORDER.map((key) => ({ key, label: STAT_KO[key], value: p[key], band: band(p[key], STAT_CUTS) })),
   };
 }

@@ -162,7 +162,7 @@ function Actions() {
         )}
         {choosing && picked && (
           <div className="pick-confirm" id="me-confirm">
-            <p className="pick-confirm-name"><b>{picked.num}</b> {picked.name}</p>
+            <p className="pick-confirm-name"><b>{picked.jersey}</b> {picked.name}</p>
             <p className="muted">{step === 'change'
               ? `${me.name ?? ''}에서 ${picked.name}(으)로 바꿉니다. 지금까지 한 대결 판정도 ${picked.name} 이름으로 옮겨집니다. 직접 바꾸기는 한 번뿐입니다.`
               : '이 선수가 맞나요? 대결 판정이 이 이름으로 남습니다.'}</p>
@@ -175,14 +175,14 @@ function Actions() {
               : '명단에서 본인을 고르세요. 회색 이름은 이미 다른 사람이 골랐습니다 — 내 이름이 회색이면 누가 잘못 골랐을 수 있으니 관리자에게 알려 주세요.'}</p>
             <div className="pick-list" id="me-list">
               {pickOrder(players).map((p) => (
-                <Button key={p.num} disabled={busy || taken.includes(p.num)} onClick={() => setPick(p.num)}>{p.num} {p.name}</Button>
+                <Button key={p.num} disabled={busy || taken.includes(p.num)} onClick={() => setPick(p.num)}>{p.jersey} {p.name}</Button>
               ))}
             </div>
           </>
         )}
         {step === 'account' && (
           <>
-            <p>{me.num} {me.name} <span className="muted">· {me.email}</span></p>
+            <p>{players.find((p) => p.num === me.num)?.jersey ?? me.num} {me.name} <span className="muted">· {me.email}</span></p>
             <p className="muted">내 이름이 아닌가요? {me.canChange
               ? <Button size="small" type="link" id="me-change" onClick={toChange}>다른 선수로 바꾸기</Button>
               : '이미 한 번 바꿨으니 관리자에게 알려 주세요.'}</p>

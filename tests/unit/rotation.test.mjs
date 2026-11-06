@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rotationOrder, computeMonth, rotationFor, yearRows } from '../../src/lib/rotation.ts';
 
-const P = (num, name, rot) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: 0, dribble: 0, pass: 0, shoot: 0, defend: 0, stamina: 0, rot });
+const P = (num, name, rot) => ({ num, jersey: num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: 0, dribble: 0, pass: 0, shoot: 0, defend: 0, stamina: 0, rot });
 const ps = Array.from({ length: 29 }, (_, i) => P(i + 1, `p${i + 1}`, i + 1)).concat([P(99, 'admin', null)]);
 const NOW = new Date(2026, 8, 10); // 2026-09-10
 

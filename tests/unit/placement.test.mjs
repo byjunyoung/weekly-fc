@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ladder, posValue, startSearch, answer, pickOpponent, midOf, expectedSteps, DEFAULT_VALUE } from '../../src/lib/placement.ts';
 
-const P = (num, pace, extra = {}) => ({ num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
+const P = (num, pace, extra = {}) => ({ num, jersey: num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
   pace, dribble: pace, pass: pace, shoot: pace, defend: pace, stamina: pace, rot: null, avatar: '', ...extra });
 
 const team = [P(1, 60), P(2, 70), P(3, 70), P(4, 80), P(5, 90), P(9, 0)];

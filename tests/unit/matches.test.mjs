@@ -4,7 +4,7 @@ import { fromMatch, isVideoUrl, matchLabel, snapshot, vestOf } from '../../src/l
 import { addGuest, initialTeams, moveTo, playerKey, guestKey, togglePicked } from '../../src/lib/teams.ts';
 import { normalizeMatch, normalizeData, EMPTY } from '../../src/lib/api.ts';
 
-const P = (num, name) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '',
+const P = (num, name) => ({ num, jersey: num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '',
   pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '' });
 const ROSTER = [P(2, '김현서'), P(3, '김준영'), P(4, '이동훈')];
 const M = (over = {}) => ({ id: 1, date: '2026-09-27', video: '',
@@ -97,7 +97,7 @@ test('상대팀 매치 — 결과·전적·우리 팀 하나 스냅샷(2026-09-2
   ];
   assert.deepEqual(ms.map(M2.resultOf), ['W', 'D', 'L', null, null]);
   assert.deepEqual(M2.record(ms), { w: 1, d: 1, l: 1, gf: 4, ga: 5, played: 3 });
-  const players = [{ num: 2, name: '김준영', pos: 'DF', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70 }];
+  const players = [{ num: 2, jersey: 2, name: '김준영', pos: 'DF', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70 }];
   const st = { teams: 2, picked: [2], guests: [{ id: 'g', name: '용병A' }], assign: {} };
   const snap = M2.snapshotSquad(st, players);
   assert.equal(snap.ok, true);

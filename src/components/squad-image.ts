@@ -58,7 +58,7 @@ export function drawSquadImage(canvas: HTMLCanvasElement, players: Player[], fmt
   const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
   const GOLD = tok('--gold', '#ffce21'), BLUE = tok('--accent', '#0070d1'), MUT = tok('--muted', '#9da4af');
 
-  const list = [...players].sort((a, b) => a.num - b.num);
+  const list = [...players].sort((a, b) => a.jersey - b.jersey || a.num - b.num);   // 줄 순서·이름표 모두 등번호(jersey)
   const counts = squadRows(list.length, F.perRow);
   const BOTTOM = Math.round(40 / U);
   const T = GH - BOTTOM - counts.length * PITCH;   // 뒷줄 머리
@@ -136,7 +136,7 @@ export function drawSquadImage(canvas: HTMLCanvasElement, players: Player[], fmt
     // 이름표 — 발밑 가운데, 반투명 검정 판에 금색 번호 + 흰 이름
     ctx.font = pixelFont(20);
     for (const q of row) {
-      const n = String(q.p.num), nm = q.p.name;
+      const n = String(q.p.jersey), nm = q.p.name;
       const nw = ctx.measureText(n).width, mw = ctx.measureText(nm).width, pad = 6, gap = 6;
       const w = Math.round(nw + mw + pad * 2 + gap), h = LAB * U - 6;
       const x = Math.round((q.x + AV_W / 2) * U - w / 2), y = (q.y + AV_H) * U + 2;

@@ -3,7 +3,7 @@
 // 이 화면은 "내 선수를 보고 꾸미는" 자리라 재정 정보가 끼어들 이유가 없다(사용자 지시).
 import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Popover, Segmented, Select } from 'antd';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import NumberPicker from '../squad/NumberPicker';
+import JerseyModal from '../JerseyModal';
 import type { CSSProperties } from 'react';
 import { adminMembers, adminMove, adminRelease, fetchFull, fetchPhones, serializePlayer, write, writeAvatar, type MemberRow } from '../../lib/api';
 import { maskEmail } from '../../lib/auth';
@@ -25,7 +25,7 @@ import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useMe, useMeInfo } from '../useMe';
 import { useData } from '../useData';
-import { numClash, playerFormDefaults, playerFromForm } from './model';
+import { playerFormDefaults, playerFromForm } from './model';
 import { POS_OPTIONS } from '../squad/model';
 import type { PlayerFormValues } from './model';
 
@@ -87,6 +87,7 @@ function Detail({ num }: { num: number }) {
   const [saving, setSaving] = useState(false);
   const [opening, setOpening] = useState(false); // fetchFull 이 도는 동안(모달이 뜨기 전)
   const [deleting, setDeleting] = useState(false);
+  const [jerseyOpen, setJerseyOpen] = useState(false);   // 편집 폼의 [등번호 바꾸기]
   const [statsOpen, setStatsOpen] = useState(false); // 편집 모달의 능력치 직접 고치기 — 평소엔 접어 둔다(배치 대결이 정본)
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [avatarSpec, setAvatarSpec] = useState<AvatarSpec | null>(null);
@@ -116,20 +117,15 @@ function Detail({ num }: { num: number }) {
   };
   const save = async (v: PlayerFormValues) => {
     if (!editing) return;
-    const p = playerFromForm({ ...v, vest: editing.prevVest }, editing.prevAvatar);
-    if (!p.num || !p.name) { message.error('번호와 이름은 필수'); return; }
-    const clash = numClash(data?.players ?? [], p.num, num);
-    if (clash) { message.error(`${p.num}번은 이미 ${clash.name}의 번호입니다`); return; }
+    // 고유 번호(num)는 이 화면의 주소 번호 그대로 — 폼에서 고치지 않는다(2026-11-06). 등번호(jersey)는 [등번호 바꾸기](pickJersey)로만 바뀌고,
+    // 저장 때 실어 보내는 값은 서버가 고칠 땐 무시한다.
+    const p = playerFromForm({ ...v, num, jersey: player?.jersey ?? num, vest: editing.prevVest }, editing.prevAvatar);
+    if (!p.name) { message.error('이름은 필수'); return; }
     setSaving(true);
     try {
       await write('writePlayer', serializePlayer(p));
-      const numChanged = p.num !== num;
-      if (numChanged && data?.players.some((x) => x.num === num)) {
-        try { await write('deletePlayer', { num }); } catch (e) { message.error(`저장은 됐지만 이전 번호(${num}) 삭제 실패: ${(e as Error).message}`); }
-      }
       setOpen(false);
       message.success('저장됨');
-      if (numChanged) location.href = href(`/squad/${p.num}/`);
     } catch (e) {
       message.error((e as Error).message); // 모달·입력값은 그대로 둔다(스펙 §6)
     } finally {
@@ -252,6 +248,7 @@ function Detail({ num }: { num: number }) {
 
   function editModal() {
     return (
+      <>
       <Modal title="선수 편집" open={open} width={640} destroyOnHidden afterClose={() => setEditing(null)} onCancel={() => setOpen(false)}
         cancelButtonProps={{ disabled: saving }} maskClosable={!saving} closable={!saving} keyboard={!saving}
         classNames={{ footer: 'modal-foot-split' }}
@@ -272,7 +269,13 @@ function Detail({ num }: { num: number }) {
             <Form.Item name="pos" label="포지션" className="full"><Segmented className="chips" options={POS_OPTIONS} /></Form.Item>
             <Form.Item name="detail" label="세부 포지션"><Input placeholder="예: WB, CM" /></Form.Item>
             <Form.Item name="foot" label="주발"><Select allowClear options={FOOT_OPTIONS.map((x) => ({ value: x, label: x }))} /></Form.Item>
-            <Form.Item name="num" label="등번호" className="full" rules={[{ required: true, message: '번호를 고르세요' }]}><NumberPicker players={data?.players ?? []} own={num} /></Form.Item>
+            <Form.Item label="등번호" className="full">
+              <span className="form-member">
+                <b>{player?.jersey ?? num}번</b>
+                <Button size="small" onClick={() => setJerseyOpen(true)}>등번호 바꾸기</Button>
+                <span className="muted">{me === num ? '내 선수라 내 티어 조건이 그대로 적용됩니다.' : '티어와 상관없이 정합니다. 주인이 있으면 서로 맞바꿉니다.'}</span>
+              </span>
+            </Form.Item>
             <h3 className="form-sec full">운영</h3>
             <Form.Item name="rot" label="봉사 순번 (빈칸=제외)"><InputNumber min={1} style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="phone" label="전화 (이름 고른 팀원에게만 보임)"><Input type="tel" /></Form.Item>
@@ -283,7 +286,7 @@ function Detail({ num }: { num: number }) {
                 {member ? <span>{maskEmail(member.email)}
                   <Select size="small" placeholder="진짜 이름" style={{ width: 120 }} value={moveTo ?? undefined} onChange={setMoveTo}
                     showSearch optionFilterProp="label"
-                    options={(data?.players ?? []).filter((p) => !claimed.includes(p.num)).map((p) => ({ value: p.num, label: `${p.num} ${p.name}` }))} />
+                    options={[...(data?.players ?? [])].sort((a, b) => a.jersey - b.jersey || a.num - b.num).filter((p) => !claimed.includes(p.num)).map((p) => ({ value: p.num, label: `${p.jersey} ${p.name}` }))} />
                   <Popconfirm title="이 계정을 고른 선수로 옮길까요? 이 계정이 남긴 판정도 따라갑니다." okText="옮기기" cancelText="취소"
                     onConfirm={move} disabled={moveTo == null}>
                     <Button size="small" loading={releasing} disabled={moveTo == null}>옮기기</Button>
@@ -304,6 +307,9 @@ function Detail({ num }: { num: number }) {
           </Form>
         )}
       </Modal>
+      {/* 관리자 모드 — 그 선수의 등번호를 티어 조건 없이 정한다(pickJersey(번호, 선수 고유 번호)). 내 선수면 서버가 본인으로 보므로 티어 규칙을 따른다. */}
+      <JerseyModal open={jerseyOpen} onClose={() => setJerseyOpen(false)} players={data?.players ?? []} num={num} admin={me !== num} />
+      </>
     );
   }
 
@@ -372,7 +378,7 @@ function Detail({ num }: { num: number }) {
       {editModal()}
       <CardShareModal open={shareOpen} onClose={() => setShareOpen(false)} player={player ?? null}
         tier={player ? tierByNum(data?.players ?? []).get(player.num) : null}
-        title={player ? `${player.name} 카드` : '카드'} fileTag={`card-${num}`}
+        title={player ? `${player.name} 카드` : '카드'} fileTag={`card-${player?.jersey ?? num}`}
         team={data?.players ?? []} />
     </>
   );

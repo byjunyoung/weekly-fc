@@ -77,7 +77,7 @@ export function drawTierImage(c: HTMLCanvasElement, players: Player[], key: Tier
     for (const s of row.slots) {
       const p = byNum.get(s.num)!;
       const spriteW = 24 * s.cell;
-      drawAvatar(ctx, avatarPixels(avatarSpecFor(p.num, p.avatar)), s.x + (s.w - spriteW) / 2, s.y, s.cell, p.num);
+      drawAvatar(ctx, avatarPixels(avatarSpecFor(p.num, p.avatar)), s.x + (s.w - spriteW) / 2, s.y, s.cell, p.jersey);
       ctx.fillStyle = fg; ctx.font = pixelFont(20); ctx.textAlign = 'center';
       ctx.fillText(fit(ctx, p.name, s.w - 8), s.x + s.w / 2, s.y + 32 * s.cell + 22);
     }

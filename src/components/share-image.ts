@@ -157,7 +157,7 @@ export function drawLineupImage(c: HTMLCanvasElement, s: LineupState, players: P
       ctx.fillStyle = muted; ctx.font = pixelFont(20); ctx.fillText(slot.label, cx, b.y + b.h / 2 + 8);
       return;
     }
-    drawAvatar(ctx, avatarPixels(avatarSpecFor(p.num, p.avatar)), cx - spriteW / 2, b.y, b.cell, p.num);
+    drawAvatar(ctx, avatarPixels(avatarSpecFor(p.num, p.avatar)), cx - spriteW / 2, b.y, b.cell, p.jersey);
     // 이름은 잔디 위에 바로 놓이므로 어두운 이름표를 깔아 밝은 줄무늬에서도 읽히게 한다.
     // 30px 가 기본이고 안 들어가면 20px 로 한 단계 줄인다 — 둘 다 PIXEL_SIZES 안이라 미리 불러온다.
     ctx.font = pixelFont(30);

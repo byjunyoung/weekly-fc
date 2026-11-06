@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { FORMATIONS, FORMATION_NAMES, bestEleven, SHAPES, slotsFor, defaultPitch, clampCount, MIN_COUNT, MAX_COUNT } from '../../src/lib/formation.ts';
 
-const P = (num, name, pos, pace) => ({ num, name, pos, detail: '', foot: '', vest: null, note: '',
+const P = (num, name, pos, pace) => ({ num, jersey: num, name, pos, detail: '', foot: '', vest: null, note: '',
   pace, dribble: pace, pass: pace, shoot: pace, defend: pace, stamina: pace, rot: null, avatar: '' });
 
 test('모든 포메이션은 11 자리이고 좌표가 0~1 안에 있다', () => {

@@ -19,8 +19,10 @@ import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
 
 function Face({ num, players, size = 24 }: { num: number; players: Player[]; size?: number }) {
+  // num = 고유 번호(아바타 시드·찾기), 폴백 글자는 보이는 등번호(jersey).
+  const p = players.find((x) => x.num === num);
   return <span className="tm-face" aria-hidden="true"
-    dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(num, players.find((p) => p.num === num)?.avatar), size, num) }} />;
+    dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(num, p?.avatar), size, p?.jersey ?? num) }} />;
 }
 
 function Card({ m, players, today, admin, onTeamsImage }: { m: Match; players: Player[]; today: string; admin: boolean; onTeamsImage: (m: Match) => void }) {

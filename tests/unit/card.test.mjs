@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { cardModel, CARD_STAT_ORDER, footMode, FOOT_OPTIONS, tierByNum } from '../../src/lib/card.ts';
 import { feetPixels, feetSvg, flagKrPixels, flagKrSvg, FLAG_KR_H, FLAG_KR_W, FEET_W, FEET_H, gridRects } from '../../src/components/pixel-icons.ts';
 
-const P = (num, v, over = {}) => ({ num, name: `P${num}`, pos: 'MF', detail: '', foot: '오른발', vest: null, note: '',
+const P = (num, v, over = {}) => ({ num, jersey: num, name: `P${num}`, pos: 'MF', detail: '', foot: '오른발', vest: null, note: '',
   pace: v, dribble: v, pass: v, shoot: v, defend: v, stamina: v, rot: null, avatar: '', ...over });
 
 test('tierByNum — 종합 순위 비율제 그대로, 숫자 없는 선수는 없다', () => {
@@ -60,4 +60,9 @@ test('flagKrPixels·feetPixels — 캔버스용 격자는 SVG 와 같은 데이�
   assert.equal(b.w, FEET_W); assert.equal(b.h, FEET_H);
   for (const row of b.map) assert.equal(row.length, FEET_W);
   assert.equal(b.palette.L, '#f4f4f4'); assert.equal(b.palette.R, '#4a4f57');
+});
+
+test('cardModel — 카드에 찍히는 번호는 등번호(jersey), 고유 번호는 따로 남는다', () => {
+  const m = cardModel(P(7, 70, { jersey: 31 }), 'B');
+  assert.equal(m.jersey, 31); assert.equal(m.num, 7);
 });

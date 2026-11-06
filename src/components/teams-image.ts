@@ -111,7 +111,7 @@ export function drawTeamsImage(c: HTMLCanvasElement, lineup: MatchTeam[], player
       if (ch.num != null) {
         const face = FACE_SIZE * ch.cell;
         const p = players.find((x) => x.num === ch.num);
-        drawFace(ctx, avatarPixels(avatarSpecFor(ch.num, p?.avatar)), tx, ch.y + (ch.h - face) / 2, ch.cell, ch.num, muted);
+        drawFace(ctx, avatarPixels(avatarSpecFor(ch.num, p?.avatar)), tx, ch.y + (ch.h - face) / 2, ch.cell, p?.jersey ?? ch.num, muted);
         tx += face + 10;
       }
       ctx.fillStyle = fg; ctx.font = pixelFont(ch.font); ctx.textAlign = 'left';

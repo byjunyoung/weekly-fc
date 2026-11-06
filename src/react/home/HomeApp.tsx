@@ -1,5 +1,5 @@
 // 라커룸(홈, 2026-09-28 "홈을 라커룸이라고 정의") — 왼쪽 절반이 「내 선수」 칸(내 아바타), 오른쪽에 타일 격자(antd Card).
-import { Card } from 'antd';
+import { Button, Card } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { jerseySvg } from '../../components/jersey';
@@ -7,6 +7,7 @@ import { avatarSpecFor } from '../../lib/avatar';
 import type { Player } from '../../lib/types';
 import { tierByNum } from '../../lib/card';
 import PlayerCard from '../PlayerCard';
+import JerseyModal from '../JerseyModal';
 import { getMe } from '../../lib/me';
 import { fetchStatHistory, fetchTodayStats, type TodayStats } from '../../lib/api';
 import { change, series } from '../../lib/history';
@@ -44,7 +45,7 @@ function Jersey({ p }: { p: Player }) {
       <span className="lk-shirt">
         <span dangerouslySetInnerHTML={{ __html: jerseySvg(avatarSpecFor(p.num, p.avatar).kit, 10) }} />
         <b className="lk-jname">{p.name}</b>
-        <b className="lk-jnum">{p.num}</b>
+        <b className="lk-jnum">{p.jersey}</b>
       </span>
     </span>
   );
@@ -67,9 +68,9 @@ function LockerScene({ side, children }: { side: [Player | undefined, Player | u
     </div>
   );
 }
-/** 번호 순으로 선 명단에서 내 앞뒤 사람(끝이면 반대쪽 끝으로 돈다). */
+/** 등번호 순으로 선 명단에서 내 앞뒤 사람(끝이면 반대쪽 끝으로 돈다). 줄은 보이는 번호(jersey)로 세우고, 나는 고유 번호(num)로 찾는다. */
 function neighbors(players: Player[], num: number | null): [Player | undefined, Player | undefined] {
-  const line = [...players].sort((a, b) => a.num - b.num);
+  const line = [...players].sort((a, b) => a.jersey - b.jersey || a.num - b.num);
   if (!line.length) return [undefined, undefined];
   const i = num == null ? -1 : line.findIndex((p) => p.num === num);
   if (i < 0) return [line[0], line[1]];
@@ -140,6 +141,7 @@ const dutyBody = (d: DutyTile) => <><span className="tile-duo"><b>{d.p1}</b><b>{
 function App() {
   const { data } = useData();
   const [me, setMe] = useState<number | null>(null);
+  const [jerseyOpen, setJerseyOpen] = useState(false);   // 「내 선수」 칸의 [등번호 바꾸기]
 
   useEffect(() => {
     const read = () => setMe(getMe());
@@ -199,7 +201,10 @@ function App() {
                 <MyLocker player={mePlayer}
                   card={<PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="sm" className="locker-card" team={data.players} />} />
               </LockerScene>
-              <span className="tile-sub lk-foot"><span>유니폼을 누르면 카드</span><a className="tile-go" href={href(`/squad/${s.meTile.num}/`)}>내 선수 보기 · 꾸미기 ›</a></span>
+              <span className="tile-sub lk-foot"><span>유니폼을 누르면 카드</span>
+                <Button size="small" onClick={() => setJerseyOpen(true)}>등번호 바꾸기</Button>
+                <a className="tile-go" href={href(`/squad/${s.meTile.num}/`)}>내 선수 보기 · 꾸미기 ›</a></span>
+              <JerseyModal open={jerseyOpen} onClose={() => setJerseyOpen(false)} players={data.players} num={mePlayer.num} />
             </Card>
           )
           : <EmptyMeTile onOpen={openMe} side={side} />}

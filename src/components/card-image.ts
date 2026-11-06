@@ -73,12 +73,12 @@ export function drawCardImage(c: HTMLCanvasElement, player: Player, tier: Tier |
   // 아바타(오른쪽, 이름 띠 위에 발이 닿게)
   const nameY = CARD_Y + FRAME + PAD + 448 + 8;
   const avX = CARD_X + CARD_W - FRAME - PAD - 24 * AVATAR_CELL;
-  drawAvatar(ctx, avatarPixels(avatarSpecFor(player.num, player.avatar)), avX, nameY - 32 * AVATAR_CELL + AVATAR_CELL, AVATAR_CELL, player.num);
+  drawAvatar(ctx, avatarPixels(avatarSpecFor(player.num, player.avatar)), avX, nameY - 32 * AVATAR_CELL + AVATAR_CELL, AVATAR_CELL, player.jersey);
 
   // 이름 띠 — 이름 · 번호 · 칭호 알약을 한 덩어리로 가운데(화면 카드와 같게, 2026-09-29)
   ctx.fillStyle = frame; ctx.fillRect(CARD_X + FRAME, nameY, CARD_W - FRAME * 2, 4);
   ctx.font = pixelFont(60); const nm = fit(ctx, m.name, CARD_W - PAD * 2 - 300); const nw = ctx.measureText(nm).width;
-  ctx.font = pixelFont(30); const numT = `#${m.num}`; const numW = ctx.measureText(numT).width;
+  ctx.font = pixelFont(30); const numT = `#${m.jersey}`; const numW = ctx.measureText(numT).width;
   const bt = opts.badge ? fit(ctx, opts.badge, 240) : ''; const bw = bt ? ctx.measureText(bt).width + 24 : 0;
   const total = nw + 12 + numW + (bt ? 20 + bw : 0);
   let nx = CARD_X + CARD_W / 2 - total / 2;

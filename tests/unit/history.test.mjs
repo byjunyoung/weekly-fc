@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { series, byDay, change, seoulDay } from '../../src/lib/history.ts';
 import { why } from '../../src/react/player/model.ts';
 
-const P = { num: 2, name: '나', pos: 'DF', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '',
+const P = { num: 2, jersey: 2, name: '나', pos: 'DF', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '',
   pace: 80, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70 };
 const R = (ts, field, before, after, by = 4, via = 'game', byName = `P${by}`) => ({ ts, by, byName, num: 2, field, before, after, via });
 const rows = [

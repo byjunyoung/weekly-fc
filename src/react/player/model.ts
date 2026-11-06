@@ -2,30 +2,26 @@
 import type { Player, StatLogRow } from '../../lib/types.ts';
 
 export type PlayerFormValues = {
-  num: number; name: string; pos: Player['pos']; detail: string; foot: string; vest: number | null; rot: number | null; phone: string;
+  num: number; jersey: number; name: string; pos: Player['pos']; detail: string; foot: string; vest: number | null; rot: number | null; phone: string;
   pace: number; dribble: number; pass: number; shoot: number; defend: number; stamina: number; note: string;
 };
 /** 편집 폼 기본값 — 있으면 그 선수 값, 없으면(새 선수) 번호만 넣고 능력치는 70(지금 폼과 같다). */
 export function playerFormDefaults(num: number, existing: Player | undefined): PlayerFormValues {
   if (existing) return {
-    num: existing.num, name: existing.name, pos: existing.pos, detail: existing.detail, foot: existing.foot,
+    num: existing.num, jersey: existing.jersey, name: existing.name, pos: existing.pos, detail: existing.detail, foot: existing.foot,
     vest: existing.vest, rot: existing.rot, phone: existing.phone ?? '',
     pace: existing.pace, dribble: existing.dribble, pass: existing.pass, shoot: existing.shoot, defend: existing.defend, stamina: existing.stamina,
     note: existing.note,
   };
-  return { num, name: '', pos: '', detail: '', foot: '', vest: null, rot: null, phone: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, note: '' };
+  return { num, jersey: num, name: '', pos: '', detail: '', foot: '', vest: null, rot: null, phone: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, note: '' };
 }
 
 /** 폼 값 → 저장할 Player. avatar 는 이 폼에 없는 필드다(잠금 없는 별도 에디터가 전담) — writePlayer 가 열을 통째로
  *  덮어쓰므로, 여기서 지금 저장된 값을 그대로 옮기지 않으면 빈 문자열로 지워진다. */
 export const playerFromForm = (v: PlayerFormValues, prevAvatar: string): Player => ({
-  num: v.num, name: v.name.trim(), pos: v.pos, detail: v.detail.trim(), foot: v.foot.trim(), vest: v.vest, note: v.note.trim(), rot: v.rot,
+  num: v.num, jersey: v.jersey, name: v.name.trim(), pos: v.pos, detail: v.detail.trim(), foot: v.foot.trim(), vest: v.vest, note: v.note.trim(), rot: v.rot,
   pace: v.pace, dribble: v.dribble, pass: v.pass, shoot: v.shoot, defend: v.defend, stamina: v.stamina, phone: v.phone.trim(), avatar: prevAvatar,
 });
-
-/** 번호를 바꾸려는 값이 이미 다른 선수 번호와 겹치는지. 번호를 안 바꾸면(newNum === currentNum) 겹침이 아니다. */
-export const numClash = (players: Player[], newNum: number, currentNum: number): Player | undefined =>
-  newNum !== currentNum ? players.find((p) => p.num === newNum) : undefined;
 
 /** 이 줄이 왜 생겼나 — 대결 상대·배치·POTM 보상. 판정자 이름은 관리자에게만(2026-09-29 "팀원에겐 익명") —
  *  서버가 관리자가 아니면 이름을 비워 보내고, 관리자도 관리자 모드를 켰을 때만 보여 준다. */

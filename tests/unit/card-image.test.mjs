@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { CARD_H, CARD_W, drawCardImage } from '../../src/components/card-image.ts';
 import { IMG_W, IMG_H } from '../../src/components/share-image.ts';
 
-const P = (num, s, extra = {}) => ({ num, name: `선수${num}`, pos: 'DF', detail: '', foot: '오른발', vest: null, note: '',
+const P = (num, s, extra = {}) => ({ num, jersey: num, name: `선수${num}`, pos: 'DF', detail: '', foot: '오른발', vest: null, note: '',
   pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '', ...extra });
 
 // 캔버스가 getComputedStyle(document.documentElement) 로 토큰을 읽는다 — node 엔 없으니 세워 둔다(share-image.test 와 같은 방식).
@@ -67,4 +67,11 @@ test('카드 이미지 — 제목·부제·캡션(금색 띠는 2026-11-06 뺌)'
   assert.ok(f.texts.some((t) => t.t === '제목' && /60px/.test(t.font)));
   assert.ok(f.texts.some((t) => t.t === '9월 27일 (일) 매치'));
   assert.ok(f.texts.some((t) => t.t === '9월 27일 (일)'));
+});
+
+test('카드 이미지 — 이름 옆 번호는 등번호(jersey)다', () => {
+  const f = fakeCanvas();
+  drawCardImage(f.canvas, P(7, 80, { jersey: 31 }), 'A', {});
+  assert.ok(f.texts.some((t) => t.t === '#31'));
+  assert.ok(!f.texts.some((t) => t.t === '#7'));
 });

@@ -27,7 +27,7 @@ export default function PlayerCard({ player, tier, size, avatar, className = '',
   const m = cardModel(player, tier);
   const title = team ? titleOf(player, team) : null;
   const bests = team ? teamBests(player, team) : [];
-  const svg = avatarSvg(avatarSpecFor(player.num, player.avatar), CARD_AVATAR_H[size], player.num, true);
+  const svg = avatarSvg(avatarSpecFor(player.num, player.avatar), CARD_AVATAR_H[size], player.jersey, true);
   const t = m.tier ?? 'none';
   return (
     <div className={`fcard fcard-${size} fcard-tier-${t} ${className}`.trim()}>
@@ -48,7 +48,7 @@ export default function PlayerCard({ player, tier, size, avatar, className = '',
       </div>
       {/* 이름과 칭호를 한 덩어리로 가운데. 폭이 모자라면 칭호가 다음 줄 가운데로 내려간다. */}
       <div className={`fcard-name${title ? ' has-badge' : ''}`}>
-        <b>{m.name}</b><span>#{m.num}</span>
+        <b>{m.name}</b><span>#{m.jersey}</span>
         {title && <span className="fcard-badge" title={title.desc}>{title.name}</span>}
       </div>
       <div className="fcard-stats">

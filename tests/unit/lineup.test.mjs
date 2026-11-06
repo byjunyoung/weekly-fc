@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { initial, setCount, setShape, place, tapPlayer, swap, moveSlot, autoFill, positionOf, restore, serialize, defaultTitle } from '../../src/lib/lineup.ts';
 import { slotsFor } from '../../src/lib/formation.ts';
 
-const P = (num, pos, s = 70) => ({ num, name: `p${num}`, pos, detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '' });
+const P = (num, pos, s = 70) => ({ num, jersey: num, name: `p${num}`, pos, detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '' });
 
 test('initial: 인원만큼 빈 슬롯, 그 인원의 첫 모양과 경기장 기본값', () => {
   const s = initial(6);

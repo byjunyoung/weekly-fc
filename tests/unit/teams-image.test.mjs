@@ -5,7 +5,7 @@ import { drawTeamsImage, IMG_H_MIN, layoutBottom, teamsLayout } from '../../src/
 import { IMG_W, IMG_H } from '../../src/components/share-image.ts';
 import { nameMapOf } from '../../src/lib/teams.ts';
 
-const P = (num, name) => ({ num, name, pos: '', detail: '', foot: '', vest: null, note: '',
+const P = (num, name) => ({ num, jersey: num, name, pos: '', detail: '', foot: '', vest: null, note: '',
   pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '' });
 const PLAYERS = [P(2, '김현서'), P(3, '김준영'), P(1, '강준영'), P(4, '이동훈')];
 const LINEUP = [

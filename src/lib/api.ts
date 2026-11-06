@@ -2,13 +2,14 @@
 // 공개 함수(fetchData·refresh·login·write·writeAvatar·fetchFull)의 모양은 그대로라 화면은 모른다.
 // 2026-09-24 티어 게임: 스텝퍼(writeStats)를 걷고 대결 한 판(vote)을 더했다.
 // 2026-09-24 본인인증: 관리자 PIN 을 없애고 로그인 세션(auth.ts)으로 — 로그인 중이면 모든 호출에 토큰을 싣는다.
+// 2026-11-06 등번호: 보이는 번호(jersey)를 고유 번호(num)와 나눴다 — pickJersey 로 각자 고르고 티어가 높으면 맞바꾼다.
 // 2026-09-25 매치: 팀짜기를 날짜로 저장(saveMatch)한다. 투표 기능은 2026-11-06 에 뺐다 — 서버가 아직 보내는 표 칸은 읽지 않는다.
 import { accessToken, adminOn, cachedMe, session, setCachedMe, type Me } from './auth.ts';
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
 import { STAT_KEYS, type Data, type Match, type MatchTeam, type Placing, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
 
 // v3: matches 가 생겼다(2026-09-25) — 옛 캐시엔 그 칸이 없어 화면이 깨지므로 키를 올려 한 번 버린다.
-const CACHE_KEY = 'wfc_cache_v3';
+const CACHE_KEY = 'wfc_cache_v3';   // jersey 가 없는 옛 캐시는 cached() 가 num 으로 채워 읽는다(키는 그대로)
 export const EMPTY: Data = { players: [], rotation: [], statLog: [], matches: [] };
 
 type Raw = Record<string, unknown>;
@@ -18,11 +19,13 @@ const bool = (v: unknown): boolean => v === true || String(v).toUpperCase() === 
 const list = (v: unknown): string[] => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const day = (v: unknown): string => String(v ?? '').slice(0, 10);
 const POS = ['GK', 'DF', 'MF', 'FW'] as const;
+/** 등번호 — 양의 정수만 받고, 없거나 깨졌으면 고유 번호와 같게(옛 캐시·옛 서버 응답도 그대로 읽힌다). */
+const jerseyOf = (v: unknown, fallback: number): number => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : fallback; };
 
 export function normalizePlayer(r: Raw): Player {
   const pos = String(r.pos ?? '').toUpperCase();
   const p: Player = {
-    num: num(r.num), name: String(r.name ?? '').trim(), pos: POS.find((x) => x === pos) ?? '',
+    num: num(r.num), jersey: jerseyOf(r.jersey, num(r.num)), name: String(r.name ?? '').trim(), pos: POS.find((x) => x === pos) ?? '',
     detail: String(r.detail ?? ''), foot: String(r.foot ?? ''), vest: numOrNull(r.vest), note: String(r.note ?? ''),
     pace: num(r.pace), dribble: num(r.dribble), pass: num(r.pass), shoot: num(r.shoot), defend: num(r.defend), stamina: num(r.stamina),
     rot: numOrNull(r.rot), avatar: String(r.avatar ?? ''),
@@ -74,7 +77,8 @@ export function normalizePlacing(v: unknown): Placing {
   return { need: num(r.need) || 3, count: Object.fromEntries(Object.entries(c).map(([k, n]) => [Number(k), num(n)])) };
 }
 
-export const serializePlayer = (p: Player): Raw => ({ ...p, vest: p.vest ?? '', rot: p.rot ?? '', avatar: p.avatar ?? '' });
+// jersey 는 새 선수를 넣을 때만 서버가 쓰고, 고칠 때는 무시한다(등번호는 pickJersey 로만 바뀐다).
+export const serializePlayer = (p: Player): Raw => ({ ...p, jersey: p.jersey, vest: p.vest ?? '', rot: p.rot ?? '', avatar: p.avatar ?? '' });
 export const serializeRotation = (r: RotationRow): Record<string, string | number> => ({ year: r.year, month: r.month, p1: r.p1, p2: r.p2, done: r.done ? 'TRUE' : 'FALSE' });
 
 /** 응답을 기다리는 한도. 넘기면 끊고 오류로 돌린다.
@@ -117,7 +121,15 @@ export async function rpc(fn: string, args: Record<string, unknown> = {}, base: 
   }
 }
 
-export function cached(): Data | null { try { const s = localStorage.getItem(CACHE_KEY); return s ? (JSON.parse(s) as Data) : null; } catch { return null; } }
+export function cached(): Data | null {
+  try {
+    const s = localStorage.getItem(CACHE_KEY); if (!s) return null;
+    const d = JSON.parse(s) as Data;
+    // 등번호가 생기기 전에 저장된 캐시 — 화면이 undefined 를 찍지 않게 고유 번호로 채운다.
+    if (Array.isArray(d.players)) d.players = d.players.map((p) => (Number.isInteger(p.jersey) && p.jersey > 0 ? p : { ...p, jersey: p.num }));
+    return d;
+  } catch { return null; }
+}
 function saveCache(d: Data): void { try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch {} }
 export async function fetchData(): Promise<Data> { return normalizeData(await rpc('get_all')); }
 
@@ -196,6 +208,15 @@ export async function submitPlacement(num: number, stats: Record<StatKey, number
   if (inflight) await inflight.catch(() => {});
   await Promise.all([refresh(), refreshMe()]);
   return { count: Number(r.count) || 0, need: Number(r.need) || 3, done: r.done === true };
+}
+/** 등번호 고르기(2026-11-06 "이미 차지한 번호면 티어가 높으면 뺏을 수 있게"). num 을 주면 관리자가 그 선수의 번호를 정한다.
+ *  주인 있는 번호는 서버가 티어를 보고 맞바꾸거나 거절한다 — 거절 문구(한국어)는 그대로 throw 되니 호출부가 보여 준다.
+ *  끝나면 모두가 보는 데이터를 다시 읽는다(다른 쓰기 경로와 같은 방식). */
+export async function pickJersey(jersey: number, num?: number): Promise<{ jersey: number; swapped: string | null }> {
+  const r = await rpc('pick_jersey', { p_jersey: jersey, p_num: num ?? null });
+  if (inflight) await inflight.catch(() => {});
+  await refresh();
+  return { jersey: Number(r.jersey) || jersey, swapped: typeof r.swapped === 'string' && r.swapped ? r.swapped : null };
 }
 export async function fetchFull(): Promise<Data> { return normalizeData(await rpc('get_all_full')); }
 /** 번호별 연락처 — 이름을 고른 팀원·관리자만 받는다(2026-11-03). 그 밖엔 빈 객체. */

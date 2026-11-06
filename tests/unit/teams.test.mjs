@@ -6,7 +6,7 @@ import {
   avgSpread, SPREAD_WARN,
 } from '../../src/lib/teams.ts';
 
-const P = (num, name, s) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '',
+const P = (num, name, s) => ({ num, jersey: num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '',
   pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '', phone: '' });
 // OVR 이 전부 다른 12명 — 뱀 드래프트가 제대로 도는지 보려면 동점이 없어야 한다.
 const ROSTER = Array.from({ length: 12 }, (_, i) => P(i + 1, `선수${i + 1}`, 90 - i * 3));

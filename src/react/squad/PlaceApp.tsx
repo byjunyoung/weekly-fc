@@ -134,7 +134,7 @@ function Place({ num }: { num: number }) {
   const fieldNo = run.searches.length;
   const side = (p: Player, tag: string, a: Answer) => (
     <button type="button" className="duel-pick" onClick={() => onAnswer(a)}>
-      <span className="duel-sprite" aria-hidden="true" dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 160, p.num, true) }} />
+      <span className="duel-sprite" aria-hidden="true" dangerouslySetInnerHTML={{ __html: avatarSvg(avatarSpecFor(p.num, p.avatar), 160, p.jersey, true) }} />
       <b className="duel-name">{p.name}</b>
       <span className="muted place-tag">{tag}</span>
     </button>

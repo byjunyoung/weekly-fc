@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { voteDelta, VOTE_SCALE, VOTE_K, tierQuota, TIERS, tierRows, pickPair, QUESTION, statValue } from '../../src/lib/tier.ts';
 import { STAT_KEYS } from '../../src/lib/types.ts';
 
-const P = (num, v, extra = {}) => ({ num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
+const P = (num, v, extra = {}) => ({ num, jersey: num, name: `P${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
   pace: v, dribble: v, pass: v, shoot: v, defend: v, stamina: v, rot: null, avatar: '', ...extra });
 
 test('voteDelta — 비슷하면 2, 예상대로 1, 이변이면 3~4 (서버에서 잰 값과 같다)', () => {

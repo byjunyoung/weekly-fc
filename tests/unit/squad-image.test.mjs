@@ -6,7 +6,7 @@ import { drawSquadImage, squadRows, SQUAD_FORMATS } from '../../src/components/s
 globalThis.document ??= { documentElement: {}, fonts: { load: async () => {}, ready: Promise.resolve() } };
 globalThis.getComputedStyle = () => ({ getPropertyValue: () => '' });
 
-const P = (num, name) => ({ num, name, pos: '', detail: '', foot: '', vest: null, note: '',
+const P = (num, name) => ({ num, jersey: num, name, pos: '', detail: '', foot: '', vest: null, note: '',
   pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '' });
 
 function fakeCanvas() {
@@ -52,4 +52,13 @@ test('drawSquadImage — 같은 입력이면 같은 그림(공유 직전 다시 
   const a = fakeCanvas(), b = fakeCanvas();
   drawSquadImage(a.canvas, TEAM, 'feed', 2026); drawSquadImage(b.canvas, TEAM, 'feed', 2026);
   assert.deepEqual(a.rects, b.rects);
+});
+
+test('drawSquadImage — 이름표 번호는 등번호(jersey)이고 줄도 그 순서', () => {
+  const f = fakeCanvas();
+  const team = [{ ...P(1, '가나'), jersey: 88 }, { ...P(2, '다라'), jersey: 5 }];
+  drawSquadImage(f.canvas, team, Object.keys(SQUAD_FORMATS)[0], 2026);
+  const nums = f.texts.filter((t) => t.t === '88' || t.t === '5');
+  assert.equal(nums.length, 2);
+  assert.ok(!f.texts.some((t) => t.t === '1' || t.t === '2'), '고유 번호는 찍히지 않는다');
 });

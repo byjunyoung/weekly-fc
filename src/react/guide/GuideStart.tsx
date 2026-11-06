@@ -2,11 +2,14 @@
 import { Button } from 'antd';
 import { href } from '../../lib/url';
 import ThemeRoot from '../ThemeRoot';
+import { useData } from '../useData';
 import { useMeInfo } from '../useMe';
 import { startView } from './model';
 
 function Start() {
-  const view = startView(useMeInfo());
+  const me = useMeInfo();
+  const { data } = useData();
+  const view = startView(me, data?.players.find((p) => p.num === me.num)?.jersey);
   if (view.kind === 'linked') {
     return <p className="guide-start">{view.text} <a className="chip" href={href(view.to)}>내 선수 페이지 →</a></p>;
   }

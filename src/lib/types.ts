@@ -1,6 +1,7 @@
 // src/lib/types.ts
 export type Pos = 'GK' | 'DF' | 'MF' | 'FW';
-export type Player = { num: number; name: string; pos: Pos | ''; detail: string; foot: string; vest: number | null; note: string;
+/** num = 선수의 고유 번호(주소·키·서버 호출). jersey = 사람에게 보이는 등번호(2026-11-06 "1-99 각자가 선택") — 둘은 다르다. */
+export type Player = { num: number; jersey: number; name: string; pos: Pos | ''; detail: string; foot: string; vest: number | null; note: string;
   pace: number; dribble: number; pass: number; shoot: number; defend: number; stamina: number; rot: number | null; avatar: string; phone?: string };
 export type RotationRow = { year: number; month: number; p1: string; p2: string; done: boolean };
 /** 능력치를 누가 언제 어떻게 고쳤는지. 고친 사람(by)은 홈에서 고른 번호라 자칭이다 —

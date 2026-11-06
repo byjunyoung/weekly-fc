@@ -6,10 +6,10 @@ import { serializePlayer, write } from '../../lib/api';
 import { FOOT_OPTIONS } from '../../lib/card';
 import type { Player } from '../../lib/types';
 import { href } from '../../lib/url';
-import { newPlayer, nextFreeNum, POS_OPTIONS } from './model';
+import { newPlayer, nextFreeJersey, POS_OPTIONS } from './model';
 import NumberPicker from './NumberPicker';
 
-type Values = { name: string; num: number; pos: Player['pos']; foot: string };
+type Values = { name: string; jersey: number; pos: Player['pos']; foot: string };
 
 export default function AddPlayerModal({ open, onClose, players }: { open: boolean; onClose: () => void; players: Player[] }) {
   const { message } = App.useApp();
@@ -19,11 +19,12 @@ export default function AddPlayerModal({ open, onClose, players }: { open: boole
   const save = async (then: 'place' | 'only') => {
     let v: Values;
     try { v = await form.validateFields(); } catch { return; }
-    if (players.some((p) => p.num === v.num)) { message.error(`${v.num}번은 이미 쓰는 번호입니다`); return; }
+    if (players.some((p) => p.jersey === v.jersey)) { message.error(`${v.jersey}번은 이미 쓰는 등번호입니다`); return; }
     setSaving(then);
     try {
-      await write('writePlayer', serializePlayer(newPlayer(players, v)));
-      location.href = href(then === 'place' ? `/squad/place/?num=${v.num}` : `/squad/${v.num}/`);
+      const np = newPlayer(players, v);
+      await write('writePlayer', serializePlayer(np));
+      location.href = href(then === 'place' ? `/squad/place/?num=${np.num}` : `/squad/${np.num}/`);
     } catch (e) {
       message.error((e as Error).message);
       setSaving(null);
@@ -38,11 +39,11 @@ export default function AddPlayerModal({ open, onClose, players }: { open: boole
         <Button key="place" type="primary" disabled={!!saving} loading={saving === 'place'} onClick={() => save('place')}>저장하고 능력치 배치</Button>,
       ]}>
       <Form<Values> form={form} layout="vertical" clearOnDestroy
-        initialValues={{ name: '', num: nextFreeNum(players), pos: '', foot: '오른발' }}>
+        initialValues={{ name: '', jersey: nextFreeJersey(players) ?? undefined, pos: '', foot: '오른발' }}>
         <Form.Item name="name" label="이름" rules={[{ required: true, whitespace: true, message: '이름을 넣으세요' }]}><Input autoFocus maxLength={20} /></Form.Item>
         <Form.Item name="pos" label="포지션"><Segmented className="chips" options={POS_OPTIONS} /></Form.Item>
         <Form.Item name="foot" label="주발"><Select options={FOOT_OPTIONS.map((x) => ({ value: x, label: x }))} /></Form.Item>
-        <Form.Item name="num" label="등번호" rules={[{ required: true, message: '번호를 고르세요' }]}><NumberPicker players={players} /></Form.Item>
+        <Form.Item name="jersey" label="등번호" rules={[{ required: true, message: '번호를 고르세요' }]}><NumberPicker players={players} /></Form.Item>
       </Form>
       <p className="muted">능력치는 다음 화면에서 기존 선수들과 한 명씩 비교해 정합니다.</p>
     </Modal>

@@ -161,7 +161,7 @@ export function pitchHtml(s: LineupState, players: Player[], selected: number | 
     // 72px 짜리 칸에 네 가지를 우겨넣느라 정작 아바타가 32px 로 쪼그라들어 있었다
     // (2026-09-22 사용자: "카드 말고 그냥 아바타 차라리 크게 쓰자"). 뺀 정보는 오른쪽 명단과
     // title/aria-label 에 그대로 있고, 자리에 안 맞는 선수는 테두리(is-oop)가 계속 알려 준다.
-    const sprite = avatarSvg(avatarSpecFor(p.num, p.avatar), SPRITE_H, p.num, true);
+    const sprite = avatarSvg(avatarSpecFor(p.num, p.avatar), SPRITE_H, p.jersey, true);
     const who = `${label} · ${esc(p.name)} (${esc(p.pos || '–')})`;
     return `<button type="button" class="bd-slot bd-card${sel}${oop}" style="${at}" data-slot="${i}" title="${who}" aria-label="${who}">`
       + `<span class="bd-sprite" aria-hidden="true">${sprite}</span>`

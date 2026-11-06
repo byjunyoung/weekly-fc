@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ovr, grade, band, STAT_CUTS } from '../../src/lib/stats.ts';
 
-const P = (num, name, s = 70) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null });
+const P = (num, name, s = 70) => ({ num, jersey: num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '', pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null });
 
 test('ovr는 0을 빼고 평균, 반올림', () => {
   assert.equal(ovr(P(1, 'a', 80)), 80);

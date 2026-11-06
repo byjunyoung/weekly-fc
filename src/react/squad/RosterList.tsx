@@ -73,8 +73,9 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
 
   const columns: TableColumnsType<Player> = [
     { title: '', key: 'avatar', align: 'center', width: 44,
-      render: (_, p) => <span dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 32, p.num) }} /> },
-    { title: '#', dataIndex: 'num', key: 'num', align: 'right', sorter: (a, b) => a.num - b.num },
+      render: (_, p) => <span dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(p.num, p.avatar), 32, p.jersey) }} /> },
+    // # 은 등번호(jersey) — 사람이 읽는 번호라 정렬도 그 값으로(2026-11-06). 고유 번호(num)는 rowKey·주소에만.
+    { title: '#', dataIndex: 'jersey', key: 'jersey', align: 'right', sorter: (a, b) => a.jersey - b.jersey },
     { title: '이름', dataIndex: 'name', key: 'name', sorter: (a, b) => a.name.localeCompare(b.name, 'ko'),
       render: (_, p) => <a href={href(`/squad/${p.num}/`)}><b>{p.name}</b></a> },
     // 칭호(2026-09-29) — 능력치 모양으로(lib/titles.ts). 정렬은 가나다순.
@@ -97,7 +98,7 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
       <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'fcard-wall' : ''}
         onClick={view === 'list' ? onBodyClick : undefined} onKeyDown={view === 'list' ? onBodyKeyDown : undefined}>
         {view === 'table' ? (
-          <Table<Player> size="small" rowKey="num" pagination={false} columns={columns} dataSource={rows}
+          <Table<Player> size="small" rowKey="num" pagination={false} columns={columns} dataSource={[...rows].sort((a, b) => a.jersey - b.jersey || a.num - b.num)}
             locale={{ emptyText: '명단이 비어 있습니다' }} />
         ) : view === 'card' ? (
           // 2026-09-22 에 "카드 자체를 없애자, 아바타 뷰로" 했다가 2026-09-25 피파식 카드로 돌아왔다

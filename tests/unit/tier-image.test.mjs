@@ -6,7 +6,7 @@ import { IMG_W, IMG_H } from '../../src/components/share-image.ts';
 import { tierRows } from '../../src/lib/tier.ts';
 import { ovr } from '../../src/lib/stats.ts';
 
-const P = (num, s, extra = {}) => ({ num, name: `선수${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
+const P = (num, s, extra = {}) => ({ num, jersey: num, name: `선수${num}`, pos: '', detail: '', foot: '', vest: null, note: '',
   pace: s, dribble: s, pass: s, shoot: s, defend: s, stamina: s, rot: null, avatar: '', ...extra });
 
 /** 호출을 받아 적는 가짜 2d 컨텍스트. 실제 렌더 없이 "무엇을 어디에 그렸나"만 본다. */
