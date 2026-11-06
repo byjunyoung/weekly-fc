@@ -4,7 +4,6 @@
 // 다른 크기는 첫 열기에서 대체 글꼴로 굳는다.
 import { avatarSpecFor } from '../lib/avatar.ts';
 import { cardModel, type CardModel } from '../lib/card.ts';
-import { shortDate } from '../lib/matches.ts';
 import type { Tier } from '../lib/tier.ts';
 import type { Player, StatKey } from '../lib/types.ts';
 import { avatarPixels } from './avatar.ts';
@@ -15,17 +14,16 @@ import { TIER_COLOR } from './tier-image.ts';
 export const CARD_W = 720;
 export const CARD_H = 900;   // 여섯 칸 아래 빈 자리가 남지 않는 높이(실측)
 const CARD_X = (IMG_W - CARD_W) / 2;   // 180
-const CARD_Y = 240;                    // 위 제목 두 줄(120·165) + POTM 띠(184~240) 자리
+const CARD_Y = 240;                    // 위 제목 두 줄(120·165) + 예전 금색 띠(184~240, 2026-11-06 뺌) 자리 — 다른 카드 이미지가 안 변하게 값은 그대로
 const FRAME = 8;
 const PAD = 32;
 const AVATAR_CELL = 14;                // 24×32 → 336×448
 const POS_COLOR: Record<string, string> = { GK: '#ffce21', DF: '#2f6fed', MF: '#1e9e6a', FW: '#e34d4d' };
-export const POTM_GOLD = '#ffce21';
+const GOLD = '#ffce21';
 
 export type CardImageOpts = {
   title?: string;                       // 위 큰 글씨(기본 'WEEKLY FC')
   sub?: string;                         // 그 아래 작은 글씨
-  potmDate?: string | null;             // 있으면 카드 위에 금색 띠 "★ POTM 9/27"
   caption?: string;                     // 카드 아래 한 줄
   badge?: string;                       // 칭호(이름 줄 아래 뱃지, 2026-09-29) — 없으면 그 줄은 비워 둔다
   bests?: StatKey[];                    // 팀 1위 항목 — 라벨 금색
@@ -88,8 +86,8 @@ export function drawCardImage(c: HTMLCanvasElement, player: Player, tier: Tier |
   ctx.fillStyle = fg; ctx.font = pixelFont(60); ctx.fillText(nm, nx, nameY + 72); nx += nw + 12;
   ctx.fillStyle = muted; ctx.font = pixelFont(30); ctx.fillText(numT, nx, nameY + 72); nx += numW + 20;
   if (bt) {
-    ctx.strokeStyle = POTM_GOLD; ctx.lineWidth = 4; ctx.strokeRect(nx, nameY + 26, bw, 44);
-    ctx.fillStyle = POTM_GOLD; ctx.fillText(bt, nx + 12, nameY + 60);
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 4; ctx.strokeRect(nx, nameY + 26, bw, 44);
+    ctx.fillStyle = GOLD; ctx.fillText(bt, nx + 12, nameY + 60);
   }
   ctx.fillStyle = frame; ctx.fillRect(CARD_X + FRAME, nameY + 96, CARD_W - FRAME * 2, 4);
 
@@ -102,17 +100,9 @@ export function drawCardImage(c: HTMLCanvasElement, player: Player, tier: Tier |
     const best = (opts.bests ?? []).includes(s.key);
     ctx.fillStyle = tok(`--val-${s.band}`, '#f4f4f4'); ctx.font = pixelFont(60); ctx.textAlign = 'left';
     ctx.fillText(s.value ? String(s.value) : '–', cx, cy + 8);
-    ctx.fillStyle = best ? POTM_GOLD : muted; ctx.font = pixelFont(30);
+    ctx.fillStyle = best ? GOLD : muted; ctx.font = pixelFont(30);
     ctx.fillText(s.label, cx + 96, cy);   // 팀 1위는 금색만(★ 없음 — 모든 카드 같게, 2026-09-29)
   });
-
-  // POTM 띠 — 카드 위 가장자리에 수평으로(도트 글자는 기울이면 뭉개진다)
-  if (opts.potmDate) {
-    const bandH = 56;   // 제목·부제(165 까지) 아래, 카드 위 가장자리에 붙여서
-    ctx.fillStyle = POTM_GOLD; ctx.fillRect(CARD_X, CARD_Y - bandH, CARD_W, bandH + FRAME);
-    ctx.fillStyle = '#111111'; ctx.font = pixelFont(30); ctx.textAlign = 'center';
-    ctx.fillText(`★ POTM ${shortDate(opts.potmDate)}`, CARD_X + CARD_W / 2, CARD_Y - bandH + 40);
-  }
 
   if (opts.caption) {
     ctx.fillStyle = muted; ctx.font = pixelFont(30); ctx.textAlign = 'center';

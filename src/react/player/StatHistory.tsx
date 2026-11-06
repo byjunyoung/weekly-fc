@@ -10,30 +10,13 @@ import { STAT_KO } from '../../lib/stats';
 import { STAT_KEYS, type Player, type StatLogRow } from '../../lib/types';
 import { href } from '../../lib/url';
 import { useAdmin } from '../useAdmin';
+import { why } from './model';
 
 const KEYS: Array<{ value: HistKey; label: string }> = [{ value: 'ovr', label: '종합' }, ...STAT_KEYS.map((k) => ({ value: k as HistKey, label: STAT_KO[k] }))];
 const H = 180, PAD = { l: 34, r: 12, t: 12, b: 24 };
 
 const mmdd = (ts: string): string => { const t = Date.parse(ts); if (Number.isNaN(t)) return ''; const d = new Date(t + 9 * 3600e3); return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`; };
 const hhmm = (ts: string): string => { const t = Date.parse(ts); if (Number.isNaN(t)) return ''; const d = new Date(t + 9 * 3600e3); return `${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
-/** 이 줄이 왜 생겼나 — 대결 상대·배치·POTM 보상. 판정자 이름은 관리자에게만(2026-09-29 "팀원에겐 익명") —
- *  서버가 관리자가 아니면 이름을 비워 보내고, 관리자도 관리자 모드를 켰을 때만 보여 준다. */
-function why(r: StatLogRow, showJudge: boolean): string {
-  if (r.via === 'potm') return 'POTM 보상';
-  if (!showJudge || !r.byName) {
-    if (r.via === 'game') return r.oppName ? `vs ${r.oppName}` : '대결';
-    if (r.via === 'place') return '배치';
-    return '직접 고침';
-  }
-  if (r.via === 'place') return `${r.byName || '관리자'} · 배치`;
-  if (r.via === 'game') {
-    const who = r.byName || '누군가';
-    if (!r.oppName) return `${who}의 판정`;
-    // 판정자가 자기 대결을 판정한 경우(본인 대결도 된다) — "방오준의 판정 · vs 방오준" 대신
-    return r.by != null && r.by === r.opp ? `vs ${r.oppName} · 본인 판정` : `vs ${r.oppName} · ${who}의 판정`;
-  }
-  return `${r.byName || '누군지 모름'} · 직접 고침`;
-}
 const signed = (n: number): string => (n > 0 ? `▲${n}` : n < 0 ? `▼${-n}` : '±0');
 
 function Chart({ pts, label, showJudge }: { pts: Point[]; label: string; showJudge: boolean }) {

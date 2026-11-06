@@ -1,11 +1,10 @@
-// src/lib/matches.ts — 매치 기록과 POTM. 순수 로직만(DOM·저장소·서버 없음), 단위 테스트 대상.
-// 설계: docs/superpowers/specs/2026-09-25-matches-potm-design.md
+// src/lib/matches.ts — 매치 기록. 순수 로직만(DOM·저장소·서버 없음), 단위 테스트 대상.
+// 설계: docs/superpowers/specs/ 의 2026-09-25 매치 설계 문서(투표 기능은 2026-11-06 에 뺐다).
 //
 // 매치 하나 = 하루. 팀짜기(teams.ts)의 상태를 **이름까지 박은 스냅샷**으로 굳혀 저장한다 —
-// 명단에서 빠진 사람도 지난 매치엔 그대로 보여야 하니까. POTM 은 그날 뛴 회원이 한 표씩,
-// 매치 날짜부터 7일 동안. 자격은 서버가 다시 보지만 화면이 미리 이유를 알려 주려고 여기서도 센다.
+// 명단에서 빠진 사람도 지난 매치엔 그대로 보여야 하니까.
 import { MIN_TEAMS, VESTS, guestKey, membersOf, playerKey, teamViews, unassigned, type TeamsState } from './teams.ts';
-import type { Data, Match, MatchMember, MatchTeam, Player, VestKey } from './types.ts';
+import type { Match, MatchMember, MatchTeam, Player, VestKey } from './types.ts';
 
 /** 투표 창 — 매치 당일만(2026-09-26). 7일 → 경기 전 차단 → 당일만 순으로 좁아졌다. */
 export const VOTE_DAYS = 0;
@@ -62,14 +61,6 @@ export const vestOf = (key: VestKey): (typeof VESTS)[number] => VESTS.find((v) =
 /** 그날 뛴 명단 선수(용병 제외) — 팀 순서대로. 투표 후보이자 투표 자격의 기준. */
 export const attendees = (m: Match): MatchMember[] => m.lineup.flatMap((t) => t.members).filter((x) => x.num != null);
 
-/** 표가 가장 많은 사람. 동점이면 전부(공동 POTM). 표가 없으면 빈 배열. */
-export function potmOf(m: Match): { nums: number[]; votes: number } {
-  const entries = Object.entries(m.tally).map(([k, v]) => [Number(k), v] as const).filter(([, v]) => v > 0);
-  if (!entries.length) return { nums: [], votes: 0 };
-  const top = Math.max(...entries.map(([, v]) => v));
-  return { nums: entries.filter(([, v]) => v === top).map(([n]) => n).sort((a, b) => a - b), votes: top };
-}
-
 export const deadline = (m: Match): string => addDays(m.date, VOTE_DAYS);   // = 매치 날짜
 /** 투표 창 — 매치 **당일만**. today 는 'YYYY-MM-DD'(서울). */
 export const voteOpen = (m: Match, today: string): boolean => today === m.date;
@@ -96,11 +87,6 @@ export function matchLabel(ymd: string, todayYear?: number): string {
   return `${head}${m}월 ${d}일 (${dow})`;
 }
 
-/** 투표 응답의 집계를 데이터에 얹는다 — 서버가 낸 모양과 같아 다시 읽지 않아도 된다. 원본은 건드리지 않는다. */
-export function applyPotm(d: Data, id: number, tally: Record<number, number>, voters: number): Data {
-  return { ...d, matches: (d.matches ?? []).map((m) => (m.id === id ? { ...m, tally, voters } : m)) };
-}
-
 /** 영상 링크로 쓸 수 있는 문자열인가 — 비면 false, http(s) 로 시작해야 true(서버도 같은 규칙). */
 export const isVideoUrl = (v: string): boolean => /^https?:\/\/\S+$/i.test((v ?? '').trim());
 
@@ -108,18 +94,6 @@ export const isVideoUrl = (v: string): boolean => /^https?:\/\/\S+$/i.test((v ??
 export function shortDate(ymd: string): string {
   const [, m, d] = ymd.split('-').map(Number);
   return m && d ? `${m}/${d}` : ymd;
-}
-
-export type CurrentPotm = { date: string; matchId: number; nums: number[]; votes: number };
-/** 지금 카드에 붙는 POTM — **표가 하나라도 있는 가장 최근 매치**의 1위(공동 포함). 사용자 결정(2026-09-25):
- *  "첫 표부터 바로". 다음 매치에 첫 표가 들어오면 그쪽으로 넘어간다. 캐시 순서를 믿지 않고 여기서 다시 정렬한다. */
-export function currentPotm(matches: Match[]): CurrentPotm | null {
-  const withVotes = (matches ?? []).filter((m) => Object.values(m.tally).some((v) => v > 0))
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
-  const m = withVotes[0];
-  if (!m) return null;
-  const p = potmOf(m);
-  return { date: m.date, matchId: m.id, nums: p.nums, votes: p.votes };
 }
 
 /** 저장된 매치를 팀짜기 상태로 되돌린다(2026-09-25 "수정도 가능하게"). 팀은 조끼 순서대로 0·1·2·3 번 칸.
@@ -144,9 +118,4 @@ export function fromMatch(m: Match, players: Player[], guestId: (i: number) => s
     }
   });
   return st;
-}
-
-/** 카톡에 붙일 투표 안내 글 — 담백하게, 링크는 빈 줄 뒤 한 줄로(2026-09-26 "오글거린다·줄바꿈"). */
-export function potmShareText(m: Match, url: string, todayYear?: number): string {
-  return `${matchLabel(m.date, todayYear)} 매치 POTM 투표\n\n${url}`;
 }

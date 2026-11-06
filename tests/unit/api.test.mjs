@@ -158,3 +158,10 @@ test('normalizePlacing — 번호 키를 숫자로, 없으면 기준 3명·진�
   assert.deepEqual(normalizePlacing(undefined), { need: 3, count: {} });
   assert.deepEqual(normalizeData({}).placing, { need: 3, count: {} });
 });
+
+test('normalizeData: 매치의 tally·voters 같은 옛 칸이 와도 무시한다(POTM 은 2026-11-06 뺌)', () => {
+  const d = normalizeData({ players: [], matches: [{ id: 1, date: '2026-10-31', tally: { 7: 2 }, voters: 3 }] });
+  assert.equal(d.matches.length, 1);
+  assert.equal('tally' in d.matches[0], false);
+  assert.equal('voters' in d.matches[0], false);
+});

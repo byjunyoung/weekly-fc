@@ -6,7 +6,6 @@ import { jerseySvg } from '../../components/jersey';
 import { avatarSpecFor } from '../../lib/avatar';
 import type { Player } from '../../lib/types';
 import { tierByNum } from '../../lib/card';
-import { currentPotm } from '../../lib/matches';
 import PlayerCard from '../PlayerCard';
 import { getMe } from '../../lib/me';
 import { fetchStatHistory, fetchTodayStats, type TodayStats } from '../../lib/api';
@@ -172,7 +171,6 @@ function App() {
   const meNum = s.meTile.kind === 'picked' ? s.meTile.num : null;
   const mePlayer = meNum != null ? data.players.find((p) => p.num === meNum) : undefined;
   const tiers = tierByNum(data.players);
-  const potm = currentPotm(data.matches);
   const side = neighbors(data.players, meNum);
   // 내 티어 — 종합 순위(티어표와 같은 줄 세우기), 이번 주 종합 변화.
   const ranked = tierRows(data.players, 'ovr').flatMap((r) => r.players);
@@ -188,7 +186,6 @@ function App() {
           <p className="today-stats" aria-label="오늘 활동">
             <span>오늘 <b>{today.visitors}</b>명 방문</span>
             <span>대결 <b>{today.duels}</b>판</span>
-            {today.potm > 0 && <span>POTM 표 <b>{today.potm}</b></span>}
           </p>
         )}</div>
       </div>
@@ -201,7 +198,7 @@ function App() {
               <span className="tile-label">내 선수</span>
               <LockerScene side={side}>
                 <MyLocker player={mePlayer}
-                  card={<PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="sm" className="locker-card" team={data.players} potmDate={potm && potm.nums.includes(mePlayer.num) ? potm.date : null} />} />
+                  card={<PlayerCard player={mePlayer} tier={tiers.get(mePlayer.num)} size="sm" className="locker-card" team={data.players} />} />
               </LockerScene>
               <span className="tile-sub lk-foot"><span>유니폼을 누르면 카드</span><a className="tile-go" href={href(`/squad/${s.meTile.num}/`)}>내 선수 보기 · 꾸미기 ›</a></span>
             </Card>

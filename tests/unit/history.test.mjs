@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { series, byDay, change, seoulDay } from '../../src/lib/history.ts';
+import { why } from '../../src/react/player/model.ts';
 
 const P = { num: 2, name: '나', pos: 'DF', detail: '', foot: '', vest: null, note: '', rot: null, avatar: '',
   pace: 80, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70 };
@@ -49,4 +50,9 @@ test('normalizeStatLog — 대결 상대는 있을 때만 붙는다(2026-09-29)'
   assert.equal(a.opp, 5); assert.equal(a.oppName, '이동훈');
   const b = normalizeStatLog({ ts: 't', by: 4, by_name: 'P4', num: 2, field: 'pace', before: 70, after: 72, via: 'game' });
   assert.equal('opp' in b, false);
+});
+
+test("why: via 'potm' 줄은 계속 「POTM 보상」(기능은 2026-11-06 뺐지만 옛 기록은 남는다)", () => {
+  assert.equal(why(R('2026-09-28T00:05:00Z', 'pace', 70, 71, null, 'potm', ''), false), 'POTM 보상');
+  assert.equal(why(R('2026-09-28T00:05:00Z', 'pace', 70, 71, null, 'potm', ''), true), 'POTM 보상');
 });

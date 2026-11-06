@@ -1,4 +1,4 @@
-// src/react/CardShareModal.tsx — 선수 카드 이미지(내 카드·POTM 카드). 공통 틀(ImageShareModal)에 "무엇을 그리나"만 넘긴다.
+// src/react/CardShareModal.tsx — 선수 카드 이미지(내 카드). 공통 틀(ImageShareModal)에 "무엇을 그리나"만 넘긴다.
 import { type CardImageOpts, drawCardImage } from '../components/card-image';
 import { seoulToday } from '../lib/html';
 import type { Tier } from '../lib/tier';

@@ -12,7 +12,6 @@ import { band, ovr, STAT_CUTS, STAT_KO } from '../../lib/stats';
 import { rivalPairs } from '../../lib/tier';
 import { titleCatalog, titleDetail, titleOf } from '../../lib/titles';
 import { FOOT_OPTIONS, tierByNum } from '../../lib/card';
-import { currentPotm, matchLabel } from '../../lib/matches';
 import CardShareModal from '../CardShareModal';
 import PlayerCard from '../PlayerCard';
 import { avatarSpecFor, serializeAvatar } from '../../lib/avatar';
@@ -149,8 +148,6 @@ function Detail({ num }: { num: number }) {
   // OVR 카운트업 — [data-ovr] 를 훅으로 붙잡아 0→실제값으로 센다.
   const cardRef = useRef<HTMLDivElement>(null);
   const [shareOpen, setShareOpen] = useState(false);   // 카드 이미지 저장(2026-09-25)
-  const potm = currentPotm(data?.matches ?? []);
-  const myPotmDate = player && potm && potm.nums.includes(player.num) ? potm.date : null;
   useEffect(() => {
     if (!player || !cardRef.current) return;
     const ovrEl = cardRef.current.querySelector<HTMLElement>('[data-ovr]');
@@ -334,7 +331,7 @@ function Detail({ num }: { num: number }) {
             <div className="phero" ref={cardRef}>
               {/* 피파식 카드(2026-09-25). 아바타 자리가 꾸미기 버튼 — 꾸미는 중엔 고르는 스펙을 그 자리에 미리 보여 준다. */}
               <PlayerCard player={avatarOpen && avatarSpec ? { ...player, avatar: serializeAvatar(avatarSpec) } : player}
-                tier={tierByNum(data?.players ?? []).get(player.num)} size="lg" potmDate={myPotmDate} team={data?.players}
+                tier={tierByNum(data?.players ?? []).get(player.num)} size="lg" team={data?.players}
                 avatar={(svg) => (
                   <button type="button" id="avatar-edit-btn" className="avatar-btn" title={canDress ? '아바타 편집' : undefined}
                     disabled={!canDress} onClick={() => openAvatar(player)} dangerouslySetInnerHTML={{ __html: svg }} />
@@ -376,7 +373,7 @@ function Detail({ num }: { num: number }) {
       <CardShareModal open={shareOpen} onClose={() => setShareOpen(false)} player={player ?? null}
         tier={player ? tierByNum(data?.players ?? []).get(player.num) : null}
         title={player ? `${player.name} 카드` : '카드'} fileTag={`card-${num}`}
-        opts={{ sub: myPotmDate ? `${matchLabel(myPotmDate)} 매치 POTM` : undefined, potmDate: myPotmDate }} team={data?.players ?? []} />
+        team={data?.players ?? []} />
     </>
   );
 }

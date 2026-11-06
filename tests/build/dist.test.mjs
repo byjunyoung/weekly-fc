@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 // 태스크가 페이지를 추가할 때마다 여기에 줄을 더한다.
 export const PAGES = [
@@ -24,7 +25,7 @@ export const PAGES = [
 ];
 export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
-const REDIRECTS = ['teams/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'about/index.html'];   // tactics 는 2026-09-26 부터 진짜 페이지
+const REDIRECTS = ['matches/potm/index.html', 'teams/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'about/index.html'];   // tactics 는 2026-09-26 부터 진짜 페이지
 export const SHELL_PAGES = PAGES.filter((p) => !REDIRECTS.includes(p));
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
 
@@ -210,11 +211,21 @@ test('링크 미리보기 — 셸 페이지마다 og:image 가 절대 주소로 
     assert.ok(html.includes('property="og:title"') && html.includes('name="twitter:card"'), `${p}: og:title/twitter:card`);
   }
   assert.ok(read('tactics/index.html').includes('/weekly-fc/og-tactics.png'), '전술은 자기 그림');
-  assert.ok(read('matches/potm/index.html').includes('/weekly-fc/og-potm.png'), 'POTM 투표는 자기 그림');
   assert.ok(read('teams/index.html').includes('property="og:image"'), '넘김 페이지도 미리보기');
 });
 
-const grepSrc = (re) => execSync(`grep -rilE "${re}" src || true`, { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+// cwd 를 저장소 루트로 못 박는다 — 다른 디렉터리에서 돌려도 src 를 못 찾아 조용히 통과하는 일이 없게.
+const ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const grepSrc = (re) => execSync(`grep -rilE "${re}" src || true`, { encoding: 'utf8', cwd: ROOT }).trim().split('\n').filter(Boolean);
 test('방명록은 화면·코드에서 뺐다(2026-11-06) — src 어디에도 남지 않는다', () => {
   assert.deepEqual(grepSrc('guestbook|방명록'), []);
+});
+
+test('POTM 은 뺐다(2026-11-06) — 옛 투표 주소는 매치 목록으로 넘긴다, 코드엔 기록 표기 하나만 남는다', () => {
+  const html = read('matches/potm/index.html');
+  assert.ok(html.includes('/weekly-fc/matches/'), '넘김 목적지');
+  assert.ok(!html.includes('og-potm.png'));
+  assert.ok(!existsSync('dist/og-potm.png'));
+  // 남는 건 둘: 능력치 기록의 「POTM 보상」 줄(why, model.ts)과 StatLogRow.via 의 'potm'(types.ts).
+  assert.deepEqual(grepSrc('potm').sort(), ['src/lib/types.ts', 'src/react/player/model.ts']);
 });

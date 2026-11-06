@@ -2,10 +2,9 @@
 // 공개 함수(fetchData·refresh·login·write·writeAvatar·fetchFull)의 모양은 그대로라 화면은 모른다.
 // 2026-09-24 티어 게임: 스텝퍼(writeStats)를 걷고 대결 한 판(vote)을 더했다.
 // 2026-09-24 본인인증: 관리자 PIN 을 없애고 로그인 세션(auth.ts)으로 — 로그인 중이면 모든 호출에 토큰을 싣는다.
-// 2026-09-25 매치: 팀짜기를 날짜로 저장(saveMatch)하고 POTM 표(votePotm)를 응답으로 캐시에 얹는다.
+// 2026-09-25 매치: 팀짜기를 날짜로 저장(saveMatch)한다. 투표 기능은 2026-11-06 에 뺐다 — 서버가 아직 보내는 표 칸은 읽지 않는다.
 import { accessToken, adminOn, cachedMe, session, setCachedMe, type Me } from './auth.ts';
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
-import { applyPotm } from './matches.ts';
 import { STAT_KEYS, type Data, type Fine, type Match, type MatchTeam, type Placing, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
 
 // v3: matches 가 생겼다(2026-09-25) — 옛 캐시엔 그 칸이 없어 화면이 깨지므로 키를 올려 한 번 버린다.
@@ -50,7 +49,7 @@ export function normalizeStatLog(r: Raw): StatLogRow | null {
 }
 
 const VEST_KEYS: VestKey[] = ['none', 'orange', 'neon', 'black'];
-/** 매치 한 줄. 모양이 깨진 팀·사람은 버리고, 표 집계는 숫자 키로 옮긴다. id 가 없으면 null. */
+/** 매치 한 줄. 모양이 깨진 팀·사람은 버린다. id 가 없으면 null. */
 export function normalizeMatch(r: Raw): Match | null {
   const id = num(r.id);
   if (id <= 0) return null;
@@ -61,9 +60,7 @@ export function normalizeMatch(r: Raw): Match | null {
     const members = arr(t.members).map((m) => ({ num: numOrNull(m.num), name: String(m.name ?? '').trim() })).filter((m) => m.name);
     return members.length ? [{ vest, members }] : [];
   });
-  const tally: Record<number, number> = {};
-  for (const [k, v] of Object.entries((r.tally as Raw) ?? {})) { const n = num(k); if (n > 0 && num(v) > 0) tally[n] = num(v); }
-  return { id, date: day(r.date), lineup, tally, voters: num(r.voters), video: String(r.video ?? '').trim(),
+  return { id, date: day(r.date), lineup, video: String(r.video ?? '').trim(),
     opponent: String(r.opponent ?? '').trim(), scoreUs: numOrNull(r.score_us), scoreThem: numOrNull(r.score_them) };
 }
 
@@ -264,7 +261,7 @@ export async function writeAvatar(num: number, avatar: string): Promise<Raw> {
   return r;
 }
 
-// ── 매치 · POTM (2026-09-25) ──────────────────────────────────
+// ── 매치 (2026-09-25) ──────────────────────────────────
 /** 팀짜기 결과를 그날 매치로 저장(관리자). 같은 날짜면 서버가 덮어쓴다. 끝나면 다시 읽는다. */
 export async function saveMatch(date: string, lineup: MatchTeam[], video: string | null = null, opponent: string | null = null): Promise<number> {
   if (!isAdmin()) throw new Error('관리자 모드에서만 할 수 있습니다');
@@ -287,21 +284,6 @@ export async function deleteMatch(id: number): Promise<void> {
   if (inflight) await inflight.catch(() => {});
   await refresh();
 }
-/** POTM 한 표. 자격(그날 뛴 회원·본인 제외·7일)은 서버가 본다. 응답의 집계로 캐시와 내 표를 고쳐 다시 읽지 않는다. */
-export async function votePotm(id: number, target: number): Promise<Record<number, number>> {
-  const r = await rpc('vote_potm', { p_match: id, p_num: target });
-  const m = normalizeMatch({ id, tally: r.tally, voters: r.voters });
-  const tally = m?.tally ?? {};
-  const me = cachedMe();
-  setCachedMe({ ...me, potm: { ...(me.potm ?? {}), [String(id)]: target } });
-  const base = cached();
-  if (base) {
-    const d = applyPotm(base, id, tally, m?.voters ?? 0);
-    saveCache(d);
-    window.dispatchEvent(new CustomEvent<Data>('wfc:data', { detail: d }));
-  }
-  return tally;
-}
 
 // ── 능력치 기록 전체 · 오늘 활동 (2026-09-28) ─────────────────
 /** 한 선수의 능력치 기록 전부(오래된 것부터). get_all 은 선수마다 8줄만 싣는다 — 선수 페이지에서 따로 읽는다. */
@@ -309,10 +291,10 @@ export async function fetchStatHistory(playerNum: number): Promise<StatLogRow[]>
   const r = await rpc('stat_history', { p_num: playerNum });
   return (Array.isArray(r) ? (r as Raw[]) : []).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null);
 }
-export type TodayStats = { visitors: number; members: number; duels: number; potm: number };
+export type TodayStats = { visitors: number; members: number; duels: number };
 export async function fetchTodayStats(): Promise<TodayStats> {
   const r = await rpc('today_stats');
-  return { visitors: num(r.visitors), members: num(r.members), duels: num(r.duels), potm: num(r.potm) };
+  return { visitors: num(r.visitors), members: num(r.members), duels: num(r.duels) };
 }
 /** 페이지를 볼 때마다 한 번 — 서버는 기기·하루 한 줄에 페이지뷰를 더한다(관리자 통계, 2026-09-28).
  *  기기 id 는 이 브라우저가 만든 난수라 누구인지 알 수 없다. 로그인 중이면 서버가 선수 번호를 같이 남긴다.
@@ -328,7 +310,7 @@ export function hit(): void {
 // ── 관리자 통계 (2026-09-28) ─────────────────────────────────
 export type StatDay = { day: string; devices: number; members: number; views: number; duels: number };
 export type StatPerson = { num: number; name: string; claimedAt: string | null; lastVisit: string | null; visitDays: number; views: number;
-  duels: number; lastDuel: string | null; potmVotes: number };
+  duels: number; lastDuel: string | null };
 /** 기간 요약(서버 계산) — 방문 기기(서로 다른)·접속 팀원·페이지뷰·대결·활동 팀원(방문 또는 대결). */
 export type StatSummary = { devices: number; members: number; views: number; duels: number; active: number };
 export type AdminStats = { today: string; from: string; summary: StatSummary; days: StatDay[]; people: StatPerson[] };
@@ -343,8 +325,7 @@ export async function fetchAdminStats(days: number | null = 7): Promise<AdminSta
     summary: { devices: num(sm.devices), members: num(sm.members), views: num(sm.views), duels: num(sm.duels), active: num(sm.active) },
     days: arr(r.days).map((d) => ({ day: String(d.day ?? ''), devices: num(d.devices), members: num(d.members), views: num(d.views), duels: num(d.duels) })),
     people: arr(r.people).map((p) => ({ num: num(p.num), name: String(p.name ?? ''), claimedAt: str(p.claimed_at), lastVisit: str(p.last_visit),
-      visitDays: num(p.visit_days), views: num(p.views), duels: num(p.duels), lastDuel: str(p.last_duel),
-      potmVotes: num(p.potm_votes) })),
+      visitDays: num(p.visit_days), views: num(p.views), duels: num(p.duels), lastDuel: str(p.last_duel) })),
   };
 }
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { activityOf, ago, kpis, lastActive } from '../../src/lib/adminStats.ts';
 
 const NOW = Date.parse('2026-09-28T12:00:00Z');
-const P = (over = {}) => ({ num: 2, name: 'A', claimedAt: null, lastVisit: null, visitDays: 0, views: 0, duels: 0, lastDuel: null, potmVotes: 0, ...over });
+const P = (over = {}) => ({ num: 2, name: 'A', claimedAt: null, lastVisit: null, visitDays: 0, views: 0, duels: 0, lastDuel: null, ...over });
 
 test('lastActive — 방문·대결 중 늦은 쪽', () => {
   assert.equal(lastActive(P({ lastVisit: '2026-09-27T00:00:00Z', lastDuel: '2026-09-28T01:00:00Z' })), '2026-09-28T01:00:00.000Z');

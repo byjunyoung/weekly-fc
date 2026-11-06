@@ -1,7 +1,7 @@
 // 선수 카드 공유 이미지(2026-09-25) — 가짜 컨텍스트로 실제로 그려 보고 검사한다(tier-image.test 와 같은 방식).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CARD_H, CARD_W, drawCardImage, POTM_GOLD } from '../../src/components/card-image.ts';
+import { CARD_H, CARD_W, drawCardImage } from '../../src/components/card-image.ts';
 import { IMG_W, IMG_H } from '../../src/components/share-image.ts';
 
 const P = (num, s, extra = {}) => ({ num, name: `선수${num}`, pos: 'DF', detail: '', foot: '오른발', vest: null, note: '',
@@ -43,7 +43,6 @@ test('카드 이미지 — 1080×1350, 티어 색 테두리, OVR 60px, 여섯 �
   assert.equal(f.texts.filter((t) => t.t === '80').length, 5, '80 짜리 다섯 칸');
   assert.ok(f.texts.some((t) => t.t === '90'));
   assert.ok(f.texts.some((t) => t.t === '부제'));
-  assert.ok(!f.texts.some((t) => t.t.startsWith('★ POTM')), 'potmDate 없으면 띠 없음');
   for (const t of f.texts) assert.ok(!/undefined|NaN/.test(t.font + t.fill + t.t), JSON.stringify(t));
   for (const r of f.rects) assert.ok(r.fill && !/undefined/.test(String(r.fill)), JSON.stringify(r));
   const sizes = new Set(f.fonts.map((x) => Number(/(\d+)px/.exec(x)?.[1])));
@@ -61,13 +60,11 @@ test('카드 이미지 — 태극기, 칭호 알약(이름 줄), 티어 없으�
   assert.ok(f.texts.some((t) => t.t === '–' && /30px/.test(t.font)), '티어 자리는 –');
 });
 
-test('카드 이미지 — POTM 띠와 캡션', () => {
+test('카드 이미지 — 제목·부제·캡션(금색 띠는 2026-11-06 뺌)', () => {
   const f = fakeCanvas();
-  drawCardImage(f.canvas, P(2, 85), 'S', { title: 'POTM', sub: '9월 27일 (일) 매치 · 5표', potmDate: '2026-09-27', caption: '9월 27일 (일) · 5표' });
-  const band = f.texts.find((t) => t.t === '★ POTM 9/27');
-  assert.ok(band && /30px/.test(band.font) && band.fill === '#111111');
-  assert.ok(f.rects.some((r) => r.fill === POTM_GOLD && r.w === CARD_W), '금색 띠');
-  assert.ok(f.texts.some((t) => t.t === 'POTM' && /60px/.test(t.font)));
-  assert.ok(f.texts.some((t) => t.t === '9월 27일 (일) 매치 · 5표'));
-  assert.ok(f.texts.some((t) => t.t === '9월 27일 (일) · 5표'));
+  drawCardImage(f.canvas, P(2, 85), 'S', { title: '제목', sub: '9월 27일 (일) 매치', caption: '9월 27일 (일)' });
+  assert.ok(!f.texts.some((t) => t.t.startsWith('★')), '띠 글자 없음');
+  assert.ok(f.texts.some((t) => t.t === '제목' && /60px/.test(t.font)));
+  assert.ok(f.texts.some((t) => t.t === '9월 27일 (일) 매치'));
+  assert.ok(f.texts.some((t) => t.t === '9월 27일 (일)'));
 });

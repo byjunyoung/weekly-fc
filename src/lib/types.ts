@@ -13,12 +13,12 @@ export type RotationRow = { year: number; month: number; p1: string; p2: string;
 export type StatLogRow = { ts: string; by: number | null; byName: string; num: number; field: StatKey; before: number; after: number; via: string;
   opp?: number; oppName?: string };
 /** 매치(2026-09-25) — 하루 하나. lineup 은 저장 때 이름까지 박은 스냅샷이라 명단에서 빠진 사람도 남는다.
- *  tally 는 POTM 표 집계(번호 → 표). 누가 누구를 찍었는지는 서버가 내보내지 않는다. */
+ *  서버가 보내는 POTM 표 칸(tally·voters)은 2026-11-06 POTM 을 뺀 뒤로 읽지 않는다. */
 export type VestKey = 'none' | 'orange' | 'neon' | 'black';
 export type MatchMember = { num: number | null; name: string };   // num 없으면 용병
 export type MatchTeam = { vest: VestKey; members: MatchMember[] };
 /** opponent = '' 이면 자체전(조끼 팀 둘 이상), 이름이 있으면 상대팀전(lineup 은 우리 팀 하나). 스코어는 경기 뒤 관리자가 — 없으면 null(2026-09-28). */
-export type Match = { id: number; date: string; lineup: MatchTeam[]; tally: Record<number, number>; voters: number; video: string;
+export type Match = { id: number; date: string; lineup: MatchTeam[]; video: string;
   opponent: string; scoreUs: number | null; scoreThem: number | null };
 /** 배치 진행(2026-11-02) — 확정 기준 인원(need)과 배치 전 선수마다 판정을 낸 사람 수. 누가 냈는지는 안 온다. */
 export type Placing = { need: number; count: Record<number, number> };

@@ -98,7 +98,7 @@ function Teams() {
     if (editing && editing.date === date) { await run(); return; }   // 고치던 매치 그대로 — 덮어쓰기가 목적이다
     // 같은 날짜가 이미 있으면 덮어쓴다 — 표는 남으니 알려만 주고 진행.
     if ((data?.matches ?? []).some((m) => m.date === date)) {
-      Modal.confirm({ title: `${matchLabel(date)} 매치가 이미 있습니다`, content: '팀 구성을 이걸로 덮어씁니다. POTM 표는 그대로 남습니다.', okText: '덮어쓰기', cancelText: '취소', onOk: run });
+      Modal.confirm({ title: `${matchLabel(date)} 매치가 이미 있습니다`, content: '팀 구성을 이걸로 덮어씁니다.', okText: '덮어쓰기', cancelText: '취소', onOk: run });
     } else await run();
   }
 
@@ -149,7 +149,7 @@ function Teams() {
             </label>
           )}
           <Button onClick={onSaveMatch} loading={saving}>매치로 저장</Button>
-          <span className="muted tm-save-hint">{external ? '스코어는 경기 뒤 매치 목록에서 넣습니다 · 뛴 사람들이 POTM 을 뽑습니다' : '그날 팀 구성이 매치 탭에 남고, 뛴 사람들이 POTM 을 뽑습니다'}</span>
+          <span className="muted tm-save-hint">{external ? '스코어는 경기 뒤 매치 목록에서 넣습니다' : '그날 팀 구성이 매치 탭에 남습니다'}</span>
         </div>
       )}
 

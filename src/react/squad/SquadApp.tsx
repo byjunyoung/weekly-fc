@@ -11,7 +11,6 @@ import { loadView, saveView, type View } from './model';
 import AddPlayerModal from './AddPlayerModal';
 import RosterList from './RosterList';
 import { tierByNum } from '../../lib/card';
-import { currentPotm } from '../../lib/matches';
 
 // 목록 보기는 라인업(/lineup/) 오른쪽 칸이 가져갔다 — 여기는 폭을 다 쓰는 표·카드만 남긴다.
 const SQUAD_VIEWS: View[] = ['table', 'card'];
@@ -28,7 +27,6 @@ function Squad() {
   if (!data) return <Loading title="명단" />;
 
   const tiers = tierByNum(data.players);
-  const potm = currentPotm(data.matches);
 
   const rows = data.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
 
@@ -40,7 +38,7 @@ function Squad() {
         <h1>명단 <span className="muted" id="count">{data.players.length}명</span></h1>
         <div className="actions">{admin && <Button id="add" onClick={() => setAdding(true)}>선수 추가</Button>}</div>
       </div>
-      <RosterList tiers={tiers} potm={potm} view={view} onViewChange={onViewChange} views={SQUAD_VIEWS} pos={pos} onPosChange={setPos}
+      <RosterList tiers={tiers} view={view} onViewChange={onViewChange} views={SQUAD_VIEWS} pos={pos} onPosChange={setPos}
         q={q} onQChange={setQ} rows={rows} allPlayers={data.players} />
       {admin && <AddPlayerModal open={adding} onClose={() => setAdding(false)} players={data.players} />}
     </>

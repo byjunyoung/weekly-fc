@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addDays, applyPotm, attendees, currentPotm, deadline, fromMatch, potmShareText, isVideoUrl, matchLabel, potmOf, shortDate, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
+import { addDays, attendees, deadline, fromMatch, isVideoUrl, matchLabel, shortDate, snapshot, vestOf, voteBlock, voteOpen } from '../../src/lib/matches.ts';
 import { addGuest, initialTeams, moveTo, playerKey, guestKey, togglePicked } from '../../src/lib/teams.ts';
 import { normalizeMatch, normalizeData, EMPTY } from '../../src/lib/api.ts';
 
 const P = (num, name) => ({ num, name, pos: 'MF', detail: '', foot: '', vest: null, note: '',
   pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '' });
 const ROSTER = [P(2, '김현서'), P(3, '김준영'), P(4, '이동훈')];
-const M = (over = {}) => ({ id: 1, date: '2026-09-27', voters: 0, tally: {}, video: '',
+const M = (over = {}) => ({ id: 1, date: '2026-09-27', video: '',
   lineup: [{ vest: 'none', members: [{ num: 2, name: '김현서' }, { num: null, name: '오준 용병+2' }] },
            { vest: 'orange', members: [{ num: 3, name: '김준영' }] }], ...over });
 
@@ -35,12 +35,7 @@ test('snapshot: 온 사람이 없거나 팀이 하나면 저장하지 않는다'
   assert.deepEqual(snapshot(st, ROSTER), { ok: false, error: '팀이 둘 이상이어야 합니다' });
 });
 
-// ── POTM ──────────────────────────────────────────────────────
-test('potmOf: 최다 득표, 동점이면 공동(번호순), 표가 없으면 빈 배열', () => {
-  assert.deepEqual(potmOf(M()), { nums: [], votes: 0 });
-  assert.deepEqual(potmOf(M({ tally: { 3: 2, 2: 1 } })), { nums: [3], votes: 2 });
-  assert.deepEqual(potmOf(M({ tally: { 3: 2, 2: 2, 4: 1 } })), { nums: [2, 3], votes: 2 });
-});
+// ── 출석 ──────────────────────────────────────────────────────
 test('attendees 는 용병을 뺀 명단 선수만, 팀 순서대로', () => {
   assert.deepEqual(attendees(M()).map((x) => x.num), [2, 3]);
 });
@@ -71,21 +66,12 @@ test('vestOf: 모르는 키는 노조끼로', () => {
   assert.equal(vestOf('orange').label, '주황조끼');
   assert.equal(vestOf('zzz').key, 'none');
 });
-test('applyPotm 은 그 매치의 집계만 바꾸고 원본은 건드리지 않는다', () => {
-  const d = { ...EMPTY, matches: [M(), M({ id: 2, date: '2026-09-20' })] };
-  const out = applyPotm(d, 2, { 3: 1 }, 1);
-  assert.deepEqual(out.matches[1].tally, { 3: 1 });
-  assert.equal(out.matches[1].voters, 1);
-  assert.deepEqual(d.matches[1].tally, {});
-  assert.equal(out.matches[0], d.matches[0]);
-});
-
 // ── 서버 응답 정규화 ──────────────────────────────────────────
-test('normalizeMatch: 모르는 조끼·이름 없는 사람은 버리고, 집계는 숫자 키로', () => {
-  const m = normalizeMatch({ id: '5', date: '2026-09-27T00:00:00', voters: '2',
+test('normalizeMatch: 모르는 조끼·이름 없는 사람은 버린다', () => {
+  const m = normalizeMatch({ id: '5', date: '2026-09-27T00:00:00',
     lineup: [{ vest: 'none', members: [{ num: '2', name: ' 김현서 ' }, { name: '' }] }, { vest: 'pink', members: [{ name: 'x' }] }, { vest: 'neon', members: [] }],
-    tally: { '3': 2, '0': 1, '2': '0' } });
-  assert.deepEqual(m, { id: 5, date: '2026-09-27', voters: 2, tally: { 3: 2 }, video: '', opponent: '', scoreUs: null, scoreThem: null,
+  });
+  assert.deepEqual(m, { id: 5, date: '2026-09-27', video: '', opponent: '', scoreUs: null, scoreThem: null,
     lineup: [{ vest: 'none', members: [{ num: 2, name: '김현서' }] }] });
   const ext = normalizeMatch({ id: 7, opponent: ' FC A ', score_us: 3, score_them: '2' });
   assert.deepEqual([ext.opponent, ext.scoreUs, ext.scoreThem], ['FC A', 3, 2]);
@@ -110,18 +96,6 @@ test('shortDate — 9/27, 깨진 값은 그대로', () => {
   assert.equal(shortDate('없음'), '없음');
 });
 
-test('currentPotm — 표가 있는 가장 최근 매치의 1위(공동 포함). 더 새 매치라도 표가 없으면 건너뛴다', () => {
-  assert.equal(currentPotm([]), null);
-  assert.equal(currentPotm([M()]), null, '표 없음');
-  const older = M({ id: 1, date: '2026-09-20', tally: { 2: 3 } });
-  const newerNoVotes = M({ id: 2, date: '2026-09-27' });
-  assert.deepEqual(currentPotm([newerNoVotes, older]), { date: '2026-09-20', matchId: 1, nums: [2], votes: 3 });
-  const newerVoted = M({ id: 3, date: '2026-09-27', tally: { 3: 1, 2: 1 } });
-  assert.deepEqual(currentPotm([older, newerVoted]), { date: '2026-09-27', matchId: 3, nums: [2, 3], votes: 1 }, '캐시 순서와 무관, 공동');
-  const sameDay = M({ id: 4, date: '2026-09-27', tally: { 2: 2 } });
-  assert.equal(currentPotm([newerVoted, sameDay]).matchId, 4, '같은 날이면 id 큰 쪽');
-});
-
 test('fromMatch — 저장된 매치를 팀짜기 상태로: 조끼 순서 칸, 명단에 없는 사람은 이름만 든 용병으로', () => {
   const m = M({ id: 9, lineup: [
     { vest: 'none', members: [{ num: 2, name: '김현서' }, { num: null, name: '오준 용병+2' }] },
@@ -138,15 +112,9 @@ test('fromMatch — 저장된 매치를 팀짜기 상태로: 조끼 순서 칸, 
   assert.deepEqual(snap.lineup.map((t) => [t.vest, t.members.map((x) => x.name)]), [['none', ['김현서', '오준 용병+2']], ['neon', ['김준영', '강준영']]]);
 });
 
-test('potmShareText — 제목 한 줄, 빈 줄, 링크', () => {
-  const t = potmShareText(M(), 'https://x/y', 2026);
-  assert.deepEqual(t.split('\n'), ['9월 27일 (일) 매치 POTM 투표', '', 'https://x/y']);
-  assert.ok(!/[🏆!]/.test(t), '이모지·느낌표 없음');
-});
-
 test('상대팀 매치 — 결과·전적·우리 팀 하나 스냅샷(2026-09-28)', async () => {
   const M2 = await import('../../src/lib/matches.ts');
-  const base = { lineup: [], tally: {}, voters: 0, video: '' };
+  const base = { lineup: [], video: '' };
   const ms = [
     { ...base, id: 1, date: '2026-09-01', opponent: 'FC A', scoreUs: 3, scoreThem: 2 },
     { ...base, id: 2, date: '2026-09-08', opponent: 'FC B', scoreUs: 1, scoreThem: 1 },

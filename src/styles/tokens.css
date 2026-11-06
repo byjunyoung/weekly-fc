@@ -791,9 +791,6 @@ details.year[open] > summary::before { content: "▾ "; }
 .w-video { width: 240px; max-width: 100%; }
 .tm-save { padding-top: var(--s-sm); border-top: 2px solid var(--line); }
 .tm-save-hint { font-size: var(--fs-xs); }
-.mt-potm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
-.mt-potm-label { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; }
-.mt-potm-who { display: inline-flex; align-items: center; gap: var(--s-xxs); font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-synthesis: none; letter-spacing: 0; }
 .mt-teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-sm); }
 .mt-team { border: 2px solid var(--line); background: var(--elevated); }
 .mt-team-head { display: flex; align-items: center; gap: var(--s-xs); min-height: 36px; padding: var(--s-xxs) var(--s-sm); border-bottom: 3px solid var(--line);
@@ -806,7 +803,6 @@ details.year[open] > summary::before { content: "▾ "; }
 .mt-vote-hint { margin: 0 0 var(--s-xs); font-size: var(--fs-sm); }
 .mt-ballot { padding: 0; }
 .mt-ballot .tm-chip:disabled { opacity: .6; }
-.mt-vote-count { margin: var(--s-xs) 0 0; font-size: var(--fs-xs); }
 .linklike { padding: 0; border: 0; background: none; color: var(--link); font: inherit; text-decoration: underline; cursor: pointer; }
 
 /* ══ 피파식 선수 카드 (2026-09-25) ══════════════════════════════
@@ -903,19 +899,8 @@ details.year[open] > summary::before { content: "▾ "; }
   .player-hero.is-dressing .phero .fcard .avatar-btn .avatar-svg { width: 72px; height: 96px; }
 }
 
-/* ── 카드 POTM 띠(2026-09-25) — 표가 있는 가장 최근 매치의 1위. 수평 띠(도트 글자는 기울이면 뭉개진다) + 테두리 반짝임. */
+/* ── 카드(2026-09-25) — 카드 위 금색 띠는 2026-11-06 에 뺐다. */
 .fcard { position: relative; }
-.fcard-potm { display: block; padding: 4px var(--s-xs); background: var(--gold); color: var(--ink); text-align: center;
-  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
-.fcard-sm .fcard-potm { font-size: var(--fs-pixel-xs); padding: 4px var(--s-xxs); }
-.fcard-is-potm { --fc-frame: var(--gold); box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--gold); }
-@media (prefers-reduced-motion: no-preference) {
-  .fcard-is-potm { animation: fcard-glow 2.4s ease-in-out infinite; }
-  @keyframes fcard-glow {
-    0%, 100% { box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--gold), 0 0 0 rgba(255, 206, 33, 0); }
-    50% { box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--gold), 0 0 18px rgba(255, 206, 33, .55); }
-  }
-}
 
 /* ── 전술 법칙(2026-09-26) — 카드뉴스의 전술 보드를 그대로. 보드 위, 번호·제목·한 문장 아래. */
 .tl-jump { display: flex; flex-wrap: wrap; gap: var(--s-xs); margin-bottom: var(--s-lg); }
@@ -935,36 +920,11 @@ details.year[open] > summary::before { content: "▾ "; }
 .tl-body p { margin: 0; font-size: var(--fs-xs); line-height: 1.55; color: var(--muted); word-break: keep-all; }
 @media (max-width: 639px) { .tl-wall { grid-template-columns: 1fr; } }
 
-/* ── POTM 투표 페이지(2026-09-26) — 카톡 링크로 바로 들어오는 자리. 크게, 누르기 쉽게. */
-.pv-hero { padding: var(--s-lg) var(--s-md); margin-bottom: var(--s-md); background: linear-gradient(180deg, #2a2308, var(--card)); border: 3px solid var(--gold); text-align: center; }
-.pv-kicker { display: block; font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--gold); }
-.pv-title { margin: var(--s-xs) 0 0; font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
-.pv-title span { display: block; font-size: var(--fs-pixel-lg); color: var(--gold); }
-.pv-sub { margin: var(--s-xs) 0 0; font-size: var(--fs-xs); color: var(--muted); }
-.pv-acts { display: flex; justify-content: center; gap: var(--s-xs); margin-top: var(--s-md); flex-wrap: wrap; }
-.pv-block { margin: 0 0 var(--s-md); padding: var(--s-sm); border: 2px solid var(--line); background: var(--elevated); font-size: var(--fs-sm); text-align: center; }
-.pv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--s-sm); }
-.pv-cand { display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 150px; padding: var(--s-sm) var(--s-xs);
-  border: 3px solid var(--line); border-radius: 0; background: var(--card); color: var(--fg); cursor: pointer; }
-.pv-cand:hover:not(:disabled) { border-color: var(--fg); }
-.pv-cand:disabled { cursor: default; opacity: .75; }
-.pv-cand.is-self { opacity: .5; }
-.pv-cand.is-mine { border-color: var(--gold); box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--gold); }
-.pv-cand.is-top .pv-votes { color: var(--gold); }
-.pv-face { display: flex; }
-.pv-name { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; text-align: center; }
-.pv-name i { margin-left: 4px; font-style: normal; font-family: var(--font); font-size: var(--fs-xs); color: var(--muted); }
-.pv-bar { display: block; width: 100%; height: 8px; background: var(--elevated); }
-.pv-bar i { display: block; height: 100%; background: var(--gold); transition: width var(--dur-fast) var(--ease-std); }
-.pv-votes { min-height: 1.2em; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
-.pv-foot { margin: var(--s-md) 0 0; font-size: var(--fs-xs); text-align: center; }
-
 /* 매치 카드 머리 — 버튼이 셋이라 폰에서 한 줄에 안 들어간다. 줄바꿈을 허용하고 제목은 한 줄로 두어
    페이지가 옆으로 밀리지 않게(2026-09-26 폰 스크린샷: 카드가 화면 폭을 넘겨 전체가 잘렸다). */
 .mt-card .card-head { flex-wrap: wrap; align-items: center; row-gap: var(--s-xs); }
 .mt-card .card-head h2 { white-space: nowrap; margin-right: auto; max-width: 100%; }
 .mt-card .card-head-act { flex-wrap: wrap; max-width: 100%; }
-.mt-potm { flex-wrap: wrap; }
 
 /* ── 선수 페이지 「능력치 기록」(2026-09-28) ── 주가 차트 + 날짜별 게임 로그.
    선 하나라 범례 없음(제목 칩이 이름). 오르면 --val-a, 내리면 --val-d — 숫자 옆 ▲▼ 글자가 같이 가서 색만으로 구분하지 않는다. */
@@ -991,7 +951,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .sh-log li:last-child { border-bottom: 0; }
 .sh-why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sh-move { font-variant-numeric: tabular-nums; }
-/* 라커룸 제목 옆 오늘 숫자(2026-09-28) — 방문(기기 수)·대결, POTM 표는 있을 때만. */
+/* 라커룸 제목 옆 오늘 숫자(2026-09-28) — 방문(기기 수)·대결. */
 .today-stats { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 var(--s-sm); margin: 0; font-size: var(--fs-xs); color: var(--muted); }
 .today-stats b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--fg); }
 @media (max-width: 639px) { .today-stats { justify-content: flex-start; } }

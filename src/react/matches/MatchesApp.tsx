@@ -1,7 +1,6 @@
-// src/react/matches/MatchesApp.tsx — 매치 목록과 POTM 투표. 계산은 lib/matches.ts(순수), 여기는 배선과 화면만.
+// src/react/matches/MatchesApp.tsx — 매치 목록. 계산은 lib/matches.ts(순수), 여기는 배선과 화면만.
 //
-// 카드 하나가 매치 하루. 팀은 팀짜기와 같은 칩 모양으로(같은 손버릇), POTM 은 맨 위에 아바타로.
-// 투표는 그날 뛴 로그인 회원만 — 못 누르는 이유는 lib 가 정한 한 줄을 그대로 보여 준다.
+// 카드 하나가 매치 하루. 팀은 팀짜기와 같은 칩 모양으로(같은 손버릇).
 import { App, Button, InputNumber, Popconfirm } from 'antd';
 import { useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
@@ -12,8 +11,6 @@ import { seoulToday } from '../../lib/html';
 import { href } from '../../lib/url';
 import * as M from '../../lib/matches';
 import type { Match, Player } from '../../lib/types';
-import { tierByNum } from '../../lib/card';
-import CardShareModal from '../CardShareModal';
 import TeamsShareModal from '../teams/TeamsShareModal';
 import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
@@ -25,10 +22,8 @@ function Face({ num, players, size = 24 }: { num: number; players: Player[]; siz
     dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(num, players.find((p) => p.num === num)?.avatar), size, num) }} />;
 }
 
-function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Match; players: Player[]; today: string; admin: boolean; onPotmImage: (m: Match, num: number) => void; onTeamsImage: (m: Match) => void }) {
+function Card({ m, players, today, admin, onTeamsImage }: { m: Match; players: Player[]; today: string; admin: boolean; onTeamsImage: (m: Match) => void }) {
   const { message } = App.useApp();
-  const potm = M.potmOf(m);
-  const nameOf = (num: number): string => M.attendees(m).find((x) => x.num === num)?.name ?? players.find((p) => p.num === num)?.name ?? `${num}번`;
   const year = Number(today.slice(0, 4));
 
   // 상대팀 매치 스코어(2026-09-28) — 경기 뒤 관리자가 카드에서 넣는다.
@@ -57,7 +52,6 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
       <div className="card-head">
         <h2>{M.matchLabel(m.date, year)}{ext && <span className="mt-vs"> vs {m.opponent}</span>}</h2>
         <div className="card-head-act">
-          {M.voteOpen(m, today) && <Button size="small" type="primary" href={href(`/matches/potm/?m=${m.id}`)}>🏆 POTM 투표</Button>}
           {/* 경기 영상(2026-09-28) — 링크는 /weekly-fc 스킬이 유튜브 게시 직후 자동으로 건다. 손으로 넣는 칸은 두지 않는다
               (2026-09-25 "일일이 넣기 번거롭다"로 걷었던 입력 UI). */}
           {M.isVideoUrl(m.video) && <Button size="small" href={m.video} target="_blank" rel="noopener">▶ 영상</Button>}
@@ -65,7 +59,7 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
           {admin && ext && <Button size="small" onClick={() => setScoring((x) => !x)}>{res ? '스코어 고치기' : '스코어 입력'}</Button>}
           {admin && <Button size="small" onClick={() => { location.href = href(`/matches/new/?edit=${m.id}`); }}>{ext ? '명단 수정' : '팀 수정'}</Button>}
           {admin && (
-            <Popconfirm title="이 매치를 지울까요?" description="팀 구성과 POTM 표가 함께 사라집니다." okText="삭제" cancelText="취소" okButtonProps={{ danger: true, loading: deleting }} onConfirm={onDelete}>
+            <Popconfirm title="이 매치를 지울까요?" description="팀 구성이 사라집니다." okText="삭제" cancelText="취소" okButtonProps={{ danger: true, loading: deleting }} onConfirm={onDelete}>
               <Button size="small" danger loading={deleting}>삭제</Button>
             </Popconfirm>
           )}
@@ -88,21 +82,6 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
         </div>
       )}
 
-      <div className="mt-potm" aria-live="polite">
-        <span className="mt-potm-label">POTM</span>
-        {potm.nums.length === 0
-          ? <span className="muted">아직 없음</span>
-          : potm.nums.map((n) => (
-            <span key={n} className="mt-potm-who"><Face num={n} players={players} size={28} /><b>{nameOf(n)}</b></span>
-          ))}
-        {potm.votes > 0 && <span className="muted">{potm.votes}표{potm.nums.length > 1 ? ' · 공동' : ''}</span>}
-        {potm.nums.map((n) => (
-          <Button key={n} size="small" onClick={() => onPotmImage(m, n)}>
-            {potm.nums.length > 1 ? `${nameOf(n)} POTM 이미지` : 'POTM 이미지'}
-          </Button>
-        ))}
-      </div>
-
       <div className="mt-teams">
         {m.lineup.map((t, i) => {
           const vest = M.vestOf(t.vest);
@@ -115,7 +94,6 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
                     {x.num != null && <Face num={x.num} players={players} />}
                     <b>{x.name}</b>
                     {x.num == null && <span className="tm-guest">용병</span>}
-                    {x.num != null && (m.tally[x.num] ?? 0) > 0 && <span className="tm-ovr">{m.tally[x.num]}표</span>}
                   </span>
                 ))}
               </div>
@@ -124,7 +102,6 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
         })}
       </div>
 
-      <p className="muted mt-vote-count">{M.attendees(m).length}명 중 {m.voters}명 투표{M.voteOpen(m, today) ? ' · 투표는 위 [POTM 투표] 버튼에서' : ''}</p>
     </section>
   );
 }
@@ -132,15 +109,11 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
 function Matches() {
   const { data } = useData();
   const admin = useAdmin();
-  const [share, setShare] = useState<{ m: Match; num: number } | null>(null);   // 훅은 이른 return 앞에(순서 고정)
   const [teamsShare, setTeamsShare] = useState<Match | null>(null);   // 팀 나누기 이미지(2026-09-25 "매치 목록 뷰에 나와야지")
   if (!data) return <Loading title="매치" />;
   const matches = data.matches ?? [];
   const today = seoulToday();
-  const tiers = tierByNum(data.players);
   const rec = M.record(matches);
-  const sharePlayer = share ? data.players.find((p) => p.num === share.num) ?? null : null;
-  const shareVotes = share ? (share.m.tally[share.num] ?? 0) : 0;
   return (
     <>
       <div className="page-head">
@@ -157,13 +130,9 @@ function Matches() {
         <p className="mt-record">상대팀 전적 <b>{rec.w}</b>승 <b>{rec.d}</b>무 <b>{rec.l}</b>패 <span className="muted">· 득 {rec.gf} 실 {rec.ga}</span></p>
       )}
       <div className="stack">
-        {matches.map((m) => <Card key={m.id} m={m} players={data.players} today={today} admin={admin} onPotmImage={(mm, n) => setShare({ m: mm, num: n })} onTeamsImage={setTeamsShare} />)}
+        {matches.map((m) => <Card key={m.id} m={m} players={data.players} today={today} admin={admin} onTeamsImage={setTeamsShare} />)}
       </div>
       <TeamsShareModal open={!!teamsShare} onClose={() => setTeamsShare(null)} lineup={teamsShare?.lineup ?? []} players={data.players} date={teamsShare?.date ?? today} />
-      <CardShareModal open={!!share} onClose={() => setShare(null)} player={sharePlayer} tier={share ? tiers.get(share.num) : null}
-        title={share ? `${M.matchLabel(share.m.date, Number(today.slice(0, 4)))} POTM` : 'POTM'} fileTag={share ? `potm-${share.num}` : 'potm'}
-        opts={share ? { title: 'POTM', sub: `${M.matchLabel(share.m.date, Number(today.slice(0, 4)))} 매치 · ${shareVotes}표`, potmDate: share.m.date } : undefined}
-        team={data.players} />
     </>
   );
 }
