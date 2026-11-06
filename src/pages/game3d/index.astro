@@ -1,9 +1,6 @@
 ---
-// 3D 축구 시제품(2026-11-07) — 손맛을 보려는 실험. 주소로만 들어온다(상단 메뉴 nav.ts 에 넣지 않는다). 2D 게임은 /game/ 그대로.
-// 설계: docs/superpowers/specs/2026-11-07-game3d-spike-design.md. three.js 는 이 페이지의 섬에서만 불러온다.
-import Shell from '../../layouts/Shell.astro';
-import Game3DApp from '../../react/game3d/Game3DApp.tsx';
+// 옛 3D 시제품 주소(2026-11-07) → 게임 묶음의 3D 경기(/game/?g=match3d). 4단계 "3D 경기 온라인"에서 시제품 화면이 공용 게임 화면으로 옮겨 갔다.
+// 사람들이 /game3d/ 링크를 이미 갖고 있어 넘김 페이지로 남긴다(다른 옛 주소들과 같은 Redirect.astro).
+import Redirect from '../../components/Redirect.astro';
 ---
-<Shell title="3D 축구 시제품" description="WEEKLY FC 3D 축구 시제품 — 실험 중, 내 선수로 봇과 5대5">
-  <Game3DApp client:load />
-</Shell>
+<Redirect to="/game/?g=match3d" title="3D 경기" />

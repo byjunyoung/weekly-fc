@@ -1165,18 +1165,8 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .game-banner { position: absolute; z-index: 2; left: 0; right: 0; top: 50%; transform: translateY(-50%); padding: var(--s-sm) var(--s-md); background: rgba(0, 0, 0, .72);
   color: var(--fg); font-size: var(--fs-xs); text-align: center; pointer-events: none; }
 
-/* ══ 3D 축구 시제품(2026-11-07, /game3d/ — 주소로만 들어옴, 메뉴에 없음) ═══════════════════════
-   2D 게임(.game-*) 과 같은 뼈대를 따로 둔다 — 시제품을 버릴 때 이 덩어리만 지우면 되게. 색은 토큰, 팀 색만 VESTS(인라인). */
-html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
-.g3-note { margin: 0; padding: var(--s-xs) var(--s-sm); border: 1px dashed var(--hairline-strong); background: var(--elevated); color: var(--body); font-size: var(--fs-xs); }
-.g3-opt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs) var(--s-md); }
-.g3-opt > .muted { width: 5em; }
-.g3-hint { margin-top: var(--s-md); font-size: var(--fs-xs); }
-.g3-start { margin-top: var(--s-md); }
-.g3-overlay { position: fixed; inset: 0; z-index: 900; width: 100vw; height: 100dvh; background: var(--canvas); overflow: hidden;
-  touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
-.g3-wait { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: var(--fs-xs); }
-.g3-canvas { display: block; width: 100%; height: 100%; touch-action: none; image-rendering: pixelated; }
+/* ══ 3D 경기(2026-11-07 시제품으로 시작, 4단계에 /game/?g=match3d — 공용 경기 화면 틀 위 .game-layer 에 단다) ═══════════════════════
+   경기 화면 틀(.game-overlay·✕·결과)은 2D 와 같은 .game-*, 3D 에만 있는 점수판·이름표·버튼 다섯·시점·화살표만 .g3-*. 색은 토큰, 팀 색만 VESTS(인라인). */
 .g3-labels { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 .g3-label { position: absolute; left: 0; top: 0; display: none; padding: 0 var(--s-xxs); border-bottom: 2px solid var(--hairline-strong); background: rgba(0, 0, 0, .55);
   color: var(--fg); font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-synthesis: none; letter-spacing: 0; line-height: 14px; white-space: nowrap; will-change: transform; }
@@ -1198,8 +1188,6 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
 .g3-gauge.is-on { display: block; }
 .g3-gauge.is-touch { left: auto; margin-left: 0; width: 110px; right: max(var(--s-lg), env(safe-area-inset-right)); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 172px); }
 .g3-gauge i { display: block; width: 100%; height: 100%; background: var(--gold); transform: scaleX(0); transform-origin: left center; }
-.g3-x { position: absolute; top: max(var(--s-sm), env(safe-area-inset-top)); right: max(var(--s-sm), env(safe-area-inset-right)); z-index: 3;
-  width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: var(--r-full); background: rgba(0, 0, 0, .55); font-family: var(--font); font-size: 18px; }
 .g3-stick { position: absolute; left: 0; top: 0; width: 96px; height: 96px; margin: -48px 0 0 -48px; display: none; align-items: center; justify-content: center;
   border: 2px solid rgba(255, 255, 255, .35); border-radius: 50%; background: rgba(255, 255, 255, .08); pointer-events: none; z-index: 2; }
 .g3-stick.is-on { display: flex; }
@@ -1218,13 +1206,6 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
 .g3-through { right: max(var(--s-lg), env(safe-area-inset-right)); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 108px); }
 .g3-lob { right: calc(max(var(--s-lg), env(safe-area-inset-right)) + 66px); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 92px); }
 .g3-sprint { right: calc(max(var(--s-lg), env(safe-area-inset-right)) + 186px); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 8px); width: 56px; height: 56px; }
-.g3-result { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; padding: var(--s-md); background: rgba(0, 0, 0, .72); }
-.g3-result-box { display: flex; flex-direction: column; align-items: center; gap: var(--s-sm); padding: var(--s-xl) var(--s-lg); background: var(--card); border: 1px solid var(--hairline); text-align: center; max-width: 360px; width: 100%; }
-.g3-outcome { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
-.g3-outcome.is-win { color: var(--gold); }
-.g3-outcome.is-lose { color: var(--warn); }
-.g3-final { display: flex; align-items: center; gap: var(--s-xs); font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-synthesis: none; letter-spacing: 0; }
-.g3-result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-xs); margin-top: var(--s-sm); }
 
 /* ══ 선수 선택(2026-11-07 "선택한 선수 크게 오른쪽에 다른 선수 리스트 … 약간 옛날 오락실게임에서 고르듯이") ══════════
    PC·가로: 큰 칸 왼쪽 · 명단 오른쪽. 폰 세로: 큰 칸 위(줄인 꼴), 명단 아래, 버튼 줄은 화면 아래에 붙는다.
@@ -1299,4 +1280,10 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
 .g3-arrow { position: absolute; left: 0; top: 0; z-index: 2; display: none; width: 0; height: 0; pointer-events: none;
   border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-left: 22px solid var(--gold); filter: drop-shadow(0 0 2px rgba(0, 0, 0, .8)); }
 .g3-arrow.is-on { display: block; }
-.g3-opt + .g3-opt { margin-top: var(--s-sm); }
+/* 경기 화면 위 DOM 층(2026-11-07 게임 묶음 4단계) — 화면이 직접 다는 점수판·이름표·말풍선·버튼(3D). ✕·한마디·결과 상자(z 2~3)보다 아래.
+   층 자체는 누름을 통과시키고(조이스틱은 아래 캔버스·오버레이가 받는다), 버튼만 받는다. */
+.game-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.game-layer .g3-btn, .game-layer .g3-view { pointer-events: auto; }
+/* 3D 말풍선 — 머리 위 이름표보다 조금 위. 2D 말풍선(캔버스)과 같은 흰 바탕 검은 글자 */
+.g3-bubble { position: absolute; left: 0; top: 0; display: none; padding: 1px var(--s-xs); border: 2px solid #000; background: #fff; color: #000; font-size: var(--fs-xs); white-space: nowrap; pointer-events: none; }
+.g3-bubble.is-on { display: block; }

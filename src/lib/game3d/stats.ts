@@ -1,4 +1,4 @@
-// src/lib/game3d/stats.ts — 3D 축구 시제품: 포털 능력치 → 게임 속 성능(2026-11-07). 순수 함수.
+// src/lib/game3d/stats.ts — 3D 경기: 포털 능력치 → 게임 속 성능(2026-11-07). 순수 함수.
 // 스펙 §3 "능력치: 2D 와 같은 방식으로 살짝(±10%)" — 페이스 → 속도, 드리블 → 공 간수, 슈팅 → 슛 세기, 패스 → 패스 정확도,
 // 수비 → 빼앗기, 피지컬(stamina) → 몸싸움. 2D(src/lib/game/stats.ts)와 같은 계산이지만 성능 칸이 달라 따로 둔다(2D 를 건드리지 않으려고).
 import type { Player, StatKey } from '../types.ts';

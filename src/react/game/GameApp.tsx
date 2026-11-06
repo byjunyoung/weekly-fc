@@ -71,6 +71,18 @@ function GameRoot() {
       getBase: () => { const s = o()?.session; return s ? (s.role === 'guest' ? s.getBase() : s.getState()) : l.state; },
       // 지금 그리는 화면의 카메라 — cx·cy(논리 좌표), scale(논리 1 = 몇 px), follow(따라가는 중). 경기 화면이 없으면 null.
       getView: () => l.camera,
+      // 그림판을 스스로 여닫는 화면(3D)이 내놓은 것 — 예전 /game3d/ 의 __wfc3d 에 있던 getInfo·goalChance 와 시점 바꾸기(2026-11-07 4단계).
+      getInfo: () => { const f = l.extra?.getInfo; return typeof f === 'function' ? f() : null; },
+      setView: (m: string) => { const f = l.extra?.setView; if (typeof f === 'function') f(m); },
+      // 골 장면 점검 — 혼자면 다음 틱 전에, 방장이면 지금 판에 한 번. 손님은 못 한다(방장이 계산한다).
+      goalChance: (): boolean => {
+        const f = l.extra?.goalPatch;
+        if (typeof f !== 'function') return false;
+        const s = o()?.session;
+        if (s) { if (s.role !== 'host') return false; s.debugPatch(f as (x: unknown) => unknown); return true; }
+        l.patch = f as (x: unknown) => unknown;
+        return true;
+      },
     };
     return () => { delete (window as unknown as { __wfcGame?: unknown }).__wfcGame; };
   }, []);

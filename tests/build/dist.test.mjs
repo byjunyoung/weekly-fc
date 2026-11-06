@@ -30,7 +30,7 @@ export const PAGES = [
 ];
 export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
-const REDIRECTS = ['matches/potm/index.html', 'teams/index.html', 'rules/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'about/index.html'];   // tactics 는 2026-09-26 부터 진짜 페이지
+const REDIRECTS = ['matches/potm/index.html', 'teams/index.html', 'rules/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'about/index.html', 'game3d/index.html'];   // tactics 는 2026-09-26 부터 진짜 페이지
 export const SHELL_PAGES = PAGES.filter((p) => !REDIRECTS.includes(p));
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
 
@@ -296,25 +296,38 @@ test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단
   assert.match(html, /<a href="\/weekly-fc\/games\/"[^>]*class="active"|<a[^>]*class="active"[^>]*href="\/weekly-fc\/games\/"/, '/game/ 에선 게임 메뉴가 켜진다');
 });
 
-// 3D 축구 시제품(2026-11-07) — 주소로만 들어온다(상단 메뉴에 없다). three.js 는 이 페이지 섬이 따로 받는 경기 화면 묶음에만 있다.
-test('3D 시제품 페이지는 Game3DApp 섬을 담고, 상단 메뉴에는 없고, three.js 는 다른 페이지에 안 실린다', () => {
+// 3D 경기(2026-11-07 게임 묶음 4단계) — 시제품 페이지(/game3d/)는 /game/?g=match3d 로 넘기는 페이지가 됐다(이미 퍼진 링크를 살린다).
+// three.js 는 경기 화면이 열릴 때만 받는 묶음 하나에만 있고, 그 묶음을 부르는 건 /game/ 섬(GameApp)의 동적 import 뿐이다 —
+// 어느 페이지 HTML 도 그 묶음을 미리 싣지 않는다(2D 게임·목록·다른 페이지는 three.js 무게를 안 진다).
+test('/game3d/ 는 /game/?g=match3d 로 넘기고, three.js 묶음은 GameApp 의 동적 import 로만 받는다', () => {
   const html = read('game3d/index.html');
-  assert.match(html, /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/Game3DApp\.[^"]+\.js"[^>]*client="load"/, 'Game3DApp 섬');
-  assert.ok(html.includes('<title>3D 축구 시제품 · WEEKLY FC</title>'), '제목');
-  assert.ok(html.includes('class="loading"'), '빌드 때는 불러오는 중 화면');
-  assert.ok(!html.includes('class="g3-overlay"'), '경기 오버레이는 시작한 뒤에만');
-  for (const p of ['index.html', 'game/index.html', 'game3d/index.html', 'tier/index.html']) {
+  assert.match(html, /<meta http-equiv="refresh" content="0; url=\/weekly-fc\/game\/\?g=match3d"/, '넘김');
+  assert.ok(html.includes('<title>3D 경기 · WEEKLY FC</title>'), '제목(시제품 딱지 없음)');
+  assert.ok(!html.includes('시제품'), '시제품 딱지 없음');
+  for (const p of ['index.html', 'game/index.html', 'tier/index.html']) {
     const nav = (read(p).match(/<nav[\s\S]*?<\/nav>/g) ?? []).join('');
     assert.ok(nav.length > 0, `${p}: 메뉴를 못 찾았다`);
-    assert.ok(!nav.includes('/weekly-fc/game3d/'), `${p}: 상단 메뉴에 3D 시제품이 있다`);
+    assert.ok(!nav.includes('/weekly-fc/game3d/'), `${p}: 상단 메뉴에 /game3d/ 가 있다`);
   }
-  // 경기 화면 묶음(Match3D — three.js 포함)은 Game3DApp 묶음만 부른다
+  // three.js 가 든 묶음 — WebGLRenderer 를 정의하는 파일(이름이 아니라 내용으로 찾는다)
   const files = readdirSync('dist/_astro').filter((f) => f.endsWith('.js'));
-  const match3d = files.filter((f) => /^Match3D\./.test(f));
-  assert.equal(match3d.length, 1, '경기 화면 묶음 하나');
-  const users = files.filter((f) => f !== match3d[0] && readFileSync(`dist/_astro/${f}`, 'utf8').includes(match3d[0]));
-  assert.deepEqual(users.map((f) => f.split('.')[0]), ['Game3DApp']);
-  for (const p of SHELL_PAGES.filter((x) => x !== 'game3d/index.html')) assert.ok(!read(p).includes(match3d[0]), `${p} 가 three.js 묶음을 부른다`);
+  const body = (f) => readFileSync(`dist/_astro/${f}`, 'utf8');
+  const three = files.filter((f) => /WebGLRenderer/.test(body(f)) && /WebGLRenderingContext|webglcontextlost|precision highp/.test(body(f)));
+  assert.ok(three.length >= 1, 'three.js 묶음이 있다');
+  // 3D 그림판 묶음(surface3d — three.js 를 품거나 부른다). three.js·그림판 묶음을 부르는 바깥 파일은 GameApp 하나이고, 그것도 동적 import 로만.
+  const surface = files.filter((f) => /^surface3d\./.test(f));
+  assert.equal(surface.length, 1, '3D 그림판 묶음 하나');
+  const heavy = new Set([...three, ...surface]);
+  for (const t of three) assert.ok(t === surface[0] || body(surface[0]).includes(t), `${t} 는 그림판 묶음만 부른다`);
+  for (const h of heavy) {
+    const outside = files.filter((f) => !heavy.has(f) && body(f).includes(h));
+    for (const u of outside) {
+      assert.equal(u.split('.')[0], 'GameApp', `${u} 가 ${h} 를 부른다`);
+      assert.match(body(u), new RegExp(`import\\([\`"'][^\`"']*${h.replace(/\./g, '\\.')}`), `${u} 는 ${h} 를 동적 import 로만`);
+    }
+  }
+  // 어느 페이지 HTML 도 three.js·그림판 묶음을 미리 싣지 않는다
+  for (const p of SHELL_PAGES) for (const f of [...three, ...surface]) assert.ok(!read(p).includes(f), `${p} 가 ${f} 를 싣는다`);
 });
 
 test('게임 목록(2026-11-07) — 2D 모드·3D 모드 두 탭, 모드마다 게임 카드, 가장 왼쪽(2D)이 기본', () => {
@@ -323,13 +336,14 @@ test('게임 목록(2026-11-07) — 2D 모드·3D 모드 두 탭, 모드마다 �
   assert.match(d3, /class="subnav"[^>]*>\s*<a[^>]*>2D 모드<\/a>\s*<a[^>]*class="active"[^>]*>3D 모드<\/a>/);
   // 2026-11-07 게임 묶음: 2D 카드는 등록부에서 오고 ?g= 로 그 게임을 고른다(아래 테스트가 등록부와 맞춘다)
   assert.match(d2, /<a class="card games-card" href="\/weekly-fc\/game\/\?g=match2d"/, '2D 목록에 경기');
-  assert.match(d3, /<a class="card games-card" href="\/weekly-fc\/game3d\/"/, '3D 목록에 경기');
+  assert.match(d3, /<a class="card games-card" href="\/weekly-fc\/game\/\?g=match3d"/, '3D 목록에 경기(등록부에서)');
+  assert.ok(!d3.includes('시제품'), '3D 목록에 시제품 딱지 없음');
   for (const html of [d2, d3]) assert.ok(html.indexOf('class="subnav"') > html.indexOf('class="page-head"'), '탭 줄은 제목 아래');
-  assert.ok(!d2.includes('Match3D') && !d3.includes('Match3D'), '목록 화면은 three.js 를 부르지 않는다');
+  assert.ok(!d2.includes('surface3d') && !d3.includes('surface3d'), '목록 화면은 three.js 를 부르지 않는다');
 });
 
 // 2026-11-07 게임 묶음 토대 — "만든 게임은 거기에 하나씩 추가하자": 목록 카드는 게임 등록부에서 온다. 등록부의 게임마다 카드 하나(이름·설명·?g= 주소),
-// 3D 는 등록부 것 + 아직 등록부에 없는 시제품(/game3d/) 한 장. 카드가 가리키는 /game/ 은 GameApp 섬 하나로 모든 게임을 연다(?g= 는 화면에서 읽는다).
+// 3D 도 등록부 것만(2026-11-07 4단계 — 손으로 쓴 시제품 카드를 지웠다). 카드가 가리키는 /game/ 은 GameApp 섬 하나로 모든 게임을 연다(?g= 는 화면에서 읽는다).
 test('게임 목록 카드는 등록부에서 — 모드마다 등록된 게임 수만큼, 주소는 /game/?g=<id>', async () => {
   const { gamesOf } = await import('../../src/lib/games/registry.ts');
   const cards = (html) => [...html.matchAll(/<a class="card games-card" href="([^"]+)"[^>]*>\s*<b class="games-name">([^<]+)<\/b>\s*<span class="games-desc">([^<]+)<\/span>/g)]
@@ -337,7 +351,7 @@ test('게임 목록 카드는 등록부에서 — 모드마다 등록된 게임 
   const d2 = cards(read('games/index.html')), d3 = cards(read('games/3d/index.html'));
   assert.deepEqual(d2, gamesOf('2d').map((g) => ({ href: `/weekly-fc/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe })));
   assert.ok(d2.length >= 1);
-  assert.deepEqual(d3.slice(0, -1), gamesOf('3d').map((g) => ({ href: `/weekly-fc/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe })));
-  assert.equal(d3.at(-1).href, '/weekly-fc/game3d/', '3D 시제품은 손으로 쓴 카드');
+  assert.deepEqual(d3, gamesOf('3d').map((g) => ({ href: `/weekly-fc/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe })));
+  assert.ok(d3.length >= 1, '3D 경기가 등록부에 있다');
   assert.match(read('game/index.html'), /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/GameApp\.[^"]+\.js"[^>]*client="load"/, '/game/ 은 GameApp 섬');
 });

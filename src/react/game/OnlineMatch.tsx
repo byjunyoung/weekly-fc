@@ -23,8 +23,8 @@ export function OnlineMatch({ session, view, adapter, gameView, roster, live, on
   const playing = view.myId !== null;
   const isHost = session.role === 'host';
 
-  const { refs, touch } = usePlaySurface({
-    view: gameView, config, roster, playing, live,
+  const { refs, touch, wait, fail } = usePlaySurface({
+    view: gameView, config, roster, playing, live, myId: view.myId,
     run: ({ scene, readHuman }) => {
       session.setInputReader(playing ? readHuman : null);
       // PC 한마디: 숫자 1~6. 글자 입력 칸에서는 안 먹는다(경기 화면엔 없지만 확인창이 뜰 수 있다).
@@ -45,7 +45,7 @@ export function OnlineMatch({ session, view, adapter, gameView, roster, live, on
         const f = session.frame(now);
         if (!f) return;
         // 효과음 — 그리는 상태가 바뀐 것으로 알아낸다(방장·손님·구경 모두 같은 길). 틱이 뒤로 가면(새 경기) 비교하지 않는다.
-        if (lastShown !== null && adapter.tick(f.state) >= adapter.tick(lastShown)) for (const fx of gameView.sfx(lastShown, f.state)) playSfx(fx);
+        if (lastShown !== null && adapter.tick(f.state) >= adapter.tick(lastShown)) for (const fx of gameView.sfx(lastShown, f.state, config)) playSfx(fx);
         lastShown = f.state;
         scene.draw(f);
         live.current.camera = scene.camera();
@@ -83,6 +83,6 @@ export function OnlineMatch({ session, view, adapter, gameView, roster, live, on
     <MatchOverlay refs={refs} xLabel={isHost ? '경기 멈추기' : '방에서 나가기'} onX={confirmExit}
       say={playing ? (k) => { session.say(k); } : undefined} watching={!playing}
       banner={conn || view.paused || view.hostSlow ? conn ?? (view.paused ? '방장이 잠깐 자리를 비웠습니다' : '방장 응답을 기다리는 중…') : null}
-      kickShown={touch && playing && !result} result={result} />
+      kickShown={touch && playing && !result} result={result} wait={wait} fail={fail} />
   );
 }

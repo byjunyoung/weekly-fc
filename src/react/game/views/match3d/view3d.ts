@@ -1,9 +1,10 @@
-// src/react/game3d/view3d.ts — 3D 축구 **시제품** 화면의 순수 계산(DOM·three.js 없음 — node 단위 테스트가 그대로 가져온다).
-// 하는 일: ① 화면 기준 스틱 → 경기장 방향(카메라가 실제로 보는 방향으로), ② 카메라가 가려는 자리, ③ 라인업, ④ 남은 시간 글자.
+// src/react/game/views/match3d/view3d.ts — 3D 경기 화면의 순수 계산(2026-11-07, 4단계에 src/react/game3d 에서 옮김)(DOM·three.js 없음 — node 단위 테스트가 그대로 가져온다).
+// 하는 일: ① 화면 기준 스틱 → 경기장 방향(카메라가 실제로 보는 방향으로), ② 카메라가 가려는 자리, ③ 남은 시간 글자.
+// (라인업 뽑기 pickLineup5 는 2026-11-07 4단계에 지웠다 — 혼자 하기도 방의 시작(src/lib/games/match3d-room.ts buildMatch3d)으로 판을 만든다.)
 // 2D 의 view.ts 는 가져오지 않는다 — 그쪽은 2D 경기 계산을 끌고 와서 이 페이지 묶음이 무거워진다.
 //
 // 좌표: 경기 계산은 바닥 x·y + 높이 z, three.js 는 위가 y 라서 three(x, y, z) = 경기(x, z, y).
-import { PITCH3D, type Side } from '../../lib/game3d/sim.ts';
+import { PITCH3D } from '../../../../lib/game3d/sim.ts';
 
 /** 화면 위 스틱(오른쪽 +x, 아래 +y — 2D 와 같은 꼴) → 경기장 방향. fwdX·fwdY = 카메라가 보는 방향을 바닥에 눕힌 것(경기 좌표).
  *  화면 위 = 카메라 앞, 화면 오른쪽 = 앞을 오른쪽으로 돌린 것((−fy, fx) — three 의 forward × up 을 경기 좌표로 옮긴 값).
@@ -63,32 +64,6 @@ export function rngFrom(seed: number): () => number {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-export type Slot3 = { num: number; side: Side; human: boolean; gk: boolean };
-
-/** 5대5 라인업 — 반환 순서가 곧 경기 id(0 편 다섯, 1 편 다섯), 편 안에서 slot 0 이 골키퍼(sim 의 편성과 같은 순서).
- *  사람은 0 편 slot 3(앞줄). 나머지는 명단에서 섞어 뽑는다.
- *  명단이 10명이 안 되면 같은 사람이 봇으로 두 번 나올 수 있다(결정: 시제품은 5대5 고정이라 막는 것보다 판이 열리는 게 낫다 —
- *  이름표가 같아도 경기엔 지장이 없다). 사람 혼자면 봇이 전부 그 사람 그림이다. */
-export function pickLineup5(roster: number[], humanNum: number, rnd: () => number): Slot3[] {
-  const uniq = roster.filter((n, i) => roster.indexOf(n) === i);
-  const others = uniq.filter((n) => n !== humanNum);
-  const pool = others.slice();
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  const src = pool.length ? pool : [humanNum];
-  let k = 0;
-  const next = (): number => src[k++ % src.length];
-  const out: Slot3[] = [];
-  for (const side of [0, 1] as const)
-    for (let slot = 0; slot < 5; slot++) {
-      const human = side === 0 && slot === 3;
-      out.push({ num: human ? humanNum : next(), side, human, gk: slot === 0 });
-    }
-  return out;
 }
 
 // ── 시점(2026-11-07 "1인칭도 구현해줘") ──

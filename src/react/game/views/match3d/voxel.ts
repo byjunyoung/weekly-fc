@@ -1,4 +1,4 @@
-// src/react/game3d/voxel.ts — 포털 도트 아바타(avatarPixels 의 24×32 문자맵)를 블록 입체로(3D 시제품, 2026-11-07).
+// src/react/game/views/match3d/voxel.ts — 포털 도트 아바타(avatarPixels 의 24×32 문자맵)를 블록 입체로(3D 경기, 2026-11-07).
 // 스펙 §4 "포털 도트 아바타를 픽셀마다 블록으로 세운 입체. 멤버마다 얼굴·머리·유니폼이 그대로 보인다."
 // 순수 — three.js 를 모르고 숫자 배열만 만든다(node 테스트가 그대로 가져온다). 화면 쪽이 이걸 BufferGeometry 하나로 감싼다.
 //

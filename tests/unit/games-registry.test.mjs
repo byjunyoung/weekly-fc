@@ -31,7 +31,7 @@ test('등록부 — id 는 겹치지 않고, 모드별로 나뉜다, 지금 2D �
     assert.equal(g.applySettings(g.defaultSettings, {}), g.defaultSettings, '안 바뀌면 같은 객체');
   }
   assert.deepEqual(gamesOf('2d').map((g) => g.adapter.id), ['match2d']);
-  assert.deepEqual(gamesOf('3d'), []);
+  assert.deepEqual(gamesOf('3d').map((g) => g.adapter.id), ['match3d']);   // 4단계: 3D 경기
 });
 
 test('방 — 게임 종류와 그 게임의 기본 설정으로 만들고, 기본값을 나눠 쓰지 않는다', () => {

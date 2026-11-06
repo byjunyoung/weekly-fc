@@ -1,9 +1,9 @@
-// src/react/game3d/sfx3d.ts — 3D 시제품의 소리 낼 사건 찾기(2026-11-07 "3d도 당연히 효과음 있어야지 두 모드 다 일관성 갖추게해").
+// src/react/game/views/match3d/sfx3d.ts — 3D 경기의 소리 낼 사건 찾기(2026-11-07 "3d도 당연히 효과음 있어야지 두 모드 다 일관성 갖추게해").
 // 2D 의 sfx-detect.ts 와 같은 방식이다 — 이어진 두 상태를 비교하는 순수 함수, 경기 계산은 소리를 모른다.
 // 소리 자체는 2D 와 같은 모듈(src/react/game/sfx.ts)이 낸다: 골·휘슬·킥·튕김은 두 모드가 똑같이 들린다.
 // 3D 에만 있는 것(슛 세기·땅 튕김·골키퍼·태클)은 같은 모듈에 종류를 몇 개 더했다.
-import type { Sfx } from '../game/sfx.ts';
-import { RULES3D, PITCH3D, type MatchConfig, type MatchState } from '../../lib/game3d/sim.ts';
+import type { Sfx } from '../../sfx.ts';
+import { RULES3D, PITCH3D, type MatchConfig, type MatchState } from '../../../../lib/game3d/sim.ts';
 
 /** 땅에 떨어질 때 세로 속도(m/s)가 이보다 커야 튕김 소리 — 낮게 통통 구르는 건 조용히. */
 const GROUND_MIN_VZ = 2.2;

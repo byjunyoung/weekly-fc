@@ -1,7 +1,8 @@
-// src/lib/game3d/sim.ts — 3D 축구 **시제품**의 경기 계산(2026-11-07). 상태 하나와 "한 틱 진행"이 전부다.
+// src/lib/game3d/sim.ts — 3D 경기의 경기 계산(2026-11-07). 상태 하나와 "한 틱 진행"이 전부다.
 // 설계: docs/superpowers/specs/2026-11-07-game3d-spike-design.md
 // 사용자: "3차원 피파 같은 게임으로 만들긴 좀 그런가?" → 세 갈래 중 "b 쪽도 시도해보고 싶은데"(단순한 3D 아케이드 축구).
-// 시제품이다 — 손맛이 재미있는지 보려는 것이고, 버려도 된다. 2D 게임(src/lib/game)은 건드리지 않고 가져다 쓰지도 않는다.
+// 시제품으로 시작했고(손맛을 보려는 것), 게임 묶음 4단계(2026-11-07 "3D 경기 온라인")에 어댑터(src/lib/games/match3d.ts)로 감싸 방에서 온라인으로 뛰게 됐다 —
+// 방장이 이 step 을 돌리고 손님이 같은 step 으로 예측하므로 아래 약속이 이제 실제로 쓰인다. 2D 게임(src/lib/game)은 건드리지 않고 가져다 쓰지도 않는다.
 //
 // 2D 와 같은 약속(스펙 §5 "2D 의 규칙 그대로"):
 //   1) 순수하다 — 화면·three.js·시계·Math.random 을 모른다. 난수는 상태 안의 seed 에서만 뽑는다(rand).
@@ -165,6 +166,12 @@ const SUBSTEPS = 4;           // 한 틱을 쪼개 움직인다 — 30m/s 공이
 const FORMATION: { x: number; y: number }[] = [
   { x: -17, y: 0 }, { x: -11, y: -5 }, { x: -11, y: 5 }, { x: -4.5, y: -4 }, { x: -4.5, y: 4 },
 ];
+/** 필드 선수가 2·3명인 편의 편성(골키퍼 다음 slot 1 부터). 2026-11-07 4단계 — 방에서 한 편 필드 2~4명을 고르게 했다
+ *  (위 다섯 자리를 그대로 쓰면 둘일 때 둘 다 뒷줄에 서서 앞이 빈다). 뒤 → 앞 순서는 위와 같다. 4명이면 위 FORMATION 그대로. */
+const FORMATION_FEW: Record<number, { x: number; y: number }[]> = {
+  2: [{ x: -10.5, y: -2.5 }, { x: -4.5, y: 2.5 }],
+  3: [{ x: -11, y: 0 }, { x: -5, y: -4.5 }, { x: -5, y: 4.5 }],
+};
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 
 export const TICK_HZ = 60;
@@ -195,7 +202,8 @@ export type Input = {
 export const NO_INPUT: Input = { x: 0, y: 0, shoot: false, pass: false };
 /** gk = 골키퍼(봇만). bot = 봇이 조종. */
 export type MatchPlayer = { id: number; num: number; name: string; side: Side; bot: boolean; gk: boolean; perf: Perf };
-export type MatchConfig = { minutes: number; players: MatchPlayer[] };
+/** scoreLimit(있고 0 보다 크면) = 이 점수에 먼저 닿으면 골 장면 뒤 끝(2D 와 같은 규칙, 2026-11-07 4단계 방 설정). 없으면 시간만. */
+export type MatchConfig = { minutes: number; players: MatchPlayer[]; scoreLimit?: number };
 export type Ball = { x: number; y: number; z: number; vx: number; vy: number; vz: number };
 /** fx·fy = 보는 방향(단위 벡터). charge = 슛을 누르고 있는 틱. noTouch = 공을 못 잡는 남은 틱. kickTicks = 찬 동작(화면이 기울인다).
  *  hold = 골키퍼가 잡은 공을 들고 있는 남은 틱. */
@@ -237,10 +245,20 @@ export type MatchEvent =
 /** 0 편이면 +1(오른쪽으로 공격), 1 편이면 -1. */
 export const attackDir = (side: Side): 1 | -1 => (side === 0 ? 1 : -1);
 
-/** 편성 자리(slot 0 = 골키퍼). 1 편은 좌우를 뒤집는다. 봇이 쉬는 자리를 잡을 때도 쓴다. */
-export function formationSpot(slot: number, side: Side): { x: number; y: number } {
-  const s = FORMATION[Math.min(Math.max(slot, 0), FORMATION.length - 1)];
+/** 편성 자리(slot 0 = 골키퍼). 1 편은 좌우를 뒤집는다. 봇이 쉬는 자리를 잡을 때도 쓴다.
+ *  outfield = 그 편 필드 선수 수 — 2·3 이면 FORMATION_FEW, 그 밖(4, 또는 골키퍼 없는 시험 판)은 예전 다섯 자리. */
+export function formationSpot(slot: number, side: Side, outfield = 4): { x: number; y: number } {
+  const few = FORMATION_FEW[outfield];
+  const s = few && slot >= 1 ? few[Math.min(slot - 1, few.length - 1)] : FORMATION[Math.min(Math.max(slot, 0), FORMATION.length - 1)];
   return { x: side === 0 ? s.x : 0 - s.x, y: s.y };
+}
+
+/** 그 선수의 편성 자리 — 편 안 순번(slotOf)과 그 편 필드 수로. 골키퍼가 있는 편만 필드 수를 센다(없으면 예전 자리). */
+export function spotOf(config: MatchConfig, id: number): { x: number; y: number } {
+  const me = config.players[id];
+  let n = 0, gk = false;
+  for (const p of config.players) if (p.side === me.side) { if (p.gk) gk = true; else n++; }
+  return formationSpot(slotOf(config, id), me.side, gk ? n : 4);
 }
 
 /** 편 안 순번(slot). config.players 순서대로 편마다 0, 1, 2… */
@@ -289,7 +307,7 @@ function placeForKickoff(s: MatchState, config: MatchConfig): void {
   const taker = kickoffTaker(config, s.kickoffSide);
   config.players.forEach((mp, i) => {
     const p = s.players[i];
-    const spot = formationSpot(slotOf(config, mp.id), mp.side);
+    const spot = spotOf(config, mp.id);
     const dir = attackDir(mp.side);
     p.x = spot.x; p.y = spot.y + (mp.gk ? 0 : (rand(s) - 0.5) * 2 * KICKOFF_JITTER);
     if (mp.id === taker) { p.x = 0 - dir * (PLAYER_R + BALL_R + KICKOFF_GAP); p.y = 0; }
@@ -843,7 +861,8 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
     } else if (s.ticksLeft <= 0) finish(s);
   } else if (s.phase === 'goal') {
     if (s.phaseTicks >= GOAL_TICKS) {
-      if (s.ticksLeft <= 0) finish(s);
+      const lim = config.scoreLimit ?? 0;
+      if (s.ticksLeft <= 0 || (lim > 0 && (s.score[0] >= lim || s.score[1] >= lim))) finish(s);
       else { placeForKickoff(s, config); s.phase = 'kickoff'; s.phaseTicks = 0; }
     }
   }

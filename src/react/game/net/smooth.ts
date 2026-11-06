@@ -32,14 +32,20 @@ export type Smoother<S> = {
 /** 몸 목록을 아는 게임의 부드럽게 하기. 몸을 모르는 게임(bodies 없음)은 그대로 돌려준다. */
 export function smootherFor<S>(lens: Lens<S> | undefined): Smoother<S> {
   if (!lens) return { lerp: (_p, c) => c, correct: () => noOffsets(0), withOffsets: (s) => s };
+  // 한계는 게임 좌표 단위라 게임이 줄 수 있다(3D 경기는 m — 2026-11-07 4단계). 없으면 2D 경기 값.
+  const jump = lens.jump ?? JUMP, snapLimit = lens.snap ?? SNAP_LIMIT;
   return {
     lerp(prev, cur, a) {
       if (prev === cur || a <= 0) return cur;
       const t = Math.min(1, a);
       const mix = (p: Point, c: Point): Point => {
         const dx = c.x - p.x, dy = c.y - p.y;
-        if (dx * dx + dy * dy > JUMP * JUMP) return c;
-        return { ...c, x: p.x + dx * t, y: p.y + dy * t };
+        if (dx * dx + dy * dy > jump * jump) return c;
+        const out = { ...c, x: p.x + dx * t, y: p.y + dy * t };
+        // 높이가 있는 몸(3D 공)은 높이도 섞는다 — 안 섞으면 뜬 공이 틱마다 계단처럼 오르내린다
+        const pz = (p as { z?: unknown }).z, cz = (c as { z?: unknown }).z;
+        if (typeof pz === 'number' && typeof cz === 'number') (out as { z?: number }).z = pz + (cz - pz) * t;
+        return out;
       };
       const pb = lens.get(prev);
       return lens.set(cur, lens.get(cur).map((c, i) => (pb[i] ? mix(pb[i], c) : c)));
@@ -52,7 +58,7 @@ export function smootherFor<S>(lens: Lens<S> | undefined): Smoother<S> {
       if (b.length !== n) return out;
       for (let i = 0; i < n; i++) {
         const dx = b[i].x + (off.x[i] ?? 0) - a[i].x, dy = b[i].y + (off.y[i] ?? 0) - a[i].y;
-        if (dx * dx + dy * dy <= SNAP_LIMIT * SNAP_LIMIT) { out.x[i] = dx; out.y[i] = dy; }
+        if (dx * dx + dy * dy <= snapLimit * snapLimit) { out.x[i] = dx; out.y[i] = dy; }
       }
       return out;
     },

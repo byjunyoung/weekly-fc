@@ -6,12 +6,24 @@ import assert from 'node:assert/strict';
 import { TICK_HZ } from '../../src/lib/games/adapter.ts';
 import { GAMES } from '../../src/lib/games/registry.ts';
 import { match2d } from '../../src/lib/games/match2d.ts';
+import { match3d } from '../../src/lib/games/match3d.ts';
+import { MAX_CODES } from '../../src/lib/games/net.ts';
+import { BASE_PERF as BASE_PERF_3D } from '../../src/lib/game3d/stats.ts';
 import { TICK_HZ as SIM_HZ } from '../../src/lib/game/sim.ts';
 import { BASE_PERF } from '../../src/lib/game/stats.ts';
 
 const cfg2d = (a, b, field = 'M', minutes = 2) => ({
   field, minutes, scoreLimit: 0,
   players: Array.from({ length: a + b }, (_, i) => ({ id: i, num: 10 + i, name: `P${i}`, side: i < a ? 0 : 1, bot: i !== 0, perf: { ...BASE_PERF } })),
+});
+
+// 3D 경기 — 편마다 [골키퍼 봇, 필드…](방 규칙 match3d-room.ts 의 차례). human = 사람 자리 id 들.
+const cfg3d = (a, b, minutes = 2, human = [3]) => ({
+  minutes, scoreLimit: 0,
+  players: Array.from({ length: a + b }, (_, i) => {
+    const side = i < a ? 0 : 1, gk = i === 0 || i === a;
+    return { id: i, num: 10 + i, name: `P${i}`, side, bot: gk || !human.includes(i), gk, perf: { ...BASE_PERF_3D } };
+  }),
 });
 
 /** 게임마다: 검사에 쓸 설정들, 짧게 끝나는 설정과 그 틱 한도, 상태를 그 게임만 아는 방식으로 망가뜨리는 법, 빠져도 되는 상태 필드. */
@@ -36,6 +48,32 @@ const CASES = [
       (c) => ({ ...c, players: [...c.players, ...cfg2d(7, 0).players].map((p, i) => ({ ...p, id: i, side: 0 })) }),
     ],
     optionalStateKeys: ['lastAssist', 'prevTouch'],   // 도움 기록 전의 상태도 받던 너그러움(예전 net.ts 그대로)
+  },
+  {
+    adapter: match3d,
+    configs: [cfg3d(5, 5), cfg3d(3, 3, 2, [1, 4, 5]), cfg3d(4, 5, 3, [2, 3]), cfg3d(5, 3, 1, [])],
+    short: { config: cfg3d(5, 5, 0.5, []), maxTicks: 60 * 60 * 2 },
+    // 자리 수가 다른 상태, 자리 id 어긋남, 모르는 단계, 소유자가 자리 밖, 점수 칸 모자람, 찬 사람이 자리 밖, 기록 칸 모자람
+    mangleState: [
+      (s) => ({ ...s, players: s.players.slice(1) }),
+      (s) => ({ ...s, players: [...s.players, s.players[0]] }),
+      (s) => ({ ...s, players: s.players.map((p, i) => ({ ...p, id: i === 0 ? 1 : p.id })) }),
+      (s) => ({ ...s, phase: 'zz' }),
+      (s) => ({ ...s, owner: s.players.length }),
+      (s) => ({ ...s, score: [0] }),
+      (s) => ({ ...s, lastKick: { by: s.players.length, kind: 'shot', tick: 1 } }),
+      (s) => ({ ...s, count: { ...s.count, lobs: [0] } }),
+      (s) => ({ ...s, players: s.players.map((p, i) => (i === 0 ? { ...p, sprint: 1 } : p)) }),
+    ],
+    // 골키퍼가 사람, 한 편 골키퍼 둘, 골키퍼가 편 첫 자리가 아님, 한 편 여섯, 선수 없음
+    mangleConfig: [
+      (c) => ({ ...c, players: c.players.map((p, i) => (i === 0 ? { ...p, bot: false } : p)) }),
+      (c) => ({ ...c, players: c.players.map((p, i) => (i === 1 ? { ...p, gk: true, bot: true } : p)) }),
+      (c) => ({ ...c, players: c.players.map((p, i) => (i === 0 ? { ...p, gk: false } : i === 1 ? { ...p, gk: true, bot: true } : p)) }),
+      (c) => ({ ...c, players: [...c.players, ...cfg3d(6, 0).players].map((p, i) => ({ ...p, id: i, side: 0, gk: i === 0 })) }),
+      (c) => ({ ...c, players: [] }),
+    ],
+    optionalStateKeys: [],
   },
 ];
 
@@ -111,7 +149,7 @@ for (const C of CASES) {
   });
 
   test(`[${g.id}] 입력 정수 — 0..codes-1 이 안정하고, 범위 밖은 idle, idle 은 범위 안`, () => {
-    assert.ok(Number.isInteger(g.codes) && g.codes > 0 && g.codes <= 4096);
+    assert.ok(Number.isInteger(g.codes) && g.codes > 0 && g.codes <= MAX_CODES);
     for (let q = 0; q < g.codes; q++) {
       const i = g.decode(q), e = g.encode(i);
       assert.ok(Number.isInteger(e) && e >= 0 && e < g.codes, `코드 ${q}`);
@@ -194,6 +232,32 @@ for (const C of CASES) {
         assert.deepEqual(g.bodies.set(s, b), s);
         assert.ok(b.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y)));
       }
+    }
+  });
+}
+
+// 스냅샷 줄이기(어댑터 pack/unpack, 2026-11-07 4단계) — 잃는 게 없어야 한다: JSON 을 오간 뒤 풀면 같은 상태, 거기서 이어 돌려도 같다.
+for (const C of CASES.filter((c) => c.adapter.pack)) {
+  const g = C.adapter;
+  test(`[${g.id}] pack/unpack — 풀면 같은 상태, 이어 돌린 결과도 같다, 망가진 것은 null`, () => {
+    for (const config of C.configs) {
+      const states = run(g, config, 21, 400);
+      for (const s of states) {
+        const back = g.unpack(JSON.parse(JSON.stringify(g.pack(s))), config);
+        assert.deepEqual(back, s);
+        const ins = Array.from({ length: g.slots(config) }, (_, i) => g.decode((i * 7919 + g.tick(s)) % g.codes));
+        assert.deepEqual(g.step(back, config, ins), g.step(s, config, ins));
+      }
+      const p = g.pack(states[200]);
+      assert.ok(p && typeof p === 'object' && !Array.isArray(p), '객체여야 parseMsg 를 지난다');
+      for (const bad of [null, undefined, 3, 'x', [], {}, { ...p, v: 99 }, { ...p, p: [] }, { ...p, b: [1, 2] }, { ...p, o: null }]) {
+        assert.doesNotThrow(() => g.unpack(bad, config));
+        const u = g.unpack(bad, config);
+        assert.ok(u === null || !g.okState(u, config), JSON.stringify(bad)?.slice(0, 40));
+      }
+      // 다른 판(자리 수가 다른 설정)의 스냅샷은 풀지 않는다
+      const other = C.configs.find((c) => g.slots(c) !== g.slots(config));
+      assert.equal(g.unpack(g.pack(g.create(other, 1)), config), null);
     }
   });
 }

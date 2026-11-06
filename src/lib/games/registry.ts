@@ -7,9 +7,10 @@
 // 화면 쪽 짝(그리기·조작·설정 화면)은 src/react/game/views/index.ts 에 같은 id 로 둔다(이 파일은 리액트·캔버스를 부르지 않는다).
 import type { GameEntry, GameLookup, GameMode } from './entry.ts';
 import { MATCH2D } from './match2d.ts';
+import { MATCH3D } from './match3d.ts';
 
 /** 목록에 보이는 차례대로. */
-export const GAMES: readonly GameEntry[] = [MATCH2D];
+export const GAMES: readonly GameEntry[] = [MATCH2D, MATCH3D];
 
 /** 방을 만들 때·주소에 ?g= 가 없거나 모를 때의 게임. */
 export const DEFAULT_GAME = 'match2d';

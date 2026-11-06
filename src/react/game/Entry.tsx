@@ -44,6 +44,8 @@ export function Entry({ game, players, roomCode, reopen = false, message, onSolo
   useEffect(() => { if (solo) soloRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, [solo]);
   useEffect(() => { setLast(readLast()); }, []);
   const entry = gameOf(game), gv = viewOf(game);
+  // 그림판 묶음이 무거운 게임(3D — three.js)은 입장 화면이 뜨자마자 미리 받아 둔다 — [시작] 뒤에 기다리지 않게(예전 /game3d/ 설정 화면처럼).
+  useEffect(() => { void gv?.surface?.load().catch(() => { /* 받기 실패는 경기 화면이 다시 시도하고 안내한다 */ }); }, [gv]);
   const can = players.length >= (gv?.minRoster ?? 2);   // 명단이 모자라면 판을 못 만든다(경기: 두 명)
 
   const has = (n: number | null | undefined): n is number => n != null && players.some((p) => p.num === n);

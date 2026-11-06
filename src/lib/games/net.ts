@@ -30,8 +30,10 @@ export type NetMsg =
 
 /** 어느 게임이든 한 판의 입력 자리는 이 수까지 — 방 정원(MAX_MEMBERS)과 같다. 크기를 부풀려 먹통 만들기를 겉에서 막는 선. */
 export const MAX_SLOTS = MAX_MEMBERS;
-/** 어느 게임이든 입력 정수는 이 밑. 게임마다의 정확한 범위(어댑터 codes)는 acceptIn·acceptSnap 이 본다. */
-export const MAX_CODES = 4096;
+/** 어느 게임이든 입력 정수는 이 밑. 게임마다의 정확한 범위(어댑터 codes)는 acceptIn·acceptSnap 이 본다.
+ *  4096 → 131072(2026-11-07 4단계): 3D 경기 입력은 움직임 33 × 동작 키 32 × 1인칭 보는 방향 65 = 68,640 가지다(src/lib/game3d/quant.ts).
+ *  여전히 정수 하나라 메시지 크기는 몇 글자 차이다. */
+export const MAX_CODES = 131072;
 const MAX_ROSTER = 200, MAX_STR = 64, MAX_GAME_ID = 32;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -104,6 +106,18 @@ export function acceptIn(game: AnyAdapter, m: Extract<NetMsg, { t: 'in' }>): boo
  *  손님이 seed 로 "같은 판"을 확인한 뒤 부른다. 어긋난 스냅샷은 버린다 — step·그리기가 프레임마다 예외를 던지지 않게. */
 export function acceptSnap<C>(game: AnyAdapter, config: C, m: Extract<NetMsg, { t: 'snap' }>): boolean {
   return game.okState(m.state, config) && m.inputs.length <= game.slots(config) && m.inputs.every((q) => q < game.codes);
+}
+
+/** 받은 스냅샷을 그 게임 상태로 — 줄여 보낸 게임(어댑터 pack)이면 unpack 으로 되돌리고, 그다음 acceptSnap 으로 본다.
+ *  어긋나면 null(버린다). 손님 세션이 snap 을 받을 때 이것 하나를 부른다(2026-11-07 4단계). */
+export function readSnap<C>(game: AnyAdapter, config: C, m: Extract<NetMsg, { t: 'snap' }>): Extract<NetMsg, { t: 'snap' }> | null {
+  let state: unknown = m.state;
+  if (game.unpack) {
+    try { state = game.unpack(m.state, config); } catch { return null; }
+    if (state === null) return null;
+  }
+  const out = state === m.state ? m : { ...m, state };
+  return acceptSnap(game, config, out) ? out : null;
 }
 
 /** 한마디 문구(스펙 §3). 메시지의 k 는 이 배열의 번호다. */
