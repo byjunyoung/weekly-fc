@@ -234,22 +234,9 @@ body.wide .page-head h1 { font-size: var(--fs-h-lg); }
   .topnav { order: 3; flex-basis: 100%; height: 46px; border-top: 1px solid var(--hairline); margin: 0 calc(var(--s-md) * -1); padding: 0 var(--s-md); }
 }
 
-/* ══ 탭 ════════════════════════════════════════════════════ */
-.tabs { display: flex; gap: var(--s-xs); border-bottom: 1px solid var(--hairline); margin-bottom: var(--s-lg); overflow-x: auto; }
-/* 폰에선 목차가 704px 이라 가로로 밀렸는데 밀린다는 표시가 없어 "비용·벌"에서 잘린 것처럼 보였다.
-   접어서 전부 보이게 한다 — 여섯 개라 두 줄이면 들어간다(2026-09-23). */
-@media (max-width: 600px) {
-  .tabs { flex-wrap: wrap; overflow-x: visible; gap: 0 var(--s-xxs); }
-  .tabs a, .tabs button { padding: var(--s-xs) var(--s-sm); }
-}
-.tabs a, .tabs button { min-height: 0; padding: var(--s-sm) var(--s-md); border: 0; border-radius: 0; background: none;
-  color: var(--muted); font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; white-space: nowrap; margin-bottom: -1px;
-  border-bottom: 2px solid transparent; }
-.tabs a:hover, .tabs button:hover { color: var(--fg); background: none; }
-.tabs a.active, .tabs button.active { color: var(--fg); border-bottom-color: var(--fg); }
-
-/* 하위 탭(2026-11-06) — 묶인 상단 메뉴(매치·안내) 아래 줄. 페이지 제목 위에 놓이므로 제목 아래 목차(.tabs)와
-   다른 층으로 읽히게 본문 글꼴·활성 밑줄은 링크 색. 좁은 폭에선 .topnav 처럼 접지 않고 가로로 민다. */
+/* ══ 하위 탭 ═══════════════════════════════════════════════ */
+/* 묶인 상단 메뉴(매치·안내) 아래 줄(2026-11-06). 본문 글꼴·활성 밑줄은 링크 색. 좁은 폭에선 .topnav 처럼 접지 않고
+   가로로 민다. 규칙 페이지의 제목 아래 목차 줄(.tabs)은 같은 날 없앴다 — 탭 줄이 두 겹이었다. */
 .subnav { display: flex; gap: var(--s-lg); margin-bottom: var(--s-lg); border-bottom: 1px solid var(--hairline); overflow-x: auto; scrollbar-width: none; }
 .subnav::-webkit-scrollbar { display: none; }
 .subnav a { flex: none; padding: var(--s-xs) 0; margin-bottom: -1px; border-bottom: 2px solid transparent; background: none;
@@ -455,12 +442,6 @@ a.card:hover { background: var(--charcoal); }
 .rules-live-head { justify-content: space-between; }
 #duty-year { gap: var(--s-xs); }
 .rules-empty { margin: 0; font-size: var(--fs-sm); }
-/* 자기소개 양식 — 처음 한 번만 필요한 내용이라 접어 둔다. 기본 삼각형 대신 글자 뒤 표시. */
-.rules-fold > summary { cursor: pointer; list-style: none; }
-.rules-fold > summary::-webkit-details-marker { display: none; }
-.rules-fold > summary::after { content: " ›"; }
-.rules-fold[open] > summary::after { content: " ⌄"; }
-.rules-fold[open] > summary { margin-bottom: var(--s-xs); }
 .duty-pair { display: inline-flex; flex-wrap: wrap; gap: var(--s-xs) var(--s-md); }
 .duty-pair b { min-width: 4em; font-weight: var(--fw-strong); }
 /* 월 칸은 접지 않는다 — "9월 이번 달"이 줄바꿈되면 그 줄만 두 배로 높아진다. 폭은 표가 당번 칸에서 가져온다. */

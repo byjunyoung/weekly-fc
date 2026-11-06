@@ -132,7 +132,7 @@ test('팀 자료 — /kit/ 은 KitApp 섬, 로고 PNG 여섯 개가 dist/brand �
 });
 test('운영 탭 봉사 — 봉사표는 DutyLive 섬, 이 페이지엔 옛 페이지 스크립트·Web Awesome 대화상자가 없다', () => {
   const html = read('rules/index.html');
-  const duty = html.slice(html.indexOf('<section id="duty"'), html.indexOf('<section id="bank"'));
+  const duty = html.slice(html.indexOf('<section id="duty"'), html.indexOf('<section id="manner"'));
   const island = duty.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/DutyLive\.[^"]+\.js"[^>]*>/);
   assert.ok(island, 'DutyLive 섬 없음');
   assert.ok(island[0].includes('client="load"'), 'DutyLive 가 client:load 아님');
@@ -252,5 +252,14 @@ test('안내 > 처음 왔다면(2026-11-06) — 소제목 셋(매주 이렇게·
   assert.equal((html.match(/<h2/g) ?? []).length, 3, '소제목은 셋');
   assert.ok(!html.includes('guide-part'), '묶음 제목 단은 없앴다');
   assert.ok(html.includes('/weekly-fc/og.png'));
+  assert.ok(!html.includes('자기소개 양식'), '양식은 봇이 보낸다');
+});
+
+test('규칙은 한 단(2026-11-06 "규칙도 뎁스가 너무 깊어") — 제목 아래 목차 줄 없이 소제목 넷, 통장은 비용 칸 안에', () => {
+  const html = read('rules/index.html');
+  assert.ok(!html.includes('class="tabs"'), '목차 줄이 남았다');
+  assert.deepEqual([...html.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1]), ['when', 'fees', 'duty', 'manner']);
+  const fees = html.slice(html.indexOf('<section id="fees"'), html.indexOf('<section id="duty"'));
+  assert.ok(fees.includes('카카오뱅크'), '통장 줄은 비용 칸에');
   assert.ok(!html.includes('자기소개 양식'), '양식은 봇이 보낸다');
 });
