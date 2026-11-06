@@ -198,7 +198,7 @@ function pixelsFor(p: Player | undefined, num: number): NonNullable<ReturnType<t
  *  아래는 3D 미니게임(2026-11-07 5단계)이 더한 것 — 경기는 안 쓴다:
  *  cam = 시점 대신 이 자리로(승부차기의 키커 뒤·골대 뒤 카메라), poses[i] = 몸 i 를 숨기거나(hide) 옆으로 눕히고(roll, 라디안) 띄우기(lift, m),
  *  focus = 카메라·화면 밖 화살표가 따라갈 공 번호(공 여럿일 때), noMarker = 내 선수 머리 위 금색 표시를 숨긴다(카메라가 바로 뒤에 있을 때). */
-export type ScenePose = { hide?: boolean; roll?: number; lift?: number };
+export type ScenePose = { hide?: boolean; roll?: number; lift?: number; ghost?: boolean };
 export type SceneView = { mode: ViewMode; portrait: boolean; heading: number; snap: boolean; cam?: CamGoal; poses?: (ScenePose | undefined)[]; focus?: number; noMarker?: boolean };
 
 /** 장면이 그리는 몸·공 — 3D 경기 상태(MatchState)가 그대로 맞고, 미니게임은 자기 상태를 이 모양으로 옮겨 넘긴다(5단계).
@@ -211,7 +211,7 @@ export type SceneCast = { players: { id: number; num: number; side?: 0 | 1 }[] }
 /** 장면 옵션(5단계) — balls = 공 개수(기본 1), rings = 몸마다 고리 색(없으면 편 색, 내 선수 금색). */
 export type SceneOpts = { balls?: number; rings?: string[] };
 
-type FigureObj = { root: Group; inner: Group; legL: Mesh | null; legR: Mesh | null; phase: number };
+type FigureObj = { root: Group; inner: Group; legL: Mesh | null; legR: Mesh | null; phase: number; meshes: Mesh[]; ghost: boolean };
 
 export type SceneHandle = {
   renderer: WebGLRenderer;
@@ -263,6 +263,8 @@ export function createScene(canvas: HTMLCanvasElement, config: SceneCast, roster
 
   // 선수
   const figMat = new MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  // 흐린 몸(6단계 — 드리블 훈련장에서 다른 레인 사람). 같은 그림에 재질만 바꾼다.
+  const ghostMat = new MeshLambertMaterial({ vertexColors: true, flatShading: true, transparent: true, opacity: 0.32, depthWrite: false });
   const rgbC = new Color();
   const rgb = (hex: string): [number, number, number] => { rgbC.set(hex); return [rgbC.r, rgbC.g, rgbC.b]; };
   const figs: FigureObj[] = config.players.map((mp) => {
@@ -270,7 +272,8 @@ export function createScene(canvas: HTMLCanvasElement, config: SceneCast, roster
     const f = buildFigure(pixelsFor(pl, mp.num), rgb);
     const root = new Group(), inner = new Group();
     root.add(inner);
-    inner.add(new Mesh(toGeometry(f.body), figMat));
+    const bodyMesh = new Mesh(toGeometry(f.body), figMat);
+    inner.add(bodyMesh);
     // 다리는 엉덩이 높이에 매달아 그 자리를 축으로 흔든다
     const leg = (part: Part | null): Mesh | null => {
       if (!part) return null;
@@ -282,7 +285,7 @@ export function createScene(canvas: HTMLCanvasElement, config: SceneCast, roster
     const legL = leg(f.legL), legR = leg(f.legR);
     root.rotation.order = 'YXZ';   // 몸을 옆으로 눕힐 때(roll) 몸 앞을 축으로 돌게 — 서 있을 땐 z 가 0 이라 그림이 같다
     scene.add(root);
-    return { root, inner, legL, legR, phase: mp.id * 1.7 };
+    return { root, inner, legL, legR, phase: mp.id * 1.7, meshes: [bodyMesh, ...(legL ? [legL] : []), ...(legR ? [legR] : [])], ghost: false };
   });
 
   // 발밑 고리(팀 색) · 그림자(선수 + 공) — 인스턴스 하나씩
@@ -338,6 +341,7 @@ export function createScene(canvas: HTMLCanvasElement, config: SceneCast, roster
         const fx = lerp(a.fx, b.fx, t), fy = lerp(a.fy, b.fy, t);
         const f = figs[i];
         const pose = view.poses?.[i];
+        if (!!pose?.ghost !== f.ghost) { f.ghost = !!pose?.ghost; for (const m of f.meshes) m.material = f.ghost ? ghostMat : figMat; }
         f.root.position.set(x, pose?.lift ?? 0, y);
         if (fx * fx + fy * fy > 1e-4) f.root.rotation.y = Math.atan2(fx, fy);
         f.root.rotation.z = pose?.roll ?? 0;   // 옆으로 눕기(승부차기 키퍼가 몸을 던질 때) — 차례 'YXZ' 라 몸 앞을 축으로 돈다

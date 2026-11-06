@@ -32,6 +32,15 @@ export const MAX_BOTS = 4;
 const CENTER_SPOTS: readonly (readonly [number, number])[] = [
   [0, 0], [0, -56], [0, 56], [-56, 0], [56, 0], [-40, -40], [40, 40], [-40, 40], [40, -40], [0, -112],
 ];
+/** "골!" 표시를 띄우는 최소 간격(틱) — 연습 봇 넷이면 몇 초마다 골이 나 표시가 화면을 덮어서(2026-11-07 5단계 뒤), 3초에 한 번까지만 띄운다.
+ *  골 수·소리는 그대로(표시만 거른다). 2D·3D 훈련장이 같이 쓴다(popShown). */
+export const POP_GAP = 180;
+/** 이 "골!" 을 띄울까 — 마지막으로 띄운 것(memo.last)에서 POP_GAP 이 지났거나 바로 그것이면. 화면 쪽이 memo 를 들고 프레임마다 부른다. */
+export function popShown(tick: number, memo: { last: number }): boolean {
+  if (tick === memo.last) return true;
+  if (tick - memo.last >= POP_GAP || tick < memo.last) { memo.last = tick; return true; }
+  return false;
+}
 /** "골!" 표시를 남기는 틱(1초)과 동시에 들고 있는 개수. */
 export const POP_TICKS = 60;
 const MAX_POPS = 4;

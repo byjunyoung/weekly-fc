@@ -20,6 +20,44 @@ export const FK_EXTENT = { wx: 330, y0: -80, y1: 500 };
 /** 결과 상자는 한 판에 한 번만 최고 기록을 적게 — 같은 끝 상태로 여러 번 불려도 처음 계산을 돌려준다. */
 const once = new WeakMap<object, ResultView>();
 
+/** 결과 상자(2026-11-07 6단계에 꺼냄 — 3D 프리킥도 같은 상자를 쓴다, 혼자 최고 기록 칸만 다르게). 내용은 예전 그대로. */
+export function fkResult(final: FkState, config: FkConfig, { myId, solo }: { myId: number | null; solo: boolean }, bestKey: string): ResultView {
+  const hit = once.get(final);
+  if (hit) return hit;
+  const order = fkRanking(final.points, final.log);
+  const goals = (i: number): number => final.log.filter((e) => e.kicker === i && e.out === 'goal').length;
+  const mark = (i: number): string => FK_SPOTS.map((_, s) => { const e = final.log.find((x) => x.kicker === i && x.spot === s); return e ? (e.out === 'goal' ? '●' : '✕') : '○'; }).join('');
+  const detail = (
+    <ul className="fk-rows">
+      {order.map((i, r) => {
+        const p = config.players[i];
+        return (
+          <li key={i} className={i === myId ? 'is-me' : undefined}>
+            <span className="fk-rank">{r + 1}</span>
+            <span className="fk-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}</span>
+            <span className="fk-marks" aria-label={`자리별 ${mark(i).replace(/●/g, '골 ').replace(/✕/g, '실패 ').trim()}`}>{mark(i)}</span>
+            <span className="fk-pts">{final.points[i]}점</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+  let out: ResultView;
+  if (solo || config.players.length === 1) {
+    const pts = final.points[0];
+    const b = solo ? offerBest(bestKey, pts, (a, c) => a > c) : { prev: null, isNew: false };
+    const sub = `다섯 자리 · 골 ${goals(0)}개${b.isNew ? (b.prev !== null ? ' · 새 최고 기록' : ' · 첫 기록') : b.prev !== null ? ` · 최고 기록 ${b.prev}점` : ''}`;
+    out = { outcome: `${pts}점`, tone: pts >= 6 ? 'win' : 'draw', score: <>{pts} / {FK_MAX_POINTS}점</>, sub, detail };
+  } else {
+    const rank = myId === null ? -1 : order.indexOf(myId);
+    const top = config.players[order[0]];
+    const outcome = myId === null ? `${top.name} 1등` : rank === 0 ? '1등!' : `${rank + 1}등`;
+    out = { outcome, tone: rank === 0 || myId === null ? 'win' : 'draw', score: <>{top.name} {final.points[order[0]]}점</>, sub: `${config.players.length}명 · 자리 다섯 · ${FK_MAX_POINTS}점 만점`, detail };
+  }
+  once.set(final, out);
+  return out;
+}
+
 export const freekick2dView: GameView<FkConfig, FkState, PenInput, FkSettings> = {
   id: 'freekick2d',
 
@@ -63,42 +101,7 @@ export const freekick2dView: GameView<FkConfig, FkState, PenInput, FkSettings> =
 
   sfx: detectFkSfx,
 
-  result(final, config, { myId, solo }) {
-    const hit = once.get(final);
-    if (hit) return hit;
-    const order = fkRanking(final.points, final.log);
-    const goals = (i: number): number => final.log.filter((e) => e.kicker === i && e.out === 'goal').length;
-    const mark = (i: number): string => FK_SPOTS.map((_, s) => { const e = final.log.find((x) => x.kicker === i && x.spot === s); return e ? (e.out === 'goal' ? '●' : '✕') : '○'; }).join('');
-    const detail = (
-      <ul className="fk-rows">
-        {order.map((i, r) => {
-          const p = config.players[i];
-          return (
-            <li key={i} className={i === myId ? 'is-me' : undefined}>
-              <span className="fk-rank">{r + 1}</span>
-              <span className="fk-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}</span>
-              <span className="fk-marks" aria-label={`자리별 ${mark(i).replace(/●/g, '골 ').replace(/✕/g, '실패 ').trim()}`}>{mark(i)}</span>
-              <span className="fk-pts">{final.points[i]}점</span>
-            </li>
-          );
-        })}
-      </ul>
-    );
-    let out: ResultView;
-    if (solo || config.players.length === 1) {
-      const pts = final.points[0];
-      const b = solo ? offerBest(FK_BEST_KEY, pts, (a, c) => a > c) : { prev: null, isNew: false };
-      const sub = `다섯 자리 · 골 ${goals(0)}개${b.isNew ? (b.prev !== null ? ' · 새 최고 기록' : ' · 첫 기록') : b.prev !== null ? ` · 최고 기록 ${b.prev}점` : ''}`;
-      out = { outcome: `${pts}점`, tone: pts >= 6 ? 'win' : 'draw', score: <>{pts} / {FK_MAX_POINTS}점</>, sub, detail };
-    } else {
-      const rank = myId === null ? -1 : order.indexOf(myId);
-      const top = config.players[order[0]];
-      const outcome = myId === null ? `${top.name} 1등` : rank === 0 ? '1등!' : `${rank + 1}등`;
-      out = { outcome, tone: rank === 0 || myId === null ? 'win' : 'draw', score: <>{top.name} {final.points[order[0]]}점</>, sub: `${config.players.length}명 · 자리 다섯 · ${FK_MAX_POINTS}점 만점`, detail };
-    }
-    once.set(final, out);
-    return out;
-  },
+  result: (final, config, o) => fkResult(final, config, o, FK_BEST_KEY),
 
   entry: { sub: '2D · 벽을 넘겨 다섯 자리', header: '2D 프리킥 · 방을 만들면 초대 링크가 생기고, 들어온 사람이 차례로 같은 자리에서 찹니다' },
   minRoster: 1,

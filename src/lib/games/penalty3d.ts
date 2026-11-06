@@ -110,28 +110,35 @@ export const speed3 = (power: number): number => speedOf(power) * DIST_M;
 /** 옆 흔들림 폭(m) — 2D deviationOf 를 골문 폭 비율로. 높이 흔들림은 이것 × DEV_Z. */
 export const deviation3 = (power: number, perf: PenConfig['players'][number]['perf']): number => deviationOf(power, perf) * SIDE_M;
 
-/** 찬다 — 조준(옆·높이) + 흔들림(씨앗) 쪽 골라인 위 점을 향해. 가로 속도 = 세기 속도, 세로 속도는 그 점에 닿게(포물선). */
-function strike(s: Pen3State, config: PenConfig, power: number, aim: Aim3): void {
-  const perf = config.players[s.kicker].perf;
+/** 찬 공의 첫 속도 — 조준(골라인 위 옆·높이) + 흔들림(ry·rz: −1..1, 씨앗에서) 쪽 점을 향해. 가로 속도 = 세기 속도,
+ *  세로 속도는 그 점에 닿게(포물선). 3D 프리킥도 이것으로 찬다(2026-11-07 6단계에 꺼냄 — 계산 같음). aimMax = 옆 조준 끝. */
+export function launch3(b: Ball, aim: Aim3, power: number, perf: PenConfig['players'][number]['perf'], ry: number, rz: number, aimMax = AIM_MAX): { vx: number; vy: number; vz: number } {
   const p = clamp(fin(power), 0, 1);
   const dev = deviation3(p, perf);
-  const ty = clamp(fin(aim.y), -AIM_MAX, AIM_MAX) + (rand(s) * 2 - 1) * dev;
-  const tz = Math.max(BR, clamp(fin(aim.z), 0, AIM_Z_MAX) + (rand(s) * 2 - 1) * dev * DEV_Z);
-  const b = s.ball;
+  const ty = clamp(fin(aim.y), -aimMax, aimMax) + ry * dev;
+  const tz = Math.max(BR, clamp(fin(aim.z), 0, AIM_Z_MAX) + rz * dev * DEV_Z);
   const dx = HW - b.x, dy = ty - b.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
   const v = speed3(p);
   const T = d / v;
-  b.vx = (dx / d) * v; b.vy = (dy / d) * v;
   // 낮게 겨눈 공은 땅으로 구른다. 아니면 그 높이에 닿는 세로 속도(공기 감속은 작아 빼고 — 조금 낮게 닿는다).
-  b.vz = tz <= BR + 0.05 ? 0 : (tz - b.z) / T + (TUNE3D.GRAVITY * T) / 2;
+  return { vx: (dx / d) * v, vy: (dy / d) * v, vz: tz <= BR + 0.05 ? 0 : (tz - b.z) / T + (TUNE3D.GRAVITY * T) / 2 };
+}
+
+/** 찬다 — 조준(옆·높이) + 흔들림(씨앗) 쪽 골라인 위 점을 향해. */
+function strike(s: Pen3State, config: PenConfig, power: number, aim: Aim3): void {
+  const perf = config.players[s.kicker].perf;
+  const p = clamp(fin(power), 0, 1);
+  const ry = rand(s) * 2 - 1, rz = rand(s) * 2 - 1;
+  const v = launch3(s.ball, aim, p, perf, ry, rz);
+  const b = s.ball;
+  b.vx = v.vx; b.vy = v.vy; b.vz = v.vz;
   s.power = p;
   s.st.held = false; s.st.kickFlash = 12;
   s.phase = 'flight'; s.phaseTicks = 0;
 }
 
-/** 키퍼 한 틱 — 옆걸음 또는 던지기·눕기, 제자리 뛰기. 줄을 못 벗어난다. */
-function moveKeeper(s: Pen3State, config: PenConfig, inp: Pen3Input, control: boolean): void {
-  const gk = s.gk, perf = config.players[s.keeper].perf;
+/** 키퍼 한 틱 — 옆걸음 또는 던지기·눕기, 제자리 뛰기. 줄을 못 벗어난다. 3D 프리킥 키퍼 봇도 이것(6단계에 꺼냄 — 계산 같음). */
+export function keeper3Step(gk: Keeper3, perf: PenConfig['players'][number]['perf'], inp: Pen3Input, control: boolean): void {
   if (control) {
     if (!inp.kick) gk.armed = true;
     else if (gk.armed && !gk.dived && gk.lie === 0 && gk.diveT === 0) {
@@ -167,7 +174,7 @@ function moveKeeper(s: Pen3State, config: PenConfig, inp: Pen3Input, control: bo
 }
 
 /** 키퍼 몸 — 선분 + 반지름(캡슐) 목록, 경기 좌표 [x0,y0,z0,x1,y1,z1,r]. 화면도 이 모양을 그린다. */
-export function keeperCapsules(gk: Keeper3): [number, number, number, number, number, number, number][] {
+export function keeperCapsules(gk: Keeper3): Capsule[] {
   const x = gk.x, y = gk.y, z = gk.z;
   if ((gk.diveT > 0 || gk.lie > 0) && gk.dive !== 0) {
     const h = DIVE_H[gk.diveH], d = gk.dive;
@@ -183,7 +190,7 @@ export function keeperCapsules(gk: Keeper3): [number, number, number, number, nu
 }
 
 /** 점 p 에서 선분 ab 까지 가장 가까운 점. */
-function closest(px: number, py: number, pz: number, c: readonly number[]): [number, number, number] {
+export function closest(px: number, py: number, pz: number, c: readonly number[]): [number, number, number] {
   const ex = c[3] - c[0], ey = c[4] - c[1], ez = c[5] - c[2];
   const l2 = ex * ex + ey * ey + ez * ez;
   const t = l2 > 1e-9 ? clamp(((px - c[0]) * ex + (py - c[1]) * ey + (pz - c[2]) * ez) / l2, 0, 1) : 0;
@@ -195,12 +202,25 @@ const FRAME: readonly (readonly number[])[] = [
   [HW, -GW, 0, HW, -GW, GH], [HW, GW, 0, HW, GW, GH], [HW, -GW, GH, HW, GW, GH],
 ];
 
-/** 공 한 틱(쪼개서) — 중력·이동·경기장(땅·그물·골대·벽)·키퍼. 키퍼에 닿았나, 골대에 닿았나. */
-function moveBall(s: Pen3State): { touched: boolean; frame: boolean } {
-  const b = s.ball;
-  let touched = false, frame = false;
-  const caps = keeperCapsules(s.gk);
+/** 몸 캡슐 — 선분 [x0,y0,z0,x1,y1,z1] + 반지름. */
+export type Capsule = readonly [number, number, number, number, number, number, number];
+
+/** 감아차기 한 번 꺾기(3D) — 가로 속도를 옆(+y 쪽 = 왼손)으로 amount 라디안만큼 돌리고 크기는 그대로(2D curlVel 과 같은 방법, 세로 속도는 그대로). */
+export function curl3(b: Ball, amount: number): void {
+  const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+  if (sp < 1e-6 || amount === 0) return;
+  const nx = b.vx + (0 - b.vy) * amount, ny = b.vy + b.vx * amount;
+  const n = Math.sqrt(nx * nx + ny * ny);
+  b.vx = (nx / n) * sp; b.vy = (ny / n) * sp;
+}
+
+/** 공 한 틱(쪼개서) — 중력·(감기)·이동·경기장(땅·그물·골대·벽)·몸 캡슐 무리. 무리마다 닿았나, 골대에 닿았나.
+ *  승부차기는 [키퍼], 3D 프리킥은 [키퍼, 벽] 을 넘긴다(6단계에 꺼냄 — 승부차기 계산 같음). curl = 쪼갠 틱마다 돌릴 라디안. */
+export function moveBall3(b: Ball, groups: readonly (readonly Capsule[])[], curl = 0): { hits: boolean[]; frame: boolean } {
+  const hits = groups.map(() => false);
+  let frame = false;
   for (let k = 0; k < TUNE3D.SUBSTEPS; k++) {
+    if (curl !== 0) curl3(b, curl);
     b.vz -= TUNE3D.GRAVITY * TUNE3D.SUB_DT;
     b.x += b.vx * TUNE3D.SUB_DT; b.y += b.vy * TUNE3D.SUB_DT; b.z += b.vz * TUNE3D.SUB_DT;
     for (const f of FRAME) {
@@ -209,12 +229,12 @@ function moveBall(s: Pen3State): { touched: boolean; frame: boolean } {
       if (dx * dx + dy * dy + dz * dz < m * m) frame = true;
     }
     containBall(b);
-    for (const c of caps) {
+    for (let gi = 0; gi < groups.length; gi++) for (const c of groups[gi]) {
       const [cx, cy, cz] = closest(b.x, b.y, b.z, c);
       const dx = b.x - cx, dy = b.y - cy, dz = b.z - cz, m = BR + c[6];
       const d2 = dx * dx + dy * dy + dz * dz;
       if (d2 >= m * m) continue;
-      touched = true;
+      hits[gi] = true;
       const d = Math.sqrt(d2);
       const nx = d > 1e-6 ? dx / d : -1, ny = d > 1e-6 ? dy / d : 0, nz = d > 1e-6 ? dz / d : 0;
       b.x = cx + nx * m; b.y = cy + ny * m; b.z = Math.max(BR, cz + nz * m);
@@ -228,7 +248,13 @@ function moveBall(s: Pen3State): { touched: boolean; frame: boolean } {
   b.vx *= keep; b.vy *= keep;
   if (onGround && b.vx * b.vx + b.vy * b.vy < TUNE3D.BALL_REST * TUNE3D.BALL_REST) { b.vx = 0; b.vy = 0; }
   if (!Number.isFinite(b.x + b.y + b.z + b.vx + b.vy + b.vz)) { Object.assign(b, START_BALL()); }
-  return { touched, frame };
+  return { hits, frame };
+}
+
+/** 승부차기의 공 한 틱 — 키퍼 하나. */
+function moveBall(s: Pen3State): { touched: boolean; frame: boolean } {
+  const r = moveBall3(s.ball, [keeperCapsules(s.gk)]);
+  return { touched: r.hits[0], frame: r.frame };
 }
 
 /** 지금 판정 — 날아가는 중이면 null. */
@@ -272,11 +298,11 @@ export function stepPenalty3(state: Pen3State, config: PenConfig, inputs: Pen3In
       st.charge = Math.min(CHARGE_TICKS, st.charge + 1);
     }
     if (s.phase === 'aim' && s.phaseTicks >= AIM_TICKS) strike(s, config, AUTO_POWER, { y: 0, z: 0 });   // 시간이 다 됐다 — 약한 가운데 땅볼
-    moveKeeper(s, config, gin, true);
+    keeper3Step(s.gk, config.players[s.keeper].perf, gin, true);
     return s;
   }
   if (s.phase === 'flight') {
-    moveKeeper(s, config, gin, true);
+    keeper3Step(s.gk, config.players[s.keeper].perf, gin, true);
     const { touched, frame } = moveBall(s);
     const out = judge(s, touched, frame || s.outcome === 'post');
     if (frame && out === null) s.outcome = 'post';   // 골대를 스치고 아직 가는 중 — 나중 판정에 남긴다(들어가면 골)
@@ -290,7 +316,7 @@ export function stepPenalty3(state: Pen3State, config: PenConfig, inputs: Pen3In
     return s;
   }
   // result — 공과 키퍼는 계속 움직이되(그물에 걸리고 튕긴다) 조작은 안 듣는다.
-  moveKeeper(s, config, PEN3_IDLE, false);
+  keeper3Step(s.gk, config.players[s.keeper].perf, PEN3_IDLE, false);
   moveBall(s);
   if (s.phaseTicks >= RESULT_TICKS) {
     const w = decided(s.taken, s.scored, config.kicks);
@@ -309,8 +335,8 @@ export function kickerPlan3(kickSeed: number): { wait: number; power: number; ai
   return { wait: p.wait, power: p.power, aim: { y: Math.round((p.aim * SIDE_M) / AIM_STEP) * AIM_STEP, z: Math.round(z / AIM_Z_STEP) * AIM_Z_STEP } };
 }
 
-/** 공이 키퍼 줄을 지날 곳(옆·높이) — 직선 + 포물선(공기 감속 무시). 줄을 향하지 않으면 null. */
-function crossing(b: Ball): { y: number; z: number } | null {
+/** 공이 키퍼 줄을 지날 곳(옆·높이) — 직선 + 포물선(공기 감속 무시). 줄을 향하지 않으면 null. 3D 프리킥 키퍼 봇도 쓴다. */
+export function crossing(b: Ball): { y: number; z: number } | null {
   if (b.vx <= 0.5) return null;
   const t = (KEEPER_X - b.x) / b.vx;
   if (t < 0) return null;
@@ -345,7 +371,7 @@ export function penalty3Bot(s: Pen3State, config: PenConfig, slot: number): Pen3
 // x 다섯 칸 × y 세 칸 × 킥 둘 × 조준(없음 + 옆 37 × 높이 13) = 5 × 3 × 2 × 482 = 14,460.
 const X_LEVELS = 5, Y_LEVELS = 3, AIM_SIDE = AIM_STEPS * 2 + 1, AIM_HIGH = AIM_Z_STEPS + 1, AIM_CODES = 1 + AIM_SIDE * AIM_HIGH;
 export const PEN3_CODES = X_LEVELS * Y_LEVELS * 2 * AIM_CODES;
-function encodePen3(i: Pen3Input): number {
+export function encodePen3(i: Pen3Input): number {
   const xi = Math.min(4, Math.max(0, Math.round(fin(i?.x) * 2) + 2));
   const yi = fin(i?.y) > 0.3 ? 2 : fin(i?.y) < -0.3 ? 0 : 1;
   const k = i?.kick ? 1 : 0;
@@ -357,7 +383,7 @@ function encodePen3(i: Pen3Input): number {
   }
   return ((a * 2 + k) * Y_LEVELS + yi) * X_LEVELS + xi;
 }
-function decodePen3(q: number): Pen3Input {
+export function decodePen3(q: number): Pen3Input {
   if (!Number.isInteger(q) || q < 0 || q >= PEN3_CODES) return { ...PEN3_IDLE };
   const xi = q % X_LEVELS, r1 = (q - xi) / X_LEVELS, yi = r1 % Y_LEVELS, r2 = (r1 - yi) / Y_LEVELS, k = r2 % 2, a = (r2 - k) / 2;
   const aim = a === 0 ? null : { y: (Math.floor((a - 1) / AIM_HIGH) - AIM_STEPS) * AIM_STEP, z: ((a - 1) % AIM_HIGH) * AIM_Z_STEP };

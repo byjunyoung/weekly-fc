@@ -2,6 +2,7 @@
 // 바닥·크기 맞추기·카메라·스틱 돌리기는 경기 화면의 것(stage·view)을 그대로 쓰고, 그리기만 render.ts.
 // 사용자: "자유 훈련장, 여러 드리블 훈련장, 승부차기, 프리킥 같은 게임 만들어서 온라인 가능하게 하자. 다 2d, 3d 모드 별로 가능하게 하고."
 import type { FreeConfig, FreeInput, FreeSettings, FreeState } from '../../../../lib/games/free2d';
+import { popShown } from '../../../../lib/games/free2d';
 import { pitchOf } from '../../../../lib/game/sim';
 import type { Camera, GameView, Scene } from '../types';
 import { buildSprites, drawBubbles } from '../match2d/render';
@@ -23,6 +24,7 @@ export const free2dView: GameView<FreeConfig, FreeState, FreeInput, FreeSettings
     const rings = ringColors(config, roster);
     let cam: Camera | null = null;
     let gather = false;   // [공 모으기] 를 눌렀다 — 다음 입력 한 번에 싣는다
+    const popMemo = { last: -Infinity };   // 마지막으로 띄운 "골!"
     return {
       draw(f) {
         const st = stage.get();
@@ -31,7 +33,9 @@ export const free2dView: GameView<FreeConfig, FreeState, FreeInput, FreeSettings
         const focus = f.myId !== null && f.state.players[f.myId] ? f.state.players[f.myId] : f.state.balls[0] ?? { x: 0, y: 0 };
         const v = aimCamera(st.view, focus);
         cam = { cx: v.cx, cy: v.cy, scale: v.scale, follow: v.follow };
-        drawFree(ctx, f.state, f.config, v, st.field, sprites, rings, { dpr: st.dpr, topInset: st.topInset, me: f.myId });
+        // "골!" 은 3초에 한 번까지(popShown — 3D 훈련장과 같은 규칙). 골 수·소리는 그대로.
+        const shown = { ...f.state, pops: f.state.pops.filter((p) => popShown(p.tick, popMemo)) };
+        drawFree(ctx, shown, f.config, v, st.field, sprites, rings, { dpr: st.dpr, topInset: st.topInset, me: f.myId });
         drawBubbles(ctx, f.state, f.config, v, f.bubbles);
       },
       toInput(h) {
