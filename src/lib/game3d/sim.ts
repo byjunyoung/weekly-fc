@@ -73,6 +73,11 @@ const LOOSE_COS = -0.1;       // 입력과 보는 방향의 코사인이 이보�
 const LOOSE_P = 0.35;         // 이 확률로 공이 떨어진다(틱마다가 아니라 "꺾은 순간" — 아래 LOOSE_LOCK 동안 다시 안 뽑는다)
 const LOOSE_LOCK = 16;        // 공을 흘린 사람이 다시 못 잡는 틱
 const KICK_LOCK = 14;         // 찬 사람이 자기 공을 바로 다시 못 잡는 틱
+const CARRY_PULL = 0.5;       // 발밑 공이 제자리로 당겨지는 비율(틱당). 1 이면 발에 딱 붙고, 내리면 공이 출렁이며 따라온다
+const LOOSE_KEEP = 1.1;       // 흘린 공이 몸 속도의 몇 배로 굴러가나
+const FIRST_TOUCH_REACH = 0.15; // 아무도 안 가진 공을 바로 찰(논스톱) 수 있는 거리 여유(잡는 거리에 더한다)
+const FIRST_TOUCH_Z = 1;      // 논스톱으로 찰 수 있는 공 높이(공 중심)
+const KICK_ANIM = 12;         // 찬 뒤 몸이 기울어 있는 틱(화면이 읽는다)
 
 // ── 빼앗기(몸으로 부딪치기) ──
 const STEAL_REACH = 0.12;     // 상대 몸·공에 이만큼 안으로 붙으면 시도
@@ -80,6 +85,9 @@ const STEAL_WIN = 0.5;        // 시도 한 번에 빼앗을 확률(평균끼리
 const STEAL_FREE_SPEED = 3.5; // 흘러나온 공의 속도
 const STEAL_IMMUNE = 40;      // 빼앗기 뒤 누구도 다시 못 빼앗는 틱(공이 핑퐁하지 않게)
 const STEAL_LOSER_LOCK = 24;  // 빼앗긴 사람이 다시 못 잡는 틱
+const STEAL_FREE_LIFT = 1.2;  // 흘러나온 공이 살짝 뜨는 속도(세로)
+const STEAL_FREE_CARRY = 0.4; // 흘러나온 공에 빼앗긴 사람 속도가 섞이는 비율
+const STEAL_TACKLER_LOCK = 10;// 공만 흘려낸 사람도 잠깐 못 잡는 틱(흘린 공이 바로 그 사람 발에 붙지 않게)
 
 // ── 패스(짧게 눌렀다 떼면) ──
 const PASS_COS = 0.6;         // 보는 방향 ±53도 안의 동료만 본다
@@ -90,6 +98,8 @@ const PASS_LEAD = 0.6;        // 뛰는 동료 앞으로 보내는 비율(1 = �
 const PASS_FREE_DIST = 9;     // 동료가 없을 때 보는 방향으로 이만큼 가게
 const PASS_ERR = 0.05;        // 평균 선수의 방향 오차(옆으로, 단위 벡터 비율)
 const PASS_TO_TICKS = 150;    // "누구에게 간 패스"를 기억하는 틱(봇이 받으러 간다)
+const PASS_W_DIR = 10;        // 받을 사람 고르기: 보는 방향과 맞는 정도의 무게 — 올리면 방향이 거리보다 더 중요해진다
+const PASS_W_DIST = 0.25;     // 받을 사람 고르기: 거리(m)마다 빼는 점수 — 올리면 가까운 동료를 고른다
 
 // ── 슛(누르고 있으면 모이고, 떼면 나간다) ──
 const CHARGE_TICKS = 54;      // 끝까지 모이는 틱(0.9초)
@@ -110,11 +120,17 @@ const KEEPER_CATCH = 18;      // 이보다 느린 공은 잡는다
 const KEEPER_PARRY = 26;      // 이보다 느린 공은 쳐낸다. 더 빠르면 손이 못 따라간다(몸에 맞으면 튕긴다)
 const KEEPER_HOLD = 60;       // 잡은 공을 들고 있는 틱(1초) — 그 뒤 봇이 패스
 const KEEPER_LOCK = 20;       // 쳐낸 뒤 다시 못 잡는 틱
+const PARRY_KEEP = 0.35;      // 쳐낸 공에 남는 속도 비율
+const PARRY_OUT = 0.6;        // 쳐낸 공이 경기장 쪽(앞)으로 가는 비율
+const PARRY_SIDE = 0.8;       // 쳐낸 공이 옆으로 비껴가는 비율
+const PARRY_LIFT = 2.5;       // 쳐낸 공이 뜨는 속도(세로)
+const KEEPER_HAND_Z = 0.9;    // 골키퍼가 든 공의 높이(그림)
 
 // ── 경기 흐름 ──
 const GOAL_TICKS = 150;       // 골 뒤 멈추는 틱(2.5초)
 const KICKOFF_TIMEOUT = 180;  // 킥오프에서 아무도 안 건드려도 3초 뒤 시작
 const KICKOFF_JITTER = 0.4;   // 킥오프 자리를 옆으로 이만큼(±) 흔든다(씨앗을 쓰는 자리)
+const KICKOFF_GAP = 0.12;     // 킥오프 차는 사람이 공 뒤에 서는 틈 — 잡는 거리 안이라 첫 틱에 발밑으로 온다
 const SUBSTEPS = 4;           // 한 틱을 쪼개 움직인다 — 30m/s 공이 쪼갠 한 번에 0.13m(공 반지름보다 작게)
 
 /** 편성(0 편 기준, 1 편은 x 부호를 뒤집는다). slot 0 = 골키퍼, 1·2 = 뒤, 3·4 = 앞. 사람은 앞(3)에 선다. */
@@ -135,7 +151,7 @@ export const PITCH3D = {
 /** 봇·화면이 쓰는 몇 가지 규칙 값(조절 값을 한 곳에만 두려고 여기서 내보낸다). */
 export const RULES3D = {
   chargeTicks: CHARGE_TICKS, controlDist: PLAYER_R + BALL_R + CONTROL_REACH, keeperHold: KEEPER_HOLD,
-  passCos: PASS_COS, passMax: PASS_MAX, rollDrag: ROLL_DRAG, goalTicks: GOAL_TICKS, keeperReach: KEEPER_REACH,
+  passCos: PASS_COS, passMax: PASS_MAX, rollDrag: ROLL_DRAG, goalTicks: GOAL_TICKS, keeperReach: KEEPER_REACH, kickAnim: KICK_ANIM,
 } as const;
 
 export type Side = 0 | 1;
@@ -232,7 +248,7 @@ function placeForKickoff(s: MatchState, config: MatchConfig): void {
     const spot = formationSpot(slotOf(config, mp.id), mp.side);
     const dir = attackDir(mp.side);
     p.x = spot.x; p.y = spot.y + (mp.gk ? 0 : (rand(s) - 0.5) * 2 * KICKOFF_JITTER);
-    if (mp.id === taker) { p.x = 0 - dir * (PLAYER_R + BALL_R + 0.12); p.y = 0; }
+    if (mp.id === taker) { p.x = 0 - dir * (PLAYER_R + BALL_R + KICKOFF_GAP); p.y = 0; }
     p.vx = 0; p.vy = 0; p.fx = dir; p.fy = 0;
     p.charge = 0; p.shootHeld = false; p.passHeld = false; p.noTouch = 0; p.kickTicks = 0; p.hold = 0;
   });
@@ -397,14 +413,14 @@ function canKick(s: MatchState, i: number): boolean {
   if (s.owner === i) return true;
   if (s.owner !== null) return false;
   const p = s.players[i], b = s.ball;
-  if (p.noTouch > 0 || b.z > 1) return false;
-  const dx = b.x - p.x, dy = b.y - p.y, r = RULES3D.controlDist + 0.15;
+  if (p.noTouch > 0 || b.z > FIRST_TOUCH_Z) return false;
+  const dx = b.x - p.x, dy = b.y - p.y, r = RULES3D.controlDist + FIRST_TOUCH_REACH;
   return dx * dx + dy * dy < r * r;
 }
 
 function releaseBall(s: MatchState, i: number, kind: KickKind): void {
   const p = s.players[i];
-  s.owner = null; p.noTouch = KICK_LOCK; p.kickTicks = 12; p.hold = 0;
+  s.owner = null; p.noTouch = KICK_LOCK; p.kickTicks = KICK_ANIM; p.hold = 0;
   s.lastTouch = i; s.lastKick = { by: i, kind, tick: s.tick };
 }
 
@@ -444,7 +460,7 @@ export function passTarget(s: MatchState, config: MatchConfig, i: number): numbe
     if (d < PASS_MIN || d > PASS_MAX) continue;
     const cos = (dx * p.fx + dy * p.fy) / d;
     if (cos < PASS_COS) continue;
-    const score = cos * 10 - d * 0.25;   // 방향이 먼저, 거리는 그다음
+    const score = cos * PASS_W_DIR - d * PASS_W_DIST;   // 방향이 먼저, 거리는 그다음
     if (score > bestScore) { bestScore = score; best = q.id; }
   }
   return best;
@@ -513,8 +529,8 @@ function touchFreeBall(s: MatchState, config: MatchConfig, controlled: boolean):
         // 쳐내기 — 경기장 쪽으로, 옆으로 비껴 힘을 잃고 나간다
         const dir = attackDir(mp.side);
         const side = b.y >= p.y ? 1 : -1;
-        const sp = Math.sqrt(sp2) * 0.35;
-        b.vx = dir * sp * 0.6; b.vy = side * sp * 0.8; b.vz = 2.5;
+        const sp = Math.sqrt(sp2) * PARRY_KEEP;
+        b.vx = dir * sp * PARRY_OUT; b.vy = side * sp * PARRY_SIDE; b.vz = PARRY_LIFT;
         p.noTouch = KEEPER_LOCK; s.lastTouch = i; s.passTo = null;
         continue;
       }
@@ -566,8 +582,8 @@ function tryTackle(s: MatchState, config: MatchConfig): void {
     } else {
       // 흘러나온다 — 부딪친 사람 반대쪽으로, 둘 다 잠깐 못 잡는다
       const u = unit(b.x - q.x, b.y - q.y, 0 - attackDir(mp.side), 0);
-      b.vx = u.x * STEAL_FREE_SPEED + op.vx * 0.4; b.vy = u.y * STEAL_FREE_SPEED + op.vy * 0.4; b.vz = 1.2;
-      s.owner = null; q.noTouch = 10; s.lastTouch = i;
+      b.vx = u.x * STEAL_FREE_SPEED + op.vx * STEAL_FREE_CARRY; b.vy = u.y * STEAL_FREE_SPEED + op.vy * STEAL_FREE_CARRY; b.vz = STEAL_FREE_LIFT;
+      s.owner = null; q.noTouch = STEAL_TACKLER_LOCK; s.lastTouch = i;
     }
     s.passTo = null; s.passTicks = 0;
     return;
@@ -604,7 +620,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
         const sp2 = p.vx * p.vx + p.vy * p.vy;
         if (sp2 > LOOSE_SPEED * LOOSE_SPEED && dx * p.fx + dy * p.fy < LOOSE_COS && rand(s) < LOOSE_P * (2 - mp.perf.control)) {
           const b = s.ball;
-          b.vx = p.vx * 1.1; b.vy = p.vy * 1.1; b.vz = 0;
+          b.vx = p.vx * LOOSE_KEEP; b.vy = p.vy * LOOSE_KEEP; b.vz = 0;
           s.owner = null; p.noTouch = LOOSE_LOCK;
         }
       }
@@ -641,10 +657,9 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
   if (s.owner !== null) {
     const p = s.players[s.owner], b = s.ball;
     const c = carrySpot(p);
-    const pull = 0.5;
-    b.x += (c.x - b.x) * pull; b.y += (c.y - b.y) * pull;
+    b.x += (c.x - b.x) * CARRY_PULL; b.y += (c.y - b.y) * CARRY_PULL;
     b.vx = p.vx; b.vy = p.vy; b.vz = 0;
-    b.z = p.hold > 0 ? 0.9 : BALL_R;   // 골키퍼는 손에 든다
+    b.z = p.hold > 0 ? KEEPER_HAND_Z : BALL_R;   // 골키퍼는 손에 든다
     containBall(b);
     if (controlled) tryTackle(s, config);
   } else {

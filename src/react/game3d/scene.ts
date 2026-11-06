@@ -13,7 +13,7 @@ import {
 } from 'three';
 import { avatarPixels } from '../../components/avatar.ts';
 import { avatarSpecFor, isUnsetAvatar, randomAvatar } from '../../lib/avatar.ts';
-import { PITCH3D, type MatchConfig, type MatchState } from '../../lib/game3d/sim.ts';
+import { PITCH3D, RULES3D, type MatchConfig, type MatchState } from '../../lib/game3d/sim.ts';
 import { VESTS } from '../../lib/teams.ts';
 import type { Player } from '../../lib/types.ts';
 import { cameraGoal } from './view3d.ts';
@@ -305,7 +305,7 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
         const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
         f.phase += sp * dt * RUN_FREQ;
         const run = Math.min(1, sp / 3.5);
-        const kick = b.kickTicks > 0 ? KICK_LEAN * (b.kickTicks / 12) : 0;
+        const kick = b.kickTicks > 0 ? KICK_LEAN * (b.kickTicks / RULES3D.kickAnim) : 0;
         f.inner.position.y = Math.abs(Math.sin(f.phase)) * BOB * run;
         f.inner.rotation.x = kick + (f.legL ? 0.06 : 0.14) * run;   // 다리가 따로 안 움직이는 그림이면 더 기울여 달리는 티를 낸다
         if (f.legL) f.legL.rotation.x = Math.sin(f.phase) * LEG_SWING * run;
