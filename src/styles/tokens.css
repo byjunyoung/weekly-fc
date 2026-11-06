@@ -1063,3 +1063,44 @@ details.year[open] > summary::before { content: "▾ "; }
 .title-catalog ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px var(--s-sm); }
 .title-catalog li { display: flex; flex-direction: column; min-width: 0; }
 .title-catalog li b { color: var(--gold); font-weight: 600; }
+
+/* ══ 게임(2026-11-06, /game/ — 주소로만 들어옴) ═══════════════════════
+   설정 화면은 보통 카드, 경기는 뷰포트 전체를 덮는 오버레이다. 경기 중엔 스크롤·확대·길게 누르기 메뉴를 전부 막는다
+   (카톡 인앱 웹뷰에서도 같게). 캔버스 그림 색은 render.ts 가 자기 팔레트로 쥐고 있다. */
+.game-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: var(--s-xs); }
+.game-pick { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; padding: var(--s-xs) 2px; border: 1px solid var(--hairline); border-radius: var(--r-md);
+  background: var(--elevated); font-family: var(--font); font-size: var(--fs-xs); }
+.game-pick:hover { background: var(--charcoal); }
+.game-pick.is-on { border-color: var(--gold); background: var(--charcoal); box-shadow: 0 0 0 1px var(--gold) inset; }
+.game-pick-face { display: flex; }
+.game-pick-face svg { width: 48px; height: 48px; }
+.game-pick-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.game-pick-num { color: var(--muted); }
+.game-opts { display: flex; flex-direction: column; gap: var(--s-sm); }
+.game-opt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs) var(--s-md); }
+.game-opt > .muted { width: 5em; }
+.game-hint { margin-top: var(--s-md); font-size: var(--fs-xs); }
+.game-start { margin-top: var(--s-md); }
+
+html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: none; }
+.game-overlay { position: fixed; inset: 0; z-index: 900; width: 100vw; height: 100dvh; background: var(--canvas); overflow: hidden;
+  touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.game-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.game-x { position: absolute; top: max(var(--s-sm), env(safe-area-inset-top)); right: max(var(--s-sm), env(safe-area-inset-right)); z-index: 2;
+  width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: var(--r-full); background: rgba(0, 0, 0, .55); font-family: var(--font); font-size: 18px; }
+.game-stick { position: absolute; left: 0; top: 0; width: 96px; height: 96px; margin: -48px 0 0 -48px; display: none; align-items: center; justify-content: center;
+  border: 2px solid rgba(255, 255, 255, .35); border-radius: 50%; background: rgba(255, 255, 255, .08); pointer-events: none; z-index: 1; }
+.game-stick.is-on { display: flex; }
+.game-stick-knob { width: 44px; height: 44px; border-radius: 50%; background: rgba(255, 255, 255, .5); border: 2px solid rgba(255, 255, 255, .8); }
+.game-kick { display: none; position: absolute; z-index: 2; right: max(var(--s-lg), env(safe-area-inset-right)); bottom: max(var(--s-lg), env(safe-area-inset-bottom));
+  width: 92px; height: 92px; min-height: 0; padding: 0; border: 3px solid rgba(255, 255, 255, .7); border-radius: 50%; background: rgba(0, 112, 209, .55);
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; touch-action: none; }
+.game-kick.is-shown { display: inline-flex; }
+.game-kick.is-down { background: rgba(0, 112, 209, .9); transform: scale(.94); }
+.game-result { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; padding: var(--s-md); background: rgba(0, 0, 0, .72); }
+.game-result-box { display: flex; flex-direction: column; align-items: center; gap: var(--s-sm); padding: var(--s-xl) var(--s-lg); background: var(--card); border: 1px solid var(--hairline); text-align: center; max-width: 360px; width: 100%; }
+.game-outcome { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.game-outcome.is-win { color: var(--gold); }
+.game-outcome.is-lose { color: var(--warn); }
+.game-final { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-synthesis: none; letter-spacing: 0; }
+.game-result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-xs); margin-top: var(--s-sm); }

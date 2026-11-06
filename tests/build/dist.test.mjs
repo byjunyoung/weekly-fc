@@ -23,6 +23,7 @@ export const PAGES = [
   'kit/index.html',
   'guide/index.html',
   'about/index.html',
+  'game/index.html',
 ];
 export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
@@ -274,3 +275,18 @@ test('안내 > 가이드(2026-11-06) — 시작하기와 규칙을 한 페이지
   assert.ok(!html.includes('자기소개 양식'), '양식은 봇이 보낸다');
 });
 
+
+// 게임(2026-11-06) — 1단계는 주소(/game/)로만 들어온다. 사용자가 해 보기 전엔 상단 메뉴에 올리지 않는다.
+test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단 메뉴에는 아직 게임이 없다', () => {
+  const html = read('game/index.html');
+  assert.match(html, /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/GameApp\.[^"]+\.js"[^>]*client="load"/, 'GameApp 섬');
+  assert.ok(html.includes('<title>게임 · WEEKLY FC</title>'), '제목');
+  assert.ok(html.includes('class="loading"') && html.includes('불러오는 중'), '빌드 때는 불러오는 중 화면');
+  assert.ok(!html.includes('class="game-overlay"'), '경기 오버레이는 시작한 뒤에만 생긴다');
+  for (const p of ['index.html', 'game/index.html', 'tier/index.html']) {
+    const nav = read(p).match(/<nav[\s\S]*?<\/nav>/g) ?? [];
+    assert.ok(nav.length > 0, `${p}: 메뉴를 못 찾았다`);
+    assert.ok(!nav.join('').includes('게임'), `${p}: 상단 메뉴에 게임이 있다`);
+    assert.ok(!nav.join('').includes('/weekly-fc/game/'), `${p}: 상단 메뉴에 /game/ 링크가 있다`);
+  }
+});

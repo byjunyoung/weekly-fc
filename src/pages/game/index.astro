@@ -1,0 +1,8 @@
+---
+// 게임(2026-11-06) — 1단계: 혼자서 봇과. 상단 메뉴엔 아직 넣지 않는다(사용자가 해 보고 판단하기 전까지 주소로만, nav.ts 그대로).
+import Shell from '../../layouts/Shell.astro';
+import GameApp from '../../react/game/GameApp.tsx';
+---
+<Shell title="게임" description="WEEKLY FC 게임 — 내 선수로 봇과 한 판">
+  <GameApp client:load />
+</Shell>
