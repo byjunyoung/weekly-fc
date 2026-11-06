@@ -90,3 +90,78 @@ export function pickLineup5(roster: number[], humanNum: number, rnd: () => numbe
     }
   return out;
 }
+
+// ── 시점(2026-11-07 "1인칭도 구현해줘") ──
+// 중계 = 지금까지의 카메라. 1인칭 = 내 선수 눈높이에서 보는 쪽으로. 뒤에서 = 내 선수 몇 m 뒤·위에서 상대 골대 쪽으로(폰에서 편한 중간).
+export type ViewMode = 'broadcast' | 'first' | 'chase';
+export const VIEW_MODES: readonly ViewMode[] = ['broadcast', 'first', 'chase'];
+export const VIEW_LABEL: Record<ViewMode, string> = { broadcast: '중계', first: '1인칭', chase: '뒤에서' };
+export const nextView = (m: ViewMode): ViewMode => VIEW_MODES[(VIEW_MODES.indexOf(m) + 1) % VIEW_MODES.length];
+export const isViewMode = (v: unknown): v is ViewMode => VIEW_MODES.includes(v as ViewMode);
+
+/** 고른 시점 — 설정 화면과 경기 화면이 같이 쓰고, 다음에 와도 그대로. (three.js 를 안 끌고 오게 여기 둔다.) */
+const VIEW_KEY = 'wfc:game3d:view';
+export function readView(): ViewMode {
+  try { const v = globalThis.localStorage?.getItem(VIEW_KEY); return isViewMode(v) ? v : 'broadcast'; } catch { return 'broadcast'; }
+}
+export function saveView(v: ViewMode): void {
+  try { globalThis.localStorage?.setItem(VIEW_KEY, v); } catch { /* 저장 못 해도 이번 판은 그 시점으로 */ }
+}
+
+// 1인칭·뒤에서 조절 값(화면 쪽)
+const TURN_SPEED = 2.4;      // 스틱·키를 끝까지 눌렀을 때 도는 빠르기(라디안/초) — 1초에 약 140도
+const TURN_SMOOTH = 0.18;    // 도는 속도가 목표로 따라가는 비율(틱당) — 작을수록 부드럽게 돌기 시작하고 멈춘다
+const EYE_H = 1.62;          // 눈높이(m) — 아바타 키 1.75 의 머리 가운데쯤
+const FP_LOOK_DOWN = 0.2;    // 1인칭 시선이 아래로 기우는 정도(앞 1m 당) — 발 앞 공이 화면 아래에 걸리게
+const FP_HFOV = 84;          // 1인칭 가로 시야각 — 세로 화면에서도 옆이 보이게 가로 기준으로 맞춘다
+const CHASE_BACK = 6.5, CHASE_UP = 3.6, CHASE_AHEAD = 7;   // 뒤에서: 뒤로·위로 물러난 거리, 바라보는 점(선수 앞)
+
+/** 탱크식 1인칭 조작 한 틱: 스틱 좌우(sx) = 시선 돌리기, 위아래(sy, 위가 -) = 앞뒤로 가기.
+ *  heading = 보는 각(라디안, 경기 x 축에서 y 쪽으로), turnVel = 지금 도는 속도. 화면 쪽 계산이라 삼각함수를 쓴다 —
+ *  경기 계산에는 결과 단위 벡터(face)와 움직임(move)만 넘긴다. 화면에서 오른쪽(sx>0)을 누르면 시선이 오른쪽으로 돈다
+ *  (경기 좌표는 x→y 가 시계 방향으로 보이게 깔려 있어 heading 이 커지는 쪽이 오른쪽이다). */
+export function tankStep(sx: number, sy: number, heading: number, turnVel: number, dt: number):
+  { heading: number; turnVel: number; move: { x: number; y: number }; face: { x: number; y: number } } {
+  const want = Math.max(-1, Math.min(1, sx)) * TURN_SPEED;
+  const tv = turnVel + (want - turnVel) * TURN_SMOOTH;
+  let h = heading + tv * dt;
+  if (h > Math.PI) h -= Math.PI * 2; else if (h < -Math.PI) h += Math.PI * 2;
+  const fx = Math.cos(h), fy = Math.sin(h);
+  const fwd = Math.max(-1, Math.min(1, 0 - sy));
+  return { heading: h, turnVel: tv, move: { x: fx * fwd, y: fy * fwd }, face: { x: fx, y: fy } };
+}
+
+/** 1인칭 카메라: 눈(경기 좌표 x·y·높이)과 바라보는 점. */
+export function firstPersonGoal(me: { x: number; y: number }, heading: number, aspect: number): CamGoal {
+  const fx = Math.cos(heading), fy = Math.sin(heading);
+  return { px: me.x, py: me.y, pz: EYE_H, lx: me.x + fx * 6, ly: me.y + fy * 6, lz: EYE_H - FP_LOOK_DOWN * 6, fov: fpFov(aspect) };
+}
+
+/** 가로 시야각을 FP_HFOV 로 맞춘 세로 시야각(three 카메라는 세로 기준). 너무 넓거나 좁지 않게 자른다. */
+export function fpFov(aspect: number): number {
+  const v = (2 * Math.atan(Math.tan((FP_HFOV * Math.PI) / 360) / Math.max(0.3, aspect)) * 180) / Math.PI;
+  return Math.max(50, Math.min(100, v));
+}
+
+/** 뒤에서 카메라: 내 선수 뒤(우리 골대 쪽)·위에서 상대 골대 쪽으로 — 화면 위가 늘 공격 방향이라 스틱이 화면 기준 그대로 맞는다. */
+export function chaseGoal(me: { x: number; y: number }, ball: { x: number; y: number }, aspect: number): CamGoal {
+  const ly = me.y * 0.8 + ball.y * 0.2;
+  return { px: me.x - CHASE_BACK, py: me.y * 0.9 + ball.y * 0.1, pz: CHASE_UP, lx: me.x + CHASE_AHEAD, ly, lz: 0.4, fov: Math.max(55, Math.min(80, fpFov(aspect) - 15)) };
+}
+
+/** 화면 밖·뒤에 있는 공을 가리키는 화살표 자리. cx·cy·cz = 카메라 좌표의 공(앞이 -z, 위가 +y), w·h = 화면(px), m = 가장자리 여백.
+ *  화면 안이면 show=false. angle 은 화면 기준(오른쪽 0, 아래가 +, 라디안). */
+export function edgeArrow(cx: number, cy: number, cz: number, fovDeg: number, aspect: number, w: number, h: number, m: number):
+  { show: boolean; x: number; y: number; angle: number } {
+  const t = Math.tan((fovDeg * Math.PI) / 360);
+  const front = cz < 0;
+  // 앞이면 투영한 자리, 뒤면 방향만(뒤를 투영하면 좌우가 뒤집힌다)
+  let nx: number, ny: number;
+  if (front) { nx = cx / (0 - cz) / (t * aspect); ny = cy / (0 - cz) / t; }
+  else { nx = cx; ny = cy; if (Math.abs(nx) + Math.abs(ny) < 1e-6) ny = -1; }
+  if (front && Math.abs(nx) <= 1 && Math.abs(ny) <= 1) return { show: false, x: 0, y: 0, angle: 0 };
+  const dx = nx, dy = 0 - ny;
+  const hw = w / 2 - m, hh = h / 2 - m;
+  const k = Math.min(hw / Math.max(1e-6, Math.abs(dx)), hh / Math.max(1e-6, Math.abs(dy)));
+  return { show: true, x: w / 2 + dx * k, y: h / 2 + dy * k, angle: Math.atan2(dy, dx) };
+}

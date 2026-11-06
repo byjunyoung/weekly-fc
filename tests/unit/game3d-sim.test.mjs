@@ -259,3 +259,21 @@ test('흐름 — 킥오프 → 경기(시계는 경기 중에만) → 골(멈춤
   assert.ok(ended);
   assert.equal(s.winner, s.score[0] > s.score[1] ? 0 : s.score[1] > s.score[0] ? 1 : 'draw');
 });
+
+test('보는 방향을 입력으로 주면(1인칭) 서 있어도 그쪽을 보고, 슛도 그쪽으로 간다 — 주지 않으면 예전 그대로', () => {
+  const cfg = few([0, 1]);
+  let s = put(createMatch(cfg, 2), { ball: { x: -9.3, y: 0 }, players: { 0: { x: -10, y: 0, fx: 1, fy: 0 }, 1: FAR(1) } });
+  s = step(s, cfg, idle(cfg));
+  const face = { fx: 0, fy: 2 };   // 길이는 1로 맞춰 쓴다
+  for (let t = 0; t < 3; t++) s = step(s, cfg, [{ x: 0, y: 0, shoot: false, pass: false, ...face }, NO_INPUT]);
+  assert.ok(Math.abs(s.players[0].fx) < 1e-9 && Math.abs(s.players[0].fy - 1) < 1e-9, '바로 그쪽을 본다');
+  assert.equal(s.players[0].vx, 0, '서 있다');
+  for (let t = 0; t < 20; t++) s = step(s, cfg, [{ x: 0, y: 0, shoot: true, pass: false, ...face }, NO_INPUT]);
+  s = step(s, cfg, [{ x: 0, y: 0, shoot: false, pass: false, ...face }, NO_INPUT]);
+  assert.equal(s.lastKick.kind, 'shot');
+  assert.ok(s.ball.vy > 0 && Math.abs(s.ball.vx) < 0.05 * s.ball.vy, '보는 쪽(+y)으로');
+  // 뒤로 걷기 — 보는 방향은 그대로, 몸만 뒤로
+  let w = put(createMatch(cfg, 2), { players: { 0: { x: 0, y: 0, fx: 1, fy: 0 }, 1: FAR(1) } });
+  for (let t = 0; t < 30; t++) w = step(w, cfg, [{ x: -1, y: 0, shoot: false, pass: false, fx: 1, fy: 0 }, NO_INPUT]);
+  assert.ok(w.players[0].x < -1 && w.players[0].fx === 1, '뒷걸음');
+});

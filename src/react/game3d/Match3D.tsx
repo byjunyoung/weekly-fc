@@ -12,7 +12,7 @@ import type { Player } from '../../lib/types';
 import { href } from '../../lib/url';
 import { attachInput } from './input3d';
 import { createScene, TEAM_COLOR, type SceneHandle } from './scene';
-import { clockText, stickToWorld } from './view3d';
+import { clockText, edgeArrow, nextView, readView, saveView, stickToWorld, tankStep, VIEW_LABEL, type ViewMode } from './view3d';
 
 const STEP_MS = 1000 / TICK_HZ;
 const MAX_CATCHUP = 5;          // 한 프레임에 따라잡는 최대 틱 — 느린 기기가 계산에 먹혀 더 느려지지 않게(느리면 화면만 덜 그린다)
@@ -24,6 +24,8 @@ export type Setup3D = { key: number; config: MatchConfig; seed: number; humanId:
 /** 디버그 훅(?debug=1)과 나눠 쓰는 살아 있는 값 — 리액트 상태가 아니다. override = 사람 입력을 덮어쓰기(경기 좌표). */
 export type Live3D = {
   state: MatchState | null; config: MatchConfig | null; override: Input | null;
+  /** 디버그 전용: 다음 틱 전에 상태를 한 번 바꾼다(예: 빈 골대 앞에 공 놓기). 경기 계산 밖, 화면 쪽에서만. */
+  patch: ((s: MatchState) => MatchState) | null;
   info: { fps: number; drawCalls: number; triangles: number };
 };
 
@@ -45,6 +47,10 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
   const [goal, setGoal] = useState<{ side: 0 | 1; name: string | null } | null>(null);
   const [result, setResult] = useState<{ score: [number, number]; winner: 0 | 1 | 'draw' } | null>(null);
   const [fail, setFail] = useState<string | null>(null);
+  const [view, setView] = useState<ViewMode>(() => readView());
+  const viewRef = useRef<ViewMode>(view);
+  viewRef.current = view;
+  const arrowRef = useRef<HTMLDivElement>(null);
   const { config, seed, humanId, roster } = setup;
 
   useEffect(() => {
@@ -92,12 +98,21 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
       labelBox.appendChild(el);
       return { el, shown: false };
     });
-    const vHead = new Vector3(), vFoot = new Vector3();
+    const vHead = new Vector3(), vFoot = new Vector3(), vCam = new Vector3();
+    // 1인칭 시선 — 화면 쪽에서 각도로 들고(삼각함수는 여기서만), 경기 계산에는 단위 벡터로 넘긴다
+    let heading = 0, prevHeading = 0, turnVel = 0, lastMode: ViewMode | null = null;
+    const faceOf = (s: MatchState): number => { const p = s.players[humanId]; return p ? Math.atan2(p.fy, p.fx) : 0; };
 
     const collectInputs = (s: MatchState): Input[] => config.players.map((p) => {
       if (p.id !== humanId) return botInput(s, config, p.id);
-      if (live.current.override) return live.current.override;
+      if (live.current.override) { heading = faceOf(s); turnVel = 0; return live.current.override; }
       const h = input.read();
+      if (viewRef.current === 'first') {
+        // 탱크식: 좌우 = 돌기, 위아래 = 앞뒤. 보는 쪽을 그대로 선수가 보게 fx·fy 로 넘긴다 — 패스·슛이 보는 쪽으로 간다
+        const t = tankStep(h.x, h.y, heading, turnVel, 1 / TICK_HZ);
+        heading = t.heading; turnVel = t.turnVel;
+        return { x: t.move.x, y: t.move.y, shoot: h.shoot, pass: h.pass, fx: t.face.x, fy: t.face.y };
+      }
       const f = sc.groundForward();
       const d = stickToWorld(h.x, h.y, f.x, f.y);   // 화면 기준 → 경기장 방향(카메라가 실제로 보는 방향으로)
       return { x: d.x, y: d.y, shoot: h.shoot, pass: h.pass };
@@ -105,7 +120,7 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
 
     let raf = 0, last = performance.now(), acc = 0, ended = false, lost = false;
     let endTimer: ReturnType<typeof setTimeout> | undefined;
-    let avgMs = STEP_MS, slowFor = 0, lastClock = '', gaugeOn = false;
+    let avgMs = STEP_MS, slowFor = 0, lastClock = '', gaugeOn = false, arrowOn = false;
     const frame = (now: number): void => {
       raf = requestAnimationFrame(frame);
       const dtMs = Math.min(250, now - last); last = now;
@@ -114,7 +129,12 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
         acc += Math.min(dtMs, MAX_CATCHUP * STEP_MS);
         let n = 0;
         while (acc >= STEP_MS && n < MAX_CATCHUP && state.phase !== 'end') {
+          if (live.current.patch) { state = live.current.patch(state); prev = state; live.current.patch = null; heading = faceOf(state); turnVel = 0; }
+          // 시점을 1인칭으로 바꿨거나 킥오프 자리로 돌아갔으면 시선을 선수가 보는 쪽(공격 방향)으로 맞춘다
+          if (viewRef.current !== lastMode) { lastMode = viewRef.current; heading = faceOf(state); turnVel = 0; }
+          prevHeading = heading;
           const next = step(state, config, collectInputs(state));
+          if (next.phase === 'kickoff' && state.phase !== 'kickoff') { heading = faceOf(next); prevHeading = heading; turnVel = 0; }
           for (const ev of eventsBetween(state, next)) {
             if (ev.type === 'goal') {
               setScore([next.score[0], next.score[1]]);
@@ -130,7 +150,9 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
         if (ended) endTimer = setTimeout(() => setResult({ score: state.score, winner: (state.winner ?? 'draw') as 0 | 1 | 'draw' }), 900);
       }
       const alpha = ended ? 1 : acc / STEP_MS;
-      sc.update(prev, state, alpha, dtMs / 1000, portrait, snap);
+      let dh = heading - prevHeading;   // 두 틱 사이 시선도 섞는다(각이 ±π 를 넘을 때는 짧은 쪽으로)
+      if (dh > Math.PI) dh -= Math.PI * 2; else if (dh < -Math.PI) dh += Math.PI * 2;
+      sc.update(prev, state, alpha, dtMs / 1000, { mode: viewRef.current, portrait, heading: prevHeading + dh * alpha, snap });
       snap = false;
       sc.render();
 
@@ -155,14 +177,29 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
 
       // 이름표 — 머리 위를 화면에 비춘다. 뒤에 있거나 너무 작으면 숨긴다(폰에서 글자가 겹쳐 뭉개지지 않게)
       const w = root.clientWidth, h = root.clientHeight;
+      const fp = viewRef.current === 'first';
       for (let i = 0; i < labels.length; i++) {
+        // 카메라 뒤에 있는 점은 투영하면 엉뚱한 데 찍힌다 — 카메라 좌표로 앞(-z)인지 먼저 본다
+        const ahead = sc.headPoint(i, vCam).applyMatrix4(sc.camera.matrixWorldInverse).z < -0.3;
         sc.headPoint(i, vHead).project(sc.camera);
         sc.footPoint(i, vFoot).project(sc.camera);
         const px = (vHead.y - vFoot.y) * 0.5 * h;
-        const show = vHead.z < 1 && vHead.z > -1 && px > LABEL_MIN_PX;
+        const show = ahead && !(fp && i === humanId) && vHead.z < 1 && vHead.z > -1 && px > LABEL_MIN_PX;
         const L = labels[i];
         if (show !== L.shown) { L.el.classList.toggle('is-on', show); L.shown = show; }
         if (show) L.el.style.transform = `translate(${((vHead.x + 1) * 0.5 * w).toFixed(1)}px, ${((1 - vHead.y) * 0.5 * h).toFixed(1)}px) translate(-50%, -100%)`;
+      }
+      // 화면 밖·뒤의 공 — 가장자리 화살표(1인칭·뒤에서). 중계는 공을 따라가니 필요 없다
+      const ar = arrowRef.current;
+      if (ar) {
+        let on = false;
+        if (viewRef.current !== 'broadcast' && state.phase !== 'end') {
+          sc.ballPoint(vCam).applyMatrix4(sc.camera.matrixWorldInverse);
+          const e = edgeArrow(vCam.x, vCam.y, vCam.z, sc.camera.fov, sc.camera.aspect, w, h, 44);
+          on = e.show;
+          if (on) ar.style.transform = `translate(${e.x.toFixed(1)}px, ${e.y.toFixed(1)}px) translate(-50%, -50%) rotate(${e.angle.toFixed(3)}rad)`;
+        }
+        if (on !== arrowOn) { ar.classList.toggle('is-on', on); arrowOn = on; }
       }
     };
 
@@ -231,6 +268,13 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
       )}
       <div className={`g3-gauge${touch ? ' is-touch' : ''}`} ref={gaugeRef} aria-hidden="true"><i ref={fillRef} /></div>
       {!result && <button type="button" className="g3-x" aria-label="경기 나가기" onClick={confirmExit}>✕</button>}
+      {!result && (
+        <button type="button" className="g3-view" aria-label={`시점 바꾸기, 지금 ${VIEW_LABEL[view]}`}
+          onClick={(e) => { const v = nextView(view); setView(v); saveView(v); e.currentTarget.blur(); }}>
+          시점 <b>{VIEW_LABEL[view]}</b>
+        </button>
+      )}
+      <div className="g3-arrow" ref={arrowRef} aria-hidden="true" />
       <div className="g3-stick" ref={baseRef} aria-hidden="true"><div className="g3-stick-knob" ref={knobRef} /></div>
       <button type="button" ref={passRef} className={`g3-btn g3-pass${touch && !result ? ' is-shown' : ''}`} aria-label="패스">패스</button>
       <button type="button" ref={shootRef} className={`g3-btn g3-shoot${touch && !result ? ' is-shown' : ''}`} aria-label="슛">슛</button>

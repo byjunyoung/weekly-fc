@@ -7,7 +7,7 @@
 import { Button, Segmented } from 'antd';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { BASE_PERF } from '../../lib/game3d/stats';
-import type { Input, MatchConfig, MatchPlayer } from '../../lib/game3d/sim';
+import type { Input, MatchConfig, MatchPlayer, MatchState } from '../../lib/game3d/sim';
 import { perfOf } from '../../lib/game3d/stats';
 import type { Player } from '../../lib/types';
 import { href } from '../../lib/url';
@@ -17,7 +17,7 @@ import ThemeRoot from '../ThemeRoot';
 import { useMeInfo } from '../useMe';
 import { useData } from '../useData';
 import type { Live3D, Setup3D } from './Match3D';
-import { pickLineup5, rngFrom } from './view3d';
+import { pickLineup5, readView, rngFrom, saveView, VIEW_LABEL, VIEW_MODES, type ViewMode } from './view3d';
 
 const loadMatch = () => import('./Match3D');
 const Match3D = lazy(loadMatch);
@@ -50,7 +50,7 @@ export default function Game3DApp() {
 
 function Root() {
   const { data } = useData();
-  const live = useRef<Live3D>({ state: null, config: null, override: null, info: { fps: 0, drawCalls: 0, triangles: 0 } });
+  const live = useRef<Live3D>({ state: null, config: null, override: null, patch: null, info: { fps: 0, drawCalls: 0, triangles: 0 } });
   const [match, setMatch] = useState<Setup3D | null>(null);
   const keyN = useRef(0);
 
@@ -66,6 +66,22 @@ function Root() {
       getConfig: () => l.config,
       setInput: (i: Input | null) => { l.override = i; },
       getInfo: () => ({ ...l.info }),
+      // 골 장면 점검용 — 내 선수를 상대 골대 앞(골키퍼는 옆으로 비킴)에, 공을 발밑에. 다음 틱에 들어간다.
+      goalChance: () => {
+        l.patch = (s) => {
+          const c = l.config;
+          if (!c) return s;
+          const n = JSON.parse(JSON.stringify(s)) as MatchState;
+          const me = c.players.findIndex((p) => !p.bot);
+          const gk = c.players.findIndex((p) => p.gk && p.side === 1);
+          n.phase = 'play'; n.phaseTicks = 0;
+          Object.assign(n.players[me], { x: 14, y: 0, vx: 0, vy: 0, fx: 1, fy: 0, noTouch: 0 });
+          if (gk >= 0) Object.assign(n.players[gk], { x: 6, y: -9, vx: 0, vy: 0 });
+          for (const p of c.players) if (p.side === 1 && !p.gk) Object.assign(n.players[p.id], { x: -5, y: -8 + p.id, vx: 0, vy: 0 });
+          n.owner = me; n.ball = { x: 14.7, y: 0, z: 0.18, vx: 0, vy: 0, vz: 0 };
+          return n;
+        };
+      },
     };
     return () => { delete (window as unknown as { __wfc3d?: unknown }).__wfc3d; };
   }, []);
@@ -96,7 +112,8 @@ function Setup({ players, onStart }: { players: Player[]; onStart: (roster: Play
   const [picked, setPicked] = useState<number | null>(null);
   const [last, setLast] = useState<number | null>(null);
   const [minutes, setMinutes] = useState(3);
-  useEffect(() => { setLast(readLast()); }, []);
+  const [view, setView] = useState<ViewMode>('broadcast');
+  useEffect(() => { setLast(readLast()); setView(readView()); }, []);
   const has = (n: number | null | undefined): n is number => n != null && players.some((p) => p.num === n);
   // 고른 사람 > 지난번(2D 와 같은 칸) > 로그인해 차지한 내 선수
   const num = has(picked) ? picked : has(last) ? last : has(me.num) ? me.num : null;
@@ -118,7 +135,10 @@ function Setup({ players, onStart }: { players: Player[]; onStart: (roster: Play
           <div className="card-head"><h2>경기 <span className="muted">5대5 · 봇과</span></h2></div>
           <label className="g3-opt"><span className="muted">시간</span>
             <Segmented<number> value={minutes} onChange={setMinutes} options={[1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n}분` }))} /></label>
+          <label className="g3-opt"><span className="muted">시점</span>
+            <Segmented<ViewMode> value={view} onChange={(v) => { setView(v); saveView(v); }} options={VIEW_MODES.map((m) => ({ value: m, label: VIEW_LABEL[m] }))} /></label>
           <p className="muted g3-hint">PC: 방향키·WASD 이동, 스페이스 누르고 떼면 슛, X·Shift 패스 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼</p>
+          <p className="muted g3-hint">1인칭: 좌우(←→·A D)는 돌기, 위아래(↑↓·W S)는 앞뒤 — 보는 쪽으로 패스·슛. 경기 중에도 [시점]으로 바꿉니다.</p>
           <div className="g3-start">
             <Button type="primary" size="large" disabled={num === null} onClick={() => num !== null && onStart(players, num, minutes)}>
               {num === null ? '내 선수를 골라 주세요' : '시작'}

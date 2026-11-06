@@ -157,8 +157,10 @@ export const RULES3D = {
 } as const;
 
 export type Side = 0 | 1;
-/** 한 틱의 입력. x·y 는 경기장 방향(길이 0~1), shoot·pass 는 지금 누르고 있나(누름·뗌은 상태의 shootHeld·passHeld 와 비교해 안다). */
-export type Input = { x: number; y: number; shoot: boolean; pass: boolean };
+/** 한 틱의 입력. x·y 는 경기장 방향(길이 0~1), shoot·pass 는 지금 누르고 있나(누름·뗌은 상태의 shootHeld·passHeld 와 비교해 안다).
+ *  fx·fy(있으면) = 보는 방향을 직접 준다 — 1인칭 화면처럼 "보는 쪽 = 선수가 보는 쪽"이어야 할 때(2026-11-07 "1인칭도 구현해줘").
+ *  화면 쪽이 각도·부드럽게 돌리기를 계산해 단위 벡터로 넘긴다. 이 계산은 그 숫자를 그대로 쓸 뿐 시계·시점을 모른다(멈춰 서 있어도 돈다). */
+export type Input = { x: number; y: number; shoot: boolean; pass: boolean; fx?: number; fy?: number };
 export const NO_INPUT: Input = { x: 0, y: 0, shoot: false, pass: false };
 /** gk = 골키퍼(봇만). bot = 봇이 조종. */
 export type MatchPlayer = { id: number; num: number; name: string; side: Side; bot: boolean; gk: boolean; perf: Perf };
@@ -632,6 +634,10 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
     const il = Math.sqrt(ix * ix + iy * iy);
     const mult = (has ? CARRY_SPEED : 1) * (inp.shoot ? CHARGE_SPEED : 1);
     steer(p, mp, ix, iy, mult);
+    // 보는 방향을 직접 받았으면 그대로(길이만 1로) — 아래 "꺾다 흘리기"는 그 방향과 움직임을 비교한다
+    const ffx = fin(inp.fx ?? NaN), ffy = fin(inp.fy ?? NaN), fl = Math.sqrt(ffx * ffx + ffy * ffy);
+    const faced = inp.fx !== undefined && inp.fy !== undefined && fl > 0.5;
+    if (faced) { p.fx = ffx / fl; p.fy = ffy / fl; }
     if (il > 0.15) {
       const dx = ix / il, dy = iy / il;
       // 달리다 급히 꺾으면 공이 떨어질 수 있다(공 간수가 좋으면 덜)
@@ -643,7 +649,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
           s.owner = null; p.noTouch = LOOSE_LOCK;
         }
       }
-      turnToward(p, dx, dy, s.owner === i ? TURN_RATE_BALL : TURN_RATE);
+      if (!faced) turnToward(p, dx, dy, s.owner === i ? TURN_RATE_BALL : TURN_RATE);
     }
     // 슛: 누르는 동안 모으고, 떼는 순간 찬다. 패스: 뗄 때 찬다. 찰 수 없으면 그냥 풀린다.
     const shootNow = !!inp.shoot, passNow = !!inp.pass;

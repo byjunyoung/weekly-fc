@@ -1196,3 +1196,12 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
 .g3-outcome.is-lose { color: var(--warn); }
 .g3-final { display: flex; align-items: center; gap: var(--s-xs); font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-synthesis: none; letter-spacing: 0; }
 .g3-result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-xs); margin-top: var(--s-sm); }
+/* 시점 버튼은 ✕ 바로 아래 — 옆에 두면 좁은 폰(390px)에서 점수판과 겹친다(헤드리스 화면으로 확인) */
+.g3-view { position: absolute; top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 48px); right: max(var(--s-sm), env(safe-area-inset-right)); z-index: 3;
+  height: 40px; min-height: 0; padding: 0 var(--s-xs); border-radius: var(--r-full); background: rgba(0, 0, 0, .55); color: var(--muted); font-family: var(--font); font-size: var(--fs-xs); }
+.g3-view b { margin-left: var(--s-xxs); color: var(--fg); font-weight: var(--fw-body); }
+/* 화면 밖·뒤 공을 가리키는 화살표(1인칭·뒤에서) — 오른쪽을 가리키는 삼각형을 각도만큼 돌린다 */
+.g3-arrow { position: absolute; left: 0; top: 0; z-index: 2; display: none; width: 0; height: 0; pointer-events: none;
+  border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-left: 22px solid var(--gold); filter: drop-shadow(0 0 2px rgba(0, 0, 0, .8)); }
+.g3-arrow.is-on { display: block; }
+.g3-opt + .g3-opt { margin-top: var(--s-sm); }
