@@ -1,36 +1,34 @@
 ---
 import Shell from '../../layouts/Shell.astro';
 import GuideStart from '../../react/guide/GuideStart.tsx';
-import { MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS } from '../../lib/rules.ts';
+import { MATCH_TIME, MATCH_MIN, PLACES, LINKS, FINE_TYPES, FINE_AMOUNT, FINE_EXEMPT, DUTY_PER_MONTH } from '../../lib/rules.ts';
 import { href } from '../../lib/url.ts';
 ---
-<Shell title="처음 왔다면" description="WEEKLY FC 새 멤버 안내 — 한 주 흐름, 시간·장소·정산, 경기 영상, 포털 쓰는 법.">
-  <div class="page-head"><h1>처음 왔다면</h1></div>
+<Shell title="시작하기" description="WEEKLY FC 새 멤버 안내 — 시간·장소, 벌금·음료 봉사, 경기 영상, 포털.">
+  <div class="page-head"><h1>시작하기</h1></div>
+  {/* 한 화면 분량(2026-11-06 "안내 페이지 확! 줄여줘") — 소제목 없이 네 덩이. 자세한 건 규칙 페이지가 맡는다. */}
   <article class="prose stack">
-    <p>WEEKLY FC 에 오신 걸 환영합니다. 매주 토요일 풋살을 하는 팀입니다.</p>
-
-    <section id="week"><h2>매주 이렇게</h2>
-      <ul><li>주중에 단톡방 투표 — {MATCH_MIN}명 이상 모이면 진행</li><li>{MATCH_TIME} · {PLACES.join(' / ')}</li><li>대관비·음료비는 그날 참석자끼리 당일 정산 — {BANK.name} {BANK.number} ({BANK.holder})</li><li>벌금·봉사 등 자세한 건 <a href={href('/rules/')}>규칙 →</a></li></ul>
+    <p><strong>{MATCH_TIME}</strong> · {PLACES.join(' / ')}<br/>주중 단톡방 투표로 {MATCH_MIN}명 이상 모이면 진행하고, 대관비·음료비는 당일 정산합니다.</p>
+    {/* 벌금·음료 봉사는 새 멤버가 가장 놓치기 쉬운 약속이라 면(card)으로 띄운다(2026-11-06 "처음 왔다면에 강조해야지"). 값은 rules.ts 상수. */}
+    <section id="promise" class="card">
+      <ul><li>{FINE_TYPES.map((t, i) => <>{i > 0 && ' · '}{t} <strong>{FINE_AMOUNT[t].toLocaleString('ko-KR')}원</strong></>)} — {FINE_EXEMPT}</li><li><strong>음료 봉사</strong>는 매월 {DUTY_PER_MONTH}명씩 돌아가며 맡습니다</li></ul>
+      <a href={href('/rules/')}>규칙 전체 보기 →</a>
     </section>
-    <section id="video"><h2>경기 영상</h2>
+    <section id="video">
       <p>경기 영상은 유튜브 채널에 올라갑니다.</p>
       <div class="chips"><a class="chip" href={LINKS.youtube} target="_blank" rel="noopener">유튜브 채널 →</a><a class="chip" href={LINKS.instagram} target="_blank" rel="noopener">인스타그램 →</a></div>
     </section>
-    <section id="portal"><h2>포털</h2>
-      <p>지금 보고 있는 이 사이트입니다. 필수는 아니고 재미로 쓰는 곳입니다. 이름을 고르면 내 선수 카드를 꾸미고 티어 대결을 할 수 있습니다.</p>
+    <section id="portal">
+      <p>이 사이트는 필수는 아니고 재미로 씁니다. 이름을 고르면 선수 카드 꾸미기와 티어 대결을 할 수 있습니다.</p>
       <GuideStart client:load />
     </section>
-
-    <p>궁금한 건 단톡방에 편하게 물어보세요.</p>
   </article>
 </Shell>
 <style>
-  /* rules.astro 의 본문 갈무리와 같다 — 한 줄 길이·행간·소제목 도트 */
-  .prose section { max-width: var(--prose-max); }
+  /* rules.astro 의 본문 갈무리와 같다 — 한 줄 길이·행간 */
+  .prose > p, .prose section { max-width: var(--prose-max); }
   .prose p, .prose li { line-height: 1.6; }
-  .prose h2 { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; margin: 0 0 var(--m-md); }
-  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: 4px; background: var(--accent); margin-top: var(--m-sm); }
-  .prose ul, .prose ol { padding-left: 1.2em; margin: 0; }
+  .prose ul { padding-left: 1.2em; margin: 0 0 var(--m-sm); }
   .prose li { margin-bottom: var(--m-xs); }
   .prose p { margin: 0 0 var(--m-md); }
 </style>

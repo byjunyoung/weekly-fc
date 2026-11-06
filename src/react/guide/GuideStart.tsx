@@ -1,4 +1,4 @@
-// 안내 > 처음 왔다면 「포털」 칸 — 로그인 창을 여는 버튼, 이미 이름을 골랐다면 내 선수 페이지 링크.
+// 안내 > 시작하기 「포털」 칸 — 로그인 창을 여는 버튼, 이미 이름을 골랐다면 내 선수 페이지 링크.
 import { Button } from 'antd';
 import { href } from '../../lib/url';
 import ThemeRoot from '../ThemeRoot';

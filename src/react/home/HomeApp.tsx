@@ -220,9 +220,9 @@ function App() {
         )}
         {/* 옛 최근 글 칸 자리(2026-11-06) — 새 멤버 안내로. */}
         <LinkTile to={href('/guide/')}>
-          <span className="tile-label">처음 왔다면</span>
+          <span className="tile-label">시작하기</span>
           <b className="tile-big">팀 안내</b>
-          <span className="tile-sub">한 주 흐름 · 경기 영상 · 포털 쓰는 법</span>
+          <span className="tile-sub">시간·장소 · 벌금·봉사 · 경기 영상</span>
         </LinkTile>
         {/* 봉사는 이번 달·다음 달 두 칸이던 걸 한 칸으로(2026-09-28 "봉사에 영역을 너무 많이 배정"). 다음 달은 아래 한 줄. */}
         <LinkTile to={href('/rules/#duty')}>

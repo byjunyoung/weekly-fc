@@ -46,16 +46,18 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 라커룸·명단·매치·티어·전술·안내 여섯 갈래(2026-11-06 여덟 → 여섯; 이전: 2026-09-28 운영 규칙 → 규칙, 2026-09-30 자료) — 라인업·규칙·자료는 하위 탭으로', () => {
+test('상단 탭은 라커룸·명단·매치·전술·안내 다섯 갈래(2026-11-06 여덟 → 여섯 → 다섯, 티어는 명단 아래로; 이전: 2026-09-28 운영 규칙 → 규칙, 2026-09-30 자료) — 라인업·규칙·자료는 하위 탭으로', () => {
   const html = read('index.html');
-  for (const l of ['라커룸', '명단', '매치', '티어', '전술', '안내']) assert.ok(html.includes(`<span>${l}</span>`), l);
-  for (const l of ['스쿼드', '기록', '소개', '팀짜기', '라인업', '규칙', '자료']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
+  for (const l of ['라커룸', '명단', '매치', '전술', '안내']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['스쿼드', '기록', '소개', '팀짜기', '라인업', '티어', '규칙', '자료']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
 test('묶인 메뉴는 하위 탭 줄을 보인다(2026-11-06) — 규칙에선 안내 > 규칙, 라인업에선 매치 > 라인업 짜기', () => {
   const rules = read('rules/index.html');
-  assert.match(rules, /class="subnav"[\s\S]*처음 왔다면[\s\S]*규칙[\s\S]*자료/);
+  assert.match(rules, /class="subnav"[\s\S]*시작하기[\s\S]*규칙[\s\S]*자료/);
   assert.ok(!read('index.html').includes('class="subnav"'), '하위 탭 없는 메뉴엔 줄이 없다');
   assert.match(read('lineup/index.html'), /class="subnav"[\s\S]*지난 경기[\s\S]*라인업 짜기/);
+  assert.match(read('tier/index.html'), /class="subnav"[\s\S]*선수[\s\S]*티어/);
+  assert.match(read('squad/index.html'), /class="subnav"[\s\S]*선수[\s\S]*티어/);
 });
 test('푸터 — 셸 페이지마다 인스타·오픈카톡·유튜브 링크(2026-09-30)', () => {
   for (const p of SHELL_PAGES) {
@@ -246,11 +248,16 @@ test('벌금은 규칙 표만 남는다 — 기록 코드는 없다', () => {
   assert.ok(read('rules/index.html').includes('노쇼'), '규칙의 벌금표는 그대로');
 });
 
-test('안내 > 처음 왔다면(2026-11-06) — 소제목 셋(매주 이렇게·경기 영상·포털)으로 한 단, 가입은 필수가 아니다(같은 날 "뎁스 줄이고 간소화")', () => {
+test('안내 > 시작하기(2026-11-06) — 소제목 없이 한 화면 분량("안내 페이지 확! 줄여줘"), 벌금·음료 봉사는 면으로 띄운다, 가입은 필수가 아니다', () => {
   const html = read('guide/index.html');
-  for (const s of ['매주 이렇게', '필수는 아니고', 'youtube.com/@WEEKLYFC2020', 'instagram.com/weeklyfootballclub', '/weekly-fc/rules/', '카카오뱅크', '토요일 오전 10–12시']) assert.ok(html.includes(s), s);
-  assert.equal((html.match(/<h2/g) ?? []).length, 3, '소제목은 셋');
-  assert.ok(!html.includes('guide-part'), '묶음 제목 단은 없앴다');
+  const main = html.slice(html.indexOf('<main'), html.indexOf('</main>'));
+  assert.match(main, /<h1[^>]*>시작하기<\/h1>/);
+  for (const s of ['필수는 아니고', 'youtube.com/@WEEKLYFC2020', 'instagram.com/weeklyfootballclub', '/weekly-fc/rules/', '토요일 오전 10–12시']) assert.ok(main.includes(s), s);
+  assert.equal((main.match(/<h2/g) ?? []).length, 0, '소제목은 없다');
+  // 벌금·음료 봉사 — "벌금이랑 음료 봉사 처음 왔다면에 강조해야지"
+  const promise = main.slice(main.indexOf('<section id="promise"'), main.indexOf('<section id="video"'));
+  assert.match(promise, /^<section id="promise" class="card[^"]*"/);
+  for (const s of ['30,000원', '50,000원', '미리 공지하면 면제', '음료 봉사', '매월 2명']) assert.ok(promise.includes(s), s);
   assert.ok(html.includes('/weekly-fc/og.png'));
   assert.ok(!html.includes('자기소개 양식'), '양식은 봇이 보낸다');
 });
