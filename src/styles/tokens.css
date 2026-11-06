@@ -1132,6 +1132,15 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .game-chip.is-me { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
 .game-chip.is-picked { background: var(--link); color: var(--canvas); border-color: var(--link); }
 .game-chip.is-bot { justify-content: center; border-style: dashed; background: transparent; color: var(--muted); }
+/* 봇 고르기(2026-11-07 "그리고 봇도 선수를 고를 수 있게 해줘") — 고른 봇은 얼굴·이름이 밝게, 끝에 작은 "봇" 표시. 방장 쪽은 눌리는 버튼. */
+.game-chip.is-bot.is-picked-bot { justify-content: flex-start; color: var(--fg); }
+.game-col-list > button.game-chip.is-bot, .game-botrow > button.game-chip.is-bot { cursor: pointer; }
+.game-col-list > button.game-chip.is-bot:hover, .game-botrow > button.game-chip.is-bot:hover { border-color: var(--fg); }
+.game-bot-tag { flex: none; padding: 0 var(--s-xxs); border: 1px solid var(--hairline-strong); color: var(--muted); font-size: var(--fs-xs); }
+.game-botpick-random { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); margin-bottom: var(--s-sm); }
+.game-botrows { display: flex; flex-direction: column; gap: var(--s-xs); }
+.game-botrow { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--s-xxs); }
+.game-botrow-label { grid-column: 1 / -1; }
 .game-chip-face { display: flex; flex: none; }
 .game-chip-face svg { width: 24px; height: 24px; }
 .game-chip-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -119,22 +119,37 @@ export function rngFrom(seed: number): () => number {
 
 export type LineupSlot = { num: number; side: 0 | 1; human: boolean };
 
-/** 명단에서 양 편을 뽑는다. 사람 선수는 0 편, 나머지는 무작위(겹침 없음, 사람 선수 제외).
+/** 명단에서 양 편을 뽑는다. 사람 선수는 0 편, 나머지는 봇(겹침 없음, 사람 선수 제외).
  *  반환 순서 = 시뮬레이션 id 순서(0 편 perSide 명 다음 1 편). 편 안 순서는 slot 이고 0 이 가장 뒤라서,
  *  사람은 2명 이상이면 slot 1 에 둔다 — slot 0 을 사람이 차지하면 그 편 봇에 수비가 없어진다(report-1).
+ *  picks = 편마다 고른 봇(우리 편·상대, 차례대로) — 사용자 "그리고 봇도 선수를 고를 수 있게 해줘". 봇 자리를 앞에서부터 고른 선수로 채우고
+ *  나머지는 무작위. 못 쓰는 것(명단에 없음·내 선수·겹침)은 건너뛰고, 자리보다 많으면 남는 건 안 쓴다. 안 고르면 예전과 난수 순서까지 같다.
  *  명단이 2*perSide 보다 작으면 겹치게 뽑지 않고 RangeError — 화면이 그런 인원을 못 고르게 막는다. */
-export function pickLineup(roster: number[], humanNum: number, perSide: number, rnd: () => number): LineupSlot[] {
-  const others = roster.filter((n, i) => n !== humanNum && roster.indexOf(n) === i);
+export function pickLineup(roster: number[], humanNum: number, perSide: number, rnd: () => number, picks: readonly (readonly number[])[] = [[], []]): LineupSlot[] {
+  const uniq = roster.filter((n, i) => roster.indexOf(n) === i);
   if (!roster.includes(humanNum)) throw new RangeError('내 선수가 명단에 없다');
-  if (others.length < perSide * 2 - 1) throw new RangeError('명단이 모자란다');
+  if (uniq.length - 1 < perSide * 2 - 1) throw new RangeError('명단이 모자란다');
+  const used = new Set<number>([humanNum]);
+  const need = [perSide - 1, perSide];
+  const chosen = [0, 1].map((side) => {
+    const out: number[] = [];
+    for (const n of picks[side] ?? []) {
+      if (out.length >= need[side]) break;
+      if (!uniq.includes(n) || used.has(n)) continue;
+      used.add(n); out.push(n);
+    }
+    return out;
+  });
+  const others = uniq.filter((n) => !used.has(n));
   const pool = shuffle(others, rnd);   // 2단계 방(room.ts)과 같은 섞기를 쓴다
   const humanSlot = Math.min(1, perSide - 1);
   const out: LineupSlot[] = [];
-  let k = 0;
+  let k = 0, c0 = 0, c1 = 0;
   for (let slot = 0; slot < perSide; slot++) {
-    out.push(slot === humanSlot ? { num: humanNum, side: 0, human: true } : { num: pool[k++], side: 0, human: false });
+    out.push(slot === humanSlot ? { num: humanNum, side: 0, human: true }
+      : { num: c0 < chosen[0].length ? chosen[0][c0++] : pool[k++], side: 0, human: false });
   }
-  for (let slot = 0; slot < perSide; slot++) out.push({ num: pool[k++], side: 1, human: false });
+  for (let slot = 0; slot < perSide; slot++) out.push({ num: c1 < chosen[1].length ? chosen[1][c1++] : pool[k++], side: 1, human: false });
   return out;
 }
 

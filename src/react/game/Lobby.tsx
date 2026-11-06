@@ -8,10 +8,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
 import type { FieldChoice, Member, PerSide, RoomState, Team } from '../../lib/game/room';
-import { MAX_PER_SIDE, resolveField, sideSizes } from '../../lib/game/room';
+import { MAX_PER_SIDE, NO_PICKS, resolveField, sideSizes } from '../../lib/game/room';
 import type { Player } from '../../lib/types';
 import type { GuestSession, HostSession, SessionView } from './net/session';
 import { FIELD_OPTIONS, SCORE_LIMITS } from './Entry';
+import { BotPickModal, BotSlot } from './BotSlot';
 import { PlayerPicker } from './PlayerPicker';
 import { TEAM } from './render';
 import { maxPerSide } from './view';
@@ -47,6 +48,8 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
   const guest = session.role === 'guest' ? session : null;
   const [picked, setPicked] = useState<string | null>(null);
   const [repick, setRepick] = useState(false);
+  /** 고르는 중인 봇 자리(방장). 사용자: "그리고 봇도 선수를 고를 수 있게 해줘". */
+  const [botEdit, setBotEdit] = useState<{ side: 0 | 1; slot: number } | null>(null);
 
   // 안내(거절·시작 못 함)는 잠깐 띄우고 지운다.
   useEffect(() => {
@@ -66,6 +69,10 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
   const block = host ? host.startBlock() : null;
   const conn = connText(view.conn);
   const hostName = room.members.find((m) => m.clientId === room.hostId)?.name ?? '';
+  const picks = room.botPicks ?? NO_PICKS;
+  const editNum = botEdit ? picks[botEdit.side][botEdit.slot] ?? null : null;
+  // 고르기 창에서 흐리게 할 선수 — 방 사람이 잡은 선수 + 다른 봇 자리에 이미 고른 선수(지금 자리의 선수는 빼고).
+  const botHeld = new Set<number>([...room.members.map((m) => m.num), ...picks[0], ...picks[1]].filter((n) => n !== editNum));
 
   const moveTo = (team: Team): void => {
     if (!editable || !picked) return;
@@ -124,7 +131,13 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
                 </button>
                 <div className="game-col-list">
                   {list.map(chip)}
-                  {Array.from({ length: bots }, (_, i) => <div key={`bot${i}`} className="game-chip is-bot" aria-label="빈자리(봇)">봇</div>)}
+                  {/* 빈자리 = 봇. 방장은 눌러서 그 자리에 세울 선수를 고르고, 손님은 보기만 한다. */}
+                  {c.team !== null && Array.from({ length: bots }, (_, i) => {
+                    const side = c.team as 0 | 1;
+                    const num = picks[side][i];
+                    return <BotSlot key={`bot${i}`} label={`${c.label} 봇 ${i + 1}`} player={num === undefined ? null : byNum.get(num) ?? null}
+                      onClick={editable ? () => { setPicked(null); setBotEdit({ side, slot: i }); } : undefined} />;
+                  })}
                 </div>
               </section>
             );
@@ -160,6 +173,12 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
         </div>
       </div>
 
+      {host && (
+        <BotPickModal open={!!botEdit} title={botEdit ? `${COLS.find((c) => c.team === botEdit.side)?.label} 봇 ${botEdit.slot + 1}` : ''}
+          players={players} value={editNum} held={botHeld}
+          onPick={(num) => { if (botEdit) host.setBotPick(botEdit.side, botEdit.slot, num); setBotEdit(null); }}
+          onClose={() => setBotEdit(null)} />
+      )}
       {guest && (
         <Modal open={repick} title="선수 바꾸기" footer={null} onCancel={() => setRepick(false)} destroyOnHidden>
           <PlayerPicker players={players} value={me?.num ?? null} held={held}

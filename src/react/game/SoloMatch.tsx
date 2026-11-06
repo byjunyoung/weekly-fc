@@ -22,7 +22,8 @@ const STEP_MS = 1000 / TICK_HZ;
 const MAX_CATCHUP = 5;                     // 한 프레임에 따라잡는 최대 틱 — 느린 기기가 계산에 먹혀 더 느려지는 걸 막는다
 
 /** 혼자 연습 설정 — 인원 1대1~6대6, 경기장 자동/작게/보통/크게/아주 크게(2026-11-07). */
-export type Req = { num: number; perSide: 1 | 2 | 3 | 4 | 5 | 6; minutes: number; scoreLimit: number; field: FieldChoice };
+/** botPicks = 우리 편·상대 봇으로 고른 선수(차례대로, 비면 무작위) — "그리고 봇도 선수를 고를 수 있게 해줘". */
+export type Req = { num: number; perSide: 1 | 2 | 3 | 4 | 5 | 6; minutes: number; scoreLimit: number; field: FieldChoice; botPicks?: [number[], number[]] };
 export type MatchSetup = { key: number; req: Req; config: MatchConfig; seed: number; humanId: number; roster: Player[] };
 
 /** 지금 화면의 카메라(디버그 훅 getView 용). */
@@ -42,7 +43,7 @@ export function sidesText(config: MatchConfig): string {
 /** 설정 → 경기. 씨앗은 여기(화면 쪽 시계)에서 만든다 — 계산 코드는 시계·난수를 모른다. */
 export function buildSoloMatch(req: Req, roster: Player[], key: number): MatchSetup {
   const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
-  const lineup = pickLineup(roster.map((p) => p.num), req.num, req.perSide, rngFrom(seed ^ 0x9e3779b9));
+  const lineup = pickLineup(roster.map((p) => p.num), req.num, req.perSide, rngFrom(seed ^ 0x9e3779b9), req.botPicks);
   const players: MatchPlayer[] = lineup.map((l, id) => {
     const p = roster.find((r) => r.num === l.num) as Player;
     return { id, num: l.num, name: p.name, side: l.side, bot: !l.human, perf: perfOf(p, roster) };

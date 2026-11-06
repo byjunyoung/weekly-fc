@@ -656,3 +656,23 @@ test('두 편 0명이면 시작이 막힌다, 한 편만 사람이어도 된다(
   assert.equal(w.host.getConfig().field, 'S');
   assert.equal(w.gs[0].getView().myId, 0);
 });
+
+test('봇 고르기 — 방장 명령은 로비에서만, 손님은 고른 봇을 방 상태로 받고 경기에 그 선수가 봇으로 뛴다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.setSettings({ perSide: 2 });
+  w.host.move('c0', 0);
+  w.host.setBotPick(0, 0, 110);
+  w.host.setBotPick(1, 0, 111);
+  w.host.setBotPick(1, 1, 101);   // 손님이 잡은 선수 — 안 된다
+  w.run(200);
+  assert.deepEqual(w.gs[0].getRoom().botPicks, [[110], [111]]);
+  assert.ok(w.host.start());
+  const rev = w.host.getRoom().rev;
+  w.host.setBotPick(0, 0, 112);
+  assert.equal(w.host.getRoom().rev, rev, '경기 중엔 못 바꾼다');
+  w.run(300);
+  const cfg = w.gs[0].getConfig();
+  assert.equal(cfg.players.find((p) => p.side === 0 && p.bot).num, 110);
+  assert.equal(cfg.players.find((p) => p.side === 1 && p.bot).num, 111);
+});

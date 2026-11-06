@@ -297,3 +297,86 @@ test('변하지 않으면 같은 객체, 변하면 rev + 1', () => {
   assert.equal(setPhase(r, 'match').rev, r.rev + 1);
   assert.equal(setPhase(r, 'lobby'), r);
 });
+
+// ───────────── 봇 고르기(2026-11-07 "그리고 봇도 선수를 고를 수 있게 해줘") ─────────────
+import { setBotPick, updatePicks, NO_PICKS } from '../../src/lib/game/room.ts';
+const nums = (rost) => rost.map((p) => p.num);
+
+test('봇 고르기 — 명단의 선수만, 방 사람 선수·겹침(두 편 모두)·한 편 6 초과는 안 된다, 안 바뀌면 같은 객체', () => {
+  const rost = roster(20), R = nums(rost);
+  const r = roomWith(2);   // c0=100, c1=101
+  assert.deepEqual(r.botPicks, [[], []]);
+  const a = setBotPick(r, 0, 0, 110, R);
+  assert.deepEqual(a.botPicks, [[110], []]); assert.equal(a.rev, r.rev + 1);
+  assert.equal(setBotPick(a, 0, 0, 110, R), a, '같은 값');
+  assert.equal(setBotPick(a, 0, 1, 999, R), a, '명단에 없음');
+  assert.equal(setBotPick(a, 0, 1, 101, R), a, '방 사람이 잡은 선수');
+  assert.equal(setBotPick(a, 1, 0, 110, R), a, '다른 편에 이미 있음');
+  assert.equal(setBotPick(a, 0, 3, 110, R), a, '같은 편 다른 자리에 이미 있음');
+  assert.equal(setBotPick(a, 0, 6, 111, R), a, '자리 번호 범위 밖');
+  assert.equal(setBotPick(a, 2, 0, 111, R), a, '편 범위 밖');
+  const b = setBotPick(setBotPick(a, 0, 5, 111, R), 1, 0, 112, R);
+  assert.deepEqual(b.botPicks, [[110, 111], [112]], '목록 길이보다 뒤 자리면 끝에 붙는다');
+  const c = setBotPick(b, 0, 0, 113, R);
+  assert.deepEqual(c.botPicks[0], [113, 111], '자리 바꾸기');
+  let full = c;
+  for (const n of [114, 115, 116, 117]) full = setBotPick(full, 0, 9 - 4, n, R);
+  assert.equal(full.botPicks[0].length, 6);
+  assert.equal(setBotPick(full, 0, 5, 118, R).botPicks[0].length, 6, '자리 바꾸기는 된다');
+  const back = setBotPick(c, 0, 0, null, R);
+  assert.deepEqual(back.botPicks[0], [111], 'null = 무작위로 — 뒤의 것이 당겨진다');
+  assert.equal(setBotPick(back, 0, 4, null, R), back, '이미 무작위인 자리');
+  assert.equal(updatePicks(NO_PICKS, 0, 0, 5, () => false), NO_PICKS);
+});
+
+test('봇 고르기 — 사람이 들어오거나 선수를 바꿔 그 선수를 잡으면 봇 목록에서 빠진다', () => {
+  const R = nums(roster(20));
+  let r = setBotPick(setBotPick(roomWith(2), 0, 0, 110, R), 1, 0, 111, R);
+  const j = join(r, { clientId: 'c9', num: 110, name: '선수10' });
+  assert.ok(j.ok);
+  assert.deepEqual(j.room.botPicks, [[], [111]]);
+  const p = pick(j.room, 'c1', 111, '선수11');
+  assert.deepEqual(p.botPicks, [[], []]);
+  assert.deepEqual(pick(r, 'c1', 115, '선수15').botPicks, r.botPicks, '상관없는 선수면 그대로');
+});
+
+test('buildMatch — 고른 봇을 차례대로 쓰고 나머지는 무작위, 못 쓰게 된 것은 건너뜀, 남는 건 안 쓰지만 방에 남는다', () => {
+  const rost = roster(30), R = nums(rost);
+  let r = setSettings(roomWith(2), { perSide: 3 });
+  r = move(r, 'c0', 0);                                    // 0 편 사람 1 → 봇 2, 1 편 봇 3
+  for (const [s, n] of [[0, 120], [0, 121], [0, 122], [1, 125]]) r = setBotPick(r, s, 5, n, R);   // 뒤 자리 = 끝에 붙임
+  assert.deepEqual(r.botPicks, [[120, 121, 122], [125]]);
+  const { config } = buildMatch(r, rost, rngFrom(5));
+  const bots = (side) => config.players.filter((p) => p.side === side && p.bot).map((p) => p.num);
+  assert.deepEqual(bots(0), [120, 121], '봇 자리 둘 — 고른 차례대로, 셋째는 안 씀');
+  assert.equal(bots(1)[0], 125, '1 편 첫 봇은 고른 선수');
+  assert.equal(bots(1).length, 3);
+  assert.ok(!bots(1).slice(1).some((n) => [120, 121, 125, 100, 101].includes(n)), '나머지 무작위는 고른 선수·방 사람과 안 겹친다');
+  assert.ok(!config.players.some((p) => p.num === 122), '남는 고른 선수는 무작위로도 안 나온다(고른 편이 아닌 데서 나오지 않게)');
+  assert.deepEqual(r.botPicks[0], [120, 121, 122], '방 상태엔 남는다');
+  // 봇으로 채울 수를 늘리면 셋째도 쓰인다
+  const more = buildMatch(setSettings(r, { perSide: 4 }), rost, rngFrom(5));
+  assert.deepEqual(more.config.players.filter((p) => p.side === 0 && p.bot).map((p) => p.num), [120, 121, 122]);
+  // 같은 rnd 면 같은 결과
+  assert.deepEqual(buildMatch(r, rost, rngFrom(5)), buildMatch(r, rost, rngFrom(5)));
+  // 고른 선수가 명단에서 빠졌으면 건너뛰고 다음 것
+  const fewer = rost.filter((p) => p.num !== 120);
+  assert.deepEqual(buildMatch(r, fewer, rngFrom(5)).config.players.filter((p) => p.side === 0 && p.bot).map((p) => p.num), [121, 122]);
+});
+
+test('buildMatch — 아무것도 안 고르면 예전과 똑같다(난수 순서까지)', () => {
+  const rost = roster(30);
+  const r = setSettings(roomWith(3), { perSide: 4 });
+  const { botPicks: _, ...old } = r;   // botPicks 가 없는 옛 방 모양
+  assert.deepEqual(buildMatch(r, rost, rngFrom(11)), buildMatch(old, rost, rngFrom(11)));
+});
+
+test('buildMatch — 명단이 빠듯하면 안 쓰인 고른 선수도 무작위로 채운다(시작이 막히지 않는다)', () => {
+  const rost = roster(4), R = nums(rost);   // 100~103, 방장 100 은 대기
+  let r = setSettings(roomWith(1), { perSide: 1 });   // 봇 둘 필요, 남는 명단 셋
+  r = setBotPick(setBotPick(r, 0, 0, 101, R), 0, 1, 102, R);   // 0 편에 둘 골랐지만 자리는 하나
+  const { config } = buildMatch(r, rost, rngFrom(1));
+  assert.equal(config.players[0].num, 101);
+  assert.ok([102, 103].includes(config.players[1].num));
+  assert.equal(new Set(config.players.map((p) => p.num)).size, 2);
+});
