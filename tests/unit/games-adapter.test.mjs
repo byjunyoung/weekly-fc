@@ -12,6 +12,7 @@ import { BASE_PERF as BASE_PERF_3D } from '../../src/lib/game3d/stats.ts';
 import { TICK_HZ as SIM_HZ } from '../../src/lib/game/sim.ts';
 import { BASE_PERF } from '../../src/lib/game/stats.ts';
 import { P2_CASES } from './fixtures/games-cases-p2.mjs';
+import { P3_CASES } from './fixtures/games-cases-p3.mjs';
 
 const cfg2d = (a, b, field = 'M', minutes = 2) => ({
   field, minutes, scoreLimit: 0,
@@ -77,6 +78,7 @@ const CASES = [
     optionalStateKeys: [],
   },
   ...P2_CASES,
+  ...P3_CASES,
 ];
 
 // ── 도구 ──

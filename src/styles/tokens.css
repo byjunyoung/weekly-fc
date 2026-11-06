@@ -1145,6 +1145,16 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .pen-dot { width: 10px; height: 10px; flex: none; }
 .pen-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pen-count { font-family: var(--font-pixel); font-synthesis: none; letter-spacing: 0; }
+/* 프리킥·드리블 결과 — 순위 · 등번호 이름 · 자리 표시(●✕○)나 메달 · 점수나 기록. 결과 상자 폭 안에서 한 줄씩(2026-11-07 3단계). */
+.fk-rows, .dr-rows { display: flex; flex-direction: column; gap: 2px; width: 100%; margin: 0; padding: 0; list-style: none; text-align: left; }
+.fk-rows li, .dr-rows li { display: flex; align-items: center; gap: var(--s-xs); padding: 2px var(--s-xs); border-bottom: 1px solid var(--hairline); font-size: var(--fs-xs); }
+.fk-rows li.is-me, .dr-rows li.is-me { color: var(--gold); }
+.fk-rank, .dr-rank { width: 1.5em; flex: none; color: var(--muted); }
+.fk-name, .dr-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fk-marks { flex: none; letter-spacing: 1px; }
+.fk-pts, .dr-time { flex: none; font-family: var(--font-pixel); font-synthesis: none; letter-spacing: 0; }
+.dr-medal { flex: none; width: 1.5em; }
+.fk-sum, .dr-sum { margin: 0; font-size: var(--fs-xs); }
 .game-col { display: flex; flex-direction: column; gap: var(--s-xxs); min-width: 0; padding: var(--s-xxs); background: var(--card); border: 1px solid var(--hairline); }
 .game-col.is-target { border-color: var(--link); cursor: pointer; }
 .game-col-head { display: flex; align-items: center; justify-content: flex-start; gap: var(--s-xxs); width: 100%; min-height: 36px; padding: 0 var(--s-xxs); border: 0; border-bottom: 2px solid var(--hairline-strong);
