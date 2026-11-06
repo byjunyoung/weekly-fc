@@ -11,6 +11,7 @@
 //   - 몸·공·킥·감쇠는 경기와 같은 조각(multiball.stepBodies — 레인 하나에 몸 하나·공 하나).
 //   - 끝: 모두 도착했거나, 첫 도착 뒤 AFTER_FIRST(30초), 또는 RUN_CAP(150초). 순위 = 도착한 사람은 기록 순, 못 한 사람은 지난 문 수 순.
 //   - 코스 넷(우리 것 — 어느 게임의 코스도 가져오지 않았다): ① 지그재그 ② 8자 ③ 좁은 문 ④ 왕복. 메달 기준 = 대본 주자(dribbleBot)로 잰 시간에서.
+import { placesBy } from './places.ts';
 import type { Body, Geo, Input, KickBody } from '../game/sim.ts';
 import { NO_INPUT, pitchOf } from '../game/sim.ts';
 import { stepBodies } from '../game/multiball.ts';
@@ -158,13 +159,19 @@ export function stepDribble(state: DrState, config: DrConfig, inputs: DrInput[])
 
 /** 순위(레인 번호 차례) — 도착한 사람은 기록 순, 못 한 사람은 지난 문이 많은 순(나간 사람은 그 아래), 같으면 레인 순. */
 export function drRanking(s: DrState): number[] {
-  return s.lanes.map((_, i) => i).sort((a, b) => {
-    const ta = laneTime(s.lanes[a]), tb = laneTime(s.lanes[b]);
-    if (ta !== null && tb !== null) return ta - tb || a - b;
-    if (ta !== null) return -1;
-    if (tb !== null) return 1;
-    return Number(s.lanes[a].gone) - Number(s.lanes[b].gone) || s.lanes[b].gate - s.lanes[a].gate || a - b;
-  });
+  return s.lanes.map((_, i) => i).sort((a, b) => drCompare(s.lanes[a], s.lanes[b]) || a - b);
+}
+/** 두 레인의 결과 비교(음수 = a 가 낫다, 0 = 같은 결과) — 도착한 쪽, 기록 짧은 쪽, 못 했으면 나가지 않은 쪽·지난 문 많은 쪽. 3D 레인도 같은 칸이다. */
+export function drCompare(la: Pick<Lane, 'fin' | 'pen' | 'gone' | 'gate'>, lb: Pick<Lane, 'fin' | 'pen' | 'gone' | 'gate'>): number {
+  const ta = la.fin < 0 ? null : la.fin + la.pen * CONE_PENALTY, tb = lb.fin < 0 ? null : lb.fin + lb.pen * CONE_PENALTY;   // 틱(정수)으로 — 같은 기록이 정확히 같게
+  if (ta !== null && tb !== null) return ta - tb;
+  if (ta !== null) return -1;
+  if (tb !== null) return 1;
+  return Number(la.gone) - Number(lb.gone) || lb.gate - la.gate;
+}
+/** 등수 — 같은 기록(또는 둘 다 못 했고 지난 문이 같음)이면 같은 등수(2026-11-07 합치기). */
+export function drPlaces(s: { lanes: Pick<Lane, 'fin' | 'pen' | 'gone' | 'gate'>[] }): number[] {
+  return placesBy(s.lanes.length, (a, b) => drCompare(s.lanes[a], s.lanes[b]));
 }
 
 // ── 대본 주자(메달 시간을 재고, 끊긴 손님 자리를 맡는다) ──

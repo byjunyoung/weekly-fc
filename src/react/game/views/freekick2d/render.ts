@@ -2,7 +2,8 @@
 // 승부차기 화면의 조각(골문 끝 바닥 drawGoalEnd·키퍼 drawKeeper·세기 막대·선수 원·공·띠)을 그대로 쓰고, 수비벽·감는 길 미리 보기·자리 표시·순위 줄만 여기서.
 // 조준과 감기 미리 보기는 aim 이 null 이 아닐 때만 — 화면(장면)이 "내가 키커일 때"만 넘긴다. 상태에는 조준·감기가 없다(찬 뒤의 curl 만).
 import type { FkConfig, FkState } from '../../../../lib/games/freekick2d.ts';
-import { AIM_TICKS, FK_MAX_POINTS, FK_SPOTS, READY_TICKS, WALL_R, fkPath, fkRanking, fkTotal, wallAt } from '../../../../lib/games/freekick2d.ts';
+import { AIM_TICKS, FK_MAX_POINTS, FK_SPOTS, READY_TICKS, WALL_R, fkPath, fkPlaces, fkRanking, fkTotal, wallAt } from '../../../../lib/games/freekick2d.ts';
+import { tiedAt, topName, topWord } from '../../../../lib/games/places.ts';
 import { BALL_R, BODY_R, CHARGE_TICKS, deviationOf } from '../../../../lib/games/penalty2d.ts';
 import { F9, F14, GOLD, banner, drawBall, drawName, drawToken, type Sprites } from '../match2d/render.ts';
 import { toScreen, type PenLayout } from '../penalty2d/layout.ts';
@@ -97,10 +98,10 @@ export function drawFreekick(ctx: CanvasRenderingContext2D, st: FkState, config:
     ctx.fillStyle = st.kicker === o.me ? GOLD : 'rgba(255,255,255,.8)';
     ctx.fillText(st.phase === 'end' ? '' : `${k.name}${st.kicker === o.me ? '(나)' : ''} 차례 · ${st.kickNo + 1}/${fkTotal(n)}`, cx, y0 + 26);
     // 순위 줄 — 앞 넷(폰은 셋) + 나
-    const order = fkRanking(st.points, st.log);
+    const order = fkRanking(st.points, st.log), pl = fkPlaces(st.points, st.log);
     const show = order.slice(0, l.vw < 520 ? 3 : 4);
     if (o.me !== null && !show.includes(o.me)) show.push(o.me);
-    const text = show.map((i) => `${order.indexOf(i) + 1} ${Array.from(config.players[i].name).slice(0, 4).join('')} ${st.points[i]}`).join('  ·  ');
+    const text = show.map((i) => `${pl[i]} ${Array.from(config.players[i].name).slice(0, 4).join('')} ${st.points[i]}`).join('  ·  ');
     ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.fillText(text, cx, y0 + 50);
   }
   if (st.phase === 'aim') {
@@ -117,8 +118,8 @@ export function drawFreekick(ctx: CanvasRenderingContext2D, st: FkState, config:
   } else if (st.phase === 'ready' && st.phaseTicks < READY_TICKS - 6) {
     banner(ctx, l, midY, st.kicker === o.me ? '내 차례' : `${config.players[st.kicker].name} 차례`, `${spot.name} · ${spot.pts}점`, 24, st.kicker === o.me ? GOLD : '#fff');
   } else if (st.phase === 'end') {
-    const top = fkRanking(st.points, st.log)[0];
-    banner(ctx, l, midY, n === 1 ? `${st.points[0]}점` : `${config.players[top].name} 1등`, n === 1 ? `${FK_MAX_POINTS}점 만점` : `${st.points[top]}점`, 54);
+    const top = fkRanking(st.points, st.log)[0], pl = fkPlaces(st.points, st.log);   // 같이 1등이면 "공동 1등 k명"(결과 상자와 같은 말)
+    banner(ctx, l, midY, n === 1 ? `${st.points[0]}점` : topWord(pl, config.players[top].name), n === 1 ? `${FK_MAX_POINTS}점 만점` : tiedAt(pl, 1) > 1 ? `${topName(pl, config.players[top].name)} ${st.points[top]}점` : `${st.points[top]}점`, 54);
   }
 
   // 아래 안내 — 내 차례의 조작

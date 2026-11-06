@@ -21,7 +21,7 @@ import type { Perf } from '../game3d/stats.ts';
 import { BASE_PERF, perfOf } from '../game3d/stats.ts';
 import type { Course, DrSettings } from './dribble2d.ts';
 import {
-  AFTER_FIRST, CONE_PENALTY, CONE_R, COUNT_TICKS, COURSES, DRIBBLE2D, LX, LY, RUN_CAP, courseCones, dribbleTarget, passFinish, passGate,
+  AFTER_FIRST, CONE_PENALTY, CONE_R, COUNT_TICKS, COURSES, DRIBBLE2D, LX, LY, RUN_CAP, courseCones, dribbleTarget, drCompare, drPlaces, passFinish, passGate,
 } from './dribble2d.ts';
 import { pitchOf } from '../game/sim.ts';
 import type { Player } from '../types.ts';
@@ -120,16 +120,12 @@ export function stepDribble3(state: Dr3State, config: Dr3Config, inputs: Dr3Inpu
 
 /** 기록(초) = 달린 틱 + 콘 벌점. 못 했으면 null(2D laneTime 과 같은 셈). */
 export const lane3Time = (l: Lane3): number | null => (l.fin < 0 ? null : (l.fin + l.pen * CONE_PENALTY) / 60);
-/** 순위 — 2D 와 같은 규칙(도착한 사람은 기록 순, 못 한 사람은 지난 문 순 — 나간 사람은 그 아래, 같으면 레인 순). */
+/** 순위 — 2D 와 같은 규칙·같은 함수(drCompare: 도착한 사람은 기록 순, 못 한 사람은 지난 문 순 — 나간 사람은 그 아래, 같으면 레인 순). */
 export function dr3Ranking(s: Dr3State): number[] {
-  return s.lanes.map((_, i) => i).sort((a, b) => {
-    const ta = lane3Time(s.lanes[a]), tb = lane3Time(s.lanes[b]);
-    if (ta !== null && tb !== null) return ta - tb || a - b;
-    if (ta !== null) return -1;
-    if (tb !== null) return 1;
-    return Number(s.lanes[a].gone) - Number(s.lanes[b].gone) || s.lanes[b].gate - s.lanes[a].gate || a - b;
-  });
+  return s.lanes.map((_, i) => i).sort((a, b) => drCompare(s.lanes[a], s.lanes[b]) || a - b);
 }
+/** 등수 — 같은 결과는 같은 등수(2D drPlaces 그대로). */
+export const dr3Places = (s: Dr3State): number[] => drPlaces(s);
 
 // ── 대본 주자(메달 시간을 재고, 끊긴 손님 자리를 맡는다) ──
 /** 2D 대본 주자와 같은 목표(dribbleTarget — 차례인 문을 지나 조금 더, 다 지났으면 결승선 너머)로. 공을 가졌으면 그쪽으로 몰고

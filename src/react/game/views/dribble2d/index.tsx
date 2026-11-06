@@ -2,7 +2,8 @@
 // 내 레인을 그리고(폰 세로면 세워서 따라간다), 다른 사람은 유령과 순위 줄로. 스틱 돌리기·카메라는 경기 화면(view.ts) 것 그대로.
 import type { DrConfig, DrSettings, DrState } from '../../../../lib/games/dribble2d';
 import type { Course } from '../../../../lib/games/dribble2d';
-import { courseOf, drRanking, laneTime, medalOf } from '../../../../lib/games/dribble2d';
+import { courseOf, drPlaces, drRanking, laneTime, medalOf } from '../../../../lib/games/dribble2d';
+import { placeWord, tiedAt, topName, topWord } from '../../../../lib/games/places';
 import type { Input } from '../../../../lib/game/sim';
 import type { Camera, GameView, ResultView, Scene } from '../types';
 import { buildSprites } from '../match2d/render';
@@ -21,14 +22,14 @@ const once = new WeakMap<object, ResultView>();
 export function drResult(final: DrState, config: DrConfig, { myId, solo }: { myId: number | null; solo: boolean }, c: Course, bestKey: string): ResultView {
   const hit = once.get(final);
   if (hit) return hit;
-  const order = drRanking(final);
+  const order = drRanking(final), pl = drPlaces(final);
   const detail = (
     <ul className="dr-rows">
-      {order.map((i, r) => {
+      {order.map((i) => {
         const p = config.players[i], l = final.lanes[i], t = laneTime(l), m = medalOf(c, t);
         return (
           <li key={i} className={i === myId ? 'is-me' : undefined}>
-            <span className="dr-rank">{r + 1}</span>
+            <span className="dr-rank">{pl[i]}</span>
             <span className="dr-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}</span>
             <span className="dr-medal" style={m !== null ? { color: MEDAL[m].color } : undefined}>{m !== null ? MEDAL[m].name : ''}</span>
             <span className="dr-time">{t !== null ? `${secText(t)}${l.pen ? ` (콘 ${l.pen})` : ''}` : l.gone ? `나감 · 문 ${l.gate}/${c.gates.length}` : `문 ${l.gate}/${c.gates.length}`}</span>
@@ -48,10 +49,12 @@ export function drResult(final: DrState, config: DrConfig, { myId, solo }: { myI
       score: t === null ? <>문 {l.gate}/{c.gates.length}</> : <>{secText(t)}</>, sub: `${c.name}${l.pen ? ` · 콘 ${l.pen}개(+${l.pen}초)` : ''}${bestText} · ${medalLine}`,
     };
   } else {
-    const rank = myId === null ? -1 : order.indexOf(myId), top = config.players[order[0]], tt = laneTime(final.lanes[order[0]]);
+    // 같은 기록(또는 둘 다 못 했고 지난 문이 같음)은 같은 등수 — 혼자 1등일 때만 "1등!"
+    const top = config.players[order[0]], tt = laneTime(final.lanes[order[0]]);
+    const alone = myId !== null && pl[myId] === 1 && tiedAt(pl, 1) === 1;
     out = {
-      outcome: myId === null ? `${top.name} 1등` : rank === 0 ? '1등!' : `${rank + 1}등`, tone: rank === 0 || myId === null ? 'win' : 'draw',
-      score: <>{top.name} {tt !== null ? secText(tt) : '—'}</>, sub: `${c.name} · ${config.players.length}명 · ${medalLine}`, detail,
+      outcome: myId === null ? topWord(pl, top.name) : placeWord(pl, myId), tone: alone || myId === null ? 'win' : 'draw',
+      score: <>{topName(pl, top.name)} {tt !== null ? secText(tt) : '—'}</>, sub: `${c.name} · ${config.players.length}명 · ${medalLine}`, detail,
     };
   }
   once.set(final, out);

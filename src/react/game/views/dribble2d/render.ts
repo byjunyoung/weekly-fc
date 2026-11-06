@@ -2,7 +2,7 @@
 // 내 레인만 그린다(폰 세로면 레인을 세워 그리고 내 선수를 따라간다). 다른 사람은 내 레인 위의 흐린 "유령"과 왼쪽 위 순위 줄로 —
 // 레인끼리 부딪치지 않으니 같은 코스 위에 겹쳐 보여 주면 나란히 달리는 느낌이 산다.
 import type { Course, DrConfig, DrState } from '../../../../lib/games/dribble2d.ts';
-import { CONE_R, COUNT_TICKS, LX, LY, courseCones, courseOf, drRanking, gateCones, laneTime, medalOf } from '../../../../lib/games/dribble2d.ts';
+import { CONE_R, COUNT_TICKS, LX, LY, courseCones, courseOf, drPlaces, drRanking, gateCones, laneTime, medalOf } from '../../../../lib/games/dribble2d.ts';
 import { pitchOf } from '../../../../lib/game/sim.ts';
 import { F9, F14, GOLD, banner, drawBall, drawName, drawToken, type Sprites } from '../match2d/render.ts';
 import { toScreen, type View } from '../match2d/view.ts';
@@ -124,7 +124,7 @@ export function drawDribble(ctx: CanvasRenderingContext2D, st: DrState, config: 
 
   // 순위 줄(사람이 둘 이상) — 왼쪽 위, 띠 아래
   if (st.lanes.length > 1) {
-    const order = drRanking(st);
+    const order = drRanking(st), pl = drPlaces(st);
     const rows = order.slice(0, v.vw < 520 ? 3 : 8);
     if (!rows.includes(o.lane)) rows.push(o.lane);
     ctx.font = `12px ${F14}`; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
@@ -133,7 +133,7 @@ export function drawDribble(ctx: CanvasRenderingContext2D, st: DrState, config: 
     rows.forEach((i, k) => {
       const l = st.lanes[i], tm = laneTime(l);
       ctx.fillStyle = i === o.lane ? GOLD : '#fff';
-      ctx.fillText(`${order.indexOf(i) + 1} ${Array.from(config.players[i].name).slice(0, 4).join('')}`, x, yy + k * h);
+      ctx.fillText(`${pl[i]} ${Array.from(config.players[i].name).slice(0, 4).join('')}`, x, yy + k * h);
       ctx.textAlign = 'right';
       ctx.fillText(tm !== null ? secText(tm) : l.gone ? '나감' : `문 ${l.gate}/${c.gates.length}`, x + w - 10, yy + k * h);
       ctx.textAlign = 'left';

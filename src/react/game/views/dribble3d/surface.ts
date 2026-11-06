@@ -6,7 +6,7 @@
 import { BufferGeometry, ConeGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, MeshLambertMaterial, PlaneGeometry, Vector3 } from 'three';
 import { COUNT_TICKS, courseCones } from '../../../../lib/games/dribble2d';
 import type { Dr3Config, Dr3State } from '../../../../lib/games/dribble3d';
-import { DR3_SCALE, LANE_X, LANE_Y, course3, dr3Ranking, lane3Time } from '../../../../lib/games/dribble3d';
+import { DR3_SCALE, LANE_X, LANE_Y, course3, dr3Places, dr3Ranking, lane3Time } from '../../../../lib/games/dribble3d';
 import { medalOf } from '../../../../lib/games/dribble2d';
 import type { Input } from '../../../../lib/game3d/sim';
 import { TICK_HZ } from '../../../../lib/game3d/sim';
@@ -139,11 +139,11 @@ export function createDribbleSurface(o: SurfaceIn<Dr3Config>): Surface<Dr3State,
         : `${c.name} · 문 ${Math.min(me.gate, c.gates.length)}/${c.gates.length}${me.pen ? ` · 콘 ${me.pen}` : ''}`;
       // 순위 줄(여럿)
       if (n > 1) {
-        const order = dr3Ranking(st), rows = order.slice(0, w < 520 ? 3 : 8);
+        const order = dr3Ranking(st), pl = dr3Places(st), rows = order.slice(0, w < 520 ? 3 : 8);
         if (!rows.includes(lane)) rows.push(lane);
         const html = rows.map((i) => {
           const l = st.lanes[i], tm = lane3Time(l);
-          return `<li class="${i === lane ? 'is-me' : ''}"><span>${order.indexOf(i) + 1} ${Array.from(config.players[i].name).slice(0, 4).join('')}</span><span>${tm !== null ? secText(tm) : l.gone ? '나감' : `문 ${l.gate}/${c.gates.length}`}</span></li>`;
+          return `<li class="${i === lane ? 'is-me' : ''}"><span>${pl[i]} ${Array.from(config.players[i].name).slice(0, 4).join('')}</span><span>${tm !== null ? secText(tm) : l.gone ? '나감' : `문 ${l.gate}/${c.gates.length}`}</span></li>`;
         }).join('');
         if (html !== lastRanks) { ranks.innerHTML = html; lastRanks = html; }
       }

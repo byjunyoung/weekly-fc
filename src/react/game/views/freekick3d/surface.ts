@@ -7,7 +7,8 @@
 import { BufferGeometry, DoubleSide, Float32BufferAttribute, Line, LineBasicMaterial, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, Vector3 } from 'three';
 import { PITCH3D } from '../../../../lib/game3d/sim';
 import type { FkConfig } from '../../../../lib/games/freekick2d';
-import { FK_MAX_POINTS, fkRanking, fkTotal } from '../../../../lib/games/freekick2d';
+import { FK_MAX_POINTS, fkPlaces, fkRanking, fkTotal } from '../../../../lib/games/freekick2d';
+import { tiedAt, topName, topWord } from '../../../../lib/games/places';
 import { AIM_TICKS, CHARGE_TICKS } from '../../../../lib/games/penalty2d';
 import type { Fk3State } from '../../../../lib/games/freekick3d';
 import { FK3_AIM_SCALE, FK3_SPOTS, fk3Path, fk3Wall } from '../../../../lib/games/freekick3d';
@@ -157,9 +158,9 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
           line3.innerHTML = marks(st, 0);
         } else {
           line2.innerHTML = st.phase === 'end' ? '' : `<span class="${kicker ? 'is-me' : ''}">${config.players[st.kicker].name}${kicker ? '(나)' : ''} 차례 · ${st.kickNo + 1}/${fkTotal(n)}</span>`;
-          const order = fkRanking(st.points, st.log), show = order.slice(0, w < 520 ? 3 : 4);
+          const order = fkRanking(st.points, st.log), pl = fkPlaces(st.points, st.log), show = order.slice(0, w < 520 ? 3 : 4);
           if (myId !== null && !show.includes(myId)) show.push(myId);
-          line3.textContent = show.map((i) => `${order.indexOf(i) + 1} ${Array.from(config.players[i].name).slice(0, 4).join('')} ${st.points[i]}`).join('  ·  ');
+          line3.textContent = show.map((i) => `${pl[i]} ${Array.from(config.players[i].name).slice(0, 4).join('')} ${st.points[i]}`).join('  ·  ');
         }
         let b = '', s = '', tone = '';
         if (st.phase === 'result' && st.outcome) {
@@ -168,8 +169,8 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
         } else if (st.phase === 'ready') {
           b = kicker ? '내 차례' : `${config.players[st.kicker].name} 차례`; s = `${spot.name} · ${spot.pts}점`; tone = kicker ? 'is-turn' : 'is-save';
         } else if (st.phase === 'end') {
-          const topI = fkRanking(st.points, st.log)[0];
-          b = n === 1 ? `${st.points[0]}점` : `${config.players[topI].name} 1등`; s = n === 1 ? `${FK_MAX_POINTS}점 만점` : `${st.points[topI]}점`; tone = 'is-end';
+          const topI = fkRanking(st.points, st.log)[0], pl = fkPlaces(st.points, st.log), nm = config.players[topI].name;   // 같이 1등이면 "공동 1등 k명"
+          b = n === 1 ? `${st.points[0]}점` : topWord(pl, nm); s = n === 1 ? `${FK_MAX_POINTS}점 만점` : tiedAt(pl, 1) > 1 ? `${topName(pl, nm)} ${st.points[topI]}점` : `${st.points[topI]}점`; tone = 'is-end';
         }
         banner.className = `p3-banner ${tone}${b ? ' is-on' : ''}`;
         bannerB.textContent = b; bannerS.textContent = s;

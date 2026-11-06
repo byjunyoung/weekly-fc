@@ -1,7 +1,8 @@
 // src/react/game/views/freekick2d/index.tsx — 프리킥의 화면(2026-11-07 게임 묶음 3단계). GameView 약속.
 // 조준과 감기는 이 장면 안에만 있다(aim.ts) — 모으던 킥을 떼는 틱의 입력에만 실린다. 구경하는 사람의 화면엔 조준이 없다.
 import type { FkConfig, FkSettings, FkState } from '../../../../lib/games/freekick2d';
-import { FK_MAX_POINTS, FK_SPOTS, fkGone, fkRanking } from '../../../../lib/games/freekick2d';
+import { FK_MAX_POINTS, FK_SPOTS, fkGone, fkPlaces, fkRanking } from '../../../../lib/games/freekick2d';
+import { placeWord, tiedAt, topName, topWord } from '../../../../lib/games/places';
 import type { PenInput } from '../../../../lib/games/penalty2d';
 import type { GameView, ResultView, Scene } from '../types';
 import { buildSprites } from '../match2d/render';
@@ -24,16 +25,16 @@ const once = new WeakMap<object, ResultView>();
 export function fkResult(final: FkState, config: FkConfig, { myId, solo }: { myId: number | null; solo: boolean }, bestKey: string): ResultView {
   const hit = once.get(final);
   if (hit) return hit;
-  const order = fkRanking(final.points, final.log);
+  const order = fkRanking(final.points, final.log), pl = fkPlaces(final.points, final.log);
   const goals = (i: number): number => final.log.filter((e) => e.kicker === i && e.out === 'goal').length;
   const mark = (i: number): string => FK_SPOTS.map((_, s) => { const e = final.log.find((x) => x.kicker === i && x.spot === s); return e ? (e.out === 'goal' ? '●' : e.out === 'gone' ? '－' : '✕') : '○'; }).join('');
   const detail = (
     <ul className="fk-rows">
-      {order.map((i, r) => {
+      {order.map((i) => {
         const p = config.players[i];
         return (
           <li key={i} className={i === myId ? 'is-me' : undefined}>
-            <span className="fk-rank">{r + 1}</span>
+            <span className="fk-rank">{pl[i]}</span>
             <span className="fk-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}{fkGone(final.log, i) ? ' · 나감' : ''}</span>
             <span className="fk-marks" aria-label={`자리별 ${mark(i).replace(/●/g, '골 ').replace(/✕/g, '실패 ').replace(/－/g, '비움 ').trim()}`}>{mark(i)}</span>
             <span className="fk-pts">{final.points[i]}점</span>
@@ -49,10 +50,11 @@ export function fkResult(final: FkState, config: FkConfig, { myId, solo }: { myI
     const sub = `다섯 자리 · 골 ${goals(0)}개${b.isNew ? (b.prev !== null ? ' · 새 최고 기록' : ' · 첫 기록') : b.prev !== null ? ` · 최고 기록 ${b.prev}점` : ''}`;
     out = { outcome: `${pts}점`, tone: pts >= 6 ? 'win' : 'draw', score: <>{pts} / {FK_MAX_POINTS}점</>, sub, detail };
   } else {
-    const rank = myId === null ? -1 : order.indexOf(myId);
+    // 같은 결과는 같은 등수 — 혼자 1등일 때만 "1등!", 아무도 못 넣었으면 모두 공동 1등(방장을 세우지 않는다)
     const top = config.players[order[0]];
-    const outcome = myId === null ? `${top.name} 1등` : rank === 0 ? '1등!' : `${rank + 1}등`;
-    out = { outcome, tone: rank === 0 || myId === null ? 'win' : 'draw', score: <>{top.name} {final.points[order[0]]}점</>, sub: `${config.players.length}명 · 자리 다섯 · ${FK_MAX_POINTS}점 만점`, detail };
+    const alone = myId !== null && pl[myId] === 1 && tiedAt(pl, 1) === 1;
+    const outcome = myId === null ? topWord(pl, top.name) : placeWord(pl, myId);
+    out = { outcome, tone: alone || myId === null ? 'win' : 'draw', score: <>{topName(pl, top.name)} {final.points[order[0]]}점</>, sub: `${config.players.length}명 · 자리 다섯 · ${FK_MAX_POINTS}점 만점`, detail };
   }
   once.set(final, out);
   return out;

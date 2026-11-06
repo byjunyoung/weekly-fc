@@ -11,6 +11,7 @@
 //     휘는 건 속도를 그 크기 그대로 옆으로 돌리는 것(sqrt 로 크기를 되맞춘다 — 삼각함수 없음).
 //   - 5초 안에 안 차면 약한 가운데 슛. 판정: 골 · 막음(키퍼) · 벽 · 빗나감 · 골대. 골이면 그 자리 점수.
 //   - 키퍼 봇은 공이 나간 뒤 반응 시간이 지나야 움직이고, 일부만 공의 "곧은" 길을 읽는다(감은 공은 읽은 자리에서 벗어난다), 나머지는 짐작.
+import { placesBy } from './places.ts';
 import type { Body } from '../game/sim.ts';
 import { PHYS, collidePoint, collideSegment, nextRand } from '../game/sim.ts';
 import type { Perf } from '../game/stats.ts';
@@ -92,6 +93,11 @@ export function fkRanking(points: number[], log: FkLog[]): number[] {
   const goals = points.map((_, i) => log.filter((e) => e.kicker === i && e.out === 'goal').length);
   const gone = points.map((_, i) => (fkGone(log, i) ? 1 : 0));
   return points.map((_, i) => i).sort((a, b) => gone[a] - gone[b] || points[b] - points[a] || goals[b] - goals[a] || a - b);
+}
+/** 등수 — 결과(나감 여부·점수)가 같으면 같은 등수. 골 수·차례는 줄 차례만 정한다(2026-11-07 합치기 — 0점 둘이 "1등!"·"2등"이 되지 않게). */
+export function fkPlaces(points: number[], log: FkLog[]): number[] {
+  const gone = points.map((_, i) => (fkGone(log, i) ? 1 : 0));
+  return placesBy(points.length, (a, b) => gone[a] - gone[b] || points[b] - points[a]);
 }
 
 // ── 벽과 키퍼 자리(자리마다 한 번 계산 — 사칙연산과 sqrt 만) ──
