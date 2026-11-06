@@ -9,32 +9,19 @@ import { href } from '../../lib/url.ts';
   <article class="prose stack">
     <p>WEEKLY FC 에 오신 걸 환영합니다. 매주 토요일 풋살을 하는 팀입니다.</p>
 
-    <div class="guide-part">꼭 알아 둘 것</div>
-    <section id="flow"><h2>한 주 흐름</h2>
-      <ol><li>주중에 단톡방 투표로 참석 여부 표시</li><li>{MATCH_MIN}명 이상 모이면 진행 — {MATCH_TIME}</li><li>경기 끝나고 단톡방에서 당일 정산</li></ol>
+    <section id="week"><h2>매주 이렇게</h2>
+      <ul><li>주중에 단톡방 투표 — {MATCH_MIN}명 이상 모이면 진행</li><li>{MATCH_TIME} · {PLACES.join(' / ')}</li><li>대관비·음료비는 그날 참석자끼리 당일 정산 — {BANK.name} {BANK.number} ({BANK.holder})</li><li>벌금·봉사 등 자세한 건 <a href={href('/rules/')}>규칙 →</a></li></ul>
     </section>
-    <section id="when"><h2>언제 어디서</h2>
-      <ul><li>시간: {MATCH_TIME}</li><li>장소: {PLACES.join(' / ')}</li><li>비가 오면 논의 후 결정</li></ul>
-    </section>
-    <section id="fees"><h2>비용 · 모임 통장</h2>
-      <ul><li>대관비·음료비는 그날 참석자끼리 나눕니다</li><li>{BANK.name} {BANK.number} ({BANK.holder}) · 통장 초대 문의: {BANK.contact}</li><li>지각·노쇼 벌금 등 자세한 건 <a href={href('/rules/')}>규칙 →</a></li></ul>
-    </section>
-
-    <div class="guide-part">재미로 하는 것</div>
     <section id="video"><h2>경기 영상</h2>
-      <p>경기 영상은 유튜브 채널에 올라갑니다. 지난 경기는 매치 탭에서도 볼 수 있습니다.</p>
-      <div class="chips"><a class="chip" href={LINKS.youtube} target="_blank" rel="noopener">유튜브 채널 →</a><a class="chip" href={href('/matches/')}>매치 →</a><a class="chip" href={LINKS.instagram} target="_blank" rel="noopener">인스타그램 →</a></div>
+      <p>경기 영상은 유튜브 채널에 올라갑니다.</p>
+      <div class="chips"><a class="chip" href={LINKS.youtube} target="_blank" rel="noopener">유튜브 채널 →</a><a class="chip" href={LINKS.instagram} target="_blank" rel="noopener">인스타그램 →</a></div>
     </section>
     <section id="portal"><h2>포털</h2>
-      <p>지금 보고 있는 이 사이트입니다. 필수는 아니고 재미로 쓰는 곳입니다. 이름을 고르면 내 선수 카드를 꾸미고, 티어 대결에서 팀원 능력치를 판정할 수 있습니다.</p>
+      <p>지금 보고 있는 이 사이트입니다. 필수는 아니고 재미로 쓰는 곳입니다. 이름을 고르면 내 선수 카드를 꾸미고 티어 대결을 할 수 있습니다.</p>
       <GuideStart client:load />
     </section>
 
-    <div class="guide-part">마무리</div>
-    <section id="manner"><h2>에티켓</h2>
-      <ul><li>투표에 꼭 참여하기</li><li>불참 등 특이사항은 미리 공유</li><li>서로 존중하는 채팅</li></ul>
-      <p>궁금한 건 단톡방에 편하게 물어보세요.</p>
-    </section>
+    <p>궁금한 건 단톡방에 편하게 물어보세요.</p>
   </article>
 </Shell>
 <style>
