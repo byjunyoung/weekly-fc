@@ -9,7 +9,7 @@ let muted = false;
 try { muted = localStorage.getItem(KEY) === 'off'; } catch { /* 저장소를 못 읽어도 소리는 난다 */ }
 const lastAt: Record<string, number> = {};
 /** 같은 소리가 이 간격(ms) 안에 다시 오면 건너뛴다 — 예측을 다시 돌리며 같은 킥이 두 번 잡히거나 벽에 비벼 연달아 튕길 때. */
-const GAP: Record<Sfx['kind'], number> = { kick: 70, bounce: 60, goal: 1500, whistle: 700, end: 2000 };
+const GAP: Record<Sfx['kind'], number> = { kick: 70, bounce: 60, goal: 1500, whistle: 700, end: 2000, move: 45, confirm: 250 };
 
 export const isMuted = (): boolean => muted;
 export function setMuted(m: boolean): void {
@@ -77,5 +77,8 @@ export function play(s: Sfx): void {
       noise(1.5, 0.5, 900, 0.6, 0, true);
       tone('square', 523, 523, 0.12, 0.16, 0); tone('square', 659, 659, 0.12, 0.16, 0.13); tone('square', 784, 784, 0.3, 0.16, 0.26);
       break;
+    // 선수 선택 화면 — 아주 작게. 커서가 움직일 때 짧은 "틱", 고를 때 두 음 "띠링". 소리 끔·첫 누름 전엔 위의 검사에서 이미 걸러진다.
+    case 'move': tone('square', 880, 880, 0.035, 0.05 * v); break;
+    case 'confirm': tone('square', 660, 660, 0.06, 0.07 * v); tone('square', 990, 990, 0.09, 0.07 * v, 0.06); break;
   }
 }

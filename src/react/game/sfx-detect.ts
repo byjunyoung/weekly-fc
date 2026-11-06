@@ -2,7 +2,8 @@
 // 2026-11-07 "효과음도 넣어야지". 경기 계산(sim)에는 소리를 모르게 두고, 화면 쪽에서 상태 변화로 알아낸다.
 import type { MatchState } from '../../lib/game/sim.ts';
 
-export type Sfx = { kind: 'kick' | 'bounce' | 'goal' | 'whistle' | 'end'; vol: number };
+// move·confirm 은 경기가 아니라 선수 선택 화면의 작은 소리(2026-11-07 "약간 옛날 오락실게임에서 고르듯이") — 여기서 찾지 않고 화면이 직접 낸다.
+export type Sfx = { kind: 'kick' | 'bounce' | 'goal' | 'whistle' | 'end' | 'move' | 'confirm'; vol: number };
 
 /** 공 속도(단위/초)가 이 이상일 때만 튕김 소리 — 굴러가다 살짝 닿는 건 조용히. */
 const BOUNCE_MIN_SPEED = 140;

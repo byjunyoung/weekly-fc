@@ -1217,3 +1217,69 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
 .g3-outcome.is-lose { color: var(--warn); }
 .g3-final { display: flex; align-items: center; gap: var(--s-xs); font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-synthesis: none; letter-spacing: 0; }
 .g3-result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-xs); margin-top: var(--s-sm); }
+
+/* ══ 선수 선택(2026-11-07 "선택한 선수 크게 오른쪽에 다른 선수 리스트 … 약간 옛날 오락실게임에서 고르듯이") ══════════
+   PC·가로: 큰 칸 왼쪽 · 명단 오른쪽. 폰 세로: 큰 칸 위(줄인 꼴), 명단 아래, 버튼 줄은 화면 아래에 붙는다.
+   꾸밈은 커서 하나로 — 금색 굵은 테두리 + 계단식으로 깜빡이는 작은 표시. 바뀔 때 큰 칸이 짧게 번쩍인다(움직임 줄이기면 안 함). */
+.sel { padding: var(--s-md); background: var(--elevated); border: 1px solid var(--hairline); }
+.sel-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-xxs) var(--s-md); margin-bottom: var(--s-md); }
+.sel-title { margin: 0; color: var(--gold); font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.sel-sub { font-size: var(--fs-xs); }
+.sel-body { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); grid-template-areas: "hero roster" "actions roster"; grid-template-rows: auto 1fr;
+  gap: var(--s-md) var(--s-lg); align-items: start; }
+.sel-hero { grid-area: hero; min-width: 0; padding: var(--s-md); background: var(--canvas); border: 1px solid var(--hairline-strong); }
+.sel-actions { grid-area: actions; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
+.sel-roster { grid-area: roster; min-width: 0; }
+.sel-empty { margin: 0; padding: var(--s-xl) 0; text-align: center; }
+.sel-hero-card { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--s-sm); animation: sel-pop 180ms steps(3, end); }
+.sel-figure { display: flex; }
+.sel-figure svg { display: block; width: auto; height: 256px; shape-rendering: crispEdges; image-rendering: pixelated; }
+.sel-info { width: 100%; min-width: 0; }
+.sel-name-row { display: flex; align-items: baseline; justify-content: center; gap: var(--s-xs); min-width: 0; }
+.sel-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg);
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
+.sel-jersey { flex: none; color: var(--muted); }
+.sel-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--s-xs); margin-top: var(--s-xs); font-size: var(--fs-xs); }
+.sel-ovr { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; font-variant-numeric: tabular-nums; }
+.sel-stats { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-xxs); width: 100%; margin: 0; }
+.sel-stat { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) 2.2em; align-items: center; gap: var(--s-xs); min-width: 0; }
+.sel-stat dt { color: var(--muted); font-size: var(--fs-xs); }
+.sel-stat dd { display: contents; }
+.sel-stat-val { text-align: right; font-variant-numeric: tabular-nums; font-size: var(--fs-xs); }
+.sel-unrated { width: 100%; margin: 0; padding: var(--s-sm) 0; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); color: var(--fg); text-align: center; }
+.sel-note { width: 100%; margin: 0; font-size: var(--fs-xs); text-align: center; }
+.sel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: var(--s-xxs); }
+.sel-tile { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; min-width: 0; min-height: 0;
+  padding: var(--s-xxs) 2px; border: 2px solid var(--hairline); border-radius: 0; background: var(--card); color: var(--fg); font-family: var(--font); font-size: var(--fs-xs); cursor: pointer; }
+.sel-tile-face { display: flex; }
+.sel-tile-face svg { width: 40px; height: 40px; }
+.sel-tile-num { position: absolute; top: 2px; left: 4px; color: var(--muted); font-size: var(--fs-xs); line-height: 1; }
+.sel-tile-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sel-tile.is-on { border-color: var(--gold); }
+.sel-tile.is-cursor { border: 3px solid var(--gold); padding: calc(var(--s-xxs) - 1px) 1px; background: var(--charcoal); }
+.sel-tile.is-cursor::after { content: ""; position: absolute; top: -9px; left: 50%; width: 0; height: 0; margin-left: -6px;
+  border: 6px solid transparent; border-top-color: var(--gold); border-bottom: 0; animation: sel-blink 900ms steps(1, end) infinite; }
+.sel-tile:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sel-tile.is-off { opacity: .35; cursor: not-allowed; }
+.sel-tile.is-off.is-cursor { opacity: .6; }
+.sel-notice { min-height: 1.5em; margin: var(--s-xs) 0 0; font-size: var(--fs-xs); }
+@keyframes sel-blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes sel-pop { 0% { transform: scale(.97); filter: brightness(1.5); } 100% { transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .sel-hero-card, .sel-tile.is-cursor::after { animation: none; } }
+@media (max-width: 719px) {
+  .sel { padding: var(--s-sm); }
+  .sel-body { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "roster" "actions"; grid-template-rows: auto; gap: var(--s-sm); }
+  .sel-hero { padding: var(--s-sm); }
+  /* 폰: 아바타 왼쪽 · 이름·티어 오른쪽, 능력치는 그 아래 두 줄로 */
+  .sel-hero-card { grid-template-columns: auto minmax(0, 1fr); justify-items: stretch; align-items: center; column-gap: var(--s-sm); }
+  .sel-figure svg { height: 128px; }
+  .sel-name-row, .sel-meta { justify-content: flex-start; }
+  .sel-stats, .sel-unrated, .sel-note { grid-column: 1 / -1; }
+  .sel-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--s-sm); }
+  .sel-stat { grid-template-columns: 3.6em minmax(0, 1fr) 1.8em; gap: var(--s-xxs); }
+  .sel-note { text-align: left; }
+  .sel-grid { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+  /* 버튼 줄은 명단을 다 내리지 않아도 누를 수 있게 화면 아래에 붙인다 */
+  .sel-actions { position: sticky; bottom: 0; z-index: 5; margin: 0 calc(-1 * var(--s-sm)) calc(-1 * var(--s-sm));
+    padding: var(--s-xs) var(--s-sm) max(var(--s-xs), env(safe-area-inset-bottom)); background: var(--elevated); border-top: 1px solid var(--hairline-strong); }
+}
