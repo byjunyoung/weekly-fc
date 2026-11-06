@@ -12,7 +12,7 @@ export function extentOf(p: Pitch): { w: number; h: number } {
 export const EXTENT = extentOf(PITCH);
 
 /** 화면에서 선수 반지름이 이보다 작아지면 전체를 보여 주지 않고 화면이 따라간다(스펙 2026-11-07 §2 — 큰 경기장은 폰에서 선수가 점이 된다). */
-export const FOLLOW_MIN_R = 11;
+export const FOLLOW_MIN_R = 10;   // 11 로 시작했는데 390px 폰에서 보통 경기장(10.3px)까지 따라가기가 돼 버려 10 으로 — 보통 경기장은 지금처럼 한 화면에 고정
 
 export type View = {
   /** 세로 화면이면 경기장을 세워 그린다(골대가 위아래, 사람 편은 위로 공격). 아니면 눕힌다(오른쪽으로 공격). */
@@ -38,7 +38,7 @@ export type ViewOpts = { margin?: number; top?: number; bottom?: number; pitch?:
 /** 뷰포트에 맞춰 방향과 배율을 정한다. 세로로 더 길면 세운다(폭 < 높이).
  *  top·bottom = 점수판처럼 경기장 위를 덮는 줄이 차지하는 높이 — 그만큼 빼고 남은 칸 한가운데에 놓는다.
  *  margin = 사방 여백. 골 상자와 기둥까지 안 잘리게 그 경기장의 EXTENT 로 맞춘다.
- *  전체가 들어가는 배율에서 선수 반지름이 FOLLOW_MIN_R(11px) 이상이면 그대로(고정), 작으면 배율을 11px 에 고정하고 따라가기(follow) —
+ *  전체가 들어가는 배율에서 선수 반지름이 FOLLOW_MIN_R(10px) 이상이면 그대로(고정), 작으면 배율을 10px 에 고정하고 따라가기(follow) —
  *  카메라 위치는 aimCamera 가 정한다(처음엔 가운데). */
 export function makeView(vw: number, vh: number, opts: ViewOpts = {}): View {
   const margin = opts.margin ?? 8, top = opts.top ?? 0, bottom = opts.bottom ?? 0;
