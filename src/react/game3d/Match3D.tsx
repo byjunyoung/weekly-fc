@@ -10,8 +10,13 @@ import { botInput } from '../../lib/game3d/bot';
 import { createMatch, eventsBetween, RULES3D, step, TICK_HZ, type Input, type MatchConfig, type MatchState } from '../../lib/game3d/sim';
 import type { Player } from '../../lib/types';
 import { href } from '../../lib/url';
+import { play as playSfx } from '../game/sfx';
+import SoundToggle from '../game/SoundToggle';
+import { detectSfx3d } from './sfx3d';
 import { attachInput } from './input3d';
 import { createScene, TEAM_COLOR, type SceneHandle } from './scene';
+
+const TEAM_SHORT = ['주황', '흰'] as const;   // 2D 점수판과 같은 이름
 import { clockText, edgeArrow, nextView, readView, saveView, stickToWorld, tankStep, VIEW_LABEL, type ViewMode } from './view3d';
 
 const STEP_MS = 1000 / TICK_HZ;
@@ -47,7 +52,7 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
   const paused = useRef(false);
   const [touch, setTouch] = useState(false);
   const [score, setScore] = useState<[number, number]>([0, 0]);
-  const [goal, setGoal] = useState<{ side: 0 | 1; name: string | null } | null>(null);
+  const [goal, setGoal] = useState<{ side: 0 | 1; name: string | null; assist: string | null } | null>(null);
   const [result, setResult] = useState<{ score: [number, number]; winner: 0 | 1 | 'draw' } | null>(null);
   const [fail, setFail] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>(() => readView());
@@ -138,10 +143,11 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
           prevHeading = heading;
           const next = step(state, config, collectInputs(state));
           if (next.phase === 'kickoff' && state.phase !== 'kickoff') { heading = faceOf(next); prevHeading = heading; turnVel = 0; }
+          for (const fx of detectSfx3d(state, next, config)) playSfx(fx);   // 효과음 — 2D 와 같은 모듈·같은 끔 설정, 틱마다 상태 변화로 알아낸다
           for (const ev of eventsBetween(state, next)) {
             if (ev.type === 'goal') {
               setScore([next.score[0], next.score[1]]);
-              setGoal({ side: ev.side, name: ev.scorer !== null ? config.players[ev.scorer]?.name ?? null : null });
+              setGoal({ side: ev.side, name: ev.scorer !== null ? config.players[ev.scorer]?.name ?? null : null, assist: ev.assist !== null ? config.players[ev.assist]?.name ?? null : null });
             } else if (ev.type === 'end') ended = true;
           }
           if (state.phase === 'goal' && next.phase !== 'goal') setGoal(null);
@@ -233,13 +239,14 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
   const confirmExit = (): void => {
     paused.current = true;
     modal.confirm({
-      title: '경기를 그만할까요?', content: '시제품이라 기록은 남지 않습니다.', okText: '그만하기', cancelText: '계속',
+      title: '경기를 그만할까요?', content: '지금까지 한 판은 저장되지 않습니다.', okText: '그만하기', cancelText: '계속',
       centered: true, onOk: onExit, afterClose: () => { paused.current = false; },
     });
   };
 
-  const outcome = result ? (result.winner === 'draw' ? '무' : result.winner === 0 ? '승' : '패') : '';   // 사람은 늘 0 편
-  const chip = (side: 0 | 1): React.ReactNode => <i className="g3-chip" style={{ background: TEAM_COLOR[side] }} aria-label={side === 0 ? '주황' : '흰'} />;
+  // 결과·점수판 글은 2D 와 같게(2026-11-07 "두 모드 다 일관성 갖추게해") — 승! / 패! / 무승부, 편 이름은 팀 색 글자 「주황」「흰」
+  const outcome = result ? (result.winner === 'draw' ? '무승부' : result.winner === 0 ? '승' : '패') : '';   // 사람은 늘 0 편
+  const team = (side: 0 | 1): React.ReactNode => <span className="g3-team" style={{ color: TEAM_COLOR[side] }}>{TEAM_SHORT[side]}</span>;
 
   if (fail) {
     return (
@@ -260,17 +267,18 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
       <canvas ref={canvasRef} className="g3-canvas" />
       <div className="g3-labels" ref={labelsRef} aria-hidden="true" />
       <div className="g3-hud" aria-live="polite">
-        {chip(0)}<b className="g3-score">{score[0]} : {score[1]}</b>{chip(1)}
+        <b className="g3-score">{team(0)} {score[0]} : {score[1]} {team(1)}</b>
         <span className="g3-clock" ref={clockRef}>{clockText(config.minutes * 60 * TICK_HZ, TICK_HZ)}</span>
       </div>
       {goal && !result && (
         <div className="g3-goal" role="status">
           <b>골!</b>
-          <span>{goal.name ?? (goal.side === 0 ? '주황' : '흰')}{goal.name ? '' : ' 편'}</span>
+          <span>{goal.name ? (goal.assist ? `${goal.name} · 도움 ${goal.assist}` : goal.name) : TEAM_SHORT[goal.side]}</span>
         </div>
       )}
       <div className={`g3-gauge${touch ? ' is-touch' : ''}`} ref={gaugeRef} aria-hidden="true"><i ref={fillRef} /></div>
       {!result && <button type="button" className="g3-x" aria-label="경기 나가기" onClick={confirmExit}>✕</button>}
+      {!result && <SoundToggle />}
       {!result && (
         <button type="button" className="g3-view" aria-label={`시점 바꾸기, 지금 ${VIEW_LABEL[view]}`}
           onClick={(e) => { const v = nextView(view); setView(v); saveView(v); e.currentTarget.blur(); }}>
@@ -287,9 +295,9 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
       {result && (
         <div className="g3-result" role="dialog" aria-label="경기 결과">
           <div className="g3-result-box">
-            <b className={`g3-outcome is-${outcome === '승' ? 'win' : outcome === '패' ? 'lose' : 'draw'}`}>{outcome}</b>
-            <div className="g3-final">{chip(0)} {result.score[0]} : {result.score[1]} {chip(1)}</div>
-            <p className="muted">{config.minutes}분 · 5대5 · 시제품</p>
+            <b className={`g3-outcome is-${outcome === '승' ? 'win' : outcome === '패' ? 'lose' : 'draw'}`}>{outcome === '무승부' ? outcome : `${outcome}!`}</b>
+            <div className="g3-final">{team(0)} {result.score[0]} : {result.score[1]} {team(1)}</div>
+            <p className="muted">{clockText(config.minutes * 60 * TICK_HZ, TICK_HZ)} 경기 · 5대5 · 시제품</p>
             <div className="g3-result-actions">
               <Button type="primary" size="large" onClick={onRestart}>다시 하기</Button>
               <Button size="large" onClick={onExit}>설정으로</Button>

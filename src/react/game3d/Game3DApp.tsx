@@ -66,7 +66,7 @@ function Root() {
       getConfig: () => l.config,
       setInput: (i: Input | null) => { l.override = i; },
       getInfo: () => ({ ...l.info }),
-      // 골 장면 점검용 — 내 선수를 상대 골대 앞(골키퍼는 옆으로 비킴)에, 공을 발밑에. 다음 틱에 들어간다.
+      // 골 장면 점검용 — 내 선수를 상대 골대 앞(골키퍼는 옆으로 비킴)에, 공을 발밑에, 동료가 방금 넘겨준 것으로. 다음 틱에 들어간다.
       goalChance: () => {
         l.patch = (s) => {
           const c = l.config;
@@ -79,6 +79,9 @@ function Root() {
           if (gk >= 0) Object.assign(n.players[gk], { x: 6, y: -9, vx: 0, vy: 0 });
           for (const p of c.players) if (p.side === 1 && !p.gk) Object.assign(n.players[p.id], { x: -5, y: -8 + p.id, vx: 0, vy: 0 });
           n.owner = me; n.ball = { x: 14.7, y: 0, z: 0.18, vx: 0, vy: 0, vz: 0 };
+          // 같은 편 동료가 방금 넘겨준 것으로 — 골 문구의 「도움」까지 보이게
+          const mate = c.players.findIndex((p) => p.side === 0 && p.bot && !p.gk);
+          if (mate >= 0) { n.prevTouch = mate; n.prevTouchTick = n.tick; n.lastTouch = me; n.lastTouchTick = n.tick; }
           return n;
         };
       },
@@ -137,8 +140,8 @@ function Setup({ players, onStart }: { players: Player[]; onStart: (roster: Play
             <Segmented<number> value={minutes} onChange={setMinutes} options={[1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n}분` }))} /></label>
           <label className="g3-opt"><span className="muted">시점</span>
             <Segmented<ViewMode> value={view} onChange={(v) => { setView(v); saveView(v); }} options={VIEW_MODES.map((m) => ({ value: m, label: VIEW_LABEL[m] }))} /></label>
-          <p className="muted g3-hint">PC: 방향키 이동 · S 패스 · D 슛(누르고 떼기, 공 없을 땐 태클) · W 스루 · A 로빙 · E 질주 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼</p>
-          <p className="muted g3-hint">1인칭: ←→ 돌기, ↑↓ 앞뒤 — 보는 쪽으로 패스·슛. 경기 중에도 [시점]으로 바꿉니다.</p>
+          <p className="muted g3-hint">PC: 방향키로 이동, S 패스 · D 슛(누르고 떼기, 공 없을 땐 태클) · W 스루 · A 로빙 · E 질주 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 패스·슛</p>
+          <p className="muted g3-hint">2D 와 다른 점: 키가 여럿이고(FC온라인 키 자리), 시점을 고릅니다. 1인칭은 ←→ 돌기, ↑↓ 앞뒤 — 보는 쪽으로 패스·슛.</p>
           <div className="g3-start">
             <Button type="primary" size="large" disabled={num === null} onClick={() => num !== null && onStart(players, num, minutes)}>
               {num === null ? '내 선수를 골라 주세요' : '시작'}

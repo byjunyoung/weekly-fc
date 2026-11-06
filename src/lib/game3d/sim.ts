@@ -129,6 +129,7 @@ const PARRY_LIFT = 2.5;       // 쳐낸 공이 뜨는 속도(세로)
 const KEEPER_HAND_Z = 0.9;    // 골키퍼가 든 공의 높이(그림)
 
 // ── 경기 흐름 ──
+const ASSIST_TICKS = 480;     // 도움: 득점자 바로 앞에 만진 같은 편 선수의 터치가 이 안(8초)일 때만 — 2D 와 같은 규칙
 const GOAL_TICKS = 150;       // 골 뒤 멈추는 틱(2.5초)
 const KICKOFF_TIMEOUT = 180;  // 킥오프에서 아무도 안 건드려도 3초 뒤 시작
 const KICKOFF_JITTER = 0.4;   // 킥오프 자리를 옆으로 이만큼(±) 흔든다(씨앗을 쓰는 자리)
@@ -218,6 +219,9 @@ export type MatchState = {
   /** 빼앗기 뒤 아무도 빼앗을 수 없는 남은 틱. */
   stealLock: number;
   lastTouch: number | null;
+  /** 도움(2D 와 같은 규칙, 2026-11-07 "두 모드 다 일관성 갖추게해") — prevTouch = 마지막 터치 직전에 만진 다른 사람,
+   *  lastTouchTick·prevTouchTick = 각자 마지막으로 만진 틱. lastAssist 는 골 순간에 정한다(없으면 null). */
+  prevTouch: number | null; lastTouchTick: number; prevTouchTick: number; lastAssist: number | null;
   lastKick: { by: number; kind: KickKind; tick: number } | null;
   lastScorer: number | null;
   kickoffSide: Side; winner: Side | 'draw' | null;
@@ -227,7 +231,7 @@ export type MatchState = {
 };
 export type MatchEvent =
   | { type: 'kick'; by: number; kind: KickKind }
-  | { type: 'goal'; side: Side; scorer: number | null }
+  | { type: 'goal'; side: Side; scorer: number | null; assist: number | null }
   | { type: 'end'; winner: Side | 'draw' };
 
 /** 0 편이면 +1(오른쪽으로 공격), 1 편이면 -1. */
@@ -294,6 +298,7 @@ function placeForKickoff(s: MatchState, config: MatchConfig): void {
     p.throughHeld = false; p.lobHeld = false; p.lobTicks = 0; p.sprint = false; p.tackleCD = 0; p.shootVoid = false;   // 체력은 그대로 이어진다
   });
   s.owner = null; s.passTo = null; s.passTicks = 0; s.stealLock = 0; s.lastTouch = null; s.lastKick = null;
+  s.prevTouch = null; s.lastTouchTick = 0; s.prevTouchTick = 0;
 }
 
 export function createMatch(config: MatchConfig, seed: number): MatchState {
@@ -307,6 +312,7 @@ export function createMatch(config: MatchConfig, seed: number): MatchState {
       throughHeld: false, lobHeld: false, lobTicks: 0, sprint: false, stamina: 1, tackleCD: 0, shootVoid: false,
     })),
     owner: null, passTo: null, passTicks: 0, stealLock: 0, lastTouch: null, lastKick: null, lastScorer: null,
+    prevTouch: null, lastTouchTick: 0, prevTouchTick: 0, lastAssist: null,
     kickoffSide: 0, winner: null,
     count: { passes: [0, 0], shots: [0, 0], steals: [0, 0], throughs: [0, 0], lobs: [0, 0] },
     seed: seed >>> 0,
@@ -448,6 +454,12 @@ function kickoffLimits(s: MatchState, config: MatchConfig): void {
   });
 }
 
+/** 공을 만졌다 — 만진 사람이 바뀌면 직전 사람을 prevTouch 로 밀어 둔다(도움 판정용, 2D 와 같다). */
+function touch(s: MatchState, i: number): void {
+  if (s.lastTouch !== i) { s.prevTouch = s.lastTouch; s.prevTouchTick = s.lastTouchTick; s.lastTouch = i; }
+  s.lastTouchTick = s.tick;
+}
+
 // ───────────────────────────── 차기 ─────────────────────────────
 
 /** 이 사람이 지금 공을 찰 수 있나 — 발밑에 있거나, 아무도 안 가진 공이 바로 앞 낮게 있다(논스톱). */
@@ -463,7 +475,7 @@ function canKick(s: MatchState, i: number): boolean {
 function releaseBall(s: MatchState, i: number, kind: KickKind): void {
   const p = s.players[i];
   s.owner = null; p.noTouch = KICK_LOCK; p.kickTicks = KICK_ANIM; p.hold = 0;
-  s.lastTouch = i; s.lastKick = { by: i, kind, tick: s.tick };
+  touch(s, i); s.lastKick = { by: i, kind, tick: s.tick };
 }
 
 /** 슛 — 보는 방향으로, 세기(0~1)만큼 빠르고 높게. 골문 쪽을 대충 보고 있으면 골문 안쪽으로 조금 당긴다. */
@@ -591,7 +603,7 @@ function tackle(s: MatchState, config: MatchConfig, i: number): void {
   const dx = b.x - p.x, dy = b.y - p.y, d = Math.sqrt(dx * dx + dy * dy);
   if (d > PLAYER_R + BALL_R + TACKLE_REACH || (d > 1e-6 && (dx * p.fx + dy * p.fy) / d < TACKLE_COS)) return;
   s.players[o].noTouch = STEAL_LOSER_LOCK;
-  s.owner = i; s.lastTouch = i; s.stealLock = STEAL_IMMUNE; s.passTo = null; s.passTicks = 0;
+  s.owner = i; touch(s, i); s.stealLock = STEAL_IMMUNE; s.passTo = null; s.passTicks = 0;
   s.count.steals[mp.side] += 1;
 }
 
@@ -638,7 +650,7 @@ function touchFreeBall(s: MatchState, config: MatchConfig, controlled: boolean):
         const side = b.y >= p.y ? 1 : -1;
         const out = sp * PARRY_KEEP;
         b.vx = dir * out * PARRY_OUT; b.vy = side * out * PARRY_SIDE; b.vz = PARRY_LIFT;
-        s.lastTouch = i; s.passTo = null;
+        touch(s, i); s.passTo = null;
         continue;
       }
       // 못 막았다 — 손을 스치고 지나간다(몸 한가운데로 온 공만 아래에서 몸에 맞는다)
@@ -655,12 +667,12 @@ function touchFreeBall(s: MatchState, config: MatchConfig, controlled: boolean):
       b.x = p.x + nx * min; b.y = p.y + ny * min;
       const vn = rvx * nx + rvy * ny;
       if (vn < 0) { b.vx -= (1 + BODY_E) * vn * nx; b.vy -= (1 + BODY_E) * vn * ny; }
-      if (controlled) s.lastTouch = i;
+      if (controlled) touch(s, i);
     }
   }
   if (pick >= 0) {
     const p = s.players[pick];
-    s.owner = pick; s.lastTouch = pick; s.passTo = null; s.passTicks = 0;
+    s.owner = pick; touch(s, pick); s.passTo = null; s.passTicks = 0;
     if (config.players[pick].gk) p.hold = KEEPER_HOLD;
     b.vz = 0;
   }
@@ -685,13 +697,13 @@ function tryTackle(s: MatchState, config: MatchConfig): void {
     s.stealLock = STEAL_IMMUNE;
     op.noTouch = STEAL_LOSER_LOCK;
     if (rand(s) < win) {
-      s.owner = i; s.lastTouch = i;
+      s.owner = i; touch(s, i);
       s.count.steals[mp.side] += 1;
     } else {
       // 흘러나온다 — 부딪친 사람 반대쪽으로, 둘 다 잠깐 못 잡는다
       const u = unit(b.x - q.x, b.y - q.y, 0 - attackDir(mp.side), 0);
       b.vx = u.x * STEAL_FREE_SPEED + op.vx * STEAL_FREE_CARRY; b.vy = u.y * STEAL_FREE_SPEED + op.vy * STEAL_FREE_CARRY; b.vz = STEAL_FREE_LIFT;
-      s.owner = null; q.noTouch = STEAL_TACKLER_LOCK; s.lastTouch = i;
+      s.owner = null; q.noTouch = STEAL_TACKLER_LOCK; touch(s, i);
     }
     s.passTo = null; s.passTicks = 0;
     return;
@@ -822,6 +834,9 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
       s.score[side] += 1;
       const lt = s.lastTouch;
       s.lastScorer = lt !== null && config.players[lt].side === side ? lt : null;   // 자책이면 null
+      const pt = s.prevTouch;
+      s.lastAssist = s.lastScorer !== null && pt !== null && pt !== s.lastScorer && config.players[pt]?.side === side
+        && s.tick - s.prevTouchTick <= ASSIST_TICKS ? pt : null;
       s.kickoffSide = side === 0 ? 1 : 0;
       s.owner = null; s.passTo = null;
       s.phase = 'goal'; s.phaseTicks = 0;
@@ -861,7 +876,7 @@ export function eventsBetween(prev: MatchState, next: MatchState): MatchEvent[] 
   if (k && (!prev.lastKick || prev.lastKick.tick !== k.tick || prev.lastKick.by !== k.by)) out.push({ type: 'kick', by: next.players[k.by]?.id ?? k.by, kind: k.kind });
   for (const side of [0, 1] as const)
     for (let g = prev.score[side]; g < next.score[side]; g++)
-      out.push({ type: 'goal', side, scorer: g === next.score[side] - 1 ? next.lastScorer : null });
+      out.push({ type: 'goal', side, scorer: g === next.score[side] - 1 ? next.lastScorer : null, assist: g === next.score[side] - 1 ? next.lastAssist : null });
   if (prev.phase !== 'end' && next.phase === 'end' && next.winner !== null) out.push({ type: 'end', winner: next.winner });
   return out;
 }

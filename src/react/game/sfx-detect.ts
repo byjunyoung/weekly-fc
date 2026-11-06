@@ -2,7 +2,8 @@
 // 2026-11-07 "효과음도 넣어야지". 경기 계산(sim)에는 소리를 모르게 두고, 화면 쪽에서 상태 변화로 알아낸다.
 import type { MatchState } from '../../lib/game/sim.ts';
 
-export type Sfx = { kind: 'kick' | 'bounce' | 'goal' | 'whistle' | 'end'; vol: number };
+/** shot·catch·tackle 은 3D 시제품이 쓴다(src/react/game3d/sfx3d.ts) — 2D 는 안 낸다. 같은 모듈이라 골·휘슬·킥·튕김은 두 모드가 같은 소리다. */
+export type Sfx = { kind: 'kick' | 'bounce' | 'goal' | 'whistle' | 'end' | 'shot' | 'catch' | 'tackle'; vol: number };
 
 /** 공 속도(단위/초)가 이 이상일 때만 튕김 소리 — 굴러가다 살짝 닿는 건 조용히. */
 const BOUNCE_MIN_SPEED = 140;

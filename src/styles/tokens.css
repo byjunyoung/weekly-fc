@@ -1182,11 +1182,13 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
   color: var(--fg); font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-synthesis: none; letter-spacing: 0; line-height: 14px; white-space: nowrap; will-change: transform; }
 .g3-label.is-on { display: block; }
 .g3-label.is-me { color: var(--gold); }
-.g3-hud { position: absolute; z-index: 2; top: max(var(--s-sm), env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--s-xs);
+/* 점수판 — 2D 처럼 「주황 0 : 0 흰」 아래 남은 시간 */
+.g3-hud { position: absolute; z-index: 2; top: max(var(--s-sm), env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: var(--s-xxs) var(--s-sm); background: rgba(0, 0, 0, .6); border: 1px solid var(--hairline); pointer-events: none; }
 .g3-chip { display: inline-block; width: 12px; height: 12px; flex: none; vertical-align: middle; }
 .g3-score, .g3-clock { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--fg); }
-.g3-clock { margin-left: var(--s-xs); color: var(--body); }
+.g3-clock { color: var(--body); font-size: var(--fs-pixel-xs); }
+.g3-team { font: inherit; }
 .g3-goal { position: absolute; z-index: 2; left: 50%; top: 30%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: var(--s-xxs);
   padding: var(--s-sm) var(--s-lg); background: rgba(0, 0, 0, .7); pointer-events: none; text-align: center; }
 .g3-goal b { font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--gold); line-height: 1; }

@@ -273,7 +273,10 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
   const ringGeo = new RingGeometry(0.5, 0.64, 28).rotateX(-Math.PI / 2);
   const ringMat = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9, depthWrite: false });
   const rings = new InstancedMesh(ringGeo, ringMat, n);
-  config.players.forEach((mp, i) => rings.setColorAt(i, new Color(i === humanId ? GOLD : TEAM_COLOR[mp.side])));
+  const ringBase = config.players.map((mp, i) => new Color(i === humanId ? GOLD : TEAM_COLOR[mp.side]));
+  ringBase.forEach((c, i) => rings.setColorAt(i, c));
+  const ringHot = config.players.map(() => false), HOT = new Color('#ffffff');
+  let colorDirty = false;
   rings.renderOrder = 2;
   scene.add(rings);
   const shadowGeo = new CircleGeometry(1, 20).rotateX(-Math.PI / 2);
@@ -326,6 +329,9 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
         if (f.legR) f.legR.rotation.x = 0 - Math.sin(f.phase) * LEG_SWING * run;
         tmpM.compose(tmpV.set(x, 0.006, y), tmpQ.identity(), tmpS.set(1, 1, 1));
         rings.setMatrixAt(i, tmpM);
+        // 고리가 하얘진다 — 슛을 모으는 동안과 찬(패스·슛·태클) 직후 잠깐(2D 와 같은 표시, 봇도 똑같이)
+        const hot = (b.shootHeld && b.charge > 0 && !b.shootVoid) || b.kickTicks > 0;
+        if (hot !== ringHot[i]) { ringHot[i] = hot; rings.setColorAt(i, hot ? HOT : ringBase[i]); colorDirty = true; }
         tmpM.compose(tmpV.set(x, 0.004, y), tmpQ.identity(), tmpS.set(0.55, 1, 0.55));
         shadows.setMatrixAt(i, tmpM);
       }
@@ -343,6 +349,7 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
       tmpM.compose(tmpV.set(bx, 0.005, by), tmpQ.identity(), tmpS.set(hs, 1, hs));
       shadows.setMatrixAt(n, tmpM);
       rings.instanceMatrix.needsUpdate = true;
+      if (colorDirty && rings.instanceColor) { rings.instanceColor.needsUpdate = true; colorDirty = false; }
       shadows.instanceMatrix.needsUpdate = true;
       // 내 선수 표시
       const me = humanId >= 0 ? pos[humanId] : null;
