@@ -21,7 +21,7 @@ test('기본 게임은 2D 경기 — 모르는 ?g= 도 기본으로', () => {
   for (const v of ['nope', '', 'constructor', '__proto__', 'toString', 3, null, undefined]) assert.equal(gameOf(v), undefined, String(v));
 });
 
-test('등록부 — id 는 겹치지 않고, 모드별로 나뉜다, 지금 2D 는 경기·승부차기·자유 훈련장·프리킥', () => {
+test('등록부 — id 는 겹치지 않고, 모드별로 나뉜다, 지금 2D 는 경기·승부차기·자유 훈련장·프리킥·드리블 훈련장', () => {
   const ids = GAMES.map((g) => g.adapter.id);
   assert.equal(new Set(ids).size, ids.length);
   for (const g of GAMES) {
@@ -30,7 +30,7 @@ test('등록부 — id 는 겹치지 않고, 모드별로 나뉜다, 지금 2D �
     assert.ok(g.okSettings(g.defaultSettings), `${g.adapter.id} 기본 설정이 자기 검사를 통과`);
     assert.equal(g.applySettings(g.defaultSettings, {}), g.defaultSettings, '안 바뀌면 같은 객체');
   }
-  assert.deepEqual(gamesOf('2d').map((g) => g.adapter.id), ['match2d', 'penalty2d', 'free2d', 'freekick2d']);
+  assert.deepEqual(gamesOf('2d').map((g) => g.adapter.id), ['match2d', 'penalty2d', 'free2d', 'freekick2d', 'dribble2d']);
   assert.deepEqual(gamesOf('3d').map((g) => g.adapter.id), ['match3d']);   // 4단계: 3D 경기
 });
 
