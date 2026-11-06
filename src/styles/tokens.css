@@ -1357,3 +1357,12 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 /* 훈련장 "골!" — 경기의 골 문구보다 작고 높이(골이 자주 나서 화면을 덮지 않게, 2D 훈련장의 작은 "골!"과 같은 뜻) */
 .g3-goal.f3-pop { top: 20%; padding: var(--s-xxs) var(--s-sm); }
 .g3-goal.f3-pop b { font-size: var(--fs-pixel-md); }
+/* ══ 3D 프리킥·드리블 훈련장(2026-11-07 게임 묶음 6단계) — 위 띠·가운데 띠는 3D 승부차기의 .p3-* 를 같이 쓰고, 드리블만의 순위 줄과 "+1초"만 더한다 ══ */
+.p3-board.is-done { color: var(--gold); }
+.d3-ranks { position: absolute; z-index: 2; left: max(var(--s-sm), env(safe-area-inset-left)); top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 128px); margin: 0; padding: var(--s-xxs) var(--s-xs);
+  list-style: none; min-width: 150px; background: rgba(0, 0, 0, .55); color: var(--fg); font-size: var(--fs-xs); pointer-events: none; }
+.d3-ranks li { display: flex; justify-content: space-between; gap: var(--s-sm); }
+.d3-ranks li.is-me { color: var(--gold); }
+.d3-pop { position: absolute; z-index: 2; left: 50%; top: 58%; transform: translateX(-50%); display: none; color: var(--warn); font-family: var(--font-pixel); font-size: var(--fs-pixel-md);
+  font-synthesis: none; letter-spacing: 0; text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
+.d3-pop.is-on { display: block; }

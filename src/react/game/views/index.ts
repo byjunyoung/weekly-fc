@@ -10,8 +10,10 @@ import { freekick2dView } from './freekick2d';
 import { dribble2dView } from './dribble2d';
 import { penalty3dView } from './penalty3d';
 import { free3dView } from './free3d';
+import { freekick3dView } from './freekick3d';
+import { dribble3dView } from './dribble3d';
 
-const VIEWS: Record<string, AnyView> = { match2d: match2dView, penalty2d: penalty2dView, free2d: free2dView, freekick2d: freekick2dView, dribble2d: dribble2dView, match3d: match3dView, penalty3d: penalty3dView, free3d: free3dView };
+const VIEWS: Record<string, AnyView> = { match2d: match2dView, penalty2d: penalty2dView, free2d: free2dView, freekick2d: freekick2dView, dribble2d: dribble2dView, match3d: match3dView, penalty3d: penalty3dView, free3d: free3dView, freekick3d: freekick3dView, dribble3d: dribble3dView };
 
 /** id → 그 게임의 화면. 모르면 undefined. */
 export function viewOf(id: string | null | undefined): AnyView | undefined {

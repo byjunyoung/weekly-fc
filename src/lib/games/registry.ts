@@ -14,9 +14,11 @@ import { FREEKICK2D } from './freekick2d.ts';
 import { DRIBBLE2D } from './dribble2d.ts';
 import { PENALTY3D } from './penalty3d.ts';
 import { FREE3D } from './free3d.ts';
+import { FREEKICK3D } from './freekick3d.ts';
+import { DRIBBLE3D } from './dribble3d.ts';
 
 /** 목록에 보이는 차례대로. */
-export const GAMES: readonly GameEntry[] = [MATCH2D, PENALTY2D, FREE2D, FREEKICK2D, DRIBBLE2D, MATCH3D, PENALTY3D, FREE3D];
+export const GAMES: readonly GameEntry[] = [MATCH2D, PENALTY2D, FREE2D, FREEKICK2D, DRIBBLE2D, MATCH3D, PENALTY3D, FREE3D, FREEKICK3D, DRIBBLE3D];
 
 /** 방을 만들 때·주소에 ?g= 가 없거나 모를 때의 게임. */
 export const DEFAULT_GAME = 'match2d';
