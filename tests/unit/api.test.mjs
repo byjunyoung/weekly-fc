@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeFine, normalizePlayer, normalizeRotation, serializeFine, serializeRotation, rpc, RPC_OF } from '../../src/lib/api.ts';
+import { normalizeData, normalizePlayer, normalizeRotation, serializeRotation, rpc, RPC_OF } from '../../src/lib/api.ts';
 
 // ── 전달 통로(2026-09-24 Supabase RPC) ────────────────────────────
 test('rpc 는 POST 로 /rest/v1/rpc/<함수> 를 부르고 apikey 헤더만 싣는다', async () => {
@@ -31,17 +31,12 @@ test('rpc 빈 응답(204)은 빈 객체', async () => {
   try { assert.deepEqual(await rpc('x', {}, 'https://ex', 'pk'), {}); } finally { globalThis.fetch = orig; }
 });
 
-test('관리자 쓰기 액션 다섯이 모두 RPC 이름을 가진다', () => {
-  assert.deepEqual(RPC_OF, { writePlayer: 'write_player', deletePlayer: 'delete_player', writeRotation: 'write_rotation', writeFine: 'write_fine', deleteFine: 'delete_fine' });
+test('관리자 쓰기 액션 셋이 모두 RPC 이름을 가진다', () => {
+  assert.deepEqual(RPC_OF, { writePlayer: 'write_player', deletePlayer: 'delete_player', writeRotation: 'write_rotation' });
 });
-test('normalizeFine: paid 문자열 → boolean, amount 숫자', () => {
-  const f = normalizeFine({ id: '1', date: '2026-09-05', player: '김철수', type: '지각', amount: '30000', paid: 'TRUE' });
-  assert.equal(f.paid, true); assert.equal(f.amount, 30000);
-  assert.equal(serializeFine(f).paid, 'TRUE');
-});
-test('serializeFine ↔ normalizeFine 왕복', () => {
-  const f = normalizeFine({ id: '1', date: '2026-09-05', match_id: '2026-09-05', player: '김철수', type: '노쇼', amount: 50000, paid: false });
-  assert.deepEqual(normalizeFine(serializeFine(f)), f);
+test('normalizeData: 서버가 fines 를 보내도 Data 에 싣지 않는다(2026-11-06 벌금 기록 제거)', () => {
+  const d = normalizeData({ players: [], fines: [{ id: 'f1', player: '김', type: '지각', amount: 30000 }] });
+  assert.equal('fines' in d, false);
 });
 test('normalizePlayer: pos 대문자화, 빈 rot는 null, phone은 있을 때만', () => {
   const p = normalizePlayer({ num: '9', name: '김철수', pos: 'mf', rot: '', pace: '80' });
@@ -93,7 +88,7 @@ test2('서버가 보낸 오류 문구는 제한시간 문구로 덮어쓰지 않
 // 기록이 조용히 비거나 엉뚱한 칸으로 들어오면 그 제동이 사라지므로 정규화를 못 박는다.
 import test3 from 'node:test';
 import assert3 from 'node:assert/strict';
-import { normalizeStatLog, normalizeData } from '../../src/lib/api.ts';
+import { normalizeStatLog } from '../../src/lib/api.ts';
 
 test3('기록 한 줄을 화면이 쓰는 모양으로 바꾼다', () => {
   const r = normalizeStatLog({ ts: '2026-09-22T10:00:00.000Z', by: '7', by_name: '이찬우', num: '2', field: 'pace', before: '70', after: '84' });
@@ -137,7 +132,7 @@ const pl = (num, pace) => ({ num, name: `P${num}`, pos: '', detail: '', foot: ''
   pace, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '' });
 
 test3('applyVote — 서버 응답으로 두 선수 숫자를 고치고 기록 두 줄을 맨 위에 얹는다(다시 읽지 않는다)', () => {
-  const d = { players: [pl(1, 70), pl(2, 70), pl(3, 50)], rotation: [], fines: [], statLog: [{ ts: 'old', by: null, byName: '', num: 1, field: 'pace', before: 60, after: 70, via: '' }] };
+  const d = { players: [pl(1, 70), pl(2, 70), pl(3, 50)], rotation: [], statLog: [{ ts: 'old', by: null, byName: '', num: 1, field: 'pace', before: 60, after: 70, via: '' }] };
   const r = { ts: 'now', field: 'pace', by: 3, by_name: 'P3', win: { num: 2, before: 70, after: 72 }, lose: { num: 1, before: 70, after: 68 } };
   const n = applyVote(d, r);
   assert3.deepEqual(n.players.map((p) => p.pace), [68, 72, 50]);
@@ -146,7 +141,7 @@ test3('applyVote — 서버 응답으로 두 선수 숫자를 고치고 기록 �
 });
 
 test3('applyVote — 끝에 막혀 안 바뀐 쪽은 기록을 남기지 않는다(서버와 같다)', () => {
-  const d = { players: [pl(1, 99), pl(2, 98)], rotation: [], fines: [], statLog: [] };
+  const d = { players: [pl(1, 99), pl(2, 98)], rotation: [], statLog: [] };
   const n = applyVote(d, { ts: 't', field: 'pace', by: null, by_name: '', win: { num: 1, before: 99, after: 99 }, lose: { num: 2, before: 98, after: 96 } });
   assert3.deepEqual(n.statLog.map((x) => x.num), [2]);
 });

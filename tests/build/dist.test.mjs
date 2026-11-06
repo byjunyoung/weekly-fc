@@ -229,3 +229,8 @@ test('POTM 은 뺐다(2026-11-06) — 옛 투표 주소는 매치 목록으로 �
   // 남는 건 둘: 능력치 기록의 「POTM 보상」 줄(why, model.ts)과 StatLogRow.via 의 'potm'(types.ts).
   assert.deepEqual(grepSrc('potm').sort(), ['src/lib/types.ts', 'src/react/player/model.ts']);
 });
+
+test('벌금은 규칙 표만 남는다 — 기록 코드는 없다', () => {
+  assert.deepEqual(grepSrc('writeFine|deleteFine|normalizeFine|unpaidRows|fineSummary'), []);
+  assert.ok(read('rules/index.html').includes('노쇼'), '규칙의 벌금표는 그대로');
+});

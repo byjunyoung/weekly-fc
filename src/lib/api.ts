@@ -5,11 +5,11 @@
 // 2026-09-25 매치: 팀짜기를 날짜로 저장(saveMatch)한다. 투표 기능은 2026-11-06 에 뺐다 — 서버가 아직 보내는 표 칸은 읽지 않는다.
 import { accessToken, adminOn, cachedMe, session, setCachedMe, type Me } from './auth.ts';
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
-import { STAT_KEYS, type Data, type Fine, type Match, type MatchTeam, type Placing, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
+import { STAT_KEYS, type Data, type Match, type MatchTeam, type Placing, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
 
 // v3: matches 가 생겼다(2026-09-25) — 옛 캐시엔 그 칸이 없어 화면이 깨지므로 키를 올려 한 번 버린다.
 const CACHE_KEY = 'wfc_cache_v3';
-export const EMPTY: Data = { players: [], rotation: [], fines: [], statLog: [], matches: [] };
+export const EMPTY: Data = { players: [], rotation: [], statLog: [], matches: [] };
 
 type Raw = Record<string, unknown>;
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -29,11 +29,6 @@ export function normalizePlayer(r: Raw): Player {
   };
   if (r.phone !== undefined) p.phone = String(r.phone);
   return p;
-}
-export function normalizeFine(r: Raw): Fine {
-  const type = String(r.type ?? '');
-  return { id: String(r.id ?? ''), date: day(r.date), match_id: String(r.match_id ?? ''), player: String(r.player ?? ''),
-    type: type === '노쇼' ? '노쇼' : '지각', amount: num(r.amount), paid: bool(r.paid) };
 }
 export function normalizeRotation(r: Raw): RotationRow {
   return { year: num(r.year), month: num(r.month), p1: String(r.p1 ?? ''), p2: String(r.p2 ?? ''), done: bool(r.done) };
@@ -67,7 +62,7 @@ export function normalizeMatch(r: Raw): Match | null {
 export function normalizeData(d: Raw): Data {
   const arr = (v: unknown): Raw[] => (Array.isArray(v) ? (v as Raw[]) : []);
   return { players: arr(d.players).map(normalizePlayer).filter((p) => p.num > 0),
-    rotation: arr(d.rotation).map(normalizeRotation), fines: arr(d.fines).map(normalizeFine).filter((f) => f.id),
+    rotation: arr(d.rotation).map(normalizeRotation),
     // 최신이 위로 — 서버는 오래된 것부터 보낸다(옛 시트와 같은 순서)라 뒤집는다.
     statLog: arr(d.statLog).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null).reverse(),
     matches: arr(d.matches).map(normalizeMatch).filter((m): m is Match => m !== null), placing: normalizePlacing(d.placing) };
@@ -80,7 +75,6 @@ export function normalizePlacing(v: unknown): Placing {
 }
 
 export const serializePlayer = (p: Player): Raw => ({ ...p, vest: p.vest ?? '', rot: p.rot ?? '', avatar: p.avatar ?? '' });
-export const serializeFine = (f: Fine): Record<string, string | number> => ({ id: f.id, date: f.date, match_id: f.match_id, player: f.player, type: f.type, amount: f.amount, paid: f.paid ? 'TRUE' : 'FALSE' });
 export const serializeRotation = (r: RotationRow): Record<string, string | number> => ({ year: r.year, month: r.month, p1: r.p1, p2: r.p2, done: r.done ? 'TRUE' : 'FALSE' });
 
 /** 응답을 기다리는 한도. 넘기면 끊고 오류로 돌린다.
@@ -92,7 +86,6 @@ export const TIMEOUT_MS = 15000;
 /** 관리자 쓰기 액션 → DB 함수 이름. 화면은 옛 액션 이름으로 부른다. */
 export const RPC_OF: Record<string, string> = {
   writePlayer: 'write_player', deletePlayer: 'delete_player', writeRotation: 'write_rotation',
-  writeFine: 'write_fine', deleteFine: 'delete_fine',
 };
 
 /** DB 함수 하나를 부른다 — POST · JSON 본문 · apikey 헤더. 로그인 중이면 Authorization 에 토큰을 싣는다

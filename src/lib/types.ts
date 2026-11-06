@@ -2,8 +2,6 @@
 export type Pos = 'GK' | 'DF' | 'MF' | 'FW';
 export type Player = { num: number; name: string; pos: Pos | ''; detail: string; foot: string; vest: number | null; note: string;
   pace: number; dribble: number; pass: number; shoot: number; defend: number; stamina: number; rot: number | null; avatar: string; phone?: string };
-export type FineType = '지각' | '노쇼';
-export type Fine = { id: string; date: string; match_id: string; player: string; type: FineType; amount: number; paid: boolean };
 export type RotationRow = { year: number; month: number; p1: string; p2: string; done: boolean };
 /** 능력치를 누가 언제 어떻게 고쳤는지. 고친 사람(by)은 홈에서 고른 번호라 자칭이다 —
  *  막는 장치가 아니라 서로 보면서 조절되라고 남기는 기록이다(2026-09-22). */
@@ -22,6 +20,6 @@ export type Match = { id: number; date: string; lineup: MatchTeam[]; video: stri
   opponent: string; scoreUs: number | null; scoreThem: number | null };
 /** 배치 진행(2026-11-02) — 확정 기준 인원(need)과 배치 전 선수마다 판정을 낸 사람 수. 누가 냈는지는 안 온다. */
 export type Placing = { need: number; count: Record<number, number> };
-export type Data = { players: Player[]; rotation: RotationRow[]; fines: Fine[]; statLog: StatLogRow[]; matches: Match[]; placing?: Placing };
+export type Data = { players: Player[]; rotation: RotationRow[]; statLog: StatLogRow[]; matches: Match[]; placing?: Placing };
 export const STAT_KEYS = ['pace', 'dribble', 'pass', 'shoot', 'defend', 'stamina'] as const;
 export type StatKey = (typeof STAT_KEYS)[number];

@@ -4,12 +4,8 @@ import { computeHomeSummary, nextMonthOf } from '../../src/react/home/model.ts';
 
 const P = (num, name, pos, over = {}) => ({ num, name, pos, detail: '', foot: '', vest: null, note: '', pace: 70, dribble: 70, pass: 70, shoot: 70, defend: 70, stamina: 70, rot: null, avatar: '', phone: '', ...over });
 const players = [P(7, '김민수', 'MF', { rot: 1 }), P(9, '박지훈', 'FW', { pace: 85, dribble: 80, shoot: 88, pass: 70, defend: 40, stamina: 75 }), P(3, '이서준', 'DF')];
-const fines = [
-  { id: 'f1', date: '2026-09-12', match_id: '', player: '박지훈', type: '지각', amount: 30000, paid: false },
-  { id: 'f2', date: '2026-09-05', match_id: '', player: '김민수', type: '노쇼', amount: 50000, paid: true },
-];
 const rotation = [{ year: 2026, month: 9, p1: '김민수', p2: '이서준', done: false }];
-const data = { players, rotation, fines, statLog: [] };
+const data = { players, rotation, statLog: [] };
 const now = new Date(2026, 8, 15); // 2026-09-15, rotation 시트와 같은 달
 
 test('nextMonthOf: 12월 다음은 다음 해 1월', () => {
