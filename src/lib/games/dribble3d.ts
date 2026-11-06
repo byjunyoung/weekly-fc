@@ -140,7 +140,7 @@ export function dribble3Bot(s: Dr3State, config: Dr3Config, slot: number): Input
     const sp = dist < 1.2 ? 0.5 : 1;
     return { ...IDLE3, x: d.x * sp, y: d.y * sp };
   }
-  const t2 = dribbleTarget(c, l.gate, { p: { ...to2(p), vx: 0, vy: 0, kickCooldown: 0, kicking: false, kickFlash: 0 }, b: { ...to2(b), vx: 0, vy: 0 }, gate: l.gate, hit: 0, pen: 0, fin: -1 });
+  const t2 = dribbleTarget(c, l.gate, { p: { ...to2(p), vx: 0, vy: 0, kickCooldown: 0, kicking: false, kickFlash: 0 }, b: { ...to2(b), vx: 0, vy: 0 }, gate: l.gate, hit: 0, pen: 0, fin: -1, gone: false });
   let tx = t2.x * K, ty = t2.y * K;
   // 문 앞에서 옆으로 비껴 있으면 먼저 문 정면(지나는 방향 반대쪽 1.5m)으로 — 비스듬히 들어가면 문 밖으로 지나가 버린다(왕복의 가로 문)
   const gg = c.gates[l.gate];

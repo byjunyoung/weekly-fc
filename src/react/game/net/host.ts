@@ -15,7 +15,7 @@ import { autoBalance, createRoom, join, leave as leaveRoom, move, pick, setBotPi
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView } from './common.ts';
 import {
-  CROWD_MEMBERS, CROWD_ROOM_EVERY_MS, GIVE_UP_MS, HELLO_DEDUPE_MS, HIDDEN_ROOM_EVERY_MS, LOBBY_SILENCE_MS, MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, SNAP_EVERY, STEP_MS,
+  CROWD_MEMBERS, CROWD_ROOM_EVERY_MS, GIVE_UP_MS, HOST_SLOW_MS, PROBE_EVERY_MS, HELLO_DEDUPE_MS, HIDDEN_ROOM_EVERY_MS, LOBBY_SILENCE_MS, MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, SNAP_EVERY, STEP_MS,
   createStore, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import type { Smoother } from './smooth.ts';
@@ -89,6 +89,8 @@ export type HostSession = {
 
 type Match = {
   game: string; adapter: AnyAdapter; smooth: Smoother<unknown>;
+  /** 빈 사람 자리 정책(등록부 absent, 없으면 'bot'). */
+  absent: 'bot' | 'idle';
   config: unknown; seed: number; slots: (string | null)[];
   state: unknown; prev: unknown; qs: number[];
   acc: number; endedAt: number | null; lastPausedSnap: number;
@@ -123,6 +125,7 @@ export function createHostSession(o: HostOptions): HostSession {
   const lastQ = new Map<string, number>();
   const lastSeq = new Map<string, number>();
   let conn: SessionView['conn'] = 'connecting';
+  let lastProbe = -Infinity, liveSet = false;   // 길 떠보기·경기 중 박동(리뷰 #3)
   let matchKey = 0;
 
   const store = createStore<SessionView>({
@@ -232,7 +235,12 @@ export function createHostSession(o: HostOptions): HostSession {
     const qs = Array.from({ length: g.slots(m.config) }, (_, i) => {
       if (i === me_) return g.encode(reader ? reader() : g.idle);
       const cid = m.slots[i];
-      if (cid === null || !alive(cid, now)) return g.encode(g.botInput ? g.botInput(s, m.config, i) : g.idle);   // 봇, 또는 조용해진 손님 자리
+      if (cid === null) return g.encode(g.botInput ? g.botInput(s, m.config, i) : g.idle);   // 봇 자리
+      if (!alive(cid, now)) {
+        // 조용해졌거나 나간 손님 자리 — 게임 정책대로(리뷰 #2): 'idle' 이면 대신하지 않고 그 게임의 "빈 자리" 입력, 아니면 봇이 대신
+        if (m.absent === 'idle') return g.encode(g.absentInput ?? g.idle);
+        return g.encode(g.botInput ? g.botInput(s, m.config, i) : g.idle);
+      }
       return lastQ.get(cid) ?? idleQ;
     });
     const next = g.step(s, m.config, qs.map((q) => g.decode(q)));
@@ -275,6 +283,12 @@ export function createHostSession(o: HostOptions): HostSession {
       const dt = now - lastAt;
       lastAt = now;
       if (now - lastSilence >= 250) checkSilence(now);
+      // 손님이 모두 3초 넘게 조용하다 — 내 길이 조용히 죽었을 수도 있어 떠본다(5초에 한 번, 리뷰 #3). 경기 중엔 박동도 자주.
+      const guestsIn = room.members.filter((x) => x.clientId !== me.clientId);
+      if (conn === 'open' && guestsIn.length > 0 && guestsIn.every((x) => quietFor(x.clientId, now) > HOST_SLOW_MS) && now - lastProbe >= PROBE_EVERY_MS) {
+        lastProbe = now; t.probe?.();
+      }
+      if ((match !== null) !== liveSet) { liveSet = match !== null; t.setLive?.(liveSet); }
       // 오래 가려진 탭(잊힌 탭) — 경기를 접고 주기 방송을 멈춘다. hello 에는 그래도 답한다.
       if (hidden && hiddenSince !== null && !dormant && now - hiddenSince >= GIVE_UP_MS) { backToLobby(now); dormant = true; }
       // 주기 방 상태: 혼자면 안 보낸다(들어오는 사람의 hello 엔 답이 간다), 가려진 동안은 5초마다, 잠들면 멈춘다.
@@ -364,7 +378,7 @@ export function createHostSession(o: HostOptions): HostSession {
       const g = entry.adapter;
       const state = g.create(built.config, seed);
       match = {
-        game: room.game, adapter: g, smooth: smootherFor(g.bodies),
+        game: room.game, adapter: g, smooth: smootherFor(g.bodies), absent: entry.absent ?? 'bot',
         config: built.config, seed, slots: built.slots, state, prev: state, qs: Array.from({ length: g.slots(built.config) }, () => g.encode(g.idle)),
         acc: 0, endedAt: null, lastPausedSnap: -Infinity,
       };

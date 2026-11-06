@@ -135,7 +135,7 @@ export function drawDribble(ctx: CanvasRenderingContext2D, st: DrState, config: 
       ctx.fillStyle = i === o.lane ? GOLD : '#fff';
       ctx.fillText(`${order.indexOf(i) + 1} ${Array.from(config.players[i].name).slice(0, 4).join('')}`, x, yy + k * h);
       ctx.textAlign = 'right';
-      ctx.fillText(tm !== null ? secText(tm) : `문 ${l.gate}/${c.gates.length}`, x + w - 10, yy + k * h);
+      ctx.fillText(tm !== null ? secText(tm) : l.gone ? '나감' : `문 ${l.gate}/${c.gates.length}`, x + w - 10, yy + k * h);
       ctx.textAlign = 'left';
     });
   }

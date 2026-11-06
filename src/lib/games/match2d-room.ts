@@ -94,7 +94,8 @@ export function setSettings(room: Room2d, patch: Partial<RoomSettings>): Room2d 
 /** 채널에서 온 방의 설정 검사(예전 net.ts okRoom 의 설정 부분 그대로 — 화면 범위보다 넉넉하게 본다). */
 export function okSettings(s: unknown): s is RoomSettings {
   const isInt = (v: unknown, lo: number, hi: number): boolean => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
-  return isObj(s) && isInt(s.perSide, 0, MAX_PER_SIDE) && isInt(s.minutes, 1, 60) && isInt(s.scoreLimit, 0, 99)
+  // 칸이 정확히 넷이어야 한다(2026-11-07 리뷰 #11 — 방 메시지의 settings·saved 에 군더더기가 실려 오지 않게)
+  return isObj(s) && Object.keys(s).length === 4 && isInt(s.perSide, 0, MAX_PER_SIDE) && isInt(s.minutes, 1, 60) && isInt(s.scoreLimit, 0, 99)
     && (FIELD_CHOICES as readonly unknown[]).includes(s.field);
 }
 

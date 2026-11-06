@@ -43,3 +43,13 @@ test('효과음 — 골·끝·킥오프 휘슬은 그 순간 한 번', () => {
   assert.ok(kinds(put(a, { state: { phase: 'play' } }), put(a, { state: { phase: 'end' } })).includes('end'));
   assert.deepEqual(kinds(goal, goal), []);
 });
+
+test('소리 장치 깨우기(리뷰 #4) — 없거나 닫혔으면 새로, running 이 아니면(아이폰 interrupted 포함) resume, 다시 보인 뒤 첫 손짓엔 한 번 더', async () => {
+  const { needsWake } = await import('../../src/react/game/sfx.ts');
+  assert.equal(needsWake(null, false), 'create');
+  assert.equal(needsWake('closed', false), 'create');
+  assert.equal(needsWake('suspended', false), 'resume');
+  assert.equal(needsWake('interrupted', false), 'resume');
+  assert.equal(needsWake('running', false), 'none');
+  assert.equal(needsWake('running', true), 'resume');
+});

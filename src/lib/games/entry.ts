@@ -35,6 +35,11 @@ export type GameEntry<C = any, S = any, I = any, T = any> = {
   botSeats?(room: RoomState<T>): [number, number];
   /** 봇 자리 i(편 안 차례, 0 부터)의 작은 표시 — 예: 3D 경기의 첫 봇 자리는 '키퍼'(2026-11-07 4단계). 없거나 null 이면 그냥 '봇'. */
   botSeatTag?(room: RoomState<T>, side: 0 | 1, i: number): string | null;
+  /** 경기 중 사람 자리가 비었을 때(bye 했거나 SILENCE_MS 넘게 조용) — 'bot'(없을 때와 같다) = 봇이 대신(botInput),
+   *  'idle' = 대신하지 않는다: 그 자리엔 어댑터의 absentInput(없으면 idle)이 들어간다(2026-11-07 리뷰 #2 — 기록 게임에서 대본 봇이 사람 이름으로 1등을 가져가지 않게).
+   *  돌아오면(말이 다시 오면) 그 사람 입력으로 이어 간다. 편 있는 게임(경기·승부차기)과 자유 훈련장은 'bot'. 드리블·프리킥은 'idle'.
+   *  새 게임이 쓰려면: 여기 'idle' 한 줄 + (결과에 "나감"을 보이려면) 어댑터에 absentInput 과 그 입력을 상태에 적는 한 줄. */
+  absent?: 'bot' | 'idle';
   /** 방 화면의 사람 칸(2026-11-07 2단계 — 자유 훈련장). 'teams'(없을 때와 같다) = 주황 | 대기 | 흰 세 칸, 방장이 옮기고 자동 나누기.
    *  'all' = 편이 없는 게임 — "참가" 한 칸에 방 사람 모두, 옮기기·자동 나누기·봇 칸이 없다. buildConfig 는 칸(team)을 보지 말고
    *  방 사람을 들어온 차례로 앞에서부터 MAX_HUMANS(8)명 뛰게 하고 나머지는 구경시킨다(방장이 맨 앞이라 늘 뛴다). */

@@ -205,7 +205,7 @@ export type FreeSettings = { field: FieldChoice; bots: number };
 export const FREE_DEFAULTS: FreeSettings = { field: 'auto', bots: 2 };
 
 export function okFreeSettings(v: unknown): v is FreeSettings {
-  return isObj(v) && (FIELD_CHOICES as readonly unknown[]).includes(v.field) && isInt(v.bots, 0, MAX_BOTS);
+  return isObj(v) && Object.keys(v).length === 2 && (FIELD_CHOICES as readonly unknown[]).includes(v.field) && isInt(v.bots, 0, MAX_BOTS);   // 칸은 정확히 둘(리뷰 #11)
 }
 export function applyFreeSettings(cur: FreeSettings, given: unknown): FreeSettings {
   const p = isObj(given) ? given : {};

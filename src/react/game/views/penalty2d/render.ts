@@ -205,8 +205,9 @@ export function drawPenalty(ctx: CanvasRenderingContext2D, st: PenState, config:
   }
 
   // 아래 안내 — 내 역할의 조작
-  const hint = st.phase === 'end' ? '' : st.kicker === o.me ? '←→ 겨누기 · 킥을 누르고 있다가 떼면 슛(오래 누를수록 세고 덜 정확)'
-    : st.keeper === o.me ? '←→ 옆걸음 · 킥 = 몸 던지기(그쪽으로, 한 번)' : '';
+  // PC 와 폰 두 조작을 같이 말한다(3D 문구와 같은 모양 — 리뷰 #10). 폰에선 ' · ' 마다 줄을 바꾼다.
+  const hint = st.phase === 'end' ? '' : st.kicker === o.me ? '겨누기(방향키·왼쪽 끌기) · 킥을 누르고 있다가 떼면 슛 · 오래 누를수록 세고 덜 정확'
+    : st.keeper === o.me ? '옆걸음(방향키·왼쪽 끌기) · 킥 = 몸 던지기(그쪽으로, 한 번)' : '';
   if (hint) {
     ctx.font = `14px ${F14}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';

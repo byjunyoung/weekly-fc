@@ -35,6 +35,10 @@ export const LOBBY_SILENCE_MS = 30000;
 export const HOST_SILENCE_LOBBY_MS = 30000;
 export const HOST_SILENCE_MATCH_MS = 20000;
 export const HOST_SLOW_MS = 3000;
+/** 상대가 HOST_SLOW_MS 넘게 조용하면 길을 떠본다(transport.probe) — 이 간격에 한 번까지(리뷰 #3). */
+export const PROBE_EVERY_MS = 5000;
+/** 방장의 bye 를 받은 손님이 방장의 room(새로고침해 다시 연 방)을 기다리는 시간 — 그 뒤에도 없으면 "방장이 방을 닫았습니다". */
+export const HOST_BYE_WAIT_MS = 8000;
 // 무료 메시지 한도는 프로젝트 전체가 나눠 쓴다 — 잊힌 탭이 끝없이 보내지 않게.
 /** 방장 탭이 이만큼 가려져 있으면 경기를 접고 주기 방송을 멈춘다. 손님도 이만큼 못 들어가거나 방장이 멈춰 있으면 나온다. */
 export const GIVE_UP_MS = 180000;
@@ -51,6 +55,28 @@ export const IN_GAP_PER_GUEST_MS = 28;
 export function inputGapMs(humans: number): number {
   const guests = Math.max(0, Math.floor(humans) - 1);
   return Math.max(IN_MIN_GAP_MS, guests * IN_GAP_PER_GUEST_MS);
+}
+// ── 손님 입력의 양동이(2026-11-07 리뷰 #1) ──
+// 급한 입력(킥·액션 키를 누르고 뗀 순간)은 간격을 기다리지 않고 바로 나가야 한다(세기 모으기·떼기의 때가 곧 슛이다). 그 대신 모든 in 이 —
+// 급하든 아니든, 0.5초 살아 있음 알림까지 — 그리고 ping 도 이 양동이에서 표 하나를 쓴다. 표는 초당 min(20, IN_BUDGET / 손님 수)개 차고 4개까지 모인다.
+// 표가 없으면 다음 표가 찰 때까지 기다린다(그때 가장 최근 입력이 나간다 — 하나 넘게 쌓아 두지 않는다).
+// 예산: 손님 전체 in+ping 52 + 방장 스냅샷 10 + pong 3.5 + room 0.5 = 66, 처음 양동이 4개(손님 7 × 4 = 28건)를 10초에 나눠도 69 → 70 아래(채널이 닫히는 실측 ~86).
+// (조정자 안은 56 이었는데 ping·pong 7건이 얹혀 10초 창에서 72 가 나와 52 로 — fix-report §1.)
+/** 양동이 — tokens = 지금 표(소수 가능), at = 마지막으로 채운 때(ms). */
+export type InBucket = { tokens: number; at: number };
+export const IN_BURST = 4;
+/** 손님 한 명의 초당 표 — 손님 수 = 경기의 사람 수 − 1(1 이상). */
+export const IN_BUDGET = 52;
+export function inRate(humans: number): number {
+  const guests = Math.max(1, Math.floor(humans) - 1);
+  return Math.min(20, IN_BUDGET / guests);
+}
+export const fullBucket = (now: number): InBucket => ({ tokens: IN_BURST, at: now });
+/** 표 하나 쓰기(순수). 채운 뒤 1 이상이면 쓰고 ok, 아니면 채운 양동이만 돌려준다. 시계가 뒤로 가면 채우지 않는다. */
+export function takeToken(b: InBucket, now: number, rate: number): { ok: boolean; b: InBucket } {
+  const dt = Math.max(0, now - b.at);
+  const tokens = Math.min(IN_BURST, b.tokens + (dt / 1000) * rate);
+  return tokens >= 1 ? { ok: true, b: { tokens: tokens - 1, at: now } } : { ok: false, b: { tokens, at: now } };
 }
 /** 구경하는 사람의 ping 간격 — 뛰는 사람(2초)보다 드물게. */
 export const SPECTATOR_PING_MS = 5000;

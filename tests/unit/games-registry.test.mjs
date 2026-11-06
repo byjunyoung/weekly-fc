@@ -125,3 +125,18 @@ test('공용 세션·메시지·예측기는 2D 경기 코드를 import 하지 �
     for (const p of imports) assert.ok(!/game\/(sim|bot|quant|stats|lineup)|games\/(match2d|registry)/.test(p), `${f} → ${p}`);
   }
 });
+
+test('방 설정 검사는 정확한 모양만 — 2D 게임 다섯은 군더더기 칸이 붙은 설정을 받지 않는다, saved 의 모르는 게임도(리뷰 #11)', () => {
+  for (const id of ['match2d', 'penalty2d', 'free2d', 'freekick2d', 'dribble2d']) {
+    const g = gameOf(id);
+    assert.ok(g.okSettings(g.defaultSettings), id);
+    assert.equal(g.okSettings({ ...g.defaultSettings, junk: 'x'.repeat(10000) }), false, `${id} 군더더기`);
+    assert.equal(g.okSettings({ ...g.defaultSettings, __proto__: { a: 1 } }), true, `${id} 프로토타입은 칸이 아니다`);
+  }
+  assert.equal(gameOf('freekick2d').okSettings({ big: [1, 2, 3] }), false);
+  const room = { code: 'ABCD', hostId: 'c0', members: [{ clientId: 'c0', num: 1, name: 'a', team: null }], game: 'match2d', settings: MATCH2D.defaultSettings, phase: 'lobby', rev: 1, botPicks: [[], []] };
+  const msg = (saved) => ({ t: 'room', from: 'c0', sid: 's', room: { ...room, saved }, roster: [1] });
+  assert.ok(parseMsg(msg({ freekick2d: {} }), gameOf));
+  assert.equal(parseMsg(msg({ freekick2d: { x: 'y' } }), gameOf), null, '큰 값');
+  assert.equal(parseMsg(msg({ nope: {} }), gameOf), null, '모르는 게임');
+});

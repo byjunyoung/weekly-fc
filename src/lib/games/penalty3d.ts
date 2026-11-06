@@ -248,6 +248,11 @@ export function moveBall3(b: Ball, groups: readonly (readonly Capsule[])[], curl
   b.vx *= keep; b.vy *= keep;
   if (onGround && b.vx * b.vx + b.vy * b.vy < TUNE3D.BALL_REST * TUNE3D.BALL_REST) { b.vx = 0; b.vy = 0; }
   if (!Number.isFinite(b.x + b.y + b.z + b.vx + b.vy + b.vz)) { Object.assign(b, START_BALL()); }
+  // 그림 밖으로 터무니없이 먼 공은 세운다(2D 승부차기와 같은 안전망 — 2026-11-07 리뷰 #5). 실제 차기는 이 근처에도 안 간다.
+  if (Math.abs(b.x) > POS_LIM || Math.abs(b.y) > POS_LIM || Math.abs(b.z) > POS_LIM) {
+    b.x = Math.min(POS_LIM, Math.max(-POS_LIM, b.x)); b.y = Math.min(POS_LIM, Math.max(-POS_LIM, b.y)); b.z = Math.min(POS_LIM, Math.max(BR, b.z));
+    b.vx = 0; b.vy = 0; b.vz = 0;
+  }
   return { hits, frame };
 }
 
@@ -398,7 +403,11 @@ const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
 const PHASES: readonly string[] = ['ready', 'aim', 'flight', 'result', 'end'];
 const OUTCOMES: readonly string[] = ['goal', 'save', 'miss', 'post'];
 const MAX_LOG = (5 + SD_MAX) * 2;
-const okBall = (b: unknown): boolean => isObj(b) && ['x', 'y', 'z', 'vx', 'vy', 'vz'].every((k) => isNum(b[k]));
+/** 바깥에서 온 위치·속도의 한도(m, m/s) — 경기장 몇 배·말이 되는 속도. 이 밖은 다른 판이거나 망가진 상태(리뷰 #5: ±1e308 이 NaN 을 만들었다). */
+const POS_LIM = 1000, VEL_LIM = 500;
+const inPos = (v: unknown): boolean => isNum(v) && Math.abs(v) <= POS_LIM;
+const inVel = (v: unknown): boolean => isNum(v) && Math.abs(v) <= VEL_LIM;
+const okBall = (b: unknown): boolean => isObj(b) && ['x', 'y', 'z'].every((k) => inPos(b[k])) && ['vx', 'vy', 'vz'].every((k) => inVel(b[k]));
 
 function okState(s: unknown, config: PenConfig): s is Pen3State {
   if (!isObj(s)) return false;
@@ -413,9 +422,9 @@ function okState(s: unknown, config: PenConfig): s is Pen3State {
     && s.log.every((e) => isObj(e) && (e.side === 0 || e.side === 1) && slot(e.kicker) && slot(e.keeper) && typeof e.out === 'string' && OUTCOMES.includes(e.out))
     && (s.outcome === null || (typeof s.outcome === 'string' && OUTCOMES.includes(s.outcome)))
     && isNum(s.power) && okBall(s.ball)
-    && isObj(gk) && ['x', 'y', 'vx', 'vy', 'z', 'vz'].every((k) => isNum(gk[k])) && (gk.dive === -1 || gk.dive === 0 || gk.dive === 1)
+    && isObj(gk) && ['x', 'y', 'z'].every((k) => inPos(gk[k])) && ['vx', 'vy', 'vz'].every((k) => inVel(gk[k])) && (gk.dive === -1 || gk.dive === 0 || gk.dive === 1)
     && (gk.diveH === 0 || gk.diveH === 1 || gk.diveH === 2) && isInt(gk.diveT, 0) && isInt(gk.lie, 0) && isBool(gk.dived) && isBool(gk.armed)
-    && isObj(st) && ['x', 'y', 'vx', 'vy', 'charge', 'kickFlash'].every((k) => isNum(st[k])) && isBool(st.held) && isBool(st.armed)
+    && isObj(st) && ['x', 'y'].every((k) => inPos(st[k])) && ['vx', 'vy'].every((k) => inVel(st[k])) && ['charge', 'kickFlash'].every((k) => isNum(st[k])) && isBool(st.held) && isBool(st.armed)
     && isNum(s.kickSeed) && (s.winner === null || s.winner === 0 || s.winner === 1 || s.winner === 'draw') && isNum(s.seed);
 }
 

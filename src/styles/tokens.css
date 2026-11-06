@@ -1079,6 +1079,11 @@ details.year[open] > summary::before { content: "▾ "; }
 .game-opts { display: flex; flex-direction: column; gap: var(--s-sm); }
 .game-opt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs) var(--s-md); }
 .game-opt > .muted { width: 5em; }
+/* 폰 누르기 목표(리뷰 #8) — 설정·방 화면의 고르기 칸과 방 칩을 40px 이상으로(antd 기본 28px·칩 34px). */
+@media (max-width: 699px) {
+  .game-opts .ant-segmented-item-label, .game-opt .ant-segmented-item-label { min-height: 40px; line-height: 40px; }
+  .game-board .game-chip, .game-botrow .game-chip { min-height: 40px; }
+}
 /* 고르기 줄이 화면보다 길면 줄을 바꾼다(2026-11-07 3단계 — 2D 게임이 다섯이 되어 방장 폰 화면의 게임 종류가 390px 를 넘었다). */
 .game-opt .ant-segmented { max-width: 100%; }
 .game-opt .ant-segmented-group { flex-wrap: wrap; }
@@ -1351,7 +1356,7 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
   text-align: center; text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
 @media (max-width: 520px) { .p3-hint { left: var(--s-sm); right: 128px; text-align: left; bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 4px); } }
 /* 훈련장 — 위 줄은 폰에선 ✕·♪ 줄 아래로, 시점 버튼은 [공 모으기] 아래로 */
-@media (max-width: 520px) { .f3-hud { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 48px); } }
+@media (max-width: 520px) { .f3-hud { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 48px); max-width: calc(100vw - 216px); text-align: center; } }   /* 폭은 오른쪽 [공 모으기](88px + 여백) 양쪽만큼 빼서 — 골이 세 자리가 돼도 닿지 않게(리뷰 #9) */
 .g3-view.is-below-acts { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 96px); }
 .g3-goal b.f3-start { font-size: var(--fs-pixel-md); white-space: nowrap; }
 /* 훈련장 "골!" — 경기의 골 문구보다 작고 높이(골이 자주 나서 화면을 덮지 않게, 2D 훈련장의 작은 "골!"과 같은 뜻) */
