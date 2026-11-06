@@ -69,11 +69,11 @@ test('parseMsg — 종류마다 받는다', () => {
   const cfg = cfgOf(), st = createMatch(cfg, 5);
   const room = createRoom('ABCD', { clientId: 'h', num: 1, name: '방장' });
   const good = [
-    { t: 'hello', from: 'a', num: 3, name: '가' }, { t: 'deny', to: 'a', reason: 'full' },
-    { t: 'room', room, roster: [1, 2, 3] }, { t: 'pick', from: 'a', num: 3, name: '가' },
-    { t: 'start', config: cfg, seed: 123 }, { t: 'in', from: 'a', seq: 4, i: 65 },
-    { t: 'snap', tick: 6, state: st, inputs: [0, 1, 2, 65], paused: false }, { t: 'stop' },
-    { t: 'say', from: 'a', id: 2, k: 5 }, { t: 'ping', from: 'a', at: 12.5 }, { t: 'pong', to: 'a', at: 12.5 }, { t: 'bye', from: 'a' },
+    { t: 'hello', from: 'a', num: 3, name: '가' }, { t: 'deny', from: 'h', to: 'a', reason: 'full' },
+    { t: 'room', from: 'h', sid: 's1', room, roster: [1, 2, 3] }, { t: 'pick', from: 'a', num: 3, name: '가' },
+    { t: 'start', from: 'h', config: cfg, seed: 123 }, { t: 'in', from: 'a', seq: 4, i: 65 },
+    { t: 'snap', from: 'h', seed: 123, tick: 6, state: st, inputs: [0, 1, 2, 65], paused: false }, { t: 'stop', from: 'h', seed: 123 },
+    { t: 'say', from: 'a', id: 2, k: 5 }, { t: 'ping', from: 'a', at: 12.5 }, { t: 'pong', from: 'h', to: 'a', at: 12.5 }, { t: 'bye', from: 'a' },
   ];
   for (const m of good) assert.deepEqual(parseMsg(JSON.parse(JSON.stringify(m))), m, m.t);
 });
@@ -85,19 +85,24 @@ test('parseMsg — 틀린 모양은 null', () => {
     null, undefined, 3, 'x', [], [{ t: 'stop' }], {}, { t: 5 }, { t: 'nope' },
     { t: 'hello', from: 'a', num: 3 }, { t: 'hello', from: 3, num: 3, name: 'x' }, { t: 'hello', from: 'a', num: '3', name: 'x' },
     { t: 'hello', from: 'a', num: -1, name: 'x' }, { t: 'hello', from: 'a', num: 1, name: 'x'.repeat(100) }, { t: 'hello', from: '', num: 1, name: 'x' },
-    { t: 'deny', to: 'a', reason: 'bored' }, { t: 'deny', reason: 'full' },
-    { t: 'room', room: { ...room, code: 'AB0D' }, roster: [] }, { t: 'room', room, roster: 'x' }, { t: 'room', room, roster: Array(500).fill(1) },
-    { t: 'room', room: { ...room, members: Array(40).fill(room.members[0]) }, roster: [] },
-    { t: 'room', room: { ...room, phase: 'x' }, roster: [] }, { t: 'room', room: { ...room, settings: { perSide: 9, minutes: 3, scoreLimit: 0 } }, roster: [] },
-    { t: 'start', config: { ...cfg, players: cfg.players.slice(1) }, seed: 1 }, { t: 'start', config: cfg },
-    { t: 'start', config: { ...cfg, players: cfg.players.map((p) => ({ ...p, perf: { maxSpeed: 'a' } })) }, seed: 1 },
+    { t: 'deny', from: 'h', to: 'a', reason: 'bored' }, { t: 'deny', reason: 'full' },
+    { t: 'room', from: 'h', sid: 's', room: { ...room, code: 'AB0D' }, roster: [] }, { t: 'room', from: 'h', sid: 's', room, roster: 'x' }, { t: 'room', from: 'h', sid: 's', room, roster: Array(500).fill(1) },
+    { t: 'room', from: 'h', sid: 's', room: { ...room, members: Array(40).fill(room.members[0]) }, roster: [] },
+    { t: 'room', from: 'h', sid: 's', room: { ...room, phase: 'x' }, roster: [] }, { t: 'room', from: 'h', sid: 's', room: { ...room, settings: { perSide: 9, minutes: 3, scoreLimit: 0 } }, roster: [] },
+    { t: 'start', from: 'h', config: { ...cfg, players: cfg.players.slice(1) }, seed: 1 }, { t: 'start', from: 'h', config: cfg },
+    { t: 'start', from: 'h', config: { ...cfg, players: cfg.players.map((p) => ({ ...p, perf: { maxSpeed: 'a' } })) }, seed: 1 },
     { t: 'in', from: 'a', seq: 1, i: 66 }, { t: 'in', from: 'a', seq: 1, i: 1.5 }, { t: 'in', from: 'a', i: 1 }, { t: 'in', from: 'a', seq: 1, i: '3' },
-    { t: 'snap', tick: 1, state: st, inputs: Array(50).fill(0), paused: false }, { t: 'snap', tick: 1, state: st, inputs: [70], paused: false },
-    { t: 'snap', tick: 1, state: st, inputs: [], paused: 'no' }, { t: 'snap', tick: 1, state: { ...st, phase: 'zz' }, inputs: [], paused: false },
-    { t: 'snap', tick: 1, state: { ...st, players: Array(40).fill(st.players[0]) }, inputs: [], paused: false },
-    { t: 'snap', tick: 1, state: { ...st, ball: { x: NaN, y: 0, vx: 0, vy: 0 } }, inputs: [], paused: false },
-    { t: 'snap', tick: -1, state: st, inputs: [], paused: false }, { t: 'snap', state: st, inputs: [], paused: false },
-    { t: 'say', from: 'a', id: 2, k: 6 }, { t: 'say', from: 'a', id: 99, k: 1 }, { t: 'ping', from: 'a', at: 'x' }, { t: 'pong', at: 1 }, { t: 'bye' },
+    { t: 'snap', from: 'h', seed: 1, tick: 1, state: st, inputs: Array(50).fill(0), paused: false }, { t: 'snap', from: 'h', seed: 1, tick: 1, state: st, inputs: [70], paused: false },
+    { t: 'snap', from: 'h', seed: 1, tick: 1, state: st, inputs: [], paused: 'no' }, { t: 'snap', from: 'h', seed: 1, tick: 1, state: { ...st, phase: 'zz' }, inputs: [], paused: false },
+    { t: 'snap', from: 'h', seed: 1, tick: 1, state: { ...st, players: Array(40).fill(st.players[0]) }, inputs: [], paused: false },
+    { t: 'snap', from: 'h', seed: 1, tick: 1, state: { ...st, ball: { x: NaN, y: 0, vx: 0, vy: 0 } }, inputs: [], paused: false },
+    { t: 'snap', from: 'h', seed: 1, tick: -1, state: st, inputs: [], paused: false }, { t: 'snap', from: 'h', seed: 1, state: st, inputs: [], paused: false },
+    // 2026-11-07: 방장이 보내는 것엔 from, room 엔 sid, snap·stop 엔 seed 가 있어야 한다
+    { t: 'deny', to: 'a', reason: 'full' }, { t: 'room', sid: 's', room, roster: [] }, { t: 'room', from: 'h', room, roster: [] },
+    { t: 'start', config: cfg, seed: 1 }, { t: 'snap', from: 'h', tick: 1, state: st, inputs: [], paused: false },
+    { t: 'snap', seed: 1, tick: 1, state: st, inputs: [], paused: false }, { t: 'stop' }, { t: 'stop', from: 'h' }, { t: 'stop', seed: 1 },
+    { t: 'pong', to: 'a', at: 1 },
+    { t: 'say', from: 'a', id: 2, k: 6 }, { t: 'say', from: 'a', id: 99, k: 1 }, { t: 'ping', from: 'a', at: 'x' }, { t: 'pong', from: 'h', at: 1 }, { t: 'bye' },
   ];
   for (const m of bad) assert.equal(parseMsg(m), null, JSON.stringify(m)?.slice(0, 80));
 });

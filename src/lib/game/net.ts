@@ -9,17 +9,20 @@ import { NO_INPUT, step } from './sim.ts';
 import type { RoomState } from './room.ts';
 import { MAX_MEMBERS, isRoomCode } from './room.ts';
 
+// 방장이 보내는 것(deny·room·start·snap·stop·pong)에도 from(= 방장 clientId)을 싣는다 — 손님은 처음 받은 방의 hostId 와 같은 from 만 믿는다.
+// room 의 sid = 방장 세션 고유값(방장 탭이 새로 열릴 때마다 새로). 방장이 새로고침하면 rev 가 0 부터라, sid 가 바뀌면 손님이 rev 비교를 새로 시작한다.
+// snap·stop 의 seed = 그 경기의 씨앗 — 손님이 놓친 start 뒤의 낡은 예측기를 알아보게(2026-11-07 리뷰).
 export type NetMsg =
   | { t: 'hello'; from: string; num: number; name: string }
-  | { t: 'deny'; to: string; reason: 'taken' | 'full' | 'closed' }
-  | { t: 'room'; room: RoomState; roster: number[] }
+  | { t: 'deny'; from: string; to: string; reason: 'taken' | 'full' | 'closed' }
+  | { t: 'room'; from: string; sid: string; room: RoomState; roster: number[] }
   | { t: 'pick'; from: string; num: number; name: string }
-  | { t: 'start'; config: MatchConfig; seed: number }
+  | { t: 'start'; from: string; config: MatchConfig; seed: number }
   | { t: 'in'; from: string; seq: number; i: number }
-  | { t: 'snap'; tick: number; state: MatchState; inputs: number[]; paused: boolean }
-  | { t: 'stop' }
+  | { t: 'snap'; from: string; seed: number; tick: number; state: MatchState; inputs: number[]; paused: boolean }
+  | { t: 'stop'; from: string; seed: number }
   | { t: 'say'; from: string; id: number; k: number }
-  | { t: 'ping'; from: string; at: number } | { t: 'pong'; to: string; at: number }
+  | { t: 'ping'; from: string; at: number } | { t: 'pong'; from: string; to: string; at: number }
   | { t: 'bye'; from: string };
 
 // ═══════════════════════════ 입력 양자화 ═══════════════════════════
@@ -130,21 +133,21 @@ export function parseMsg(raw: unknown): NetMsg | null {
     case 'hello': case 'pick':
       return isStr(m.from) && isInt(m.num, 0) && isName(m.name) ? (raw as NetMsg) : null;
     case 'deny':
-      return isStr(m.to) && (m.reason === 'taken' || m.reason === 'full' || m.reason === 'closed') ? (raw as NetMsg) : null;
+      return isStr(m.from) && isStr(m.to) && (m.reason === 'taken' || m.reason === 'full' || m.reason === 'closed') ? (raw as NetMsg) : null;
     case 'room':
-      return okRoom(m.room) && isArr(m.roster, MAX_ROSTER) && m.roster.every((n) => isInt(n, 0)) ? (raw as NetMsg) : null;
+      return isStr(m.from) && isStr(m.sid) && okRoom(m.room) && isArr(m.roster, MAX_ROSTER) && m.roster.every((n) => isInt(n, 0)) ? (raw as NetMsg) : null;
     case 'start':
-      return okConfig(m.config) && isNum(m.seed) ? (raw as NetMsg) : null;
+      return isStr(m.from) && okConfig(m.config) && isNum(m.seed) ? (raw as NetMsg) : null;
     case 'in':
       return isStr(m.from) && isInt(m.seq, 0) && isInt(m.i, 0, Q_COUNT - 1) ? (raw as NetMsg) : null;
     case 'snap':
-      return isInt(m.tick, 0) && okState(m.state) && isArr(m.inputs, MAX_PLAYERS) && m.inputs.every((q) => isInt(q, 0, Q_COUNT - 1))
+      return isStr(m.from) && isNum(m.seed) && isInt(m.tick, 0) && okState(m.state) && isArr(m.inputs, MAX_PLAYERS) && m.inputs.every((q) => isInt(q, 0, Q_COUNT - 1))
         && typeof m.paused === 'boolean' ? (raw as NetMsg) : null;
-    case 'stop': return raw as NetMsg;
+    case 'stop': return isStr(m.from) && isNum(m.seed) ? (raw as NetMsg) : null;
     case 'say':
       return isStr(m.from) && isInt(m.id, 0, MAX_PLAYERS - 1) && isInt(m.k, 0, PHRASES.length - 1) ? (raw as NetMsg) : null;
     case 'ping': return isStr(m.from) && isNum(m.at) ? (raw as NetMsg) : null;
-    case 'pong': return isStr(m.to) && isNum(m.at) ? (raw as NetMsg) : null;
+    case 'pong': return isStr(m.from) && isStr(m.to) && isNum(m.at) ? (raw as NetMsg) : null;
     case 'bye': return isStr(m.from) ? (raw as NetMsg) : null;
     default: return null;
   }

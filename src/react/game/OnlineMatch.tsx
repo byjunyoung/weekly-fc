@@ -122,8 +122,8 @@ export function OnlineMatch({ session, view, roster, readOverride, onLeaveRoom }
         </div>
       )}
       {!result && !playing && <div className="game-watch" role="status">구경 중</div>}
-      {!result && (view.paused || conn) && (
-        <div className="game-banner" role="status">{conn ?? '방장이 잠깐 자리를 비웠습니다'}</div>
+      {!result && (conn || view.paused || view.hostSlow) && (
+        <div className="game-banner" role="status">{conn ?? (view.paused ? '방장이 잠깐 자리를 비웠습니다' : '방장 응답을 기다리는 중…')}</div>
       )}
       <div className="game-stick" ref={baseRef} aria-hidden="true"><div className="game-stick-knob" ref={knobRef} /></div>
       <button type="button" ref={kickRef} className={`game-kick${touch && playing && !result ? ' is-shown' : ''}`} aria-label="킥">킥</button>

@@ -41,7 +41,7 @@ test('입장 답(ok) 뒤에야 open — 그 전에 보낸 건 버리되 마지�
   assert.equal(b.length, 1, 'ping 은 버리고 hello 하나');
   assert.deepEqual(b[0].payload, { type: 'broadcast', event: 'm', payload: { t: 'hello', from: 'a', num: 2, name: 'y' } });
   ws.recv({ topic: T, event: 'broadcast', payload: { type: 'broadcast', event: 'm', payload: { t: 'stop' } } });
-  ws.recv({ topic: T, event: 'broadcast', payload: { type: 'broadcast', event: 'other', payload: { t: 'stop' } } });
+  ws.recv({ topic: T, event: 'broadcast', payload: { type: 'broadcast', event: 'other', payload: { t: 'stop' } } });   // 길은 모양을 안 본다 — 세션이 parseMsg
   ws.recv({ topic: 'realtime:game:ZZZZ', event: 'broadcast', payload: { type: 'broadcast', event: 'm', payload: { t: 'x' } } });
   ws.onmessage?.({ data: 'not json' });
   assert.deepEqual(got, [{ t: 'stop' }]);
@@ -66,8 +66,10 @@ test('끊기면 다시 붙고 다시 입장한다, 입장 거절은 closed 로 �
   ws2.open();
   ws2.recv({ topic: T, event: 'phx_reply', ref: ws2.joinRef(), payload: { status: 'ok' } });
   assert.equal(st.at(-1), 'open');
-  ws2.close();   // 서버가 끊음
+  ws2.close();   // 입장 직후 끊김 — 5초를 못 버텼으니 재시도 간격은 처음(1초)으로 안 돌아간다
   assert.equal(st.at(-1), 'connecting');
+  await new Promise((r) => setTimeout(r, 1100));
+  assert.equal(FakeWS.all.length, 2, '1초 만에 다시 두드리지 않는다(2초 뒤)');
   tr.close();
   await new Promise((r) => setTimeout(r, 1100));
   assert.equal(FakeWS.all.length, 2, 'close 뒤 재접속 없음');

@@ -28,16 +28,22 @@ function world({ delayMs = 30, n = 12, guests = 2 } = {}) {
     return g;
   };
   for (let i = 1; i <= guests; i++) addGuest(who(i));
-  const run = (ms) => {
+  // 엿듣는 끝점 — 방장이 보낸 것을 모은다(sid·seed 를 알아내고 답 수를 센다).
+  const spy = hub.endpoint();
+  const heard = [];
+  spy.onMessage((m) => heard.push(m));
+  const state = { host };
+  /** frozen = 이 동안 advance 를 부르지 않는 손님 번호들(폰이 탭을 얼린 흉내). */
+  const run = (ms, { frozen = [] } = {}) => {
     const end = clock.t + ms;
     while (clock.t < end) {
       clock.t = Math.min(end, clock.t + STEP_MS);
       hub.pump(clock.t);
-      host.advance();
-      for (const g of gs) g.advance();
+      state.host.advance();
+      gs.forEach((g, i) => { if (!frozen.includes(i)) g.advance(); });
     }
   };
-  return { clock, hub, host, hostEp, gs, gEps, addGuest, run, R };
+  return { clock, hub, host, hostEp, gs, gEps, addGuest, run, R, spy, heard, state, now };
 }
 const inRoom = (room, cid) => !!room?.members.some((m) => m.clientId === cid);
 
@@ -137,9 +143,10 @@ test('낮은 rev 의 방 상태와 옛 스냅샷은 버린다', () => {
   w.run(500);
   const g = w.gs[0];
   const rev = g.getRoom().rev, tick = g.getBase().tick;
-  const fake = w.hub.endpoint();
-  fake.send({ t: 'room', room: { ...w.host.getRoom(), rev: rev - 1, members: [] }, roster: [] });
-  fake.send({ t: 'snap', tick: 1, state: { ...createMatch(w.host.getConfig(), 1), tick: 1 }, inputs: [], paused: false });
+  const sid = w.heard.find((m) => m.t === 'room').sid, seed = w.heard.find((m) => m.t === 'start').seed;
+  const fake = w.hub.endpoint();   // 방장 말투(from·sid·seed 가 진짜와 같음)로 옛것을 보낸다
+  fake.send({ t: 'room', from: 'c0', sid, room: { ...w.host.getRoom(), rev: rev - 1, members: [] }, roster: [] });
+  fake.send({ t: 'snap', from: 'c0', seed, tick: 1, state: { ...createMatch(w.host.getConfig(), 1), tick: 1 }, inputs: [], paused: false });
   w.hub.pump(w.clock.t + 1000);
   assert.equal(g.getRoom().rev, rev);
   assert.ok(g.getBase().tick >= tick, '옛 스냅샷으로 되돌아가지 않는다');
@@ -176,11 +183,13 @@ test('경기 중 조용해진 손님 자리는 봇이 맡고, 다시 말하면 �
   assert.equal(w.host.getSlots()[id].bot, false, '입력이 다시 오면 그 손님이 조종');
 });
 
-test('로비에서 조용해진 손님은 명단에서 빠지고, 다시 살아나면 스스로 다시 들어온다', () => {
+test('로비에서 30초 조용한 손님은 명단에서 빠지고(2026-11-07: 4초 → 30초, 앱 전환에 쫓겨나서), 다시 살아나면 스스로 다시 들어온다', () => {
   const w = world();
   w.run(1500);
   w.gEps[1].mute(true);
-  w.run(4600);
+  w.run(10000);
+  assert.ok(inRoom(w.host.getRoom(), 'c2'), '10초는 아직 남는다');
+  w.run(21000);
   assert.ok(!inRoom(w.host.getRoom(), 'c2'));
   assert.ok(inRoom(w.host.getRoom(), 'c1'), '말하는 손님(ping)은 남는다');
   w.gEps[1].mute(false);
@@ -188,11 +197,13 @@ test('로비에서 조용해진 손님은 명단에서 빠지고, 다시 살아�
   assert.ok(inRoom(w.host.getRoom(), 'c2'), '빠진 걸 보고 hello 를 다시 보냈다');
 });
 
-test('방장이 조용해지면 손님은 "방장과 연결이 끊겼습니다"', () => {
+test('로비에서 방장이 30초 조용하면 손님은 "방장과 연결이 끊겼습니다"(2026-11-07: 4초 → 30초)', () => {
   const w = world();
   w.run(1500);
   w.hostEp.mute(true);
   w.run(4600);
+  for (const g of w.gs) { assert.equal(g.getView().stage, 'lobby'); assert.equal(g.getView().hostSlow, true, '띠만'); }
+  w.run(26000);
   for (const g of w.gs) {
     assert.equal(g.getView().stage, 'ended');
     assert.equal(g.getView().endedWhy, '방장과 연결이 끊겼습니다');
@@ -354,4 +365,224 @@ test('입력은 바뀔 때만 + 0.5초마다 — 같은 입력이면 초당 2번
   const s1 = w.gEps[0].sentByType.in;
   assert.ok(s1 > s0 + idle, '바뀌면 바로');
   assert.equal(encodeInput(q) > 32, true);
+});
+
+// ───────────────────────── 2026-11-07 리뷰 뒤 ─────────────────────────
+test('혼자 있는 방장은 10초 동안 room 을 안 보낸다 — 들어오는 hello 엔 답한다', () => {
+  const w = world({ guests: 0 });
+  w.run(500);
+  const r0 = w.hostEp.sentByType.room ?? 0;
+  w.run(10000);
+  assert.equal((w.hostEp.sentByType.room ?? 0) - r0, 0);
+  const g = w.addGuest(who(1));
+  w.run(1500);
+  assert.equal(g.getView().stage, 'lobby');
+});
+
+test('가려진 방장 3분 → 경기를 접고(stop) 그 뒤로 조용하다, 남은 손님은 30초 뒤 스스로 나온다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.move('c1', 0);
+  w.run(100);
+  w.host.start();
+  w.run(1000);
+  w.host.setHidden(true);
+  w.run(181000);
+  assert.equal(w.host.getView().stage, 'lobby');
+  assert.ok(w.heard.some((m) => m.t === 'stop'));
+  assert.equal(w.gs[0].getView().stage, 'lobby', '손님은 stop 을 받고 방으로');
+  const s0 = w.hostEp.sent;
+  w.run(10000);
+  assert.equal(w.hostEp.sent - s0, 0, '잠든 방장은 주기 방송도 pong 도 안 보낸다');
+  w.run(21000);
+  assert.equal(w.gs[0].getView().stage, 'ended');
+  w.host.setHidden(false);
+  w.run(2000);
+  assert.ok(w.hostEp.sent > s0, '돌아오면 다시 보낸다(hello 답 등)');
+});
+
+test('가려진 방장의 로비 room 은 5초마다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.setHidden(true);
+  const r0 = w.hostEp.sentByType.room;
+  w.run(20000);
+  const n = w.hostEp.sentByType.room - r0;
+  assert.ok(n >= 3 && n <= 5, `20초에 ${n}건`);
+});
+
+test('손님 탭이 5초 얼었다 돌아와도 쫓겨나지 않는다(로비·경기)', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.gs[0].setHidden(true); w.gEps[0].mute(true);
+  w.run(5000, { frozen: [0] });
+  w.gs[0].setHidden(false); w.gEps[0].mute(false);
+  w.run(2000);
+  assert.equal(w.gs[0].getView().stage, 'lobby');
+  assert.ok(inRoom(w.host.getRoom(), 'c1'));
+  w.host.move('c1', 0);
+  w.run(100);
+  w.host.start();
+  w.run(500);
+  const id = w.gs[0].getPredictor().myId;
+  w.gs[0].setHidden(true); w.gEps[0].mute(true);
+  w.run(5000, { frozen: [0] });
+  assert.equal(w.host.getSlots()[id].bot, true, '없는 동안은 봇');
+  w.gs[0].setHidden(false); w.gEps[0].mute(false);
+  w.gs[0].setInputReader(() => ({ x: 1, y: 0, kick: false }));
+  w.run(1000);
+  assert.equal(w.gs[0].getView().stage, 'match');
+  assert.equal(w.host.getSlots()[id].bot, false, '돌아오면 다시 내 자리');
+});
+
+test('가려진 손님은 in·ping 을 안 보낸다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.move('c1', 0);
+  w.run(100);
+  w.host.start();
+  w.run(500);
+  w.gs[0].setHidden(true);
+  const a = { ...w.gEps[0].sentByType };
+  w.run(5000);
+  assert.equal((w.gEps[0].sentByType.in ?? 0) - (a.in ?? 0), 0);
+  assert.equal((w.gEps[0].sentByType.ping ?? 0) - (a.ping ?? 0), 0);
+});
+
+test('경기 중 방장이 10초 조용해도 손님은 남고 띠만, 21초면 끝난다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.start();
+  w.run(500);
+  w.hostEp.mute(true);
+  w.run(10000);
+  assert.equal(w.gs[0].getView().stage, 'match');
+  assert.equal(w.gs[0].getView().hostSlow, true);
+  w.run(11000);
+  assert.equal(w.gs[0].getView().stage, 'ended');
+  assert.equal(w.gs[0].getView().endedWhy, '방장과 연결이 끊겼습니다');
+});
+
+test('다른 seed 의 snap → 예측기를 버리고 hello, 방장이 start 를 다시 줘 따라잡는다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.start();
+  w.run(500);
+  const seed = w.heard.find((m) => m.t === 'start').seed;
+  const g = w.gs[0];
+  const fake = w.hub.endpoint();
+  fake.send({ t: 'snap', from: 'c0', seed: seed + 1, tick: 99999, state: { ...w.host.getState(), tick: 99999 }, inputs: [], paused: false });
+  const h0 = w.gEps[0].sentByType.hello ?? 0;
+  w.hub.pump(w.clock.t + 100);
+  assert.equal(g.getPredictor(), null, '낡은 예측기를 버렸다');
+  assert.equal((w.gEps[0].sentByType.hello ?? 0) - h0, 1, 'hello 를 다시');
+  w.run(500);
+  assert.ok(g.getPredictor(), '방장의 start 로 다시');
+  assert.equal(g.getView().stage, 'match');
+  assert.ok(Math.abs(g.getBase().tick - w.host.getState().tick) < 15);
+});
+
+test('hostId 가 아닌 from 의 room·snap·stop·bye 는 무시한다', () => {
+  const w = world();
+  w.run(1500);
+  w.host.start();
+  w.run(500);
+  const g = w.gs[0];
+  const rev = g.getRoom().rev, seed = w.heard.find((m) => m.t === 'start').seed, sid = w.heard.find((m) => m.t === 'room').sid;
+  const fake = w.hub.endpoint();
+  fake.send({ t: 'room', from: 'c2', sid, room: { ...w.host.getRoom(), hostId: 'c2', rev: rev + 10, members: [] }, roster: [] });
+  fake.send({ t: 'room', from: 'c2', sid, room: { ...w.host.getRoom(), rev: rev + 10, members: [] }, roster: [] });
+  fake.send({ t: 'snap', from: 'c2', seed, tick: 99999, state: { ...w.host.getState(), tick: 99999 }, inputs: [], paused: true });
+  fake.send({ t: 'stop', from: 'c2', seed });
+  fake.send({ t: 'bye', from: 'c2' });
+  w.hub.pump(w.clock.t + 100);
+  assert.ok(g.getRoom().rev < rev + 10);
+  assert.ok(g.getBase().tick < 99999);
+  assert.equal(g.getView().stage, 'match');
+  assert.equal(g.getView().paused, false);
+});
+
+test('선수 수가 다른 snap 은 버리고 예외 없이 그린다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.start();
+  w.run(500);
+  const g = w.gs[0];
+  const seed = w.heard.find((m) => m.t === 'start').seed;
+  const st = w.host.getState();
+  const tick = g.getBase().tick;
+  const fake = w.hub.endpoint();
+  fake.send({ t: 'snap', from: 'c0', seed, tick: 99999, state: { ...st, tick: 99999, players: st.players.slice(1) }, inputs: [], paused: false });
+  fake.send({ t: 'snap', from: 'c0', seed, tick: 99998, state: { ...st, tick: 99998, lastScorer: 7 }, inputs: [], paused: false });
+  w.hub.pump(w.clock.t + 100);
+  assert.equal(g.getBase().tick, tick);
+  assert.doesNotThrow(() => { w.run(300); g.frame(); });
+  assert.ok(g.getBase().tick > tick, '진짜 스냅샷은 계속 받는다');
+});
+
+test('떨리는 입력(매 틱 q 가 바뀜)에도 손님 전송은 초당 21건 이하', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.move('c1', 0);
+  w.run(100);
+  w.host.start();
+  let k = 0;
+  w.gs[0].setInputReader(() => { k++; return k % 2 ? { x: 1, y: 0, kick: false } : { x: 0, y: 1, kick: false }; });
+  w.run(500);
+  const s0 = w.gEps[0].sent;
+  w.run(5000);
+  const rate = (w.gEps[0].sent - s0) / 5;
+  assert.ok(rate <= 21, `${rate}/초`);
+});
+
+test('방장 새로고침(sid 바뀜, rev 0) 뒤 bye 를 놓친 손님도 새 방을 받아들이고 다시 들어간다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.move('c1', 0); w.host.move('c0', 1);
+  w.run(300);
+  assert.ok(w.gs[0].getRoom().rev >= 3);
+  w.hostEp.close();   // 탭이 bye 없이 사라짐
+  const ep = w.hub.endpoint();
+  w.state.host = createHostSession({ transport: ep, roster: w.R, me: who(0), code: 'ABCD', now: w.now, rnd: rngFrom(99) });
+  w.run(3000);
+  assert.equal(w.gs[0].getView().stage, 'lobby');
+  assert.ok(inRoom(w.state.host.getRoom(), 'c1'), '새 방에 다시 들어갔다');
+  assert.deepEqual(w.gs[0].getRoom(), w.state.host.getRoom());
+});
+
+test('같은 clientId 의 연속 hello 는 900ms 안에 한 번만 답한다', () => {
+  const w = world({ guests: 0 });
+  w.run(500);
+  const fake = w.hub.endpoint();
+  const r0 = w.hostEp.sentByType.room ?? 0;
+  fake.send({ t: 'hello', from: 'c7', num: 107, name: '선수7' });
+  w.run(300);
+  fake.send({ t: 'hello', from: 'c7', num: 107, name: '선수7' });
+  w.run(300);
+  assert.equal((w.hostEp.sentByType.room ?? 0) - r0, 1);
+  fake.send({ t: 'hello', from: 'c7', num: 107, name: '선수7' });   // 900ms 뒤엔 다시 답한다
+  w.run(500);
+  assert.equal((w.hostEp.sentByType.room ?? 0) - r0, 2);
+});
+
+test('명단에 없는 선수의 hello·pick 은 무시한다(거절 사유를 지어내지 않음)', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  const fake = w.hub.endpoint();
+  fake.send({ t: 'hello', from: 'c8', num: 999, name: '유령' });
+  fake.send({ t: 'pick', from: 'c1', num: 999, name: '유령' });
+  w.run(300);
+  assert.ok(!inRoom(w.host.getRoom(), 'c8'));
+  assert.equal(w.host.getRoom().members.find((m) => m.clientId === 'c1').num, 101);
+  assert.equal(w.hostEp.sentByType.deny ?? 0, 0);
+});
+
+test('손님이 3분 못 들어가면 "방장을 찾지 못했습니다"', () => {
+  const w = world({ guests: 0 });
+  w.host.leave();
+  w.run(100);   // 방장이 떠나며 보낸 것은 먼저 지나가게
+  const g = w.addGuest(who(1));
+  w.run(181000);
+  assert.equal(g.getView().stage, 'ended');
+  assert.equal(g.getView().endedWhy, '방장을 찾지 못했습니다');
 });

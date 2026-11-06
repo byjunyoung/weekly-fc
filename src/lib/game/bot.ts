@@ -29,7 +29,7 @@ const OWN_THIRD = -200;
 // ═══════════════════════════════════════
 
 const R_SUM = PITCH.playerR + PITCH.ballR;
-const REACH = R_SUM + 6;   // 킥 닿는 거리(sim 의 KICK_REACH 8 보다 조금 안쪽 — 확실히 닿을 때만 누른다)
+const REACH = R_SUM + 6;   // 킥 닿는 거리(sim 의 KICK_REACH 6 과 같은 거리 — 닿을 때만 누른다)
 const HW = PITCH.w / 2, HH = PITCH.h / 2;
 
 /** (a, b) → -1..1. 정수 해시라 환경이 달라도 같다. */
@@ -72,7 +72,8 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
   let attackerId = -1, best = Infinity;
   for (const q of contenders) {
     const b = state.players[q.id];
-    const d2 = (b.x - ball.x) ** 2 + (b.y - ball.y) ** 2;
+    const dx = b.x - ball.x, dy = b.y - ball.y;
+    const d2 = dx * dx + dy * dy;
     if (d2 < best) { best = d2; attackerId = q.id; }
   }
 

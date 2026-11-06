@@ -12,6 +12,8 @@ import type { ConnStatus, Transport } from './transport.ts';
 const HEARTBEAT_MS = 25000;
 const JOIN_TIMEOUT_MS = 10000;
 const BACKOFF_MS = [1000, 2000, 4000, 8000, 10000];
+/** 입장 뒤 이만큼 버텨야 재시도 간격을 처음(1초)으로 돌린다 — 입장 직후 끊기기를 반복할 때 1초마다 두드리지 않게(2026-11-07 리뷰). */
+const STABLE_MS = 5000;
 
 type Frame = { topic?: unknown; event?: unknown; payload?: unknown; ref?: unknown };
 
@@ -39,6 +41,7 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
   let hbTimer: ReturnType<typeof setInterval> | undefined;
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let joinTimer: ReturnType<typeof setTimeout> | undefined;
+  let stableTimer: ReturnType<typeof setTimeout> | undefined;
   /** 열리기 전에 보낸 hello 는 마지막 하나만 들고 있다가 입장하자마자 보낸다 — 들어가는 첫 말이라 놓치면 1초를 더 기다린다.
    *  다른 메시지는 버린다(방 상태·스냅샷·입력은 어차피 곧 다시 보낸다). */
   let pendingHello: NetMsg | null = null;
@@ -55,7 +58,8 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
   const clearTimers = (): void => {
     if (hbTimer) clearInterval(hbTimer);
     if (joinTimer) clearTimeout(joinTimer);
-    hbTimer = undefined; joinTimer = undefined;
+    if (stableTimer) clearTimeout(stableTimer);
+    hbTimer = undefined; joinTimer = undefined; stableTimer = undefined;
   };
 
   const scheduleRetry = (): void => {
@@ -90,7 +94,8 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
       if (f.ref === joinRef && f.topic === topic) {
         if (joinTimer) { clearTimeout(joinTimer); joinTimer = undefined; }
         if (p && p.status === 'ok') {
-          attempt = 0;
+          if (stableTimer) clearTimeout(stableTimer);
+          stableTimer = setTimeout(() => { stableTimer = undefined; attempt = 0; }, STABLE_MS);
           setStatus('open');
           if (pendingHello) { const h = pendingHello; pendingHello = null; api.send(h); }
         } else {

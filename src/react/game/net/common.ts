@@ -24,8 +24,24 @@ export const ROOM_EVERY_MS = 1000;
 export const HELLO_EVERY_MS = 1000;
 export const PING_EVERY_MS = 2000;
 export const KEEPALIVE_MS = 500;
-/** 이만큼 아무 말이 없으면 나간 것으로 친다(경기 중이면 그 자리를 봇이 맡는다). */
+/** 경기 중 손님이 이만큼 조용하면 그 자리를 봇이 맡는다(말이 다시 오면 돌려준다). */
 export const SILENCE_MS = 4000;
+// 2026-11-07 리뷰: 폰에서 앱을 잠깐 바꾸면(카톡으로 링크 보내러 나갔다 오기 — 기본 흐름이다) 4초 한도로는 쫓겨났다. 내보내는 한도는 길게.
+/** 로비에서 손님이 이만큼 조용하면 명단에서 뺀다. */
+export const LOBBY_SILENCE_MS = 30000;
+/** 손님이 방장을 포기하는 침묵 — 로비 30초, 경기 중 20초. 3초가 넘으면 안내 띠만 띄운다. */
+export const HOST_SILENCE_LOBBY_MS = 30000;
+export const HOST_SILENCE_MATCH_MS = 20000;
+export const HOST_SLOW_MS = 3000;
+// 무료 메시지 한도는 프로젝트 전체가 나눠 쓴다 — 잊힌 탭이 끝없이 보내지 않게.
+/** 방장 탭이 이만큼 가려져 있으면 경기를 접고 주기 방송을 멈춘다. 손님도 이만큼 못 들어가거나 방장이 멈춰 있으면 나온다. */
+export const GIVE_UP_MS = 180000;
+/** 가려진 방장의 로비 방 상태 주기. */
+export const HIDDEN_ROOM_EVERY_MS = 5000;
+/** 같은 clientId 의 hello 는 이 안에 다시 오면 무시한다(hello 하나에 room·start·snap 세 건이 나간다). */
+export const HELLO_DEDUPE_MS = 900;
+/** 입력이 바뀌어도 마지막 전송에서 이만큼은 띄운다(킥 여부가 바뀐 경우는 바로). 떨리는 스틱이 초당 60건을 보내지 않게. */
+export const IN_MIN_GAP_MS = 50;
 /** 방장 화면이 가려진 동안 "멈춤" 스냅샷을 보내는 간격. */
 export const PAUSED_SNAP_MS = 1000;
 /** 경기가 끝나고 결과를 보여 주는 시간 — 그 뒤 모두 방으로. */
@@ -60,8 +76,10 @@ export type SessionView = {
   myId: number | null;
   /** 방장이 자리를 비워 경기가 멈췄나(손님 화면 안내). 방장 자신에겐 늘 false. */
   paused: boolean;
-  /** 방장과 연결이 4초 넘게 끊겼나(손님). */
+  /** 방장과 연결이 끊겨 끝났나(손님). */
   hostLost: boolean;
+  /** 방장이 3초 넘게 조용하다(손님) — "방장 응답을 기다리는 중…" 띠만. */
+  hostSlow: boolean;
   result: Result | null;
   /** 잠깐 띄울 안내(거절·시작 못 함 등). 없으면 null. */
   notice: string | null;

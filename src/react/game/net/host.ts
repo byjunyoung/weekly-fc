@@ -11,11 +11,11 @@ import { botInput } from '../../../lib/game/bot.ts';
 import type { NetMsg } from '../../../lib/game/net.ts';
 import { Q_IDLE, decodeInput, encodeInput, parseMsg } from '../../../lib/game/net.ts';
 import type { RoomSettings, RoomState, Team, Who } from '../../../lib/game/room.ts';
-import { autoBalance, buildMatch, createRoom, join, leave, move, pick, setPhase, setSettings } from '../../../lib/game/room.ts';
+import { autoBalance, buildMatch, createRoom, join, leave as leaveRoom, move, pick, setPhase, setSettings } from '../../../lib/game/room.ts';
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView } from './common.ts';
 import {
-  MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, SNAP_EVERY, STEP_MS,
+  GIVE_UP_MS, HELLO_DEDUPE_MS, HIDDEN_ROOM_EVERY_MS, LOBBY_SILENCE_MS, MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, SNAP_EVERY, STEP_MS,
   createStore, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import { lerpState } from './smooth.ts';
@@ -30,6 +30,8 @@ export type HostOptions = {
   now: () => number;
   /** 봇 뽑기·경기 씨앗용 난수(0..1). 기본 Math.random. */
   rnd?: () => number;
+  /** 방장 세션 고유값(room 메시지의 sid). 기본은 rnd 로 만든다 — 새로고침하면 바뀌어 손님이 rev 를 새로 센다. */
+  sid?: string;
 };
 
 export type HostSession = {
@@ -96,6 +98,11 @@ export function createHostSession(o: HostOptions): HostSession {
   let reader: (() => Input) | null = null;
   let lastAt = o.now();
   let lastRoomSent = -Infinity, lastSilence = -Infinity, lastSay = -Infinity;
+  /** 가려지기 시작한 때. 3분이 넘으면 경기를 접고 주기 방송을 멈춘다(dormant) — 돌아오면 다시. */
+  let hiddenSince: number | null = null, dormant = false;
+  const sid = o.sid ?? `${Math.floor(rnd() * 0x100000000).toString(36)}${Math.floor(rnd() * 0x100000000).toString(36)}`;
+  const inRoster = new Set(o.roster.map((p) => p.num));
+  const lastHelloAt = new Map<string, number>();
   let bubbles: Bubble[] = [];
   /** 손님별 마지막으로 들은 때·받은 입력·입력 번호. 침묵 판정과 "그 자리를 봇이 맡나"가 이 값의 함수다(상태 기계를 따로 두지 않는다). */
   const lastSeen = new Map<string, number>();
@@ -106,12 +113,12 @@ export function createHostSession(o: HostOptions): HostSession {
 
   const store = createStore<SessionView>({
     role: 'host', code: o.code, clientId: me.clientId, room, conn, stage: 'lobby', matchKey, config: null, myId: null,
-    paused: false, hostLost: false, result: null, notice: null, endedWhy: null, joinSlow: false,
+    paused: false, hostLost: false, hostSlow: false, result: null, notice: null, endedWhy: null, joinSlow: false,
   });
 
   const send = (m: NetMsg): void => { if (!closed) t.send(m); };
   const rosterNums = o.roster.map((p) => p.num).slice(0, 200);
-  const sendRoom = (now: number): void => { lastRoomSent = now; send({ t: 'room', room, roster: rosterNums }); };
+  const sendRoom = (now: number): void => { lastRoomSent = now; send({ t: 'room', from: me.clientId, sid, room, roster: rosterNums }); };
   const setRoom = (r: RoomState, now: number): void => {
     if (r === room) return;
     room = r;
@@ -121,9 +128,15 @@ export function createHostSession(o: HostOptions): HostSession {
   const mySlot = (): number | null => { if (!match) return null; const i = match.slots.indexOf(me.clientId); return i < 0 ? null : i; };
   const alive = (cid: string, now: number): boolean => { const s = lastSeen.get(cid); return s !== undefined && now - s <= SILENCE_MS; };
   const sendSnap = (m: Match, paused: boolean): void => {
-    send({ t: 'snap', tick: m.state.tick, state: m.state, inputs: m.qs, paused });
+    send({ t: 'snap', from: me.clientId, seed: m.seed, tick: m.state.tick, state: m.state, inputs: m.qs, paused });
   };
-  const sendStart = (m: Match): void => send({ t: 'start', config: m.config, seed: m.seed });
+  const sendStart = (m: Match): void => send({ t: 'start', from: me.clientId, config: m.config, seed: m.seed });
+  /** 손님이 방에서 빠질 때 — 손님별 기록도 같이 지운다(오래 열린 방에서 맵이 자라지 않게). */
+  const leave = (r: RoomState, cid: string): RoomState => {
+    lastSeen.delete(cid); lastQ.delete(cid); lastSeq.delete(cid); lastHelloAt.delete(cid);
+    return leaveRoom(r, cid);
+  };
+  const quietFor = (cid: string, now: number): number => now - (lastSeen.get(cid) ?? -Infinity);
 
   t.onStatus((s) => {
     conn = s;
@@ -141,8 +154,12 @@ export function createHostSession(o: HostOptions): HostSession {
     if ('from' in m && m.from === me.clientId) return;
     switch (m.t) {
       case 'hello': {
+        // 같은 clientId 의 hello 가 900ms 안에 또 오면 답하지 않는다(답 하나가 room·start·snap 세 건이다). 살아 있다는 건 받아 둔다.
+        if (now - (lastHelloAt.get(m.from) ?? -Infinity) < HELLO_DEDUPE_MS) { if (lastSeen.has(m.from)) lastSeen.set(m.from, now); return; }
+        lastHelloAt.set(m.from, now);
+        if (!inRoster.has(m.num)) return;   // 명단에 없는 선수 — 거절 사유를 지어내지 않고 무시
         const r = join(room, { clientId: m.from, num: m.num, name: m.name });
-        if (!r.ok) { send({ t: 'deny', to: m.from, reason: r.reason }); return; }
+        if (!r.ok) { send({ t: 'deny', from: me.clientId, to: m.from, reason: r.reason }); return; }
         lastSeen.set(m.from, now);
         lastSeq.delete(m.from);   // 새로고침한 탭은 입력 번호를 0 부터 다시 센다
         if (r.room !== room) setRoom(r.room, now); else sendRoom(now);   // 들어왔다는 답 — 바뀐 게 없어도 보낸다
@@ -153,10 +170,10 @@ export function createHostSession(o: HostOptions): HostSession {
       case 'pick': {
         if (!room.members.some((x) => x.clientId === m.from)) return;
         lastSeen.set(m.from, now);
-        if (room.phase !== 'lobby') return;
+        if (room.phase !== 'lobby' || !inRoster.has(m.num)) return;
         const r = pick(room, m.from, m.num, m.name);
         const mine = room.members.find((x) => x.clientId === m.from);
-        if (r === room && mine && mine.num !== m.num) { send({ t: 'deny', to: m.from, reason: 'taken' }); sendRoom(now); return; }
+        if (r === room && mine && mine.num !== m.num) { send({ t: 'deny', from: me.clientId, to: m.from, reason: 'taken' }); sendRoom(now); return; }
         setRoom(r, now);
         return;
       }
@@ -171,7 +188,7 @@ export function createHostSession(o: HostOptions): HostSession {
       case 'ping': {
         if (!room.members.some((x) => x.clientId === m.from)) return;
         lastSeen.set(m.from, now);
-        send({ t: 'pong', to: m.from, at: m.at });
+        if (!dormant) send({ t: 'pong', from: me.clientId, to: m.from, at: m.at });   // 잠든 방장은 답하지 않는다 — 남은 손님이 30초 뒤 스스로 나가게
         return;
       }
       case 'say': {
@@ -182,8 +199,8 @@ export function createHostSession(o: HostOptions): HostSession {
       }
       case 'bye': {
         // 로비면 명단에서 뺀다. 경기 중이면 그 자리를 봇이 맡는다(들은 때를 지우면 alive 가 거짓) — 명단 정리는 방으로 돌아갈 때.
-        lastSeen.delete(m.from);
         if (!match) setRoom(leave(room, m.from), now);
+        else lastSeen.delete(m.from);
         return;
       }
       default: return;   // room·start·snap·stop·deny·pong 은 방장이 보내는 것 — 누가 흉내 내도 무시
@@ -213,18 +230,19 @@ export function createHostSession(o: HostOptions): HostSession {
     lastSilence = now;
     if (match) return;   // 경기 중엔 빼지 않는다 — 자리는 alive() 가 봇에게 넘긴다
     let r = room;
-    for (const x of room.members) if (x.clientId !== me.clientId && !alive(x.clientId, now)) r = leave(r, x.clientId);
+    for (const x of room.members) if (x.clientId !== me.clientId && quietFor(x.clientId, now) > LOBBY_SILENCE_MS) r = leave(r, x.clientId);
     setRoom(r, now);
   };
 
   const backToLobby = (now: number): void => {
     if (!match) return;
+    const seed = match.seed;
     match = null;
     bubbles = [];
     let r = setPhase(room, 'lobby');
-    for (const x of r.members) if (x.clientId !== me.clientId && !alive(x.clientId, now)) r = leave(r, x.clientId);
+    for (const x of r.members) if (x.clientId !== me.clientId && quietFor(x.clientId, now) > LOBBY_SILENCE_MS) r = leave(r, x.clientId);
     setRoom(r, now);
-    send({ t: 'stop' });
+    send({ t: 'stop', from: me.clientId, seed });
     store.set({ stage: 'lobby', config: null, myId: null, result: null });
   };
 
@@ -238,12 +256,16 @@ export function createHostSession(o: HostOptions): HostSession {
       const dt = now - lastAt;
       lastAt = now;
       if (now - lastSilence >= 250) checkSilence(now);
-      if (now - lastRoomSent >= ROOM_EVERY_MS - SLACK_MS) sendRoom(now);
+      // 오래 가려진 탭(잊힌 탭) — 경기를 접고 주기 방송을 멈춘다. hello 에는 그래도 답한다.
+      if (hidden && hiddenSince !== null && !dormant && now - hiddenSince >= GIVE_UP_MS) { backToLobby(now); dormant = true; }
+      // 주기 방 상태: 혼자면 안 보낸다(들어오는 사람의 hello 엔 답이 간다), 가려진 동안은 5초마다, 잠들면 멈춘다.
+      const every = hidden ? HIDDEN_ROOM_EVERY_MS : ROOM_EVERY_MS;
+      if (!dormant && room.members.length > 1 && now - lastRoomSent >= every - SLACK_MS) sendRoom(now);
       const m = match;
       if (!m) return;
       if (m.endedAt !== null) { if (now - m.endedAt >= RESULT_MS) backToLobby(now); return; }
       if (hidden) {
-        if (now - m.lastPausedSnap >= PAUSED_SNAP_MS - SLACK_MS) { m.lastPausedSnap = now; sendSnap(m, true); }
+        if (!dormant && now - m.lastPausedSnap >= PAUSED_SNAP_MS - SLACK_MS) { m.lastPausedSnap = now; sendSnap(m, true); }
         return;
       }
       m.acc += Math.min(Math.max(0, dt), MAX_CATCHUP * STEP_MS);
@@ -258,7 +280,8 @@ export function createHostSession(o: HostOptions): HostSession {
       const now = o.now();
       lastAt = now;
       // 돌아옴 — 폰은 가려진 탭을 얼려 손님 소식을 못 들었을 수 있다. 모두 방금 들은 것으로 쳐서 한꺼번에 내보내지 않는다.
-      if (!h) for (const k of lastSeen.keys()) lastSeen.set(k, now);
+      hiddenSince = h ? now : null;
+      if (!h) { dormant = false; for (const k of lastSeen.keys()) lastSeen.set(k, now); }
       if (!match || match.endedAt !== null) return;
       if (h) { match.lastPausedSnap = now; sendSnap(match, true); return; }
       match.acc = 0;   // 밀린 시간을 따라잡지 않는다(1단계와 같다)

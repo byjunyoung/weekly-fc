@@ -93,6 +93,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
       </div>
       <div className="stack">
         {conn && <p className="game-conn" role="status">{conn}</p>}
+        {!conn && view.hostSlow && <p className="game-conn" role="status">방장 응답을 기다리는 중…</p>}
         {room.phase === 'match' && <p className="game-conn" role="status">경기가 진행 중입니다 — 곧 구경 화면이 열립니다</p>}
         <p className="muted game-hint" aria-live="polite">
           {editable ? (picked ? '옮길 칸을 누르세요 · 다시 누르면 취소' : '이름을 누르고 칸을 누르면 옮겨집니다 · 빈자리는 봇이 채웁니다')
