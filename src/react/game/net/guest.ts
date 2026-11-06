@@ -15,7 +15,7 @@ import type { RoomState, Who } from '../../../lib/game/room.ts';
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView, Stage } from './common.ts';
 import {
-  DENY_TEXT, HELLO_EVERY_MS, JOIN_SLOW_MS, KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, SAY_GAP_MS, SILENCE_MS, STEP_MS,
+  DENY_TEXT, HELLO_EVERY_MS, JOIN_SLOW_MS, KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, STEP_MS,
   createStore, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import type { Offsets } from './smooth.ts';
@@ -226,16 +226,16 @@ export function createGuestSession(o: GuestOptions): GuestSession {
       lastAt = now;
       offsets = decay(offsets, dt);
       if (stage === 'joining') {
-        if (conn === 'open' && now - lastHello >= HELLO_EVERY_MS) hello(now);
+        if (conn === 'open' && now - lastHello >= HELLO_EVERY_MS - SLACK_MS) hello(now);
         if (now - joinStartAt >= JOIN_SLOW_MS) store.set({ joinSlow: true });
         return;
       }
       if (stage === 'ended') return;
       if (conn !== 'open') { lastHostAt = now; return; }   // 내 쪽 길이 끊긴 동안은 방장 침묵으로 치지 않는다(다시 붙는 중 안내만)
       if (now - lastHostAt > SILENCE_MS) { end(LOST); return; }
-      if (now - lastPing >= PING_EVERY_MS) { lastPing = now; send({ t: 'ping', from: me.clientId, at: now }); }
+      if (now - lastPing >= PING_EVERY_MS - SLACK_MS) { lastPing = now; send({ t: 'ping', from: me.clientId, at: now }); }
       // 방은 경기 중인데 경기 설정을 못 받았다(놓쳤다) — hello 를 다시 보내면 방장이 start 를 다시 보낸다.
-      if (room?.phase === 'match' && !pred && now - lastHello >= HELLO_EVERY_MS) hello(now);
+      if (room?.phase === 'match' && !pred && now - lastHello >= HELLO_EVERY_MS - SLACK_MS) hello(now);
       const p0 = pred;
       if (!p0 || stage !== 'match') return;
       const playing = p0.myId !== null;
@@ -251,7 +251,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
       if (n === MAX_CATCHUP) acc = 0;
       pred = p;
       // 입력은 바뀔 때만 + 0.5초마다 살아 있음 알림(스펙 §2.4). 한 번 부를 때 많아야 하나.
-      if (playing && n > 0 && (q !== lastSentQ || now - lastInAt >= KEEPALIVE_MS)) {
+      if (playing && n > 0 && (q !== lastSentQ || now - lastInAt >= KEEPALIVE_MS - SLACK_MS)) {
         lastSentQ = q; lastInAt = now;
         send({ t: 'in', from: me.clientId, seq: seq++, i: q });
       }

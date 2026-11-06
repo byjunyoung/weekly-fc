@@ -15,7 +15,7 @@ import { autoBalance, buildMatch, createRoom, join, leave, move, pick, setPhase,
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView } from './common.ts';
 import {
-  MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SNAP_EVERY, STEP_MS,
+  MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, SNAP_EVERY, STEP_MS,
   createStore, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import { lerpState } from './smooth.ts';
@@ -238,12 +238,12 @@ export function createHostSession(o: HostOptions): HostSession {
       const dt = now - lastAt;
       lastAt = now;
       if (now - lastSilence >= 250) checkSilence(now);
-      if (now - lastRoomSent >= ROOM_EVERY_MS) sendRoom(now);
+      if (now - lastRoomSent >= ROOM_EVERY_MS - SLACK_MS) sendRoom(now);
       const m = match;
       if (!m) return;
       if (m.endedAt !== null) { if (now - m.endedAt >= RESULT_MS) backToLobby(now); return; }
       if (hidden) {
-        if (now - m.lastPausedSnap >= PAUSED_SNAP_MS) { m.lastPausedSnap = now; sendSnap(m, true); }
+        if (now - m.lastPausedSnap >= PAUSED_SNAP_MS - SLACK_MS) { m.lastPausedSnap = now; sendSnap(m, true); }
         return;
       }
       m.acc += Math.min(Math.max(0, dt), MAX_CATCHUP * STEP_MS);

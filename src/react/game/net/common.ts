@@ -36,6 +36,10 @@ export const BUBBLE_MS = 2000;
 /** 손님이 방장을 이만큼 못 찾으면 "방장을 찾는 중" 안내를 띄운다(그래도 계속 찾는다). */
 export const JOIN_SLOW_MS = 5000;
 
+/** 주기 비교의 여유(ms). 가려진 탭의 interval 은 ~1000ms 로 늦춰지는데 999.x 에 불리면 ">= 1000" 이 한 박자를 건너뛰어
+ *  "1초마다"가 2초마다가 된다 — 그래서 주기 비교는 전부 (주기 − 이 값)과 한다. */
+export const SLACK_MS = 50;
+
 export type Role = 'host' | 'guest';
 /** joining = 들어가는 중(손님), lobby = 방, match = 경기(결과 화면 포함), ended = 끝(나갔거나 끊김 — 이유는 endedWhy). */
 export type Stage = 'joining' | 'lobby' | 'match' | 'ended';

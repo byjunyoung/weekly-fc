@@ -85,7 +85,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
   return (
     <>
       <div className="page-head">
-        <h1>방 <span className="game-code">{room.code}</span> <span className="muted">{room.members.length}명 · 방장 {hostName}</span></h1>
+        <h1>방 <span className="game-code">{room.code}</span> <span className="muted">{room.members.length}명</span></h1>
         <div className="actions">
           {host && <Button onClick={onShare}>초대 링크 복사</Button>}
           <Button onClick={onLeave}>나가기</Button>
@@ -97,6 +97,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
         <p className="muted game-hint" aria-live="polite">
           {editable ? (picked ? '옮길 칸을 누르세요 · 다시 누르면 취소' : '이름을 누르고 칸을 누르면 옮겨집니다 · 빈자리는 봇이 채웁니다')
             : '방장이 팀을 나누는 중입니다'}
+          {` · 방장 ${hostName}`}
         </p>
         <div className="game-board">
           {COLS.map((c) => {
