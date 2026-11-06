@@ -141,3 +141,20 @@ test('방 — 편 없이 앞 8명이 자기 레인, 코스는 방장이 고른�
   const raw = JSON.stringify(s).length, packed = JSON.stringify(g.pack(s)).length;
   assert.ok(packed < 2000 && packed < raw * 0.7, `pack ${packed} / 그대로 ${raw}`);
 });
+
+test('빈 자리(리뷰 #2) — 빈 자리 입력을 받는 레인은 서고 "나감", 끝은 나간 레인을 기다리지 않고, 순위 맨 아래. 돌아오면 이어 달린다', async () => {
+  const { DR_ABSENT } = await import('../../src/lib/games/dribble2d.ts');
+  assert.deepEqual(g.decode(g.encode(DR_ABSENT)), DR_ABSENT);
+  const config = drCfg(3, 3, true);
+  let s = g.create(config, 1);
+  const step = (absent1) => { s = g.step(s, config, config.players.map((_, i) => (i === 1 && absent1 ? DR_ABSENT : g.decode(g.encode(g.botInput(s, config, i)))))); };
+  for (let t = 0; t < 600; t++) step(true);
+  assert.equal(s.lanes[1].gone, true); assert.equal(s.lanes[1].gate, 0);
+  const x1 = s.lanes[1].p.x;
+  for (let t = 0; t < 120; t++) step(false);
+  assert.equal(s.lanes[1].gone, false); assert.ok(s.lanes[1].p.x !== x1, '돌아오면 이어 달린다');
+  for (let t = 0; t < 60 * 120 && !g.ended(s); t++) step(true);
+  assert.ok(g.ended(s));
+  assert.ok(s.lanes[0].fin >= 0 && s.lanes[2].fin >= 0 && s.lanes[1].fin < 0);
+  assert.deepEqual(drRanking(s).at(-1), 1);
+});

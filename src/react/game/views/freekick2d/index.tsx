@@ -1,7 +1,7 @@
 // src/react/game/views/freekick2d/index.tsx — 프리킥의 화면(2026-11-07 게임 묶음 3단계). GameView 약속.
 // 조준과 감기는 이 장면 안에만 있다(aim.ts) — 모으던 킥을 떼는 틱의 입력에만 실린다. 구경하는 사람의 화면엔 조준이 없다.
 import type { FkConfig, FkSettings, FkState } from '../../../../lib/games/freekick2d';
-import { FK_MAX_POINTS, FK_SPOTS, fkRanking } from '../../../../lib/games/freekick2d';
+import { FK_MAX_POINTS, FK_SPOTS, fkGone, fkRanking } from '../../../../lib/games/freekick2d';
 import type { PenInput } from '../../../../lib/games/penalty2d';
 import type { GameView, ResultView, Scene } from '../types';
 import { buildSprites } from '../match2d/render';
@@ -68,7 +68,7 @@ export const freekick2dView: GameView<FkConfig, FkState, PenInput, FkSettings> =
     if (hit) return hit;
     const order = fkRanking(final.points, final.log);
     const goals = (i: number): number => final.log.filter((e) => e.kicker === i && e.out === 'goal').length;
-    const mark = (i: number): string => FK_SPOTS.map((_, s) => { const e = final.log.find((x) => x.kicker === i && x.spot === s); return e ? (e.out === 'goal' ? '●' : '✕') : '○'; }).join('');
+    const mark = (i: number): string => FK_SPOTS.map((_, s) => { const e = final.log.find((x) => x.kicker === i && x.spot === s); return e ? (e.out === 'goal' ? '●' : e.out === 'gone' ? '－' : '✕') : '○'; }).join('');
     const detail = (
       <ul className="fk-rows">
         {order.map((i, r) => {
@@ -76,8 +76,8 @@ export const freekick2dView: GameView<FkConfig, FkState, PenInput, FkSettings> =
           return (
             <li key={i} className={i === myId ? 'is-me' : undefined}>
               <span className="fk-rank">{r + 1}</span>
-              <span className="fk-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}</span>
-              <span className="fk-marks" aria-label={`자리별 ${mark(i).replace(/●/g, '골 ').replace(/✕/g, '실패 ').trim()}`}>{mark(i)}</span>
+              <span className="fk-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}{fkGone(final.log, i) ? ' · 나감' : ''}</span>
+              <span className="fk-marks" aria-label={`자리별 ${mark(i).replace(/●/g, '골 ').replace(/✕/g, '실패 ').replace(/－/g, '비움 ').trim()}`}>{mark(i)}</span>
               <span className="fk-pts">{final.points[i]}점</span>
             </li>
           );

@@ -89,6 +89,8 @@ export type HostSession = {
 
 type Match = {
   game: string; adapter: AnyAdapter; smooth: Smoother<unknown>;
+  /** 빈 사람 자리 정책(등록부 absent, 없으면 'bot'). */
+  absent: 'bot' | 'idle';
   config: unknown; seed: number; slots: (string | null)[];
   state: unknown; prev: unknown; qs: number[];
   acc: number; endedAt: number | null; lastPausedSnap: number;
@@ -232,7 +234,12 @@ export function createHostSession(o: HostOptions): HostSession {
     const qs = Array.from({ length: g.slots(m.config) }, (_, i) => {
       if (i === me_) return g.encode(reader ? reader() : g.idle);
       const cid = m.slots[i];
-      if (cid === null || !alive(cid, now)) return g.encode(g.botInput ? g.botInput(s, m.config, i) : g.idle);   // 봇, 또는 조용해진 손님 자리
+      if (cid === null) return g.encode(g.botInput ? g.botInput(s, m.config, i) : g.idle);   // 봇 자리
+      if (!alive(cid, now)) {
+        // 조용해졌거나 나간 손님 자리 — 게임 정책대로(리뷰 #2): 'idle' 이면 대신하지 않고 그 게임의 "빈 자리" 입력, 아니면 봇이 대신
+        if (m.absent === 'idle') return g.encode(g.absentInput ?? g.idle);
+        return g.encode(g.botInput ? g.botInput(s, m.config, i) : g.idle);
+      }
       return lastQ.get(cid) ?? idleQ;
     });
     const next = g.step(s, m.config, qs.map((q) => g.decode(q)));
@@ -364,7 +371,7 @@ export function createHostSession(o: HostOptions): HostSession {
       const g = entry.adapter;
       const state = g.create(built.config, seed);
       match = {
-        game: room.game, adapter: g, smooth: smootherFor(g.bodies),
+        game: room.game, adapter: g, smooth: smootherFor(g.bodies), absent: entry.absent ?? 'bot',
         config: built.config, seed, slots: built.slots, state, prev: state, qs: Array.from({ length: g.slots(built.config) }, () => g.encode(g.idle)),
         acc: 0, endedAt: null, lastPausedSnap: -Infinity,
       };

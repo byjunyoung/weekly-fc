@@ -79,7 +79,7 @@ export const dribble2dView: GameView<DrConfig, DrState, Input, DrSettings> = {
               <span className="dr-rank">{r + 1}</span>
               <span className="dr-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}</span>
               <span className="dr-medal" style={m !== null ? { color: MEDAL[m].color } : undefined}>{m !== null ? MEDAL[m].name : ''}</span>
-              <span className="dr-time">{t !== null ? `${secText(t)}${l.pen ? ` (콘 ${l.pen})` : ''}` : `문 ${l.gate}/${c.gates.length}`}</span>
+              <span className="dr-time">{t !== null ? `${secText(t)}${l.pen ? ` (콘 ${l.pen})` : ''}` : l.gone ? `나감 · 문 ${l.gate}/${c.gates.length}` : `문 ${l.gate}/${c.gates.length}`}</span>
             </li>
           );
         })}

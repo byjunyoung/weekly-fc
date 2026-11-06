@@ -77,7 +77,8 @@ export function crosses(a: Point, b: Point, c: Point, d: Point): boolean {
 }
 
 /** 문 하나를 지났나 — 차례인 문(gate)만 본다. 이 틱에 몸이나 공이 두 콘 사이 선을 넘었고, 그때 공이 몸에서 KEEP 안이면 통과.
- *  (공만 먼저 문을 지나도 데리고 있으면 센다 — 공을 몰고 지나가는 느낌대로.) 3D 도 같은 판정. */
+ *  (공만 먼저 문을 지나도 데리고 있으면 센다 — 공을 몰고 지나가는 느낌대로.) 3D 도 같은 판정.
+ *  방향을 안 보고 공이 콘 바깥(몸에서 KEEP 안)이어도 세는 너그러움은 일부러다(2026-11-07 리뷰 #12 — 지금 코스엔 이걸로 줄일 길이 없다). */
 export function passGate(course: Course, gate: number, from: Point, to: Point, ballFrom: Point, ball: Point): boolean {
   const g = course.gates[gate];
   if (!g) return false;
@@ -102,7 +103,11 @@ export function medalOf(course: Course, seconds: number | null): 0 | 1 | 2 | nul
 export type DrPlayer = { id: number; num: number; jersey: number; name: string; bot: boolean; perf: Perf };
 export type DrConfig = { course: number; players: DrPlayer[] };
 /** 레인 하나 — 몸 p, 공 b, 다음 문 gate, 넘어뜨린 콘 hit(비트), 콘 벌점 수 pen, 도착 fin(달린 틱, 못 했으면 −1). */
-export type Lane = { p: KickBody; b: Body; gate: number; hit: number; pen: number; fin: number };
+/** gone = 그 레인 사람이 자리를 비웠다(방장이 넣은 빈 자리 입력을 받는 중 — 2026-11-07 리뷰 #2). 돌아오면 거짓으로. */
+export type Lane = { p: KickBody; b: Body; gate: number; hit: number; pen: number; fin: number; gone: boolean };
+/** 드리블 입력 = 경기 입력 + "빈 자리"(방장이 나간 사람 자리에 넣는다 — 스냅샷 입력에 실려 손님도 안다). */
+export type DrInput = Input & { gone?: true };
+export const DR_ABSENT: DrInput = { x: 0, y: 0, kick: false, gone: true };
 export type DrPhase = 'count' | 'run' | 'end';
 export type DrState = { tick: number; phase: DrPhase; phaseTicks: number; lanes: Lane[]; first: number; seed: number };
 
@@ -113,7 +118,7 @@ export const LANE_GEO: Geo = { pitch: P, HW: LX, HH: LY, GH: 0, GD: 0, OW: LX, O
 
 function startLane(c: Course): Lane {
   const s = c.start, dir = c.gates[0] ? Math.sign(c.gates[0].x - s.x) || 1 : 1;
-  return { p: { x: s.x, y: s.y, vx: 0, vy: 0, kickCooldown: 0, kicking: false, kickFlash: 0 }, b: { x: s.x + dir * 40, y: s.y, vx: 0, vy: 0 }, gate: 0, hit: 0, pen: 0, fin: -1 };
+  return { p: { x: s.x, y: s.y, vx: 0, vy: 0, kickCooldown: 0, kicking: false, kickFlash: 0 }, b: { x: s.x + dir * 40, y: s.y, vx: 0, vy: 0 }, gate: 0, hit: 0, pen: 0, fin: -1, gone: false };
 }
 
 export function createDribble(config: DrConfig, seed: number): DrState {
@@ -121,7 +126,7 @@ export function createDribble(config: DrConfig, seed: number): DrState {
   return { tick: 0, phase: 'count', phaseTicks: 0, lanes: config.players.map(() => startLane(c)), first: -1, seed: seed >>> 0 };
 }
 
-export function stepDribble(state: DrState, config: DrConfig, inputs: Input[]): DrState {
+export function stepDribble(state: DrState, config: DrConfig, inputs: DrInput[]): DrState {
   const s: DrState = { ...state, tick: state.tick + 1, phaseTicks: state.phaseTicks + 1, lanes: state.lanes.map((l) => ({ ...l, p: { ...l.p }, b: { ...l.b } })) };
   if (s.phase === 'end') return s;
   const c = courseOf(config.course), cones = courseCones(c);
@@ -129,7 +134,8 @@ export function stepDribble(state: DrState, config: DrConfig, inputs: Input[]): 
   s.lanes.forEach((l, i) => {
     const from = { x: l.p.x, y: l.p.y }, bfrom = { x: l.b.x, y: l.b.y };
     // 출발 전·도착 뒤엔 손을 뗀 것으로(몸·공은 굴러가던 대로 선다)
-    const inp = run && l.fin < 0 ? inputs[i] ?? NO_INPUT : NO_INPUT;
+    if (l.fin < 0) l.gone = !!inputs[i]?.gone;   // 빈 자리 — 레인은 서고(대신 달리지 않는다) 결과에 "나감"
+    const inp = run && l.fin < 0 && !l.gone ? inputs[i] ?? NO_INPUT : NO_INPUT;
     stepBodies([l.p], [config.players[i].perf], [l.b], [inp], LANE_GEO);
     if (!run || l.fin >= 0) return;
     // 콘 — 몸이나 공이 닿으면 넘어지고 1초(콘마다 한 번)
@@ -143,21 +149,21 @@ export function stepDribble(state: DrState, config: DrConfig, inputs: Input[]): 
   });
   if (s.phase === 'count' && s.phaseTicks >= COUNT_TICKS) { s.phase = 'run'; s.phaseTicks = 0; }
   else if (run) {
-    const all = s.lanes.every((l) => l.fin >= 0);
+    const all = s.lanes.every((l) => l.fin >= 0 || l.gone);   // 나간 레인은 기다리지 않는다
     const late = s.lanes.length > 1 && s.first >= 0 && s.phaseTicks - s.first >= AFTER_FIRST;
     if (all || late || s.phaseTicks >= RUN_CAP) { s.phase = 'end'; s.phaseTicks = 0; }
   }
   return s;
 }
 
-/** 순위(레인 번호 차례) — 도착한 사람은 기록 순, 못 한 사람은 지난 문이 많은 순, 같으면 레인 순. */
+/** 순위(레인 번호 차례) — 도착한 사람은 기록 순, 못 한 사람은 지난 문이 많은 순(나간 사람은 그 아래), 같으면 레인 순. */
 export function drRanking(s: DrState): number[] {
   return s.lanes.map((_, i) => i).sort((a, b) => {
     const ta = laneTime(s.lanes[a]), tb = laneTime(s.lanes[b]);
     if (ta !== null && tb !== null) return ta - tb || a - b;
     if (ta !== null) return -1;
     if (tb !== null) return 1;
-    return s.lanes[b].gate - s.lanes[a].gate || a - b;
+    return Number(s.lanes[a].gone) - Number(s.lanes[b].gone) || s.lanes[b].gate - s.lanes[a].gate || a - b;
   });
 }
 
@@ -221,7 +227,7 @@ function okLane(l: unknown, gates: number, cones: number): boolean {
   if (!isObj(l)) return false;
   const p = l.p as Record<string, unknown>;
   return okBody(p) && isNum(p.kickCooldown) && typeof p.kicking === 'boolean' && isNum(p.kickFlash) && okBody(l.b)
-    && isInt(l.gate, 0, gates) && isInt(l.hit, 0, 2 ** cones - 1) && isInt(l.pen, 0, cones) && isInt(l.fin, -1);
+    && isInt(l.gate, 0, gates) && isInt(l.hit, 0, 2 ** cones - 1) && isInt(l.pen, 0, cones) && isInt(l.fin, -1) && typeof l.gone === 'boolean';
 }
 function okState(s: unknown, config: DrConfig): s is DrState {
   if (!isObj(s)) return false;
@@ -235,7 +241,7 @@ function okState(s: unknown, config: DrConfig): s is DrState {
 function pack(s: DrState): Record<string, unknown> {
   return {
     t: s.tick, ph: s.phase, pt: s.phaseTicks, f: s.first, sd: s.seed,
-    L: s.lanes.map((l) => [l.p.x, l.p.y, l.p.vx, l.p.vy, l.p.kickCooldown, l.p.kicking ? 1 : 0, l.p.kickFlash, l.b.x, l.b.y, l.b.vx, l.b.vy, l.gate, l.hit, l.pen, l.fin]),
+    L: s.lanes.map((l) => [l.p.x, l.p.y, l.p.vx, l.p.vy, l.p.kickCooldown, l.p.kicking ? 1 : 0, l.p.kickFlash, l.b.x, l.b.y, l.b.vx, l.b.vy, l.gate, l.hit, l.pen, l.fin, l.gone ? 1 : 0]),
   };
 }
 function unpack(v: unknown, config: DrConfig): DrState | null {
@@ -243,22 +249,23 @@ function unpack(v: unknown, config: DrConfig): DrState | null {
   if (!isObj(v) || !Array.isArray(v.L) || Object.keys(v).sort().join() !== 'L,f,ph,pt,sd,t') return null;
   const lanes: Lane[] = [];
   for (const r of v.L) {
-    if (!Array.isArray(r) || r.length !== 15 || !r.every(isNum)) return null;
-    lanes.push({ p: { x: r[0], y: r[1], vx: r[2], vy: r[3], kickCooldown: r[4], kicking: r[5] === 1, kickFlash: r[6] }, b: { x: r[7], y: r[8], vx: r[9], vy: r[10] }, gate: r[11], hit: r[12], pen: r[13], fin: r[14] });
+    if (!Array.isArray(r) || r.length !== 16 || !r.every(isNum)) return null;
+    lanes.push({ p: { x: r[0], y: r[1], vx: r[2], vy: r[3], kickCooldown: r[4], kicking: r[5] === 1, kickFlash: r[6] }, b: { x: r[7], y: r[8], vx: r[9], vy: r[10] }, gate: r[11], hit: r[12], pen: r[13], fin: r[14], gone: r[15] === 1 });
   }
   const s = { tick: v.t, phase: v.ph, phaseTicks: v.pt, lanes, first: v.f, seed: v.sd };
   return okState(s, config) ? s : null;
 }
 
 // ═══════════════════════════ 어댑터 ═══════════════════════════
-export const dribble2d: GameAdapter<DrConfig, DrState, Input> = {
+export const dribble2d: GameAdapter<DrConfig, DrState, DrInput> = {
   id: 'dribble2d',
   create: createDribble,
   step: stepDribble,
   idle: NO_INPUT,
-  encode: encodeInput,
-  decode: decodeInput,
-  codes: Q_COUNT,
+  encode: (i: DrInput) => (i && i.gone ? Q_COUNT : encodeInput(i)),
+  decode: (q: number): DrInput => (q === Q_COUNT ? { ...DR_ABSENT } : decodeInput(q)),
+  codes: Q_COUNT + 1,   // 경기 66가지 + 빈 자리
+  absentInput: DR_ABSENT,
   okConfig,
   okState,
   tick: (s) => s.tick,
@@ -293,7 +300,7 @@ export function buildDribble(humans: { num: number; name: string }[], course: nu
   };
 }
 
-export const DRIBBLE2D: GameEntry<DrConfig, DrState, Input, DrSettings> = {
+export const DRIBBLE2D: GameEntry<DrConfig, DrState, DrInput, DrSettings> = {
   adapter: dribble2d,
   mode: '2d',
   name: '드리블 훈련장',
@@ -306,6 +313,7 @@ export const DRIBBLE2D: GameEntry<DrConfig, DrState, Input, DrSettings> = {
     return c === cur.course ? cur : { course: c };
   },
   lobby: 'all',
+  absent: 'idle',   // 나간 레인을 대본 주자가 대신 달리지 않는다(리뷰 #2)
   buildConfig(room, roster) {
     const playing = room.members.slice(0, MAX_HUMANS);
     return { config: buildDribble(playing.map((m) => ({ num: m.num, name: m.name })), room.settings.course, roster), slots: playing.map((m) => m.clientId) };

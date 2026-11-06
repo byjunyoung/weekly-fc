@@ -140,3 +140,25 @@ test('방 — 편 없이 앞 8명이 차고 나머지는 구경, 설정은 없�
   assert.equal(config.players[0].jersey, 1, '등번호가 설정에 실린다');
   assert.equal(FREEKICK2D.applySettings(FREEKICK2D.defaultSettings, { x: 1 }), FREEKICK2D.defaultSettings);
 });
+
+test('빈 자리(리뷰 #2) — 차례인 사람이 빈 자리면 준비를 잠깐 보여 준 뒤 넘기고, 돌아오면 이어 찬다. 나간 사람은 순위 맨 아래', async () => {
+  const { FK_ABSENT, fkGone } = await import('../../src/lib/games/freekick2d.ts');
+  const config = fkCfg(2);
+  let s = g.create(config, 3);
+  const absent0 = [FK_ABSENT, IDLE];
+  let t = 0;
+  while (s.log.length === 0 && t < 200) { s = g.step(s, config, absent0); t++; }
+  assert.equal(s.log[0].out, 'gone'); assert.ok(t <= 30, `${t}틱 만에 넘김`);
+  // 입력 정수로 오가도 빈 자리
+  assert.deepEqual(g.decode(g.encode(FK_ABSENT)), FK_ABSENT);
+  assert.equal(g.absentInput, FK_ABSENT);
+  // 다음 차례(1번)가 차고, 0번이 돌아오면 이어 찬다
+  while (s.kicker !== 0 || s.phase !== 'aim') s = g.step(s, config, [IDLE, IDLE]);
+  for (let k = 0; k < 30; k++) s = g.step(s, config, [{ x: 0, kick: true, aim: null }, IDLE]);
+  s = g.step(s, config, [{ x: 0, kick: false, aim: 40 }, IDLE]);
+  assert.equal(s.phase, 'flight', '돌아온 사람은 그대로 찬다');
+  assert.equal(fkGone(s.log, 0), true, '아직 마지막 기록은 넘김');
+  while (s.phase !== 'ready') s = g.step(s, config, [IDLE, IDLE]);
+  assert.equal(fkGone(s.log, 0), false, '다시 찼으면 나감이 아니다');
+  assert.deepEqual(fkRanking([5, 0], [{ kicker: 0, spot: 0, out: 'goal' }, { kicker: 0, spot: 1, out: 'gone' }, { kicker: 1, spot: 1, out: 'miss' }]), [1, 0], '점수가 높아도 나간 사람은 아래');
+});

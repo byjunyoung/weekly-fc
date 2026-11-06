@@ -8,7 +8,7 @@ import { F9, F14, GOLD, banner, drawBall, drawName, drawToken, type Sprites } fr
 import { toScreen, type PenLayout } from '../penalty2d/layout.ts';
 import { MISS, drawGoalEnd, drawKeeper, drawPowerBar } from '../penalty2d/render.ts';
 
-export const FK_OUT_TEXT = { goal: '골!', save: '막았다!', wall: '벽!', miss: '빗나감', post: '골대!' } as const;
+export const FK_OUT_TEXT = { goal: '골!', save: '막았다!', wall: '벽!', miss: '빗나감', post: '골대!', gone: '자리 비움' } as const;
 const KICKER_RING = '#ffce21', BOT_RING = '#8a8f98', WALL_FILL = '#2a2f37';
 
 export type FkDrawOpts = { me: number | null; aim: number | null; curl: number; bubbles: { id: number; text: string }[]; best: number | null };
@@ -113,7 +113,7 @@ export function drawFreekick(ctx: CanvasRenderingContext2D, st: FkState, config:
   const midY = toScreen(l, 0, 150).y;
   if (st.phase === 'result' && st.outcome) {
     const who = config.players[st.kicker].name;
-    banner(ctx, l, midY, FK_OUT_TEXT[st.outcome], st.outcome === 'goal' ? `${who} +${spot.pts}점` : '', 54, st.outcome === 'goal' ? GOLD : st.outcome === 'save' ? '#fff' : '#c9ced6');
+    banner(ctx, l, midY, FK_OUT_TEXT[st.outcome], st.outcome === 'goal' ? `${who} +${spot.pts}점` : st.outcome === 'gone' ? `${who} 차례를 넘깁니다` : '', 54, st.outcome === 'goal' ? GOLD : st.outcome === 'save' ? '#fff' : '#c9ced6');
   } else if (st.phase === 'ready' && st.phaseTicks < READY_TICKS - 6) {
     banner(ctx, l, midY, st.kicker === o.me ? '내 차례' : `${config.players[st.kicker].name} 차례`, `${spot.name} · ${spot.pts}점`, 24, st.kicker === o.me ? GOLD : '#fff');
   } else if (st.phase === 'end') {

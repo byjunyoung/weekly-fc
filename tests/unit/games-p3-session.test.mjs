@@ -85,3 +85,43 @@ test('드리블 — 3·2·1 동안 손님 입력은 안 듣고, 출발 뒤 손�
   assert.ok(r.lanes.every((l) => l.fin >= 0), '둘 다 도착');
   assert.deepEqual(r.lanes.map((l) => l.fin), w.host.getView().result.lanes.map((l) => l.fin));
 });
+
+// ── 리뷰 #2: 기록 게임에서 나간 사람 자리는 봇이 대신하지 않는다(absent 'idle') ──
+test('드리블 — 출발 직후 나간 손님 레인은 서 있고 "나감", 방장이 도착하면 바로 끝, 나간 사람은 맨 아래', () => {
+  const w = world('dribble2d');
+  w.run(1500);
+  w.host.setSettings({ course: 3 });
+  w.run(200);
+  assert.ok(w.host.start());
+  w.run(4000);   // 3·2·1 지나 출발
+  w.guest.leave();
+  w.host.setInputReader(() => { const s = w.host.getState(); return s ? dribbleBot(s, w.host.getConfig(), 0) : { x: 0, y: 0, kick: false }; });
+  w.run(5000);
+  const mid = w.host.getState();
+  assert.equal(mid.lanes[1].gone, true, '나간 레인 표시');
+  assert.ok(mid.lanes[1].gate === 0 && Math.abs(mid.lanes[1].p.x + 540) < 30, '나간 레인을 아무도 대신 달리지 않는다');
+  assert.ok(w.run(60000, () => !!w.host.getView().result), '안 끝났다');
+  const r = w.host.getView().result;
+  assert.ok(r.lanes[0].fin >= 0 && r.lanes[1].fin < 0 && r.lanes[1].gone);
+  // 첫 도착 뒤 30초를 기다리지 않고 끝 — 나간 레인은 기다리지 않는다
+  assert.ok(r.tick - 180 - r.lanes[0].fin < 60, `방장 도착 뒤 곧 끝(${r.tick - 180 - r.lanes[0].fin}틱)`);
+});
+
+test('프리킥 — 시작 직후 나간 손님 차례는 바로 넘어가고(점수 없음) 맨 아래, 방은 멈추지 않는다', () => {
+  const w = world('freekick2d');
+  w.run(1500);
+  assert.ok(w.host.start());
+  w.run(300);
+  w.guest.leave();
+  // 방장은 대본 키커
+  w.host.setInputReader(() => { const s = w.host.getState(); return s ? gameOf('freekick2d').adapter.botInput(s, w.host.getConfig(), 0) : IDLE; });
+  assert.ok(w.run(200000, () => !!w.host.getView().result), '안 끝났다');
+  const r = w.host.getView().result;
+  const guestKicks = r.log.filter((e) => e.kicker === 1);
+  assert.equal(guestKicks.length, 5);
+  assert.ok(guestKicks.every((e) => e.out === 'gone'), '나간 사람 차례는 모두 넘김');
+  assert.equal(r.points[1], 0);
+  // 넘긴 차기는 짧다 — 손님 차례 다섯 번이 합쳐 5초 남짓
+  const goneTicks = guestKicks.length * (24 + 30);
+  assert.ok(goneTicks < 400);
+});

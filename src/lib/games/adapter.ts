@@ -69,6 +69,10 @@ export type GameAdapter<C, S, I> = {
    *  지키는 선: 잃는 게 없어야 한다 — unpack(pack(s)) 는 s 와 같은 값(그래서 step 결과도 같다). pack 은 객체를 돌려준다(parseMsg 가 배열을 거른다).
    *  unpack 은 바깥에서 온 값을 받으니 모양이 틀리면 던지지 말고 null. */
   pack?(s: S): Record<string, unknown>;
+  /** 빈 사람 자리에 넣을 입력(2026-11-07 리뷰 #2, 선택) — 등록부 absent 가 'idle' 일 때 방장이 그 자리에 이걸 넣는다(없으면 idle).
+   *  입력 정수(encode)로 스냅샷 inputs 에 실려 가므로 손님 예측도 같은 입력을 본다. 게임이 "나감"을 알아야 할 때(프리킥: 그 차기를 바로 넘김,
+   *  드리블: 결과에 나감 표시) idle 과 다른 코드 하나를 둔다. */
+  absentInput?: I;
   unpack?(packed: unknown, config: C): S | null;
 };
 

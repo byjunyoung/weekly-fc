@@ -56,7 +56,13 @@ const GK_REACT_MIN = 18, GK_REACT_SPAN = 12, GK_READS = 0.3, GK_OPEN_SIDE = 0.5;
 // ════════════════════════════════════════════════════════════
 
 const HALF = GOAL_W / 2;
-export type FkOutcome = 'goal' | 'save' | 'wall' | 'miss' | 'post';
+/** gone = 차례인 사람이 자리를 비워(나감·조용함) 그 차기를 넘겼다(2026-11-07 리뷰 #2). */
+export type FkOutcome = 'goal' | 'save' | 'wall' | 'miss' | 'post' | 'gone';
+/** 프리킥 입력 = 승부차기 입력 + "빈 자리"(방장이 나간 사람 자리에 넣는다 — 스냅샷 입력에 실려 손님 예측도 안다). */
+export type FkInput = PenInput & { gone?: true };
+export const FK_ABSENT: FkInput = { x: 0, kick: false, aim: null, gone: true };
+/** 빈 자리 차기는 준비 화면을 이만큼 보여 준 뒤 넘기고, 판정 띠도 짧게(0.5초). */
+const GONE_AFTER = 24, GONE_SHOW = 30;
 export type FkPlayer = { id: number; num: number; jersey: number; name: string; bot: boolean; perf: Perf };
 export type FkConfig = { players: FkPlayer[] };
 export type FkLog = { kicker: number; spot: number; out: FkOutcome };
@@ -79,9 +85,13 @@ export function fkTurn(k: number, n: number): { spot: number; kicker: number } {
 }
 export const fkTotal = (n: number): number => FK_SPOTS.length * n;
 /** 순위 — 점수 높은 순, 같으면 골 많은 순, 같으면 먼저 찬 사람. */
+/** 나갔나 — 그 사람의 마지막 차기가 빈 자리로 넘어갔다(돌아와 다시 찼으면 아니다). */
+export const fkGone = (log: FkLog[], i: number): boolean => { const mine = log.filter((e) => e.kicker === i); return mine.length > 0 && mine[mine.length - 1].out === 'gone'; };
+/** 순위 — 나간 사람은 맨 아래, 그다음 점수 높은 순, 같으면 골 많은 순, 같으면 먼저 찬 사람. */
 export function fkRanking(points: number[], log: FkLog[]): number[] {
   const goals = points.map((_, i) => log.filter((e) => e.kicker === i && e.out === 'goal').length);
-  return points.map((_, i) => i).sort((a, b) => points[b] - points[a] || goals[b] - goals[a] || a - b);
+  const gone = points.map((_, i) => (fkGone(log, i) ? 1 : 0));
+  return points.map((_, i) => i).sort((a, b) => gone[a] - gone[b] || points[b] - points[a] || goals[b] - goals[a] || a - b);
 }
 
 // ── 벽과 키퍼 자리(자리마다 한 번 계산 — 사칙연산과 sqrt 만) ──
@@ -236,12 +246,19 @@ function judge(s: FkState, hit: { keeper: boolean; wall: boolean }, postHit: boo
 
 const KEEPER_PERF: Perf = { ...BASE_PERF };
 
-export function stepFreekick(state: FkState, config: FkConfig, inputs: PenInput[]): FkState {
+export function stepFreekick(state: FkState, config: FkConfig, inputs: FkInput[]): FkState {
   if (state.phase === 'end') return { ...state, tick: state.tick + 1, phaseTicks: state.phaseTicks + 1 };
   const s: FkState = { ...state, points: [...state.points], ball: { ...state.ball }, gk: { ...state.gk }, st: { ...state.st } };
   s.tick += 1; s.phaseTicks += 1;
-  const kin = inputs[s.kicker] ?? PEN_IDLE;
+  const kin: FkInput = inputs[s.kicker] ?? PEN_IDLE;
   if (s.st.kickFlash > 0) s.st.kickFlash -= 1;
+  // 차례인 사람의 자리가 비었다 — 준비 화면을 잠깐 보여 준 뒤 그 차기를 넘긴다(방이 기다리지 않게). 점수 없음, 판정 띠는 짧게.
+  if (kin.gone && (s.phase === 'aim' || (s.phase === 'ready' && s.phaseTicks >= GONE_AFTER))) {
+    s.outcome = 'gone';
+    s.log = [...s.log, { kicker: s.kicker, spot: s.spot, out: 'gone' }];
+    s.phase = 'result'; s.phaseTicks = RESULT_TICKS - GONE_SHOW;
+    return s;
+  }
 
   if (s.phase === 'ready') {
     if (!kin.kick) s.st.armed = true;   // 눌린 채 넘어온 버튼은 세지 않는다(승부차기와 같다)
@@ -338,7 +355,7 @@ const isName = (v: unknown): v is string => typeof v === 'string' && v.length <=
 const okBody = (b: unknown): boolean => isObj(b) && isNum(b.x) && isNum(b.y) && isNum(b.vx) && isNum(b.vy);
 const okPerf = (p: unknown): boolean => isObj(p) && isNum(p.maxSpeed) && isNum(p.accel) && isNum(p.kick) && isNum(p.mass) && p.mass > 0;
 const PHASES: readonly string[] = ['ready', 'aim', 'flight', 'result', 'end'];
-const OUTS: readonly string[] = ['goal', 'save', 'wall', 'miss', 'post'];
+const OUTS: readonly string[] = ['goal', 'save', 'wall', 'miss', 'post', 'gone'];
 
 function okConfig(c: unknown): c is FkConfig {
   return isObj(c) && Array.isArray(c.players) && c.players.length >= 1 && c.players.length <= MAX_HUMANS
@@ -361,14 +378,19 @@ function okState(s: unknown, config: FkConfig): s is FkState {
 }
 
 // ═══════════════════════════ 어댑터 ═══════════════════════════
-export const freekick2d: GameAdapter<FkConfig, FkState, PenInput> = {
+// 입력 정수 — 승부차기 780가지 + 마지막 하나(PEN_CODES) = 빈 자리.
+const encodeFk = (i: FkInput): number => (i && i.gone ? PEN_CODES : encodePen(i));
+const decodeFk = (q: number): FkInput => (q === PEN_CODES ? { ...FK_ABSENT } : decodePen(q));
+
+export const freekick2d: GameAdapter<FkConfig, FkState, FkInput> = {
   id: 'freekick2d',
   create: createFreekick,
   step: stepFreekick,
   idle: PEN_IDLE,
-  encode: encodePen,
-  decode: decodePen,
-  codes: PEN_CODES,
+  encode: encodeFk,
+  decode: decodeFk,
+  codes: PEN_CODES + 1,
+  absentInput: FK_ABSENT,
   okConfig,
   okState,
   tick: (s) => s.tick,
@@ -401,7 +423,7 @@ export function buildFreekick(humans: { num: number; name: string }[], roster: P
   };
 }
 
-export const FREEKICK2D: GameEntry<FkConfig, FkState, PenInput, FkSettings> = {
+export const FREEKICK2D: GameEntry<FkConfig, FkState, FkInput, FkSettings> = {
   adapter: freekick2d,
   mode: '2d',
   name: '프리킥',
@@ -411,6 +433,7 @@ export const FREEKICK2D: GameEntry<FkConfig, FkState, PenInput, FkSettings> = {
   okSettings: (v): v is FkSettings => isObj(v),
   applySettings: (cur) => cur,
   lobby: 'all',
+  absent: 'idle',   // 나간 사람 차례는 봇이 대신 차지 않고 넘긴다(리뷰 #2)
   buildConfig(room, roster) {
     const playing = room.members.slice(0, MAX_HUMANS);
     const config = buildFreekick(playing.map((m) => ({ num: m.num, name: m.name })), roster);

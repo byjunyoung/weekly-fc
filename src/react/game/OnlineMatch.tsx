@@ -71,7 +71,7 @@ export function OnlineMatch({ session, view, adapter, gameView, roster, live, on
       modal.confirm({ title: '경기를 멈출까요?', content: '모두 방으로 돌아갑니다.', okText: '멈추기', cancelText: '계속', centered: true,
         onOk: () => { (session as HostSession).stop(); } });
     } else {
-      modal.confirm({ title: '방에서 나갈까요?', content: playing ? '이번 경기는 봇이 대신 뜁니다.' : '구경을 그만하고 나갑니다.', okText: '나가기', cancelText: '계속', centered: true,
+      modal.confirm({ title: '방에서 나갈까요?', content: playing ? (adapter.absentInput !== undefined ? '이번 판 기록에는 "나감"으로 남습니다.' : '이번 경기는 봇이 대신 뜁니다.') : '구경을 그만하고 나갑니다.', okText: '나가기', cancelText: '계속', centered: true,
         onOk: onLeaveRoom });
     }
   };
