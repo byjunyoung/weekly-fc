@@ -198,8 +198,11 @@ test('이동 — 최고 속도를 넘지 않고, 손을 떼면 선다', () => {
   for (let t = 0; t < 40; t++) { s = step(s, cfg, [{ x: 5, y: 5, kick: false }, NO_INPUT]); max = Math.max(max, speed(s.players[0])); }   // 길이 1 넘는 입력은 1 로
   assert.ok(max <= BASE_PERF.maxSpeed + 1e-6, `최고 속도 ${max}`);
   assert.ok(max > BASE_PERF.maxSpeed * 0.95);
-  for (let t = 0; t < 30; t++) s = step(s, cfg, idle(cfg));
-  assert.ok(speed(s.players[0]) < 1e-6);
+  // 손을 떼면 바로 서지 않고 미끄러지다 선다(2026-11-06 "쫀득함" — 관성). 0.25초 뒤엔 아직 움직이고, 1초 안엔 선다.
+  for (let t = 0; t < 15; t++) s = step(s, cfg, idle(cfg));
+  assert.ok(speed(s.players[0]) > BASE_PERF.maxSpeed * 0.3, '0.25초 뒤에도 미끄러지는 중');
+  for (let t = 0; t < 45; t++) s = step(s, cfg, idle(cfg));
+  assert.ok(speed(s.players[0]) < 1e-6, '1초 안에 선다');
 });
 
 test('이동 — 경기장 길이를 4~5초 안에 건넌다', () => {
@@ -312,4 +315,19 @@ test('킥을 누르고 있는 동안 kicking 이 켜진다 — 공이 멀어 차
   assert.equal(s.players[0].kicking, false, '떼면 꺼진다');
   s = step(put(s, { state: { phase: 'goal' } }), cfg, hold);
   assert.equal(s.players[0].kicking, false, '세리머니 중엔 입력을 안 받는다');
+});
+
+test('공에 무게가 있다 — 달려가 부딪치면 내 몸이 느려지고, 공은 멀리 튕겨 나가지 않고 내 앞에 붙어 간다', () => {
+  const cfg = mk(1);
+  let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: 0, y: 0 }, players: { 0: { x: -200, y: 0 }, 1: { x: 400, y: 300 } } });
+  const run = [{ x: 1, y: 0, kick: false }, { ...NO_INPUT }];
+  let before = 0, hit = null;
+  for (let t = 0; t < 120 && !hit; t++) { before = s.players[0].vx; s = step(s, cfg, run); if (s.ball.vx > 1) hit = s; }
+  assert.ok(hit, '공에 닿았다');
+  assert.ok(hit.players[0].vx < before * 0.9, `부딪친 순간 몸이 느려진다: ${before} → ${hit.players[0].vx}`);
+  assert.ok(hit.ball.vx < before * 1.05, `공이 내 속도보다 훨씬 빠르게 튕겨 나가지 않는다: ${hit.ball.vx}`);
+  // 계속 밀면 공은 1초 뒤에도 몸 앞 가까이에 있다(드리블이 붙는다)
+  for (let t = 0; t < 60; t++) s = step(s, cfg, run);
+  const gap = s.ball.x - s.players[0].x - PITCH.playerR - PITCH.ballR;
+  assert.ok(gap < 40, `1초 뒤 공과 몸 사이 ${gap}`);
 });

@@ -26,26 +26,30 @@ export const PITCH = {
 
 /** 능력치가 평균인 선수의 성능. stats.ts 의 BASE_PERF 가 이걸 그대로 쓴다(숫자는 한 곳에서만 고치려고).
  *  maxSpeed 단위/초 — 290 이면 경기장 길이를 가속 포함 4.4초 안팎에 건넌다.
- *  accel    단위/초² — 1100 이면 최고 속도까지 0.26초. 클수록 방향을 빨리 튼다(손맛이 날카롭다).
+ *  accel    단위/초² — 560 이면 최고 속도까지 0.52초. 클수록 방향을 빨리 튼다(손맛이 날카롭다), 작을수록 묵직하다.
  *  kick     킥이 공에 더해 주는 속도(단위/초) — 가만있는 공이 이 속도로 나간다. 아래 BALL_DRAG 와 짝:
- *           1050 이면 공은 한 번 차서 약 875 단위 간다(경기장 길이의 73%). 자기 진영 가운데 3분의 1 끝(x=-200,
- *           골대까지 800)에서 간신히 닿아 골이 되고, 그보다 깊은 곳(x<-275)에선 한 번에 못 닿는다.
+ *           820 이면 공은 한 번 차서 약 890 단위 간다(경기장 길이의 74%). 자기 진영 가운데 3분의 1 끝(x=-200,
+ *           골대까지 800)에서 간신히 닿아 골이 되고, 그보다 깊은 곳에선 한 번에 못 닿는다.
  *  mass     몸 무게 배율(1 = 평균). 실제 질량은 PLAYER_MASS × 이 값. */
-export const BASE_PERF_TUNE: Perf = { maxSpeed: 290, accel: 1100, kick: 1050, mass: 1 };
+// 2026-11-06 손맛 조정("쫀득함이 덜하다", "공 무게가 안 느껴진다"): 가속을 1100 → 560 으로 낮춰 몸에 관성을 주고(최고 속도까지
+// 0.26초 → 0.52초), 킥은 1050 → 820 으로 — 공이 무거워진 만큼 "툭" 이 아니라 "묵직하게" 나간다. 아래 공 질량·반발·감속과 한 묶음.
+export const BASE_PERF_TUNE: Perf = { maxSpeed: 290, accel: 560, kick: 820, mass: 1 };
 
 /** 손을 떼면 가속의 이 배수로 멈춘다 — 크면 칼같이 서고 작으면 미끄러진다. */
-const BRAKE_MULT = 1.4;
+const BRAKE_MULT = 0.8;   // 1.4 였다 — 손을 떼면 0.65초쯤 미끄러지다 선다(관성)
+/** 킥을 누르고 있는 동안 몸이 이만큼 굼떠진다(속도·가속 모두). 계속 누른 채 뛰어다니는 것보다 맞춰 누르는 쪽이 낫게. */
+const KICK_HOLD_MULT = 0.82;
 /** 질량. 선수끼리 부딪칠 때 누가 얼마나 밀리는지, 공이 얼마나 가벼운지의 비율만 의미가 있다. */
 const PLAYER_MASS = 10;
-const BALL_MASS = 1;
+const BALL_MASS = 4.5;    // 1 이었다 — 공이 깃털 같아 몸에 닿으면 튕겨 나가기만 했다. 이제 밀면 내 몸이 느려진다(무게가 느껴진다)
 /** 반발 계수(0 = 붙음, 1 = 완전 탄성). */
 const E_PLAYER_PLAYER = 0.35;
-const E_PLAYER_BALL = 0.55;   // 몸에 맞고 튀는 공. 크면 드리블이 잘 안 붙는다.
+const E_PLAYER_BALL = 0.18;   // 몸에 맞고 튀는 공. 크면 드리블이 잘 안 붙는다(0.55 였다 — 공이 발에 붙게 낮춤).
 const E_PLAYER_WALL = 0.15;
-const E_BALL_WALL = 0.72;
-const E_BALL_POST = 0.8;
+const E_BALL_WALL = 0.6;
+const E_BALL_POST = 0.66;
 /** 공 구르기 감속(1/초). 속도가 이 비율로 줄어 한 번 찬 공이 v0 / BALL_DRAG 만큼 가고 선다. */
-const BALL_DRAG = 1.2;
+const BALL_DRAG = 0.92;   // 1.2 였다 — 무거운 공은 천천히 나가 오래 구른다(킥 820 / 0.92 = 약 890 단위)
 const BALL_MAX_SPEED = 1250;  // 킥이 겹쳐도 이 이상은 안 나간다(벽을 뚫지 않게 하는 안전선이기도 하다).
 const BALL_REST_SPEED = 4;    // 이보다 느리면 선 것으로 친다.
 /** 공이 닿는 거리(몸이 맞닿은 거리에 더하는 여유)와 킥 뒤 쉬는 틱. 누르고 있어도 기관총처럼 안 나가게. */
@@ -248,8 +252,9 @@ function steer(p: Body, perf: Perf, inp: Input): void {
   let ix = fin(inp.x), iy = fin(inp.y);
   let len = Math.sqrt(ix * ix + iy * iy);
   if (len > 1) { ix /= len; iy /= len; len = 1; }
-  const tx = ix * perf.maxSpeed, ty = iy * perf.maxSpeed;
-  const maxDv = perf.accel * DT * (len < 0.05 ? BRAKE_MULT : 1);
+  const hold = inp.kick ? KICK_HOLD_MULT : 1;
+  const tx = ix * perf.maxSpeed * hold, ty = iy * perf.maxSpeed * hold;
+  const maxDv = perf.accel * hold * DT * (len < 0.05 ? BRAKE_MULT : 1);
   const dvx = tx - p.vx, dvy = ty - p.vy;
   const dl = Math.sqrt(dvx * dvx + dvy * dvy);
   if (dl <= maxDv) { p.vx = tx; p.vy = ty; }
