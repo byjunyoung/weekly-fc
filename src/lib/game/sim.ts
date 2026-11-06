@@ -104,6 +104,13 @@ export const TICK_HZ = 60;
 const DT = 1 / TICK_HZ;
 const SUB_DT = DT / SUBSTEPS;
 
+/** 다른 게임(승부차기·훈련장, 2026-11-07 게임 묶음)이 같은 몸·공 느낌을 쓰게 조절 값을 읽기 전용으로 내보낸다.
+ *  값은 위 조절 값 그대로 — 고치려면 위에서 고친다(경기도 같이 바뀐다). */
+export const PHYS = Object.freeze({
+  PLAYER_MASS, BALL_MASS, E_PLAYER_PLAYER, E_PLAYER_BALL, E_PLAYER_WALL, E_BALL_WALL, E_BALL_POST,
+  BALL_DRAG, BALL_MAX_SPEED, BALL_REST_SPEED, KICK_REACH, KICK_COOLDOWN, KICK_FLASH_TICKS, SUBSTEPS, DT, SUB_DT,
+});
+
 export type Side = 0 | 1;
 export type Input = { x: number; y: number; kick: boolean };
 export const NO_INPUT: Input = { x: 0, y: 0, kick: false };
@@ -133,10 +140,10 @@ export type MatchEvent =
   | { type: 'goal'; side: Side; scorer: number | null; assist: number | null }
   | { type: 'end'; winner: Side | 'draw' };
 
-type Seg = [number, number, number, number];
+export type Seg = [number, number, number, number];
 /** 경기장 하나에서 나오는 벽·기둥. 크기 넷을 모듈을 읽을 때 한 번 만들어 두는 상수 표다 — step() 은 config.field 로 꺼내 쓰기만 해서
  *  부르는 순서와 상관없이 같은 결과다(숨은 상태 없음). */
-type Geo = {
+export type Geo = {
   pitch: Pitch;
   HW: number; HH: number; GH: number; GD: number;
   OW: number; OH: number;                 // 선수가 갈 수 있는 바깥 테두리(선 밖 여백까지)
@@ -163,7 +170,8 @@ function buildGeo(id: FieldId): Geo {
   };
 }
 const GEO: Record<FieldId, Geo> = { S: buildGeo('S'), M: buildGeo('M'), L: buildGeo('L'), XL: buildGeo('XL') };
-const geoOf = (field: unknown): Geo => (FIELD_IDS.includes(field as FieldId) ? GEO[field as FieldId] : GEO.M);
+/** 그 경기장의 벽·기둥(모르는 값이면 보통). 훈련장(여러 공)이 같은 벽을 쓰려고 내보낸다(2026-11-07). */
+export const geoOf = (field: unknown): Geo => (FIELD_IDS.includes(field as FieldId) ? GEO[field as FieldId] : GEO.M);
 
 /** 그 경기의 경기장. 모르는 값이면 보통(M) — 바깥에서 온 설정을 믿지 않는다. */
 export function pitchOf(field: unknown): Pitch { return geoOf(field).pitch; }
@@ -180,8 +188,9 @@ export function formationSpot(field: unknown, count: number, slot: number, side:
   return { x: side === 0 ? x : 0 - x, y };
 }
 
-/** 상태 안의 씨앗에서 0 이상 1 미만 값 하나를 뽑고 씨앗을 앞으로 보낸다(mulberry32). 상태를 직접 바꾸므로 복사본에만 쓴다. */
-function rand(s: MatchState): number {
+/** 상태 안의 씨앗에서 0 이상 1 미만 값 하나를 뽑고 씨앗을 앞으로 보낸다(mulberry32). 상태를 직접 바꾸므로 복사본에만 쓴다.
+ *  2026-11-07 게임 묶음: 씨앗을 가진 어느 상태에나 쓰게 내보낸다(승부차기·훈련장 — 같은 난수기). 경기 쪽 동작은 같다. */
+export function nextRand(s: { seed: number }): number {
   s.seed = (s.seed + 0x6d2b79f5) >>> 0;
   let t = s.seed;
   t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -190,6 +199,7 @@ function rand(s: MatchState): number {
 }
 
 function fin(v: number): number { return Number.isFinite(v) ? v : 0; }
+const rand = nextRand;
 
 function clone(s: MatchState): MatchState {
   return {
@@ -238,7 +248,7 @@ export function createMatch(config: MatchConfig, seed: number): MatchState {
 // ───────────────────────────── 충돌 ─────────────────────────────
 
 /** 원 둘. 겹친 만큼을 질량 반비례로 갈라 밀어내고, 다가오던 속도에는 반발을 준다. 겹쳤으면 true. */
-function collideCircles(a: Body, ra: number, ma: number, b: Body, rb: number, mb: number, e: number): boolean {
+export function collideCircles(a: Body, ra: number, ma: number, b: Body, rb: number, mb: number, e: number): boolean {
   const dx = b.x - a.x, dy = b.y - a.y;
   const min = ra + rb;
   const d2 = dx * dx + dy * dy;
@@ -259,7 +269,7 @@ function collideCircles(a: Body, ra: number, ma: number, b: Body, rb: number, mb
 }
 
 /** 움직이는 원 하나와 못 움직이는 점(기둥은 굵기 pr). */
-function collidePoint(b: Body, r: number, px: number, py: number, pr: number, e: number): void {
+export function collidePoint(b: Body, r: number, px: number, py: number, pr: number, e: number): void {
   const dx = b.x - px, dy = b.y - py;
   const min = r + pr;
   const d2 = dx * dx + dy * dy;
@@ -272,7 +282,7 @@ function collidePoint(b: Body, r: number, px: number, py: number, pr: number, e:
 }
 
 /** 원과 선분. 선분에서 가장 가까운 점 쪽으로 밀어내고 반발. 선분 끝점이면 둥근 모서리가 된다. */
-function collideSegment(b: Body, r: number, seg: Seg, e: number): void {
+export function collideSegment(b: Body, r: number, seg: Seg, e: number): void {
   const [ax, ay, bx, by] = seg;
   const abx = bx - ax, aby = by - ay;
   const len2 = abx * abx + aby * aby;
@@ -314,7 +324,7 @@ function kickoffLimits(s: MatchState, config: MatchConfig, g: Geo): void {
 
 /** 감쇠 방식 이동: 매 틱 입력 방향으로 gain 만큼 속도를 더하고 감쇠(damp)를 곱한다 — 정상 상태가 maxSpeed 가 되게 gain 을 고른다.
  *  감쇠가 늘 걸려 부딪쳐서 최고 속도를 넘긴 몸도 자연스럽게 되돌아오고, 손을 떼면 지수적으로 미끄러지다 선다. */
-function steer(p: Body, perf: Perf, inp: Input, armed: boolean): void {
+export function steer(p: Body, perf: Perf, inp: Input, armed: boolean): void {
   let ix = fin(inp.x), iy = fin(inp.y);
   const len = Math.sqrt(ix * ix + iy * iy);
   if (len > 1) { ix /= len; iy /= len; }
@@ -324,6 +334,34 @@ function steer(p: Body, perf: Perf, inp: Input, armed: boolean): void {
   p.vx = (p.vx + ix * gain) * damp;
   p.vy = (p.vy + iy * gain) * damp;
   if (len < 0.05 && p.vx * p.vx + p.vy * p.vy < PLAYER_REST_SPEED * PLAYER_REST_SPEED) { p.vx = 0; p.vy = 0; }
+}
+
+/** 몸 하나에 이 틱의 입력을 건다 — 킥 장전·쿨다운·찬 표시 줄이기 + 감쇠 이동(steer). 경기·훈련장 공용(2026-11-07 — 경기 step 에서 그대로 떼어 냄).
+ *  controlled 가 거짓(세리머니·끝)이면 입력을 무시하고 서서히 선다. */
+export type KickBody = Body & { kickCooldown: number; kicking: boolean; kickFlash: number };
+export function controlBody(p: KickBody, perf: Perf, inp: Input | undefined, controlled: boolean): void {
+  const held = controlled && !!inp?.kick;
+  // 킥은 한 번 나가면 뗐다 눌러야 다시 장전된다 — 누르고 있는 동안엔 쿨다운이 줄지 않는다.
+  if (p.kickCooldown > 0 && !held) p.kickCooldown -= 1;
+  if (p.kickFlash > 0) p.kickFlash -= 1;
+  p.kicking = held && p.kickCooldown === 0;   // 장전 중(고리가 밝다). 차고 나면 꺼진다.
+  steer(p, perf, controlled ? (inp ?? NO_INPUT) : NO_INPUT, p.kicking);
+}
+
+/** 킥 한 번 — 공이 닿는 거리(몸 + 공 + KICK_REACH) 안이면 몸→공 방향으로 kick 만큼 속도를 더하고 쉬는 틱·찬 표시를 건다. 찼으면 true.
+ *  부르는 쪽이 킥을 눌렀고 쉬는 중이 아닌지(kickCooldown === 0) 먼저 본다. fallbackX = 몸과 공이 정확히 겹친 드문 경우의 방향(±1).
+ *  경기 step 에서 그대로 떼어 냈다(2026-11-07 — 훈련장의 여러 공이 같은 킥 규칙을 쓰게). */
+export function tryKick(p: KickBody, ball: Body, kick: number, R: number, BR: number, fallbackX: number): boolean {
+  const dx = ball.x - p.x, dy = ball.y - p.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  if (d > R + BR + KICK_REACH) return false;
+  const nx = d > 1e-6 ? dx / d : fallbackX, ny = d > 1e-6 ? dy / d : 0;
+  ball.vx += nx * kick;
+  ball.vy += ny * kick;
+  p.kickCooldown = KICK_COOLDOWN;
+  p.kicking = false;   // 나갔으니 장전 표시를 끈다
+  p.kickFlash = KICK_FLASH_TICKS;
+  return true;
 }
 
 /** 공을 만졌다(킥·몸) — 만진 사람이 바뀌면 직전 사람을 prevTouch 로 밀어 둔다(도움 판정용). */
@@ -345,15 +383,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
   const mass: number[] = config.players.map((mp) => PLAYER_MASS * mp.perf.mass);
 
   // 1) 입력 → 속도. 세리머니·끝난 뒤엔 입력을 무시하고 서서히 선다.
-  for (let i = 0; i < n; i++) {
-    const p = s.players[i];
-    const held = controlled && !!inputs[i]?.kick;
-    // 킥은 한 번 나가면 뗐다 눌러야 다시 장전된다 — 누르고 있는 동안엔 쿨다운이 줄지 않는다.
-    if (p.kickCooldown > 0 && !held) p.kickCooldown -= 1;
-    if (p.kickFlash > 0) p.kickFlash -= 1;
-    p.kicking = held && p.kickCooldown === 0;   // 장전 중(고리가 밝다). 차고 나면 꺼진다.
-    steer(p, config.players[i].perf, controlled ? (inputs[i] ?? NO_INPUT) : NO_INPUT, p.kicking);
-  }
+  for (let i = 0; i < n; i++) controlBody(s.players[i], config.players[i].perf, inputs[i], controlled);
 
   // 2) 킥 — 닿는 거리 안이고 쉬는 중이 아니면 공에 속도를 더해 준다.
   let kicked = false;
@@ -361,15 +391,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
     for (let i = 0; i < n; i++) {
       const p = s.players[i], inp = inputs[i];
       if (!inp || !inp.kick || p.kickCooldown > 0) continue;
-      const dx = s.ball.x - p.x, dy = s.ball.y - p.y;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      if (d > R + BR + KICK_REACH) continue;
-      const nx = d > 1e-6 ? dx / d : (config.players[i].side === 0 ? 1 : -1), ny = d > 1e-6 ? dy / d : 0;
-      s.ball.vx += nx * config.players[i].perf.kick;
-      s.ball.vy += ny * config.players[i].perf.kick;
-      p.kickCooldown = KICK_COOLDOWN;
-      p.kicking = false;   // 나갔으니 장전 표시를 끈다
-      p.kickFlash = KICK_FLASH_TICKS;
+      if (!tryKick(p, s.ball, config.players[i].perf.kick, R, BR, config.players[i].side === 0 ? 1 : -1)) continue;
       touched(s, i);
       kicked = true;
     }
@@ -452,8 +474,13 @@ function finish(s: MatchState): void {
 
 /** 마지막 안전망. 정상이면 아무 일도 안 한다 — 숫자가 깨지거나 몸이 판을 벗어난 경우만 되돌린다. */
 function guardBodies(s: MatchState, g: Geo): void {
-  const { HW, HH, GH, GD, OW, OH } = g;
-  const b = s.ball;
+  guardBall(s.ball, g);
+  for (const p of s.players) guardPlayer(p, g);
+}
+
+/** 마지막 안전망(공 하나) — 숫자가 깨지거나 판을 벗어난 공만 되돌린다. 훈련장의 여러 공도 같은 걸 쓴다(2026-11-07). */
+export function guardBall(b: Body, g: Geo): void {
+  const { HW, HH, GH, GD } = g;
   if (!Number.isFinite(b.x + b.y + b.vx + b.vy)) { b.x = 0; b.y = 0; b.vx = 0; b.vy = 0; }
   const BR = g.pitch.ballR;
   if (b.x > HW + GD - BR) { b.x = HW + GD - BR; b.vx = 0; }
@@ -464,12 +491,15 @@ function guardBodies(s: MatchState, g: Geo): void {
     // 골대 상자 안에서는 옆벽 안쪽에만 있을 수 있다. 벗어났다면 뚫고 나온 것이니 골라인 위로 되돌린다.
     if (Math.abs(b.y) > GH - BR) { b.x = b.x > 0 ? HW : -HW; b.vx = 0; }
   }
-  for (const p of s.players) {
-    if (!Number.isFinite(p.x + p.y + p.vx + p.vy)) { p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; }
-    const R = g.pitch.playerR;
-    p.x = Math.min(OW - R, Math.max(-OW + R, p.x));
-    p.y = Math.min(OH - R, Math.max(-OH + R, p.y));
-  }
+}
+
+/** 마지막 안전망(몸 하나) — 숫자가 깨지면 가운데로, 선 밖 여백 밖이면 안으로. */
+export function guardPlayer(p: Body, g: Geo): void {
+  const { OW, OH } = g;
+  if (!Number.isFinite(p.x + p.y + p.vx + p.vy)) { p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; }
+  const R = g.pitch.playerR;
+  p.x = Math.min(OW - R, Math.max(-OW + R, p.x));
+  p.y = Math.min(OH - R, Math.max(-OH + R, p.y));
 }
 
 /** prev → next 사이에 생긴 사건. 틱 하나일 때 가장 정확하지만 몇 틱 묶음이어도 골은 점수 차이로 센다. */
