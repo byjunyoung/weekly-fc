@@ -289,9 +289,24 @@ export function restore(raw: string | null): TeamsState {
   } catch { return base; }
 }
 
-export function load(): TeamsState {
-  try { return restore(localStorage.getItem(KEY)); } catch { return initialTeams(); }
+const DAY_KEY = 'wfc.teams.draft.day';
+
+/** 새 매치의 출발점 — 참여 선수·용병·배정은 비우고 팀 수만 이어 받는다. */
+export const freshFrom = (prev: TeamsState): TeamsState => ({ ...initialTeams(), teams: prev.teams });
+
+/**
+ * 초안 복원 + 날짜 확인. **다른 날 만든 초안은 참여 선수를 비운다** — 지난주 사람들이 그대로 골라져 있어
+ * 매번 하나씩 풀어야 했다(2026-11-06 "새 매치 만들 때 항상 초기값으로, 매번 해제해야 하잖아").
+ * 같은 날 짜던 건 새로고침해도 남는다(카톡 인앱이 화면을 다시 띄우는 일이 잦다).
+ */
+export function restoreFor(raw: string | null, savedDay: string | null, today: string): TeamsState {
+  const st = restore(raw);
+  return savedDay === today ? st : freshFrom(st);
 }
-export function save(st: TeamsState): void {
-  try { localStorage.setItem(KEY, serialize(st)); } catch { /* 저장 못 해도 화면은 돈다 */ }
+
+export function load(today: string): TeamsState {
+  try { return restoreFor(localStorage.getItem(KEY), localStorage.getItem(DAY_KEY), today); } catch { return initialTeams(); }
+}
+export function save(st: TeamsState, today: string): void {
+  try { localStorage.setItem(KEY, serialize(st)); localStorage.setItem(DAY_KEY, today); } catch { /* 저장 못 해도 화면은 돈다 */ }
 }

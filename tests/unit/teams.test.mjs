@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   VESTS, MIN_TEAMS, MAX_TEAMS, initialTeams, setTeams, togglePicked, addGuest, removeGuest, moveTo,
-  membersOf, autoBalance, teamViews, unassigned, shortName, shareText, restore, serialize, playerKey, guestKey,
+  membersOf, autoBalance, teamViews, unassigned, shortName, shareText, restore, serialize, playerKey, guestKey, restoreFor, freshFrom,
   avgSpread, SPREAD_WARN,
 } from '../../src/lib/teams.ts';
 
@@ -249,4 +249,14 @@ test('용병은 난수 배치에서도 팀별 머릿수를 지키며 자리만 �
     assert.deepEqual(sizes(r), sizes(base));
     for (const g of ['a', 'b', 'c']) assert.ok(r.assign[guestKey(g)] != null, '용병 배정됨');
   }
+});
+
+test('restoreFor — 다른 날 초안은 참여 선수를 비우고 팀 수만 잇는다, 같은 날 초안은 그대로(2026-11-06)', () => {
+  const st = { teams: 4, picked: [2, 7], guests: [{ id: 'g1', name: '용병' }], assign: { p2: 0, p7: 1, gg1: 2 } };
+  const raw = serialize(st);
+  assert.deepEqual(restoreFor(raw, '2026-10-31', '2026-11-07'), { teams: 4, picked: [], guests: [], assign: {} });
+  assert.deepEqual(restoreFor(raw, null, '2026-11-07'), { teams: 4, picked: [], guests: [], assign: {} }, '날짜 없이 저장된 옛 초안도 비운다');
+  assert.deepEqual(restoreFor(raw, '2026-11-07', '2026-11-07'), st);
+  assert.deepEqual(restoreFor(null, null, '2026-11-07'), initialTeams());
+  assert.deepEqual(freshFrom(st), { teams: 4, picked: [], guests: [], assign: {} });
 });

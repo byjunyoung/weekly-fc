@@ -42,7 +42,7 @@ function Teams() {
   // 초안은 명단과 무관하게 한 번만 불러온다 — 예전엔 명단을 기다렸다 그걸로 걸렀는데,
   // 첫 값이 비었거나 낡으면 초안이 잘린 채 저장됐다(2026-09-22 리뷰). 안 온 사람을 거르는 건
   // 화면(membersOf)이 한다.
-  useEffect(() => { setSt(T.load()); setLoaded(true); }, []);
+  useEffect(() => { setSt(T.load(seoulToday())); setLoaded(true); }, []);
   useEffect(() => {
     if (editId == null || editing || !data) return;
     const m = data.matches.find((x) => x.id === editId);
@@ -57,7 +57,8 @@ function Teams() {
   }, [editId, data]);
 
   // 저장은 상태가 바뀐 뒤에 따로 한다 — commit 안에서 하면 연타 때 낡은 스냅샷이 저장된다.
-  useEffect(() => { if (loaded) T.save(st); }, [st, loaded]);
+  // 지난 매치를 고치는 중엔 초안에 쓰지 않는다 — 고치던 매치의 사람들이 다음 새 매치에 그대로 골라져 나왔다.
+  useEffect(() => { if (loaded && editId == null) T.save(st, seoulToday()); }, [st, loaded, editId]);
 
   // 갱신은 항상 **직전 상태**에서 계산한다(렌더 시점의 st 를 클로저로 잡으면 연타가 날아간다).
   const commit = (fn: (prev: T.TeamsState) => T.TeamsState): void => { setSt(fn); };
@@ -92,6 +93,7 @@ function Teams() {
       try {
         await saveMatch(date, snap.lineup, null, external ? opponent.trim() : '');
         message.success(`${matchLabel(date)} 매치에 저장했습니다`);
+        if (editId == null) T.save(T.freshFrom(st), seoulToday());   // 저장한 매치의 사람들은 다음 새 매치에 남기지 않는다
         location.href = href('/matches/');   // 매치 탭의 기능이니 저장하면 목록으로 돌아간다
       } catch (e) { message.error((e as Error).message); }
       finally { setSaving(false); }
