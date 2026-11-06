@@ -7,17 +7,18 @@ import {
 } from '../../../../lib/games/penalty2d.ts';
 import { TEAM } from '../../teams.ts';
 import { F9, F14, GOLD, banner, drawBall, drawName, drawToken, type Sprites } from '../match2d/render.ts';
-import { WX, Y0, Y1, toScreen, type PenLayout } from './layout.ts';
+import { toScreen, type PenLayout } from './layout.ts';
 
 const GRASS_A = '#0f2617', GRASS_B = '#173a23', RUNOFF = '#0b1c13';
 const LINE = 'rgba(244, 244, 244, .82)', NET_BG = '#0b0d10', NET = 'rgba(244, 244, 244, .2)';
-const MISS = '#e5484d', PENDING = 'rgba(255,255,255,.35)';
+export const MISS = '#e5484d'; const PENDING = 'rgba(255,255,255,.35)';
 const HALF = GOAL_W / 2;
 
 export const OUT_TEXT = { goal: '골!', save: '막았다!', miss: '빗나감', post: '골대!' } as const;
 
-/** 바닥 — 잔디 줄무늬, 골라인, 골 에어리어, 페널티 점, 그물. 매 프레임 그려도 가볍다(사각형 몇 개). */
-function drawPitch(ctx: CanvasRenderingContext2D, l: PenLayout): void {
+/** 바닥 — 잔디 줄무늬, 골라인, 골 에어리어, 차는 점(spots), 그물. 매 프레임 그려도 가볍다(사각형 몇 개). 프리킥도 쓴다(2026-11-07 3단계). */
+export function drawGoalEnd(ctx: CanvasRenderingContext2D, l: PenLayout, spots: readonly { x: number; y: number }[]): void {
+  const WX = l.wx, Y0 = l.y0, Y1 = l.y1;
   ctx.fillStyle = RUNOFF; ctx.fillRect(0, 0, l.vw, l.vh);
   const a = toScreen(l, -WX, Y0), b = toScreen(l, WX, Y1);
   const band = 60;
@@ -42,8 +43,8 @@ function drawPitch(ctx: CanvasRenderingContext2D, l: PenLayout): void {
   const ga = toScreen(l, -HALF - 60, 0);
   ctx.lineWidth = Math.max(1.5, 3 * sc);
   ctx.strokeRect(ga.x, ga.y, (GOAL_W + 120) * sc, 86 * sc);
-  const sp = toScreen(l, 0, SPOT_Y);
-  ctx.fillStyle = LINE; ctx.beginPath(); ctx.arc(sp.x, sp.y, Math.max(2, 5 * sc), 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = LINE;
+  for (const p of spots) { const sp = toScreen(l, p.x, p.y); ctx.beginPath(); ctx.arc(sp.x, sp.y, Math.max(2, 5 * sc), 0, Math.PI * 2); ctx.fill(); }
   // 기둥
   ctx.fillStyle = '#f4f4f4';
   for (const sx of [-1, 1]) { const p = toScreen(l, sx * HALF, 0); ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(2, POST_R * sc), 0, Math.PI * 2); ctx.fill(); }
@@ -121,10 +122,30 @@ function drawWho(ctx: CanvasRenderingContext2D, st: PenState, config: PenConfig,
   put(g.id, right, rw);
 }
 
+/** 키퍼 몸(프리킥도 쓴다) — 던졌거나 누워 있으면 옆으로 길게 늘인 팔, 서 있으면 짧은 팔, 그 위에 얼굴 원(던지는 동안 고리 하양). */
+export function drawKeeper(ctx: CanvasRenderingContext2D, l: PenLayout, gk: PenState['gk'], R: number, face: HTMLCanvasElement | null | undefined, jersey: number | undefined, color: string, me: boolean): void {
+  const sc = l.scale, gs = toScreen(l, gk.x, gk.y);
+  const lying = gk.diveT > 0 || gk.lie > 0;
+  const reach = (lying ? DIVE_REACH : STAND_REACH) * sc;
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(gs.x, gs.y + R * 0.3, R + reach, R * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(5, 12 * sc);
+  ctx.beginPath(); ctx.moveTo(gs.x - R - reach + ctx.lineWidth / 2, gs.y); ctx.lineTo(gs.x + R + reach - ctx.lineWidth / 2, gs.y); ctx.stroke();
+  ctx.lineCap = 'butt';
+  drawToken(ctx, gs, R, face, jersey, color, gk.diveT > 0, me);
+}
+
+/** 키커 옆 세기 막대(0..1) — 모두에게 보인다(조준은 아니다). 0.8 넘으면 빨강. */
+export function drawPowerBar(ctx: CanvasRenderingContext2D, ks: { x: number; y: number }, R: number, sc: number, p: number): void {
+  const bh = Math.max(40, 70 * sc), bw = 10, bx = ks.x + R + 12, by = ks.y - bh / 2;
+  ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
+  ctx.fillStyle = p > 0.8 ? MISS : GOLD; ctx.fillRect(bx, by + bh * (1 - p), bw, bh * p);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(bx - 2, by - 2, bw + 4, bh + 4);
+}
+
 export function drawPenalty(ctx: CanvasRenderingContext2D, st: PenState, config: PenConfig, l: PenLayout, sprites: Sprites, o: PenDrawOpts, dpr: number): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.imageSmoothingEnabled = false;
-  drawPitch(ctx, l);
+  drawGoalEnd(ctx, l, [{ x: 0, y: SPOT_Y }]);
   const sc = l.scale, R = BODY_R * sc;
   const kTeam = TEAM[config.players[st.kicker].side].color, gTeam = TEAM[config.players[st.keeper].side].color;
 
@@ -141,26 +162,14 @@ export function drawPenalty(ctx: CanvasRenderingContext2D, st: PenState, config:
 
   // 키퍼 — 던졌거나 누워 있으면 옆으로 길게 늘인 몸(팔), 서 있으면 짧은 팔. 그 위에 얼굴 원.
   const gk = st.gk, gs = toScreen(l, gk.x, gk.y);
-  const lying = gk.diveT > 0 || gk.lie > 0;
-  const reach = (lying ? DIVE_REACH : STAND_REACH) * sc;
-  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(gs.x, gs.y + R * 0.3, R + reach, R * 0.7, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = gTeam; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(5, 12 * sc);
-  ctx.beginPath(); ctx.moveTo(gs.x - R - reach + ctx.lineWidth / 2, gs.y); ctx.lineTo(gs.x + R + reach - ctx.lineWidth / 2, gs.y); ctx.stroke();
-  ctx.lineCap = 'butt';
-  drawToken(ctx, gs, R, sprites.faces[st.keeper], sprites.jerseys[st.keeper], gTeam, gk.diveT > 0, st.keeper === o.me);
+  drawKeeper(ctx, l, gk, R, sprites.faces[st.keeper], sprites.jerseys[st.keeper], gTeam, st.keeper === o.me);
 
   // 키커와 세기 막대(모두에게 보인다 — 조준은 아니다)
   const ks = toScreen(l, st.st.x, st.st.y);
   ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(ks.x, ks.y + R * 0.3, R * 0.95, R * 0.8, 0, 0, Math.PI * 2); ctx.fill();
   drawToken(ctx, ks, R, sprites.faces[st.kicker], sprites.jerseys[st.kicker], kTeam, st.st.held || st.st.kickFlash > 0, st.kicker === o.me);
   if (R >= 8) { drawName(ctx, ks, R, config.players[st.kicker].name, st.kicker === o.me); drawName(ctx, { x: gs.x, y: gs.y - R * 2 - 18 }, R, config.players[st.keeper].name, st.keeper === o.me); }
-  if (st.phase === 'aim' || (st.phase === 'flight' && st.phaseTicks < 30)) {
-    const p = st.phase === 'aim' ? st.st.charge / CHARGE_TICKS : st.power;
-    const bh = Math.max(40, 70 * sc), bw = 10, bx = ks.x + R + 12, by = ks.y - bh / 2;
-    ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
-    ctx.fillStyle = p > 0.8 ? MISS : GOLD; ctx.fillRect(bx, by + bh * (1 - p), bw, bh * p);
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(bx - 2, by - 2, bw + 4, bh + 4);
-  }
+  if (st.phase === 'aim' || (st.phase === 'flight' && st.phaseTicks < 30)) drawPowerBar(ctx, ks, R, sc, st.phase === 'aim' ? st.st.charge / CHARGE_TICKS : st.power);
 
   // 공
   const bs = toScreen(l, st.ball.x, st.ball.y);
@@ -202,7 +211,7 @@ export function drawPenalty(ctx: CanvasRenderingContext2D, st: PenState, config:
     ctx.font = `14px ${F14}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
     // 그린 칸 바로 아래 — 폰에선 오른쪽 아래 킥 버튼(92px)에 가리지 않게 화면 맨 아래보다 위에 둔다.
-    const hy = Math.min(toScreen(l, 0, Y1).y + 22, l.vh - l.bottom + 30);
+    const hy = Math.min(toScreen(l, 0, l.y1).y + 22, l.vh - l.bottom + 30);
     // 폰에선 길어서 두 줄로
     const parts = l.vw < 520 ? hint.split(' · ') : [hint];
     parts.forEach((t, i) => { ctx.strokeText(t, l.vw / 2, hy + i * 18); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText(t, l.vw / 2, hy + i * 18); });

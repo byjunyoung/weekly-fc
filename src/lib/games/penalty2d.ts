@@ -39,7 +39,7 @@ export const SPOT_Y = 320;            // 골라인 → 페널티 점
 export const KEEPER_Y = 18;           // 키퍼가 서는 줄(골라인 바로 앞)
 export const KEEPER_X_MAX = GOAL_W / 2 + 12;   // 키퍼가 갈 수 있는 끝(기둥 바로 바깥)
 const KEEPER_SPEED = 190;             // 서서 옆걸음 최고 속도(능력치 페이스 ±10%)
-const KEEPER_THICK = 12;              // 위에서 본 키퍼 몸의 두께(반)
+export const KEEPER_THICK = 12;              // 위에서 본 키퍼 몸의 두께(반)
 export const STAND_REACH = 8;        // 서 있을 때 몸 가운데에서 팔 끝까지(좌우, 반 길이)
 export const DIVE_REACH = 20;         // 던졌을 때·누워 있을 때
 export const DIVE_SPEED = 300;        // 던지는 동안 옆으로 가는 속도
@@ -96,10 +96,10 @@ const HALF = GOAL_W / 2;
 const SPOT = { x: 0, y: SPOT_Y };
 const STRIKER_HOME = { x: 0, y: SPOT_Y + 36 };
 /** 그물 — 옆 둘과 뒤. 공만 막는다. */
-const NETS: [number, number, number, number][] = [
+export const NETS: [number, number, number, number][] = [
   [-HALF, 0, -HALF, -GOAL_DEPTH], [HALF, 0, HALF, -GOAL_DEPTH], [-HALF, -GOAL_DEPTH, HALF, -GOAL_DEPTH],
 ];
-const POSTS: [number, number][] = [[-HALF, 0], [HALF, 0]];
+export const POSTS: [number, number][] = [[-HALF, 0], [HALF, 0]];
 
 // ── 편 명단 ──
 /** 편마다 자리 목록(config.players 차례). */
@@ -166,7 +166,12 @@ function strike(s: PenState, config: PenConfig, power: number, aim: number): voi
 
 /** 키퍼 한 틱 — 옆걸음 또는 던지기·눕기. 줄을 못 벗어난다. */
 function moveKeeper(s: PenState, config: PenConfig, inp: PenInput, control: boolean): void {
-  const gk = s.gk, perf = config.players[s.keeper].perf;
+  keeperStep(s.gk, config.players[s.keeper].perf, inp, control);
+}
+
+/** 키퍼 한 틱(몸 하나) — 승부차기·프리킥 공용(2026-11-07 3단계, moveKeeper 에서 그대로 떼어 냄). 줄(KEEPER_Y) 위 옆걸음 또는 던지기·눕기.
+ *  control 이 거짓이면 입력을 안 듣고 움직이던 대로(던지기·눕기는 이어서) 선다. */
+export function keeperStep(gk: Keeper, perf: Perf, inp: PenInput, control: boolean): void {
   if (control) {
     if (!inp.kick) gk.armed = true;
     else if (gk.armed && !gk.dived && gk.lie === 0 && gk.diveT === 0) {
@@ -364,14 +369,19 @@ export function penaltyBot(s: PenState, config: PenConfig, slot: number): PenInp
 // ═══════════════════════════ 입력 양자화 ═══════════════════════════
 // x 다섯 칸(-1, -.5, 0, .5, 1) × 킥 둘 × 조준(없음 + -38..38 칸) = 5 × 2 × 78 = 780.
 const X_LEVELS = 5, AIM_CODES = AIM_STEPS * 2 + 2;
+/** 입력 정수 가짓수(780). */
+export const PEN_CODES = X_LEVELS * 2 * AIM_CODES;
+/** 킥·조준이 바뀐 입력인가(바로 보낸다). */
+export const penUrgent = (a: number, b: number): boolean => Math.floor(a / X_LEVELS) !== Math.floor(b / X_LEVELS);
 const fin = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
-function encodePen(i: PenInput): number {
+/** 승부차기 입력 정수(프리킥도 같은 모양 — x·킥·조준). */
+export function encodePen(i: PenInput): number {
   const xi = Math.min(4, Math.max(0, Math.round(fin(i?.x) * 2) + 2));
   const k = i?.kick ? 1 : 0;
   const a = i && typeof i.aim === 'number' && Number.isFinite(i.aim) ? 1 + Math.min(AIM_STEPS * 2, Math.max(0, Math.round(i.aim / AIM_STEP) + AIM_STEPS)) : 0;
   return (a * 2 + k) * X_LEVELS + xi;
 }
-function decodePen(q: number): PenInput {
+export function decodePen(q: number): PenInput {
   if (!Number.isInteger(q) || q < 0 || q >= X_LEVELS * 2 * AIM_CODES) return { ...PEN_IDLE };
   const xi = q % X_LEVELS, rest = Math.floor(q / X_LEVELS), k = rest % 2, a = Math.floor(rest / 2);
   return { x: (xi - 2) / 2, kick: k === 1, aim: a === 0 ? null : (a - 1 - AIM_STEPS) * AIM_STEP };
