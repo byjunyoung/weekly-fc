@@ -23,7 +23,7 @@ import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView, Stage } from './common.ts';
 import {
   DENY_TEXT, GIVE_UP_MS, HELLO_EVERY_MS, HOST_SILENCE_LOBBY_MS, HOST_SILENCE_MATCH_MS, HOST_SLOW_MS, JOIN_SLOW_MS,
-  KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, SAY_GAP_MS, SLACK_MS, SPECTATOR_PING_MS, STEP_MS, inputGapMs, inRate, takeToken, fullBucket,
+  KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, PROBE_EVERY_MS, SAY_GAP_MS, SLACK_MS, SPECTATOR_PING_MS, STEP_MS, inputGapMs, inRate, takeToken, fullBucket,
   createStore, humansIn, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import type { Offsets, Smoother } from './smooth.ts';
@@ -100,6 +100,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
   let offsets: Offsets = noOffsets(0);
   let seq = 0, lastSentQ: number | null = null, lastInAt = -Infinity;
   let bucket = fullBucket(o.now());   // 손님 입력 양동이(리뷰 #1)
+  let lastProbe = -Infinity, liveSet = false;   // 길 떠보기·경기 중 박동(리뷰 #3)
   let bubbles: Bubble[] = [];
   let matchKey = 0;
 
@@ -276,6 +277,11 @@ export function createGuestSession(o: GuestOptions): GuestSession {
       const quiet = now - lastHostAt;
       if (quiet > (stage === 'match' ? HOST_SILENCE_MATCH_MS : HOST_SILENCE_LOBBY_MS)) { end(LOST); return; }
       store.set({ hostSlow: quiet > HOST_SLOW_MS });
+      // 방장이 3초 넘게 조용하다 — 내 길이 조용히 죽었을 수도 있어 떠본다(5초에 한 번). 답이 없으면 길이 다시 붙고(connecting),
+      // 다시 붙는 동안은 위의 conn !== 'open' 규칙대로 방장 침묵으로 세지 않는다(리뷰 #3).
+      if (quiet > HOST_SLOW_MS && now - lastProbe >= PROBE_EVERY_MS) { lastProbe = now; t.probe?.(); }
+      const live = stage === 'match';
+      if (live !== liveSet) { liveSet = live; t.setLive?.(live); }
       if (pausedSince !== null && now - pausedSince >= GIVE_UP_MS) { end('방장이 돌아오지 않아 방에서 나왔습니다'); return; }
       const pingEvery = pred && pred.myId === null ? SPECTATOR_PING_MS : PING_EVERY_MS;   // 구경은 5초마다
       // ping 도 같은 양동이에서 표를 쓴다(리뷰 #1) — in 이 표를 다 쓰는 8명 판에서 ping·pong(초당 7건)까지 얹으면 70건을 넘는다. 표가 없으면 다음 틱에.

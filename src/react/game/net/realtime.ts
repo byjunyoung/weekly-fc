@@ -10,6 +10,10 @@ import type { NetMsg } from '../../../lib/games/net.ts';
 import type { ConnStatus, Transport } from './transport.ts';
 
 const HEARTBEAT_MS = 25000;
+/** 경기 중 박동 — 죽은 소켓을 일찍 알아채게(2026-11-07 리뷰 #3). */
+const HEARTBEAT_LIVE_MS = 10000;
+/** 떠보기(probe) 답을 기다리는 시간. */
+export const PROBE_MS = 3000;
 const JOIN_TIMEOUT_MS = 10000;
 const BACKOFF_MS = [1000, 2000, 4000, 8000, 10000];
 /** 입장 뒤 이만큼 버텨야 재시도 간격을 처음(1초)으로 돌린다 — 입장 직후 끊기기를 반복할 때 1초마다 두드리지 않게(2026-11-07 리뷰). */
@@ -43,7 +47,9 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
   let joinTimer: ReturnType<typeof setTimeout> | undefined;
   let stableTimer: ReturnType<typeof setTimeout> | undefined;
   let rejoinTimer: ReturnType<typeof setTimeout> | undefined;
-  let chAttempt = 0;   // 소켓은 그대로인데 채널만 닫혀 다시 입장한 횟수(늘려 가며)
+  let chAttempt = 0;
+  let live = false, probeRef: string | null = null;
+  let probeTimer: ReturnType<typeof setTimeout> | undefined;   // 소켓은 그대로인데 채널만 닫혀 다시 입장한 횟수(늘려 가며)
   /** 열리기 전에 보낸 hello 는 마지막 하나만 들고 있다가 입장하자마자 보낸다 — 들어가는 첫 말이라 놓치면 1초를 더 기다린다.
    *  다른 메시지는 버린다(방 상태·스냅샷·입력은 어차피 곧 다시 보낸다). */
   let pendingHello: NetMsg | null = null;
@@ -62,7 +68,8 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
     if (joinTimer) clearTimeout(joinTimer);
     if (stableTimer) clearTimeout(stableTimer);
     if (rejoinTimer) clearTimeout(rejoinTimer);
-    hbTimer = undefined; joinTimer = undefined; stableTimer = undefined; rejoinTimer = undefined;
+    if (probeTimer) clearTimeout(probeTimer);
+    hbTimer = undefined; joinTimer = undefined; stableTimer = undefined; rejoinTimer = undefined; probeTimer = undefined; probeRef = null;
   };
 
   const scheduleRetry = (): void => {
@@ -126,6 +133,7 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
         return;
       }
       if (f.ref === hbRef) hbRef = null;   // 심장 박동 답
+      if (probeRef !== null && f.ref === probeRef) { probeRef = null; if (probeTimer) { clearTimeout(probeTimer); probeTimer = undefined; } }   // 떠보기 답 — 살아 있다
       return;
     }
     if (f.topic !== topic) return;
@@ -142,6 +150,16 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
     // system·presence_state 등은 쓰지 않는다
   };
 
+  /** 주기 박동 — 지난 박동에 답이 없으면 죽은 연결로 보고 다시 붙는다(모바일이 소켓을 조용히 끊는 경우). 경기 중엔 10초, 로비 25초. */
+  function startBeat(): void {
+    if (hbTimer) clearInterval(hbTimer);
+    hbTimer = setInterval(() => {
+      if (hbRef !== null) { drop(); return; }
+      hbRef = nextRef();
+      raw({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: hbRef });
+    }, live ? HEARTBEAT_LIVE_MS : HEARTBEAT_MS);
+  }
+
   function connect(): void {
     if (closedByMe) return;
     let sock: WebSocket;
@@ -151,12 +169,7 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
     if (status !== 'connecting') setStatus('connecting');
     sock.onopen = () => {
       join();
-      hbTimer = setInterval(() => {
-        // 지난 박동에 답이 없으면 죽은 연결로 보고 다시 붙는다(모바일이 소켓을 조용히 끊는 경우).
-        if (hbRef !== null) { drop(); return; }
-        hbRef = nextRef();
-        raw({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: hbRef });
-      }, HEARTBEAT_MS);
+      startBeat();
     };
     sock.onmessage = (e: MessageEvent) => {
       let f: Frame;
@@ -175,6 +188,18 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
     },
     onMessage(cb) { msgCbs.push(cb); },
     onStatus(cb) { statusCbs.push(cb); cb(status); },
+    probe() {
+      // 열린 소켓에만, 이미 떠보는 중이면 그대로. 답이 PROBE_MS 안에 없으면 끊고 다시 붙는다(늘려 가는 재시도 그대로).
+      if (closedByMe || !ws || ws.readyState !== 1 || probeRef !== null) return;
+      probeRef = nextRef();
+      raw({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: probeRef });
+      probeTimer = setTimeout(() => { probeTimer = undefined; if (probeRef !== null) drop(); }, PROBE_MS);
+    },
+    setLive(on) {
+      if (on === live) return;
+      live = on;
+      if (hbTimer) startBeat();
+    },
     close() {
       if (closedByMe) return;
       // 떠나기 전 마지막 말(bye)은 send 가 이미 보냈다. 채널에서 나간 뒤 소켓을 닫는다.
