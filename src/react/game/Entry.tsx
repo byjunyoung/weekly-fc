@@ -1,15 +1,15 @@
-// src/react/game/Entry.tsx — 입장 화면(/game/): 내 선수 고르기 + [방 만들기] / [혼자 연습]. ?room=CODE 로 오면 [들어가기].
+// src/react/game/Entry.tsx — 입장 화면(/game/): 오락실식 선수 선택(select/PlayerSelect) + [방 만들기] / [혼자 연습]. ?room=CODE 로 오면 [들어가기].
 // 설계: docs/superpowers/specs/2026-11-06-game-online-design.md §3. 혼자 연습은 1단계 흐름 그대로다 — 인원·시간·점수 설정을 그 뒤로 옮겼을 뿐.
 // 사용자: "2단계 온라인으로 넘어가자", "PC 모바일 둘다 최적화".
 import { href } from '../../lib/url';
 import { Button, Segmented } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BotPicks, FieldChoice } from '../../lib/game/room';
 import { updatePicks } from '../../lib/game/room';
 import { BotPickModal, BotSlot } from './BotSlot';
 import type { Player } from '../../lib/types';
 import { useMeInfo } from '../useMe';
-import { PlayerPicker } from './PlayerPicker';
+import { PlayerSelect } from './select/PlayerSelect';
 import type { Req } from './SoloMatch';
 import { maxPerSide } from './view';
 
@@ -57,6 +57,9 @@ export function Entry({ players, roomCode, reopen = false, message, onSolo, onCr
   const [picked, setPicked] = useState<number | null>(null);
   const [last, setLast] = useState<number | null>(null);
   const [solo, setSolo] = useState(false);
+  const soloRef = useRef<HTMLDivElement>(null);
+  // 혼자 연습 설정은 명단 아래에 열린다 — 폰에선 명단이 길어 안 보이니 열자마자 그 자리로 내려 준다.
+  useEffect(() => { if (solo) soloRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, [solo]);
   useEffect(() => { setLast(readLast()); }, []);
   const max = maxPerSide(players.length);
   const [perSide, setPerSide] = useState<Req['perSide']>(3);
@@ -98,33 +101,31 @@ export function Entry({ players, roomCode, reopen = false, message, onSolo, onCr
         <div className="actions"><a className="chip" href={href('/games/')}>게임 목록</a></div></div>
       <div className="stack">
         {message && <p className="game-conn" role="status">{message}</p>}
-        <div className="card">
-          <div className="card-head"><h2>내 선수</h2></div>
-          <PlayerPicker players={players} value={num} onPick={(p) => { setPicked(p.num); saveLast(p.num); }} />
-        </div>
-        <div className="card">
-          {roomCode ? (
+        {/* 오락실식 선수 선택 — "선택한 선수 크게 오른쪽에 다른 선수 리스트 … 약간 옛날 오락실게임에서 고르듯이"(2026-11-07).
+            버튼은 큰 칸 아래(폰에선 화면 아래에 붙는다). Enter 는 주 버튼. */}
+        <PlayerSelect roster={players} value={num} title="선수 선택"
+          onChange={(n) => { setPicked(n); saveLast(n); }}
+          onConfirm={() => { if (!player) return; if (roomCode) onJoin(player); else if (max >= 1) onCreate(player); }}
+          header={roomCode
+            ? (reopen ? <>내가 만든 방 <b className="game-code">{roomCode}</b> 을 다시 엽니다</> : <>방 <b className="game-code">{roomCode}</b> 에 들어갑니다</>)
+            : '2D 경기 · 방을 만들면 초대 링크가 생기고, 빈자리는 봇이 채웁니다'}
+          actions={roomCode ? (
             <>
-              <p className="game-join-msg">{reopen ? <>내가 만든 방 <b className="game-code">{roomCode}</b> 을 다시 엽니다</> : <>방 <b className="game-code">{roomCode}</b> 에 들어갑니다</>}</p>
-              <div className="game-actions">
-                <Button type="primary" size="large" disabled={!player} onClick={() => player && onJoin(player)}>
-                  {!player ? '내 선수를 골라 주세요' : reopen ? '방 다시 열기' : '들어가기'}
-                </Button>
-                <Button type="link" onClick={() => setSolo((v) => !v)}>혼자 연습</Button>
-              </div>
+              <Button type="primary" size="large" disabled={!player} onClick={() => player && onJoin(player)}>
+                {!player ? '내 선수를 골라 주세요' : reopen ? '방 다시 열기' : '들어가기'}
+              </Button>
+              <Button type="link" onClick={() => setSolo((v) => !v)}>혼자 연습</Button>
             </>
           ) : (
-            <div className="game-actions">
+            <>
               <Button type="primary" size="large" disabled={!player || max < 1} onClick={() => player && onCreate(player)}>
                 {player ? '방 만들기' : '내 선수를 골라 주세요'}
               </Button>
               <Button size="large" aria-expanded={solo} onClick={() => setSolo((v) => !v)}>혼자 연습</Button>
-            </div>
-          )}
-          {!roomCode && <p className="muted game-hint">방을 만들면 초대 링크가 생깁니다. 빈자리는 봇이 채웁니다.</p>}
-        </div>
+            </>
+          )} />
         {solo && (
-          <div className="card">
+          <div className="card" ref={soloRef}>
             <div className="card-head"><h2>혼자 연습 <span className="muted">봇과 한 판</span></h2></div>
             <div className="game-opts">
               <label className="game-opt"><span className="muted">인원</span>
