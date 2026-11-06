@@ -3,21 +3,21 @@
 // 사용자: "haxball 시스템 벤치마킹해" — 가져온 건 방 구조(두 팀 칸 + 대기 칸, 방장이 옮김)뿐이고 이름·모양·숫자는 포털 것이다.
 // 옮기는 손짓은 포털 팀짜기(TeamsApp)와 같다: 사람을 누르고 → 칸을 누르면 옮겨진다. 다시 누르면 취소.
 // 폰(390px)에서도 세 칸이 한 화면에 나란히 보이게 칩을 작게(얼굴 + 이름) 둔다 — 세로로 쌓으면 한눈에 안 들어온다.
+// 2026-11-07 게임 묶음: 방은 게임 종류를 갖는다. 방장은 그 방 모드(2D/3D)의 게임 중에서 고르고(지금 2D 는 경기 하나라 읽기 전용 칩),
+// 설정 칸·안내는 그 게임의 화면(views)이 그린다. 팀 칸·봇 자리·시작·자동 나누기는 어느 게임에나 같다.
 import { App, Button, Modal, Segmented } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
 import type { Member, Team } from '../../lib/game/room';
-import { MAX_PER_SIDE, NO_PICKS } from '../../lib/game/room';
-import type { FieldChoice, PerSide, Room2d } from '../../lib/games/match2d-room';
-import { resolveField, sideSizes } from '../../lib/games/match2d-room';
+import { NO_PICKS } from '../../lib/game/room';
+import { gameOf, gamesOf } from '../../lib/games/registry';
 import type { Player } from '../../lib/types';
 import type { GuestSession, HostSession, SessionView } from './net/session';
-import { FIELD_OPTIONS, SCORE_LIMITS } from './Entry';
 import { BotPickModal, BotSlot } from './BotSlot';
 import { PlayerPicker } from './PlayerPicker';
 import { TEAM } from './teams';
-import { maxPerSide } from './views/match2d/view';
+import { viewOf } from './views';
 
 const COLS: { team: Team; label: string; color: string | null }[] = [
   { team: 0, label: TEAM[0].short, color: TEAM[0].color },
@@ -28,24 +28,12 @@ const COLS: { team: Team; label: string; color: string | null }[] = [
 export const connText = (c: SessionView['conn']): string | null =>
   c === 'open' ? null : c === 'connecting' ? '연결하는 중…' : '연결이 끊겼습니다 — 다시 붙는 중';
 
-const fieldLabel = (f: FieldChoice): string => FIELD_OPTIONS.find((o) => o.value === f)?.label ?? '보통';
-
-/** 경기장 줄 — 자동이면 지금 칸 인원으로 고를 크기도 같이("자동 · 보통"). */
-const fieldText = (r: Room2d): string => (r.settings.field === 'auto' ? `자동 · ${fieldLabel(resolveField(r))}` : fieldLabel(r.settings.field));
-
-function settingsText(r: Room2d): string {
-  const s = r.settings;
-  const [a, b] = sideSizes(r);
-  const bots = s.perSide ? `한 편 ${s.perSide}명까지 봇으로 채움` : '봇 없음';
-  return `${a}대${b} · ${bots} · 경기장 ${fieldText(r)} · ${s.minutes}분 · ${s.scoreLimit ? `${s.scoreLimit}점 먼저` : '점수 제한 없음'}`;
-}
-
 export function Lobby({ session, view, players, onLeave, onShare }: {
   session: HostSession | GuestSession; view: SessionView; players: Player[];
   onLeave: () => void; onShare: () => void;
 }) {
   const { message } = App.useApp();
-  const room = view.room as Room2d | null;
+  const room = view.room;
   const host = session.role === 'host' ? session : null;
   const guest = session.role === 'guest' ? session : null;
   const [picked, setPicked] = useState<string | null>(null);
@@ -65,8 +53,11 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
   const byNum = useMemo(() => new Map(players.map((p) => [p.num, p])), [players]);
   const held = useMemo(() => new Set((room?.members ?? []).filter((m) => m.clientId !== view.clientId).map((m) => m.num)), [room, view.clientId]);
   if (!room) return null;
+  const entry = gameOf(room.game), gv = viewOf(room.game);
+  if (!entry || !gv) return null;   // 모르는 게임의 방은 parseMsg 가 이미 막는다
   const me = room.members.find((m) => m.clientId === view.clientId);
-  const ps = room.settings.perSide;
+  const seats = entry.botSeats ? entry.botSeats(room) : null;
+  const kinds = gamesOf(entry.mode);
   const editable = !!host && room.phase === 'lobby';
   const block = host ? host.startBlock() : null;
   const conn = connText(view.conn);
@@ -120,7 +111,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
         <div className="game-board">
           {COLS.map((c) => {
             const list = room.members.filter((m) => m.team === c.team);
-            const bots = c.team === null ? 0 : Math.max(0, ps - list.length);
+            const bots = c.team === null || !seats ? 0 : seats[c.team];
             return (
               <section key={String(c.team)} className={`game-col${editable && picked ? ' is-target' : ''}`}
                 onClick={editable && picked ? () => moveTo(c.team) : undefined}>
@@ -147,31 +138,24 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
         </div>
 
         <div className="card">
-          {host ? (
-            <div className="game-opts">
-              {/* 인원 = "한 편을 이 수까지 봇으로 채운다"(2026-11-07 "최대 인원 같은거 헥스볼처럼 자유롭게") — 사람이 더 많은 편은 사람 수대로 다 뛴다. */}
-              <label className="game-opt"><span className="muted">봇으로 채움</span>
-                <Segmented<number> value={ps} disabled={!editable} onChange={(v) => host.setSettings({ perSide: v as PerSide })}
-                  options={Array.from({ length: MAX_PER_SIDE + 1 }, (_, n) => ({ value: n, label: n ? `${n}명까지` : '안 채움', disabled: n > maxPerSide(players.length) }))} /></label>
-              <label className="game-opt"><span className="muted">경기장</span>
-                <Segmented<FieldChoice> value={room.settings.field} disabled={!editable} onChange={(v) => host.setSettings({ field: v })}
-                  options={FIELD_OPTIONS.map((o) => (o.value === 'auto' && room.settings.field === 'auto' ? { ...o, label: `자동 · ${fieldLabel(resolveField(room))}` } : o))} /></label>
-              <label className="game-opt"><span className="muted">시간</span>
-                <Segmented<number> value={room.settings.minutes} disabled={!editable} onChange={(v) => host.setSettings({ minutes: v })}
-                  options={[1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n}분` }))} /></label>
-              <label className="game-opt"><span className="muted">점수 제한</span>
-                <Segmented<number> value={room.settings.scoreLimit} disabled={!editable} onChange={(v) => host.setSettings({ scoreLimit: v })}
-                  options={SCORE_LIMITS.map((n) => ({ value: n, label: n ? `${n}점` : '없음' }))} /></label>
-            </div>
-          ) : <p className="muted">{settingsText(room)}</p>}
+          <gv.Settings room={room} players={players} editable={editable}
+            onChange={host ? (patch) => host.setSettings(patch) : null}
+            lead={host && (
+              <label className="game-opt"><span className="muted">게임 종류</span>
+                {kinds.length > 1
+                  ? <Segmented<string> value={room.game} disabled={!editable} onChange={(v) => host.setGame(v)}
+                      options={kinds.map((k) => ({ value: k.adapter.id, label: k.name }))} />
+                  : <span className="chip" aria-readonly="true">{entry.name}</span>}
+              </label>
+            )} />
           <div className="game-actions">
             {host && <Button type="primary" size="large" disabled={!editable || !!block} onClick={() => host.start()}>시작</Button>}
             {host && <Button size="large" disabled={!editable} onClick={() => { setPicked(null); host.autoBalance(); }}>자동 나누기</Button>}
             {guest && <Button size="large" disabled={room.phase !== 'lobby'} onClick={() => setRepick(true)}>선수 바꾸기</Button>}
           </div>
-          {host && <p className="muted game-hint">한 편이 봇으로 채울 수보다 적으면 봇이 들어갑니다 · 두 편 인원이 달라도 됩니다 · 한 편 6명까지</p>}
+          {host && gv.hostHint && <p className="muted game-hint">{gv.hostHint}</p>}
           {block && <p className="muted game-hint">{block}</p>}
-          <p className="muted game-hint">PC: 방향키·WASD 이동, 스페이스·Shift 킥, 숫자 1~6 한마디 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 킥</p>
+          <p className="muted game-hint">{gv.controls}</p>
         </div>
       </div>
 

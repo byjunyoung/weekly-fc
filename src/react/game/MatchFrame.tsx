@@ -1,0 +1,106 @@
+// src/react/game/MatchFrame.tsx — 경기 화면 틀(2026-11-07 게임 묶음 토대). 혼자·온라인, 어느 게임이든 같은 틀에 그 게임의 화면(GameView)을 끼운다.
+// 설계: docs/superpowers/specs/2026-11-07-games-program-design.md §2 — "경기 화면 틀(전체 화면 오버레이·✕·소리·한마디·끊김 안내·결과)은 공용."
+// SoloMatch·OnlineMatch 에 겹쳐 있던 마크업과 준비(스크롤 잠금·터치 감지·조이스틱/킥 달기·장면 열고 닫기)를 그대로 모았다 — 모양·클래스·순서 같음.
+// 사용자: "PC 모바일 둘다 최적화". 한마디 버튼은 왼쪽 위 — 조이스틱(왼쪽 절반 아래)과 킥(오른쪽 아래)을 피한 자리.
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { PHRASES } from '../../lib/games/net';
+import { attachInput } from './input';
+import SoundToggle from './SoundToggle';
+import type { AnyView, Camera, ResultView, Scene } from './views/types';
+
+/** 디버그 훅(?debug=1)과 경기 화면이 나눠 쓰는 살아 있는 값. 리액트 상태가 아니다. camera 는 경기 화면이 프레임마다 써 둔다.
+ *  state·config 는 혼자 하기에서만(온라인은 세션이 들고 있다), override = 내 입력 덮어쓰기(그 게임의 입력 모양). */
+export type Live = { state: unknown; config: unknown; override: unknown; camera: Camera | null };
+
+type Refs = {
+  root: React.RefObject<HTMLDivElement | null>; canvas: React.RefObject<HTMLCanvasElement | null>;
+  base: React.RefObject<HTMLDivElement | null>; knob: React.RefObject<HTMLDivElement | null>; kick: React.RefObject<HTMLButtonElement | null>;
+};
+
+/** 장면을 열고 조작을 단 뒤 run(루프)을 돌린다. 한 판 동안 한 번(부르는 쪽이 경기마다 key 로 새로 마운트한다).
+ *  playing 이 거짓(구경)이면 조작을 달지 않는다 — 키·터치를 먹지 않게. readHuman = 디버그 덮어쓰기 > 화면 조작을 그 게임 입력으로. */
+export function usePlaySurface(o: {
+  view: AnyView; config: unknown; roster: Parameters<AnyView['mount']>[0]['roster']; playing: boolean;
+  live: React.RefObject<Live>;
+  run: (c: { scene: Scene<unknown, unknown, unknown>; readHuman: (() => unknown) | null }) => () => void;
+}): { refs: Refs; touch: boolean } {
+  const refs: Refs = { root: useRef(null), canvas: useRef(null), base: useRef(null), knob: useRef(null), kick: useRef(null) };
+  const [touch, setTouch] = useState(false);
+  const { view, config, roster, playing, live, run } = o;
+  const runRef = useRef(run);
+  runRef.current = run;
+  useEffect(() => {
+    const root = refs.root.current, canvas = refs.canvas.current;
+    if (config == null || !root || !canvas || !refs.base.current || !refs.knob.current || !refs.kick.current) return;
+    const scene = view.mount({ root, canvas, config, roster });
+    if (!scene) return;
+    // 페이지 스크롤 잠금(CSS 클래스) — 경기 중 배경이 밀리지 않게.
+    document.documentElement.classList.add('game-lock');
+    if (playing && window.matchMedia?.('(any-pointer: coarse)').matches) setTouch(true);
+    const input = playing ? attachInput({ root, base: refs.base.current, knob: refs.knob.current, kickBtn: refs.kick.current, onTouch: () => setTouch(true) }) : null;
+    const readHuman = input ? (): unknown => live.current.override ?? scene.toInput(input.read()) : null;
+    const stop = runRef.current({ scene, readHuman });
+    return () => {
+      stop();
+      input?.dispose();
+      scene.dispose();
+      document.documentElement.classList.remove('game-lock');
+      live.current.camera = null;
+    };
+    // 경기마다 새로 마운트(key)되므로 한 판 동안 view·config·playing 은 그대로다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, config, roster, playing, live]);
+  return { refs, touch };
+}
+
+/** 결과 상자 아래 버튼·안내(혼자: 다시 하기/설정으로, 방장: 바로 방으로, 손님: 잠시 뒤 안내). */
+export type ResultBox = ResultView & { actions: ReactNode };
+
+export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickShown, result }: {
+  refs: Refs;
+  xLabel: string; onX: () => void;
+  /** 한마디(온라인에서 뛰는 사람만). 없으면 버튼이 없다. */
+  say?: (k: number) => void;
+  /** 구경 중 표시. */
+  watching?: boolean;
+  /** 끊김·방장 자리 비움 같은 띠 글. */
+  banner?: string | null;
+  kickShown: boolean;
+  result: ResultBox | null;
+}) {
+  const [sayOpen, setSayOpen] = useState(false);
+  const pick = (k: number): void => { say?.(k); setSayOpen(false); };
+  return (
+    <div className="game-overlay" ref={refs.root}>
+      <canvas ref={refs.canvas} className="game-canvas" />
+      {!result && <button type="button" className="game-x" aria-label={xLabel} onClick={onX}>✕</button>}
+      {!result && <SoundToggle />}
+      {!result && say && (
+        <div className="game-say">
+          <button type="button" className="game-say-btn" aria-expanded={sayOpen} aria-label="한마디" onClick={() => setSayOpen((v) => !v)}>한마디</button>
+          {sayOpen && (
+            <div className="game-say-menu" role="menu">
+              {PHRASES.map((p, k) => (
+                <button type="button" role="menuitem" key={p} onClick={() => pick(k)}><span className="muted">{k + 1}</span> {p}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {!result && watching && <div className="game-watch" role="status">구경 중</div>}
+      {!result && banner && <div className="game-banner" role="status">{banner}</div>}
+      <div className="game-stick" ref={refs.base} aria-hidden="true"><div className="game-stick-knob" ref={refs.knob} /></div>
+      <button type="button" ref={refs.kick} className={`game-kick${kickShown ? ' is-shown' : ''}`} aria-label="킥">킥</button>
+      {result && (
+        <div className="game-result" role="dialog" aria-label="경기 결과">
+          <div className="game-result-box">
+            <b className={`game-outcome is-${result.tone}`}>{result.outcome}</b>
+            <div className="game-final">{result.score}</div>
+            <p className="muted">{result.sub}</p>
+            {result.actions}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
