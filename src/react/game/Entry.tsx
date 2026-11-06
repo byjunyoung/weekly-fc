@@ -3,6 +3,7 @@
 // 사용자: "2단계 온라인으로 넘어가자", "PC 모바일 둘다 최적화".
 import { Button, Segmented } from 'antd';
 import { useEffect, useState } from 'react';
+import type { FieldChoice } from '../../lib/game/room';
 import type { Player } from '../../lib/types';
 import { useMeInfo } from '../useMe';
 import { PlayerPicker } from './PlayerPicker';
@@ -11,6 +12,10 @@ import { maxPerSide } from './view';
 
 const LAST_KEY = 'wfc:game:last';          // 마지막으로 고른 내 선수(번호)
 const SCORE_LIMITS = [0, 1, 3, 5] as const;
+/** 경기장 고르기(2026-11-07 "맵 크기도 크기별로") — 방 설정과 혼자 연습이 같이 쓴다. */
+export const FIELD_OPTIONS: { value: FieldChoice; label: string }[] = [
+  { value: 'auto', label: '자동' }, { value: 'S', label: '작게' }, { value: 'M', label: '보통' }, { value: 'L', label: '크게' }, { value: 'XL', label: '아주 크게' },
+];
 
 export function readLast(): number | null {
   try { const v = Number(localStorage.getItem(LAST_KEY)); return Number.isInteger(v) && v > 0 ? v : null; } catch { return null; }
@@ -37,7 +42,8 @@ export function Entry({ players, roomCode, reopen = false, message, onSolo, onCr
   const [solo, setSolo] = useState(false);
   useEffect(() => { setLast(readLast()); }, []);
   const max = maxPerSide(players.length);
-  const [perSide, setPerSide] = useState<1 | 2 | 3 | 4>(3);
+  const [perSide, setPerSide] = useState<Req['perSide']>(3);
+  const [field, setField] = useState<FieldChoice>('auto');
   const [minutes, setMinutes] = useState(3);
   const [scoreLimit, setScoreLimit] = useState<number>(0);
 
@@ -45,7 +51,7 @@ export function Entry({ players, roomCode, reopen = false, message, onSolo, onCr
   // 고른 사람 > 지난번 > 로그인해 차지한 내 선수. 로그인은 없어도 된다.
   const num = has(picked) ? picked : has(last) ? last : has(me.num) ? me.num : null;
   const player = num === null ? null : players.find((p) => p.num === num) ?? null;
-  const per = Math.min(perSide, Math.max(1, max)) as 1 | 2 | 3 | 4;
+  const per = Math.min(perSide, Math.max(1, max)) as Req['perSide'];
   const ok = num !== null && max >= 1;
 
   return (
@@ -83,8 +89,10 @@ export function Entry({ players, roomCode, reopen = false, message, onSolo, onCr
             <div className="card-head"><h2>혼자 연습 <span className="muted">봇과 한 판</span></h2></div>
             <div className="game-opts">
               <label className="game-opt"><span className="muted">인원</span>
-                <Segmented<number> value={per} onChange={(v) => setPerSide(v as 1 | 2 | 3 | 4)}
-                  options={[1, 2, 3, 4].map((n) => ({ value: n, label: `${n}대${n}`, disabled: n > max }))} /></label>
+                <Segmented<number> value={per} onChange={(v) => setPerSide(v as Req['perSide'])}
+                  options={[1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: `${n}대${n}`, disabled: n > max }))} /></label>
+              <label className="game-opt"><span className="muted">경기장</span>
+                <Segmented<FieldChoice> value={field} onChange={setField} options={FIELD_OPTIONS} /></label>
               <label className="game-opt"><span className="muted">시간</span>
                 <Segmented<number> value={minutes} onChange={setMinutes} options={[1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n}분` }))} /></label>
               <label className="game-opt"><span className="muted">점수 제한</span>
@@ -93,7 +101,7 @@ export function Entry({ players, roomCode, reopen = false, message, onSolo, onCr
             <p className="muted game-hint">PC: 방향키·WASD로 이동, 스페이스로 킥 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 킥</p>
             {max < 1 && <p className="muted">명단이 두 명은 있어야 판을 만들 수 있습니다.</p>}
             <div className="game-start">
-              <Button type="primary" size="large" disabled={!ok} onClick={() => ok && onSolo({ num, perSide: per, minutes, scoreLimit }, players)}>
+              <Button type="primary" size="large" disabled={!ok} onClick={() => ok && onSolo({ num, perSide: per, minutes, scoreLimit, field }, players)}>
                 {ok ? '시작' : '내 선수를 골라 주세요'}
               </Button>
             </div>

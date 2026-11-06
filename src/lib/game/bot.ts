@@ -7,11 +7,15 @@
 //   - 그 밖 = 받쳐 주기. 공 앞쪽 옆자리에 서서 두 명이 한 공에 몰리지 않게 한다.
 // 일부러 틀리게 하는 값(조준 오차·머뭇거림)은 틱과 id 를 섞은 해시에서 나온다 — 난수 함수는 안 쓴다.
 // 값은 40~50틱(0.7초 안팎) 동안 유지돼 떨지 않는다.
-import { formationSpot, NO_INPUT, PITCH, type Input, type MatchConfig, type MatchState } from './sim.ts';
+//
+// 경기장 크기(2026-11-07 "최대 인원 같은거 헥스볼처럼 자유롭게 맵 크기도 크기별로 하고"): 아래 거리 값은 보통 경기장(1200×720)에서 잡은 것이고,
+// 그 경기의 경기장에 비례해 늘인다(kx = 반가로/600, ky = 반세로/360). 한 편 5~6명이어도 역할은 셋 그대로 —
+// 가장 뒤 하나는 남고, 공에 가장 가까운 하나가 공격하고, 나머지는 순번마다 다른 자리(앞뒤·좌우가 엇갈리게)에서 받친다.
+import { formationSpot, NO_INPUT, PITCH, pitchOf, type Input, type MatchConfig, type MatchState, type Pitch } from './sim.ts';
 
 // ═══════════ 봇 난이도 조절 값 ═══════════
-/** 골을 겨냥할 때 세로로 빗나가는 최대 폭(단위). 골문 반폭이 100 이라 60 이면 가끔 기둥 쪽으로 간다. */
-const AIM_ERR = 60;
+/** 골을 겨냥할 때 세로로 빗나가는 최대 폭(골문 반폭에 대한 비율). 보통 경기장 반폭 100 에서 60 — 가끔 기둥 쪽으로 간다. */
+const AIM_ERR = 0.6;
 /** 조준 오차가 바뀌는 간격(틱). */
 const AIM_HOLD = 50;
 /** 머뭇거림: 이 간격(틱)마다 제비를 뽑아 HESITATE_P 확률이면 그 동안 속도가 HESITATE_SPEED 배가 된다. */
@@ -24,13 +28,13 @@ const BEHIND_GAP = 66;
 const BEHIND_MIN = 20;
 /** 차기 전에 공-골 방향과 몸-공 방향이 이 코사인 이상 맞아야 한다(0.9 ≈ 25도). */
 const ALIGN_COS = 0.9;
-/** 자기 진영 3분의 1(공의 진행 좌표가 -200 보다 뒤) 안에서만 수비도 공을 다툰다. */
-const OWN_THIRD = -200;
+/** 자기 진영 3분의 1(공의 진행 좌표가 반가로의 -1/3 보다 뒤) 안에서만 수비도 공을 다툰다. */
+const OWN_THIRD = -1 / 3;
 // ═══════════════════════════════════════
 
+// 몸 크기는 모든 경기장에서 같다(PITCH 는 그것만 읽는다).
 const R_SUM = PITCH.playerR + PITCH.ballR;
 const REACH = R_SUM + 6;   // 킥 닿는 거리(sim 의 KICK_REACH 6 과 같은 거리 — 닿을 때만 누른다)
-const HW = PITCH.w / 2, HH = PITCH.h / 2;
 
 /** (a, b) → -1..1. 정수 해시라 환경이 달라도 같다. */
 function noise(a: number, b: number): number {
@@ -55,15 +59,17 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
   if (!mp || !me || (state.phase !== 'kickoff' && state.phase !== 'play')) return { ...NO_INPUT };
   const dir = mp.side === 0 ? 1 : -1;   // 공격 방향(x 부호)
   const ball = state.ball;
+  const pitch = pitchOf(config.field);
+  const HW = pitch.w / 2, HH = pitch.h / 2, kx = HW / 600, ky = HH / 360;
   const mates = config.players.filter((q) => q.side === mp.side);
   const slot = mates.findIndex((q) => q.id === id);
   const isKeeper = mates.length >= 2 && slot === 0;
-  const ballProg = dir * ball.x;                 // 내 편 기준 공의 진행 위치(-600 = 우리 골대 쪽 끝)
-  const inOwnThird = ballProg < OWN_THIRD;
+  const ballProg = dir * ball.x;                 // 내 편 기준 공의 진행 위치(-HW = 우리 골대 쪽 끝)
+  const inOwnThird = ballProg < OWN_THIRD * HW;
 
   // 킥오프에서 공을 차는 편이 아니면 제자리(자기 자리)를 지킨다 — 공을 건드릴 수도 없다.
   if (state.phase === 'kickoff' && state.kickoffSide !== mp.side) {
-    const f = formationSpot(config.perSide, slot, mp.side);
+    const f = formationSpot(config.field, mates.length, slot, mp.side);
     return { ...moveTo(me.x, me.y, f.x, f.y, 40), kick: false };
   }
 
@@ -80,12 +86,12 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
   const tick = state.tick;
   const hesitate = noise(id, Math.floor(tick / HESITATE_HOLD) + 1000) < -1 + 2 * HESITATE_P ? HESITATE_SPEED : 1;
 
-  if (attackerId === id) return attack(state, id, dir, ballProg, hesitate);
+  if (attackerId === id) return attack(state, id, dir, ballProg, hesitate, pitch);
 
   if (isKeeper) {
-    // 공과 우리 골대 사이에 선다. 공이 멀수록 앞으로 나오되 자기 진영(-130 이하)을 넘지 않는다.
-    const gp = Math.min(-130, -490 + 0.3 * (ballProg + 600));
-    const gy = clamp(ball.y * 0.4, -(PITCH.goalW / 2 - 30), PITCH.goalW / 2 - 30);
+    // 공과 우리 골대 사이에 선다. 공이 멀수록 앞으로 나오되 자기 진영(보통 경기장 -130 이하)을 넘지 않는다.
+    const gp = Math.min(-130 * kx, -490 * kx + 0.3 * (ballProg + HW));
+    const gy = clamp(ball.y * 0.4, -(pitch.goalW / 2 - 30), pitch.goalW / 2 - 30);
     return { ...scale(moveTo(me.x, me.y, dir * gp, gy, 60), hesitate), kick: false };
   }
 
@@ -93,18 +99,20 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
   const supporters = contenders.filter((q) => q.id !== attackerId);
   const k = Math.max(0, supporters.findIndex((q) => q.id === id));
   const sign = (k % 2 === 0 ? 1 : -1) * (ball.y > 0 ? -1 : 1);
-  const sp = clamp(ballProg + 160 - 60 * k, -380, 460);
-  const sy = clamp(sign * (190 + 40 * k) + ball.y * 0.3, -HH + 60, HH - 60);
+  // 순번 k 가 커질수록 한 칸 뒤·한 칸 바깥 — 5~6명이어도 받치는 사람이 같은 점에 몰리지 않는다(k 짝·홀로 좌우가 갈린다).
+  const sp = clamp(ballProg + (160 - 60 * k) * kx, -380 * kx, 460 * kx);
+  const sy = clamp(sign * (190 + 40 * k) * ky + ball.y * 0.3, -HH + 60, HH - 60);
   return { ...scale(moveTo(me.x, me.y, dir * sp, sy, 80), hesitate), kick: false };
 }
 
 function scale(v: { x: number; y: number }, m: number): { x: number; y: number } { return { x: v.x * m, y: v.y * m }; }
 
 /** 공격수: 공 → 상대 골대 선 위에서 공 뒤로 돌아 들어간 뒤 밀고 찬다. */
-function attack(state: MatchState, id: number, dir: number, ballProg: number, hesitate: number): Input {
+function attack(state: MatchState, id: number, dir: number, ballProg: number, hesitate: number, pitch: Pitch): Input {
   const me = state.players[id], ball = state.ball;
+  const HW = pitch.w / 2, HH = pitch.h / 2;
   // 조준점: 상대 골문 가운데에서 세로로 조금 빗나가게(틱·id 에서 나온 값, 일정 시간 유지)
-  const gx = dir * HW, gy = noise(id, Math.floor(state.tick / AIM_HOLD)) * AIM_ERR;
+  const gx = dir * HW, gy = noise(id, Math.floor(state.tick / AIM_HOLD)) * AIM_ERR * (pitch.goalW / 2);
   let dx = gx - ball.x, dy = gy - ball.y;
   const dl = Math.sqrt(dx * dx + dy * dy) || 1;
   dx /= dl; dy /= dl;                                     // 공 → 골 단위벡터 d
@@ -133,15 +141,15 @@ function attack(state: MatchState, id: number, dir: number, ballProg: number, he
   }
 
   // 걷어내기: 우리 골대 가까운 공은 방향이 맞지 않아도 (우리 골대 쪽만 아니면) 닿는 즉시 찬다.
-  if (!kick && ballProg < -330 && dist > 0 && dist <= REACH) {
+  if (!kick && ballProg < -0.55 * HW && dist > 0 && dist <= REACH) {   // 보통 경기장 -330
     const towardAttack = (-rx / dist) * dir;                // 몸→공이 상대 골대 쪽이면 +
     if (towardAttack > -0.3) kick = true;
   }
 
   // 경기장 안(선수가 갈 수 있는 곳)으로 목표를 자른다
   // 선 밖 여백까지 — 벽에 붙은 공 뒤로 돌아 들어갈 수 있다.
-  tx = clamp(tx, -HW - PITCH.marginX + PITCH.playerR, HW + PITCH.marginX - PITCH.playerR);
-  ty = clamp(ty, -HH - PITCH.marginY + PITCH.playerR, HH + PITCH.marginY - PITCH.playerR);
+  tx = clamp(tx, -HW - pitch.marginX + pitch.playerR, HW + pitch.marginX - pitch.playerR);
+  ty = clamp(ty, -HH - pitch.marginY + pitch.playerR, HH + pitch.marginY - pitch.playerR);
   const m = moveTo(me.x, me.y, tx, ty, 0);
   // 킥은 뗐다 눌러야 다시 나간다 — 방금 찼으면(쿨다운 중) 손을 뗀다.
   if (me.kickCooldown > 0) kick = false;

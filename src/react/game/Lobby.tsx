@@ -7,10 +7,11 @@ import { App, Button, Modal, Segmented } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
-import type { Member, RoomState, Team } from '../../lib/game/room';
+import type { FieldChoice, Member, PerSide, RoomState, Team } from '../../lib/game/room';
+import { MAX_PER_SIDE, resolveField, sideSizes } from '../../lib/game/room';
 import type { Player } from '../../lib/types';
 import type { GuestSession, HostSession, SessionView } from './net/session';
-import { SCORE_LIMITS } from './Entry';
+import { FIELD_OPTIONS, SCORE_LIMITS } from './Entry';
 import { PlayerPicker } from './PlayerPicker';
 import { TEAM } from './render';
 import { maxPerSide } from './view';
@@ -24,9 +25,16 @@ const COLS: { team: Team; label: string; color: string | null }[] = [
 export const connText = (c: SessionView['conn']): string | null =>
   c === 'open' ? null : c === 'connecting' ? '연결하는 중…' : '연결이 끊겼습니다 — 다시 붙는 중';
 
+const fieldLabel = (f: FieldChoice): string => FIELD_OPTIONS.find((o) => o.value === f)?.label ?? '보통';
+
+/** 경기장 줄 — 자동이면 지금 칸 인원으로 고를 크기도 같이("자동 · 보통"). */
+const fieldText = (r: RoomState): string => (r.settings.field === 'auto' ? `자동 · ${fieldLabel(resolveField(r))}` : fieldLabel(r.settings.field));
+
 function settingsText(r: RoomState): string {
   const s = r.settings;
-  return `${s.perSide}대${s.perSide} · ${s.minutes}분 · ${s.scoreLimit ? `${s.scoreLimit}점 먼저` : '점수 제한 없음'}`;
+  const [a, b] = sideSizes(r);
+  const bots = s.perSide ? `한 편 ${s.perSide}명까지 봇으로 채움` : '봇 없음';
+  return `${a}대${b} · ${bots} · 경기장 ${fieldText(r)} · ${s.minutes}분 · ${s.scoreLimit ? `${s.scoreLimit}점 먼저` : '점수 제한 없음'}`;
 }
 
 export function Lobby({ session, view, players, onLeave, onShare }: {
@@ -112,7 +120,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
                   onClick={(e) => { e.stopPropagation(); moveTo(c.team); }}>
                   {c.color && <span className="game-col-dot" style={{ background: c.color }} aria-hidden="true" />}
                   <span>{c.label}</span>
-                  <span className="muted">{c.team === null ? list.length : `${list.length}/${ps}`}</span>
+                  <span className="muted">{c.team === null ? list.length : `${list.length + bots}명`}</span>
                 </button>
                 <div className="game-col-list">
                   {list.map(chip)}
@@ -126,9 +134,13 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
         <div className="card">
           {host ? (
             <div className="game-opts">
-              <label className="game-opt"><span className="muted">인원</span>
-                <Segmented<number> value={ps} disabled={!editable} onChange={(v) => host.setSettings({ perSide: v as 1 | 2 | 3 | 4 })}
-                  options={[1, 2, 3, 4].map((n) => ({ value: n, label: `${n}대${n}`, disabled: n > maxPerSide(players.length) }))} /></label>
+              {/* 인원 = "한 편을 이 수까지 봇으로 채운다"(2026-11-07 "최대 인원 같은거 헥스볼처럼 자유롭게") — 사람이 더 많은 편은 사람 수대로 다 뛴다. */}
+              <label className="game-opt"><span className="muted">봇으로 채움</span>
+                <Segmented<number> value={ps} disabled={!editable} onChange={(v) => host.setSettings({ perSide: v as PerSide })}
+                  options={Array.from({ length: MAX_PER_SIDE + 1 }, (_, n) => ({ value: n, label: n ? `${n}명까지` : '안 채움', disabled: n > maxPerSide(players.length) }))} /></label>
+              <label className="game-opt"><span className="muted">경기장</span>
+                <Segmented<FieldChoice> value={room.settings.field} disabled={!editable} onChange={(v) => host.setSettings({ field: v })}
+                  options={FIELD_OPTIONS.map((o) => (o.value === 'auto' && room.settings.field === 'auto' ? { ...o, label: `자동 · ${fieldLabel(resolveField(room))}` } : o))} /></label>
               <label className="game-opt"><span className="muted">시간</span>
                 <Segmented<number> value={room.settings.minutes} disabled={!editable} onChange={(v) => host.setSettings({ minutes: v })}
                   options={[1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n}분` }))} /></label>
@@ -142,6 +154,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
             {host && <Button size="large" disabled={!editable} onClick={() => { setPicked(null); host.autoBalance(); }}>자동 나누기</Button>}
             {guest && <Button size="large" disabled={room.phase !== 'lobby'} onClick={() => setRepick(true)}>선수 바꾸기</Button>}
           </div>
+          {host && <p className="muted game-hint">한 편이 봇으로 채울 수보다 적으면 봇이 들어갑니다 · 두 편 인원이 달라도 됩니다 · 한 편 6명까지</p>}
           {block && <p className="muted game-hint">{block}</p>}
           <p className="muted game-hint">PC: 방향키·WASD 이동, 스페이스 킥, 숫자 1~6 한마디 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 킥</p>
         </div>

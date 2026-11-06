@@ -35,7 +35,7 @@ export default function GameApp() {
 function GameRoot() {
   const { data } = useData();
   const { message, modal } = App.useApp();
-  const live = useRef<Live>({ state: null, config: null, override: null });
+  const live = useRef<Live>({ state: null, config: null, override: null, camera: null });
   const [match, setMatch] = useState<MatchSetup | null>(null);
   const [online, setOnline] = useState<Online | null>(null);
   const [roomCode, setRoomCode] = useState<string | null>(null);
@@ -61,6 +61,8 @@ function GameRoot() {
       getRoom: () => o()?.session.getRoom() ?? null,
       getNet: () => o()?.session.getNet() ?? null,
       getBase: () => { const s = o()?.session; return s ? (s.role === 'guest' ? s.getBase() : s.getState()) : l.state; },
+      // 지금 그리는 화면의 카메라 — cx·cy(논리 좌표), scale(논리 1 = 몇 px), follow(따라가는 중). 경기 화면이 없으면 null.
+      getView: () => l.camera,
     };
     return () => { delete (window as unknown as { __wfcGame?: unknown }).__wfcGame; };
   }, []);
@@ -159,7 +161,6 @@ function GameRoot() {
     });
   }, [message, modal]);
 
-  const readOverride = useCallback(() => live.current.override, []);
 
   if (!data) return <Loading title="게임" />;
 
@@ -181,7 +182,7 @@ function GameRoot() {
       <>
         <Lobby session={online.session} view={view} players={data.players} onLeave={leaveRoom} onShare={share} />
         {view.stage === 'match' && view.config && (
-          <OnlineMatch key={view.matchKey} session={online.session} view={view} roster={data.players} readOverride={readOverride} onLeaveRoom={leaveRoom} />
+          <OnlineMatch key={view.matchKey} session={online.session} view={view} roster={data.players} live={live} onLeaveRoom={leaveRoom} />
         )}
       </>
     );

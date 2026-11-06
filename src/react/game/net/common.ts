@@ -42,6 +42,19 @@ export const HIDDEN_ROOM_EVERY_MS = 5000;
 export const HELLO_DEDUPE_MS = 900;
 /** 입력이 바뀌어도 마지막 전송에서 이만큼은 띄운다(킥 여부가 바뀐 경우는 바로). 떨리는 스틱이 초당 60건을 보내지 않게. */
 export const IN_MIN_GAP_MS = 50;
+/** 손님 한 명당 늘리는 입력 간격(ms). 2026-11-07 실측: 프로젝트 전체 초당 ~86건에서 채널이 닫힌다 — 사람이 많을수록 각자 덜 보낸다. */
+export const IN_GAP_PER_GUEST_MS = 28;
+/** 손님 입력의 최소 간격 = max(50, 손님 수 × 28)ms. 손님 수 = 그 경기의 사람 수 − 1(방장). 7명이면 196ms —
+ *  방장이 보는 남의 조작은 조금 굼떠지지만 자기 화면은 예측이라 그대로다(스펙 2026-11-07 §4). */
+export function inputGapMs(humans: number): number {
+  const guests = Math.max(0, Math.floor(humans) - 1);
+  return Math.max(IN_MIN_GAP_MS, guests * IN_GAP_PER_GUEST_MS);
+}
+/** 구경하는 사람의 ping 간격 — 뛰는 사람(2초)보다 드물게. */
+export const SPECTATOR_PING_MS = 5000;
+/** 사람이 이만큼 이상인 방의 로비 room 주기. */
+export const CROWD_MEMBERS = 6;
+export const CROWD_ROOM_EVERY_MS = 2000;
 /** 방장 화면이 가려진 동안 "멈춤" 스냅샷을 보내는 간격. */
 export const PAUSED_SNAP_MS = 1000;
 /** 경기가 끝나고 결과를 보여 주는 시간 — 그 뒤 모두 방으로. */

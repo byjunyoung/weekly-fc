@@ -8,8 +8,13 @@ import { BASE_PERF } from '../../src/lib/game/stats.ts';
 import { createRoom } from '../../src/lib/game/room.ts';
 
 const cfgOf = (perSide = 2) => ({
-  perSide, minutes: 2, scoreLimit: 0,
+  field: 'M', minutes: 2, scoreLimit: 0,
   players: Array.from({ length: perSide * 2 }, (_, i) => ({ id: i, num: 10 + i, name: `P${i}`, side: i < perSide ? 0 : 1, bot: i !== 0, perf: { ...BASE_PERF } })),
+});
+/** 두 편 인원이 다른 설정(0 편 a 명, 1 편 b 명). */
+const cfgSides = (a, b, field = 'L') => ({
+  field, minutes: 2, scoreLimit: 0,
+  players: Array.from({ length: a + b }, (_, i) => ({ id: i, num: 10 + i, name: `P${i}`, side: i < a ? 0 : 1, bot: true, perf: { ...BASE_PERF } })),
 });
 const deg = (a, b) => { let d = Math.abs(Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x)) * 180 / Math.PI; return d > 180 ? 360 - d : d; };
 
@@ -88,7 +93,13 @@ test('parseMsg — 틀린 모양은 null', () => {
     { t: 'deny', from: 'h', to: 'a', reason: 'bored' }, { t: 'deny', reason: 'full' },
     { t: 'room', from: 'h', sid: 's', room: { ...room, code: 'AB0D' }, roster: [] }, { t: 'room', from: 'h', sid: 's', room, roster: 'x' }, { t: 'room', from: 'h', sid: 's', room, roster: Array(500).fill(1) },
     { t: 'room', from: 'h', sid: 's', room: { ...room, members: Array(40).fill(room.members[0]) }, roster: [] },
-    { t: 'room', from: 'h', sid: 's', room: { ...room, phase: 'x' }, roster: [] }, { t: 'room', from: 'h', sid: 's', room: { ...room, settings: { perSide: 9, minutes: 3, scoreLimit: 0 } }, roster: [] },
+    { t: 'room', from: 'h', sid: 's', room: { ...room, phase: 'x' }, roster: [] }, { t: 'room', from: 'h', sid: 's', room: { ...room, settings: { perSide: 9, minutes: 3, scoreLimit: 0, field: 'auto' } }, roster: [] },
+    // 2026-11-07: 경기장·인원 — 모르는 경기장, 한 편 7명, 선수 13명, 선수 0명
+    { t: 'room', from: 'h', sid: 's', room: { ...room, settings: { ...room.settings, field: 'XXL' } }, roster: [] },
+    { t: 'room', from: 'h', sid: 's', room: { ...room, settings: { perSide: 3, minutes: 3, scoreLimit: 0 } }, roster: [] },
+    { t: 'start', from: 'h', config: { ...cfg, field: 'Q' }, seed: 1 }, { t: 'start', from: 'h', config: { ...cfg, field: 'auto' }, seed: 1 },
+    { t: 'start', from: 'h', config: cfgSides(7, 1), seed: 1 }, { t: 'start', from: 'h', config: { ...cfgSides(6, 6), players: [...cfgSides(6, 6).players, { ...cfgSides(6, 6).players[0], id: 12 }] }, seed: 1 },
+    { t: 'start', from: 'h', config: cfgSides(0, 0), seed: 1 },
     { t: 'start', from: 'h', config: { ...cfg, players: cfg.players.slice(1) }, seed: 1 }, { t: 'start', from: 'h', config: cfg },
     { t: 'start', from: 'h', config: { ...cfg, players: cfg.players.map((p) => ({ ...p, perf: { maxSpeed: 'a' } })) }, seed: 1 },
     { t: 'in', from: 'a', seq: 1, i: 66 }, { t: 'in', from: 'a', seq: 1, i: 1.5 }, { t: 'in', from: 'a', i: 1 }, { t: 'in', from: 'a', seq: 1, i: '3' },
@@ -250,4 +261,16 @@ test('예측 — 새 스냅샷이 예측과 맞으면 화면 상태가 튀지 �
       }
     }
   }
+});
+
+test('parseMsg — 경기장 넷·두 편 인원이 달라도·6대6(선수 12)·한 편 0명은 통과', () => {
+  for (const f of ['S', 'M', 'L', 'XL']) assert.ok(parseMsg({ t: 'start', from: 'h', config: cfgSides(2, 3, f), seed: 1 }), f);
+  assert.ok(parseMsg({ t: 'start', from: 'h', config: cfgSides(6, 6, 'XL'), seed: 1 }));
+  assert.ok(parseMsg({ t: 'start', from: 'h', config: cfgSides(1, 0, 'S'), seed: 1 }));
+  const c = cfgSides(6, 6, 'XL'), st = createMatch(c, 3);
+  assert.ok(parseMsg({ t: 'snap', from: 'h', seed: 3, tick: 0, state: st, inputs: c.players.map(() => 0), paused: false }), '선수 12 스냅샷');
+  assert.ok(parseMsg({ t: 'say', from: 'a', id: 11, k: 0 }));
+  const room = createRoom('ABCD', { clientId: 'h', num: 1, name: '방장' });
+  for (const field of ['auto', 'S', 'M', 'L', 'XL'])
+    for (const perSide of [0, 6]) assert.ok(parseMsg({ t: 'room', from: 'h', sid: 's', room: { ...room, settings: { ...room.settings, perSide, field } }, roster: [] }), `${field} ${perSide}`);
 });

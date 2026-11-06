@@ -11,11 +11,11 @@ import { botInput } from '../../../lib/game/bot.ts';
 import type { NetMsg } from '../../../lib/game/net.ts';
 import { Q_IDLE, decodeInput, encodeInput, parseMsg } from '../../../lib/game/net.ts';
 import type { RoomSettings, RoomState, Team, Who } from '../../../lib/game/room.ts';
-import { autoBalance, buildMatch, createRoom, join, leave as leaveRoom, move, pick, setPhase, setSettings } from '../../../lib/game/room.ts';
+import { autoBalance, buildMatch, createRoom, join, leave as leaveRoom, move, pick, setPhase, setSettings, startBlock } from '../../../lib/game/room.ts';
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView } from './common.ts';
 import {
-  GIVE_UP_MS, HELLO_DEDUPE_MS, HIDDEN_ROOM_EVERY_MS, LOBBY_SILENCE_MS, MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, SNAP_EVERY, STEP_MS,
+  CROWD_MEMBERS, CROWD_ROOM_EVERY_MS, GIVE_UP_MS, HELLO_DEDUPE_MS, HIDDEN_ROOM_EVERY_MS, LOBBY_SILENCE_MS, MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, SNAP_EVERY, STEP_MS,
   createStore, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import { lerpState } from './smooth.ts';
@@ -78,15 +78,16 @@ type Match = {
   acc: number; endedAt: number | null; lastPausedSnap: number;
 };
 
-/** 시작 전에 막을 이유 — buildMatch 가 RangeError 를 내기 전에 화면이 알게(report-3: 필요 봇 수 ≤ 명단 − 방 사람 수). */
+/** 시작을 막는 이유를 화면 문구로 — buildMatch 가 RangeError 를 내기 전에 [시작] 을 막고 이유를 보여 준다(room.ts startBlock). */
+export const START_BLOCK_TEXT = {
+  empty: '두 편 모두 비어 있습니다 — 사람을 팀 칸에 옮기거나 봇으로 채울 수를 늘려 주세요',
+  humans: '지금 연결 방식으로는 한 경기에 8명까지 뛸 수 있습니다 — 나머지는 대기 칸에서 구경합니다',
+  roster: '명단이 모자라 봇을 다 채울 수 없습니다 — 봇으로 채울 수를 줄여 주세요',
+} as const;
+
 export function startBlockOf(room: RoomState, roster: Player[]): string | null {
-  const ps = room.settings.perSide;
-  const taken = new Set(room.members.map((m) => m.num));
-  const free = new Set(roster.filter((p) => !taken.has(p.num)).map((p) => p.num)).size;
-  const humans = [0, 1].map((t) => Math.min(ps, room.members.filter((m) => m.team === t).length));
-  const need = ps * 2 - humans[0] - humans[1];
-  if (free < need) return `명단이 모자라 봇 ${need}명을 채울 수 없습니다 — 인원을 줄여 주세요`;
-  return null;
+  const why = startBlock(room, roster);
+  return why ? START_BLOCK_TEXT[why] : null;
 }
 
 export function createHostSession(o: HostOptions): HostSession {
@@ -259,7 +260,8 @@ export function createHostSession(o: HostOptions): HostSession {
       // 오래 가려진 탭(잊힌 탭) — 경기를 접고 주기 방송을 멈춘다. hello 에는 그래도 답한다.
       if (hidden && hiddenSince !== null && !dormant && now - hiddenSince >= GIVE_UP_MS) { backToLobby(now); dormant = true; }
       // 주기 방 상태: 혼자면 안 보낸다(들어오는 사람의 hello 엔 답이 간다), 가려진 동안은 5초마다, 잠들면 멈춘다.
-      const every = hidden ? HIDDEN_ROOM_EVERY_MS : ROOM_EVERY_MS;
+      // 사람이 6명 이상이면 2초마다 — 사람이 많은 방일수록 다른 메시지(입력·ping)도 많다(스펙 2026-11-07 §4).
+      const every = hidden ? HIDDEN_ROOM_EVERY_MS : room.members.length >= CROWD_MEMBERS ? CROWD_ROOM_EVERY_MS : ROOM_EVERY_MS;
       if (!dormant && room.members.length > 1 && now - lastRoomSent >= every - SLACK_MS) sendRoom(now);
       const m = match;
       if (!m) return;

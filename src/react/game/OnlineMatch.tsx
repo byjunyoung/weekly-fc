@@ -11,14 +11,16 @@ import type { Player } from '../../lib/types';
 import { attachInput } from './input';
 import type { GuestSession, HostSession, SessionView } from './net/session';
 import { connText } from './Lobby';
+import { pitchOf } from '../../lib/game/sim';
 import { buildSprites, drawBubbles, drawFrame, TEAM } from './render';
+import { cameraOf, sidesText, type Live } from './SoloMatch';
 import { attachStage } from './stage';
-import { clockText, stickToSim } from './view';
+import { aimCamera, clockText, stickToSim } from './view';
 
-export function OnlineMatch({ session, view, roster, readOverride, onLeaveRoom }: {
+export function OnlineMatch({ session, view, roster, live, onLeaveRoom }: {
   session: HostSession | GuestSession; view: SessionView; roster: Player[];
-  /** 디버그 훅(?debug=1)의 입력 덮어쓰기 — 있으면 키보드·터치 대신 이걸 쓴다. */
-  readOverride: () => Input | null;
+  /** 디버그 훅(?debug=1)과 나눠 쓰는 값 — override(입력 덮어쓰기)를 읽고 camera 를 써 둔다. */
+  live: React.RefObject<Live>;
   onLeaveRoom: () => void;
 }) {
   const { modal } = App.useApp();
@@ -41,11 +43,11 @@ export function OnlineMatch({ session, view, roster, readOverride, onLeaveRoom }
     document.documentElement.classList.add('game-lock');
     if (playing && window.matchMedia?.('(any-pointer: coarse)').matches) setTouch(true);
 
-    const stage = attachStage(root, canvas);
+    const stage = attachStage(root, canvas, pitchOf(config.field));
     // 구경하는 사람은 조작을 달지 않는다(키·터치를 먹지 않게).
     const input = playing ? attachInput({ root, base: baseRef.current, knob: knobRef.current, kickBtn: kickRef.current, onTouch: () => setTouch(true) }) : null;
     session.setInputReader(playing ? (): Input => {
-      const o = readOverride();
+      const o = live.current.override;
       if (o) return o;
       const st = stage.get();
       const h = input ? input.read() : { x: 0, y: 0, kick: false };
@@ -70,8 +72,12 @@ export function OnlineMatch({ session, view, roster, readOverride, onLeaveRoom }
       session.advance(now);
       const f = session.frame(now), st = stage.get();
       if (!f || !st) return;
-      drawFrame(ctx, f.state, f.config, st.view, st.field, sprites, { dpr: st.dpr, topInset: st.topInset, humanId: f.myId });
-      drawBubbles(ctx, f.state, st.view, f.bubbles);
+      // 큰 경기장이면 화면이 따라간다 — 내 선수, 구경이면 공(스펙 2026-11-07 §2).
+      const focus = f.myId !== null && f.state.players[f.myId] ? f.state.players[f.myId] : f.state.ball;
+      const cam = aimCamera(st.view, focus);
+      live.current.camera = cameraOf(cam);
+      drawFrame(ctx, f.state, f.config, cam, st.field, sprites, { dpr: st.dpr, topInset: st.topInset, humanId: f.myId });
+      drawBubbles(ctx, f.state, f.config, cam, f.bubbles);
     };
     raf = requestAnimationFrame(frame);
 
@@ -82,9 +88,10 @@ export function OnlineMatch({ session, view, roster, readOverride, onLeaveRoom }
       input?.dispose();
       stage.dispose();
       document.documentElement.classList.remove('game-lock');
+      live.current.camera = null;
     };
     // 경기마다 새로 마운트(key = matchKey)되므로 config·playing 은 한 경기 동안 그대로다.
-  }, [session, config, playing, roster, readOverride]);
+  }, [session, config, playing, roster, live]);
 
   if (!config) return null;
   const result = view.result;
@@ -134,7 +141,7 @@ export function OnlineMatch({ session, view, roster, readOverride, onLeaveRoom }
             <div className="game-final">
               <span style={{ color: TEAM[0].color }}>{TEAM[0].short}</span> {result.score[0]} : {result.score[1]} <span style={{ color: TEAM[1].color }}>{TEAM[1].short}</span>
             </div>
-            <p className="muted">{clockText(config.minutes * 60)} 경기 · {config.perSide}대{config.perSide}</p>
+            <p className="muted">{clockText(config.minutes * 60)} 경기 · {sidesText(config)}</p>
             {isHost
               ? <div className="game-result-actions"><Button type="primary" size="large" onClick={() => (session as HostSession).toLobby()}>바로 방으로</Button></div>
               : <p className="muted">잠시 뒤 방으로 돌아갑니다</p>}

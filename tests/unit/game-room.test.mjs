@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_SETTINGS, MAX_MEMBERS, autoBalance, buildMatch, createRoom, isRoomCode, join, leave, makeRoomCode, move, pick, setPhase, setSettings,
+  DEFAULT_SETTINGS, MAX_HUMANS, MAX_MEMBERS, MAX_PER_SIDE, autoBalance, fieldFor, resolveField, sideSizes, startBlock, buildMatch, createRoom, isRoomCode, join, leave, makeRoomCode, move, pick, setPhase, setSettings,
 } from '../../src/lib/game/room.ts';
 import { rngFrom } from '../../src/react/game/view.ts';
 
@@ -34,7 +34,7 @@ test('createRoom — 방장만, 대기 칸, 기본 설정', () => {
   const r = createRoom('ABCD', who(0));
   assert.deepEqual(r.members, [{ clientId: 'c0', num: 100, name: '선수0', team: null }]);
   assert.equal(r.hostId, 'c0'); assert.equal(r.phase, 'lobby'); assert.equal(r.rev, 0);
-  assert.deepEqual(r.settings, { perSide: 3, minutes: 3, scoreLimit: 0 });
+  assert.deepEqual(r.settings, { perSide: 3, minutes: 3, scoreLimit: 0, field: 'auto' });
   assert.deepEqual(DEFAULT_SETTINGS, r.settings);
   r.settings.minutes = 9;
   assert.equal(DEFAULT_SETTINGS.minutes, 3, '기본값을 공유하지 않는다');
@@ -92,34 +92,87 @@ test('pick — 남이 쓰면 그대로, 비면 바뀐다, 로비에서만', () =
   assert.equal(pick(m, 'c1', 130, 'x'), m);
 });
 
-test('move — perSide 를 지킨다', () => {
-  let r = setSettings(roomWith(4), { perSide: 2 });
+// 2026-11-07 "최대 인원 같은거 헥스볼처럼 자유롭게" — perSide 는 "봇으로 채우는 수"가 되어 칸 옮기기를 막지 않는다. 한 편 상한은 6.
+test('move — perSide 와 상관없이 옮긴다, 한 편 6명이 상한', () => {
+  let r = setSettings(roomWith(8), { perSide: 1 });
   r = move(r, 'c0', 0); r = move(r, 'c1', 0);
-  const full = move(r, 'c2', 0);
-  assert.equal(full, r, '정원 찬 칸');
-  const other = move(r, 'c2', 1);
-  assert.equal(other.members[2].team, 1); assert.equal(other.rev, r.rev + 1);
-  assert.equal(move(other, 'c2', 1), other, '같은 칸');
+  assert.equal(r.members.filter((m) => m.team === 0).length, 2, 'perSide 1 이어도 둘');
+  for (let i = 2; i < 6; i++) r = move(r, `c${i}`, 0);
+  assert.equal(r.members.filter((m) => m.team === 0).length, MAX_PER_SIDE);
+  const full = move(r, 'c6', 0);
+  assert.equal(full, r, '6명 찬 칸');
+  const other = move(r, 'c6', 1);
+  assert.equal(other.members[6].team, 1); assert.equal(other.rev, r.rev + 1);
+  assert.equal(move(other, 'c6', 1), other, '같은 칸');
   assert.equal(move(other, 'nobody', 1), other);
   const back = move(other, 'c0', null);
   assert.equal(back.members[0].team, null);
-  const again = move(back, 'c3', 0);
-  assert.equal(again.members[3].team, 0, '자리가 나면 들어간다');
+  const again = move(back, 'c7', 0);
+  assert.equal(again.members[7].team, 0, '자리가 나면 들어간다');
 });
 
-test('setSettings — perSide 를 줄이면 뒤에 온 사람부터 대기로', () => {
+test('setSettings — perSide 0~6·경기장·시간·점수, 칸의 사람은 그대로', () => {
   let r = roomWith(6);
-  r = setSettings(r, { perSide: 3 });
   for (const [i, t] of [[0, 0], [1, 0], [2, 0], [3, 1], [4, 1], [5, 1]]) r = move(r, `c${i}`, t);
   const s = setSettings(r, { perSide: 2 });
-  assert.deepEqual(s.members.map((m) => m.team), [0, 0, null, 1, 1, null]);
+  assert.deepEqual(s.members.map((m) => m.team), [0, 0, 0, 1, 1, 1], 'perSide 를 줄여도 사람은 안 빠진다');
   assert.equal(s.settings.perSide, 2); assert.equal(s.rev, r.rev + 1);
   assert.equal(setSettings(s, { perSide: 2 }), s, '같은 값');
   assert.equal(setSettings(s, {}), s);
   const t = setSettings(s, { minutes: 5, scoreLimit: 3 });
-  assert.deepEqual(t.settings, { perSide: 2, minutes: 5, scoreLimit: 3 }); assert.equal(t.members, s.members);
+  assert.deepEqual(t.settings, { perSide: 2, minutes: 5, scoreLimit: 3, field: 'auto' }); assert.equal(t.members, s.members);
   assert.equal(setSettings(s, { minutes: 999 }).settings.minutes, 10, '범위 밖은 자른다');
-  assert.equal(setSettings(s, { perSide: 9 }).settings.perSide, 4);
+  assert.equal(setSettings(s, { perSide: 9 }).settings.perSide, 6);
+  assert.equal(setSettings(s, { perSide: -3 }).settings.perSide, 0);
+  assert.equal(setSettings(s, { field: 'XL' }).settings.field, 'XL');
+  assert.equal(setSettings(s, { field: 'huge' }), s, '모르는 경기장은 무시');
+});
+
+test('자동 경기장 — 경기장 위 인원 4·6·10 을 경계로 S·M·L·XL', () => {
+  assert.deepEqual([1, 2, 4, 5, 6, 7, 10, 11, 12].map(fieldFor), ['S', 'S', 'S', 'M', 'M', 'L', 'L', 'XL', 'XL']);
+  let r = setSettings(roomWith(3), { perSide: 0 });
+  r = move(move(r, 'c0', 0), 'c1', 1);
+  assert.deepEqual(sideSizes(r), [1, 1]);
+  assert.equal(resolveField(r), 'S');
+  assert.equal(resolveField(setSettings(r, { perSide: 3 })), 'M');
+  assert.equal(resolveField(setSettings(r, { perSide: 5 })), 'L');
+  assert.equal(resolveField(setSettings(r, { perSide: 6 })), 'XL');
+  assert.equal(resolveField(setSettings(r, { perSide: 6, field: 'S' })), 'S', '고른 크기는 그대로');
+  const { config } = buildMatch(setSettings(r, { perSide: 4 }), roster(20), rngFrom(1));
+  assert.equal(config.field, 'L', 'buildMatch 가 auto 를 실제 크기로');
+});
+
+test('팀 인원 규칙 — 한 편 = max(사람, perSide), 두 편 달라도, 사람 8명 상한, 두 편 0명은 못 시작', () => {
+  const rost = roster(30);
+  let r = setSettings(roomWith(9), { perSide: 2 });
+  for (let i = 0; i < 4; i++) r = move(r, `c${i}`, 0);     // 0 편 사람 4
+  r = move(r, 'c4', 1);                                       // 1 편 사람 1 → 봇 1
+  const { config, slots } = buildMatch(r, rost, rngFrom(3));
+  const side = (t) => config.players.filter((p) => p.side === t);
+  assert.equal(side(0).length, 4); assert.equal(side(0).filter((p) => p.bot).length, 0, '사람이 perSide 보다 많은 편은 다 뛴다');
+  assert.equal(side(1).length, 2); assert.equal(side(1).filter((p) => p.bot).length, 1);
+  assert.deepEqual(config.players.map((p) => p.id), config.players.map((_, i) => i));
+  assert.deepEqual(config.players.map((p) => p.side), [0, 0, 0, 0, 1, 1], '0 편 다음 1 편');
+  assert.equal(slots.filter(Boolean).length, 5);
+  // 사람 9명이면 막힌다
+  for (let i = 5; i < 9; i++) r = move(r, `c${i}`, 1);
+  assert.equal(r.members.filter((m) => m.team !== null).length, MAX_HUMANS + 1);
+  assert.equal(startBlock(r, rost), 'humans');
+  assert.throws(() => buildMatch(r, rost, rngFrom(1)), RangeError);
+  // 6대6: 사람 8 + 봇 4
+  let six = setSettings(roomWith(8), { perSide: 6 });
+  for (let i = 0; i < 8; i++) six = move(six, `c${i}`, i % 2);
+  const b6 = buildMatch(six, rost, rngFrom(2));
+  assert.equal(b6.config.players.length, 12); assert.equal(b6.config.players.filter((p) => p.bot).length, 4);
+  assert.equal(b6.config.field, 'XL');
+  // 두 편 0명
+  const empty = setSettings(roomWith(2), { perSide: 0 });
+  assert.equal(startBlock(empty, rost), 'empty');
+  assert.throws(() => buildMatch(empty, rost, rngFrom(1)), RangeError);
+  // 한 편만 사람 하나, 봇 없음 — 1대0 연습도 된다
+  const solo = move(empty, 'c0', 0);
+  assert.equal(startBlock(solo, rost), null);
+  assert.equal(buildMatch(solo, rost, rngFrom(1)).config.players.length, 1);
 });
 
 const sideSum = (r, rost, t) => r.members.filter((m) => m.team === t).reduce((s, m) => {
@@ -143,12 +196,13 @@ test('autoBalance — 인원 차 1 이하, 합이 비슷하다', () => {
   }
 });
 
-test('autoBalance — 넘치면 대기, 다시 불러도 그대로', () => {
+test('autoBalance — 사람 8명이 넘치면 대기, 다시 불러도 그대로(2026-11-07: perSide 대신 MAX_HUMANS)', () => {
   const rost = roster(20);
-  const r = setSettings(roomWith(7), { perSide: 2 });
+  const r = setSettings(roomWith(10), { perSide: 2 });
   const b = autoBalance(r, rost);
-  assert.equal(b.members.filter((m) => m.team !== null).length, 4);
-  assert.deepEqual(b.members.slice(4).map((m) => m.team), [null, null, null]);
+  assert.equal(b.members.filter((m) => m.team !== null).length, 8);
+  assert.equal(b.members.filter((m) => m.team === 0).length, 4);
+  assert.deepEqual(b.members.slice(8).map((m) => m.team), [null, null]);
   assert.equal(b.rev, r.rev + 1);
   assert.equal(autoBalance(b, rost), b, '이미 나눈 판');
   // 전부 대기였던 1인 방
@@ -171,7 +225,7 @@ test('buildMatch — 사람은 자기 선수·편, 봇은 정확히 채움, 중�
   assert.equal(config.players.length, 6);
   assert.deepEqual(config.players.map((p) => p.id), [0, 1, 2, 3, 4, 5]);
   assert.deepEqual(config.players.map((p) => p.side), [0, 0, 0, 1, 1, 1]);
-  assert.equal(config.perSide, 3); assert.equal(config.minutes, 3); assert.equal(config.scoreLimit, 0);
+  assert.equal(config.field, 'M'); assert.equal(config.minutes, 3); assert.equal(config.scoreLimit, 0);
   const nums = config.players.map((p) => p.num);
   assert.equal(new Set(nums).size, 6, '중복 없음');
   const held = new Set(r.members.map((m) => m.num));

@@ -6,22 +6,35 @@
 import { App, Button } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { botInput } from '../../lib/game/bot';
-import { createMatch, eventsBetween, step, TICK_HZ, type Input, type MatchConfig, type MatchPlayer, type MatchState } from '../../lib/game/sim';
+import { fieldFor, type FieldChoice } from '../../lib/game/room';
+import { createMatch, eventsBetween, pitchOf, sideCounts, step, TICK_HZ, type Input, type MatchConfig, type MatchPlayer, type MatchState } from '../../lib/game/sim';
 import { perfOf } from '../../lib/game/stats';
 import type { Player } from '../../lib/types';
 import { attachInput } from './input';
 import { blend, buildField, buildSprites, drawFrame, fieldKey, HUD_H, TEAM, type Field } from './render';
 import { readInsets } from './stage';
-import { clockText, makeView, pickLineup, rngFrom, stickToSim, type View } from './view';
+import { aimCamera, clockText, makeView, pickLineup, rngFrom, stickToSim, type View } from './view';
 
 const STEP_MS = 1000 / TICK_HZ;
 const MAX_CATCHUP = 5;                     // 한 프레임에 따라잡는 최대 틱 — 느린 기기가 계산에 먹혀 더 느려지는 걸 막는다
 
-export type Req = { num: number; perSide: 1 | 2 | 3 | 4; minutes: number; scoreLimit: number };
+/** 혼자 연습 설정 — 인원 1대1~6대6, 경기장 자동/작게/보통/크게/아주 크게(2026-11-07). */
+export type Req = { num: number; perSide: 1 | 2 | 3 | 4 | 5 | 6; minutes: number; scoreLimit: number; field: FieldChoice };
 export type MatchSetup = { key: number; req: Req; config: MatchConfig; seed: number; humanId: number; roster: Player[] };
 
-/** 디버그 훅(?debug=1)과 경기 화면이 나눠 쓰는 살아 있는 값. 리액트 상태가 아니다. */
-export type Live = { state: MatchState | null; config: MatchConfig | null; override: Input | null };
+/** 지금 화면의 카메라(디버그 훅 getView 용). */
+export type Camera = { cx: number; cy: number; scale: number; follow: boolean };
+/** 디버그 훅(?debug=1)과 경기 화면이 나눠 쓰는 살아 있는 값. 리액트 상태가 아니다. camera 는 혼자·온라인 경기 화면이 프레임마다 써 둔다. */
+export type Live = { state: MatchState | null; config: MatchConfig | null; override: Input | null; camera: Camera | null };
+
+/** 그린 view → 디버그용 카메라 값. */
+export const cameraOf = (v: View): Camera => ({ cx: v.cx, cy: v.cy, scale: v.scale, follow: v.follow });
+
+/** "3대3"·"4대2" — 두 편 인원이 달라도 된다. */
+export function sidesText(config: MatchConfig): string {
+  const [a, b] = sideCounts(config);
+  return `${a}대${b}`;
+}
 
 /** 설정 → 경기. 씨앗은 여기(화면 쪽 시계)에서 만든다 — 계산 코드는 시계·난수를 모른다. */
 export function buildSoloMatch(req: Req, roster: Player[], key: number): MatchSetup {
@@ -31,7 +44,8 @@ export function buildSoloMatch(req: Req, roster: Player[], key: number): MatchSe
     const p = roster.find((r) => r.num === l.num) as Player;
     return { id, num: l.num, name: p.name, side: l.side, bot: !l.human, perf: perfOf(p, roster) };
   });
-  const config: MatchConfig = { perSide: req.perSide, minutes: req.minutes, scoreLimit: req.scoreLimit, players };
+  const field = req.field === 'auto' ? fieldFor(req.perSide * 2) : req.field;
+  const config: MatchConfig = { field, minutes: req.minutes, scoreLimit: req.scoreLimit, players };
   return { key, req, config, seed, humanId: lineup.findIndex((l) => l.human), roster };
 }
 
@@ -63,8 +77,9 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
 
     let state = createMatch(config, seed);
     let prev = state;
-    live.current.state = state; live.current.config = config; live.current.override = null;
+    live.current.state = state; live.current.config = config; live.current.override = null; live.current.camera = null;
 
+    const pitch = pitchOf(config.field);
     let view: View, field: Field, dpr = 1, topInset = 0;
     const layout = (): void => {
       const vw = root.clientWidth, vh = root.clientHeight;
@@ -73,8 +88,8 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
       canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
       const ins = readInsets();
       topInset = ins.top;
-      view = makeView(vw, vh, { margin: Math.max(8, ins.left, ins.right), top: ins.top + HUD_H, bottom: ins.bottom });
-      if (!field || field.key !== fieldKey(view, dpr)) field = buildField(view, dpr);
+      view = makeView(vw, vh, { margin: Math.max(8, ins.left, ins.right), top: ins.top + HUD_H, bottom: ins.bottom, pitch });
+      if (!field || field.key !== fieldKey(view, dpr, pitch)) field = buildField(view, dpr, pitch);
     };
     layout();
     const ro = new ResizeObserver(layout);
@@ -113,7 +128,11 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
         if (ended) endTimer = setTimeout(() => setResult({ score: state.score, winner: (state.winner ?? 'draw') as 0 | 1 | 'draw' }), 900);
       }
       const shown = ended ? state : blend(prev, state, acc / STEP_MS);
-      drawFrame(ctx, shown, config, view, field, sprites, { dpr, topInset, humanId });
+      // 큰 경기장이면 화면이 내 선수를 따라간다(스펙 2026-11-07 §2). 스틱은 그래도 "화면 방향"이다(stickToSim 은 돌리기만 한다).
+      const me = shown.players[humanId];
+      const cam = me ? aimCamera(view, me) : view;
+      live.current.camera = cameraOf(cam);
+      drawFrame(ctx, shown, config, cam, field, sprites, { dpr, topInset, humanId });
     };
     raf = requestAnimationFrame(frame);
 
@@ -128,7 +147,7 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
       ro.disconnect();
       input.dispose();
       document.documentElement.classList.remove('game-lock');
-      live.current.state = null; live.current.config = null; live.current.override = null;
+      live.current.state = null; live.current.config = null; live.current.override = null; live.current.camera = null;
     };
     // 경기마다 새로 마운트(key)되므로 setup 이 바뀌는 일은 없다.
   }, [config, seed, humanId, roster, live]);
@@ -156,7 +175,7 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
             <div className="game-final">
               <span style={{ color: TEAM[0].color }}>{TEAM[0].short}</span> {result.score[0]} : {result.score[1]} <span style={{ color: TEAM[1].color }}>{TEAM[1].short}</span>
             </div>
-            <p className="muted">{clockText(config.minutes * 60)} 경기 · {config.perSide}대{config.perSide}</p>
+            <p className="muted">{clockText(config.minutes * 60)} 경기 · {sidesText(config)}</p>
             <div className="game-result-actions">
               <Button type="primary" size="large" onClick={onRestart}>다시 하기</Button>
               <Button size="large" onClick={onExit}>설정으로</Button>

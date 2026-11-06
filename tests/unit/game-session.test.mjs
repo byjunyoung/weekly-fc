@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createHostSession, createGuestSession, STEP_MS, DENY_TEXT } from '../../src/react/game/net/session.ts';
+import { createHostSession, createGuestSession, STEP_MS, DENY_TEXT, inputGapMs } from '../../src/react/game/net/session.ts';
 import { createLoopbackHub } from '../../src/react/game/net/transport.ts';
 import { encodeInput, PHRASES } from '../../src/lib/game/net.ts';
 import { createMatch } from '../../src/lib/game/sim.ts';
@@ -13,7 +13,7 @@ const roster = (n = 12) => Array.from({ length: n }, (_, i) => ({
 }));
 const who = (i, num = 100 + i) => ({ clientId: `c${i}`, num, name: `선수${num - 100}` });
 
-function world({ delayMs = 30, n = 12, guests = 2 } = {}) {
+function world({ delayMs = 30, n = 20, guests = 2 } = {}) {
   const clock = { t: 1000 };
   const now = () => clock.t;
   const hub = createLoopbackHub({ delayMs, now });
@@ -585,4 +585,74 @@ test('손님이 3분 못 들어가면 "방장을 찾지 못했습니다"', () =>
   w.run(181000);
   assert.equal(g.getView().stage, 'ended');
   assert.equal(g.getView().endedWhy, '방장을 찾지 못했습니다');
+});
+
+// ───────────────────────── 2026-11-07 경기장 크기·팀 인원 ─────────────────────────
+test('손님 입력 간격 = max(50, 손님 수 × 28)ms', () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 8].map(inputGapMs), [50, 50, 50, 56, 84, 196]);
+});
+
+test('사람 8명(손님 7) 경기에서 떨리는 입력이어도 손님마다 초당 6건 이하, 경기장은 자동으로 크게(4대4 = 8명)', () => {
+  const w = world({ guests: 7 });
+  w.run(2500);
+  w.host.setSettings({ perSide: 0 });
+  for (let i = 0; i < 8; i++) w.host.move(`c${i}`, i % 2);
+  w.run(200);
+  assert.ok(w.host.start(), w.host.getView().notice ?? '');
+  assert.equal(w.host.getConfig().field, 'L');
+  w.run(500);
+  let k = 0;
+  for (const g of w.gs) g.setInputReader(() => { k++; return k % 2 ? { x: 1, y: 0, kick: false } : { x: 0, y: 1, kick: false }; });
+  w.run(500);
+  const s0 = w.gEps.map((e) => e.sent);
+  w.run(5000);
+  for (let i = 0; i < 7; i++) {
+    const rate = (w.gEps[i].sent - s0[i]) / 5;
+    assert.ok(rate <= 6, `손님 ${i + 1}: ${rate}/초 (간격 196ms → in 5.1 + ping 0.5)`);
+  }
+  assert.ok(w.gs.every((g) => g.getView().myId !== null));
+});
+
+test('9명이 팀 칸에 있으면 시작이 막히고 8명 안내, 구경하는 손님은 ping 5초마다', () => {
+  const w = world({ guests: 9 });
+  w.run(2500);
+  for (let i = 0; i < 9; i++) w.host.move(`c${i}`, i % 2);
+  w.run(200);
+  assert.match(w.host.startBlock(), /8명까지/);
+  assert.equal(w.host.start(), false);
+  w.host.move('c9', null); w.host.move('c8', null);   // c8·c9 는 대기 칸에서 구경
+  assert.equal(w.host.startBlock(), null);
+  assert.ok(w.host.start());
+  w.run(1000);
+  const spec = w.gs[7];   // c8
+  assert.equal(spec.getView().myId, null);
+  const p0 = w.gEps[7].sentByType.ping ?? 0;
+  w.run(10000);
+  const pings = (w.gEps[7].sentByType.ping ?? 0) - p0;
+  assert.ok(pings >= 1 && pings <= 3, `구경꾼 10초 ping ${pings}`);
+  assert.equal(w.gEps[7].sentByType.in ?? 0, 0, '구경꾼은 입력을 안 보낸다');
+});
+
+test('사람 6명 이상인 로비는 room 을 2초마다', () => {
+  const w = world({ guests: 5 });
+  w.run(3000);
+  assert.equal(w.host.getRoom().members.length, 6);
+  const r0 = w.hostEp.sentByType.room;
+  w.run(10000);
+  const n = w.hostEp.sentByType.room - r0;
+  assert.ok(n >= 4 && n <= 6, `10초에 ${n}건`);
+});
+
+test('두 편 0명이면 시작이 막힌다, 한 편만 사람이어도 된다(봇 없음)', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.setSettings({ perSide: 0 });
+  assert.match(w.host.startBlock(), /두 편 모두 비어/);
+  assert.equal(w.host.start(), false);
+  w.host.move('c1', 1);
+  assert.ok(w.host.start());
+  w.run(500);
+  assert.equal(w.host.getConfig().players.length, 1);
+  assert.equal(w.host.getConfig().field, 'S');
+  assert.equal(w.gs[0].getView().myId, 0);
 });

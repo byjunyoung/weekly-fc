@@ -5,10 +5,10 @@
 // 색은 포털 톤(어두운 도트)에 맞춘 이 파일 자기 팔레트. 팀 조끼 색만 teams.ts 의 VESTS 에서 가져온다.
 import { avatarPixels, FACE_SIZE, FACE_X, FACE_Y } from '../../components/avatar.ts';
 import { avatarSpecFor } from '../../lib/avatar.ts';
-import { PITCH, type MatchConfig, type MatchState } from '../../lib/game/sim.ts';
+import { pitchOf, type MatchConfig, type MatchState, type Pitch } from '../../lib/game/sim.ts';
 import { VESTS } from '../../lib/teams.ts';
 import type { Player } from '../../lib/types.ts';
-import { toScreen, clockText, type View } from './view.ts';
+import { toScreen, clockText, extentOf, type View } from './view.ts';
 
 // ── 팔레트(캔버스 그림 전용) ──
 const GRASS_A = '#0f2617', GRASS_B = '#173a23';   // pitch-view.ts 의 잔디 두 톤과 같은 계열
@@ -76,32 +76,35 @@ export function buildSprites(config: MatchConfig, roster: Player[]): Sprites {
 // ── 경기장 바닥(캐시) ──
 export type Field = { canvas: HTMLCanvasElement; key: string };
 
-/** 바닥을 한 번 그려 둔다. key 가 같으면 다시 안 그려도 된다(크기·배율·방향이 같다). */
-export function buildField(view: View, dpr: number): Field {
+/** 바닥을 한 번 그려 둔다 — 화면 크기가 아니라 **경기장 전체**(EXTENT)를 그 배율로. 화면이 따라갈 때(큰 경기장) 이 그림을 옮겨 찍는다.
+ *  key = 경기장 크기 + 배율 + 방향 + dpr. 같으면 다시 안 그려도 된다(화면 크기만 바뀐 건 상관없다). */
+export function buildField(view: View, dpr: number, pitch: Pitch): Field {
+  const ext = extentOf(pitch);
+  const pad = 4;   // 선 굵기가 테두리에서 잘리지 않게
+  const lw = (view.portrait ? ext.h : ext.w) * view.scale + pad * 2, lh = (view.portrait ? ext.w : ext.h) * view.scale + pad * 2;
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(view.vw * dpr));
-  canvas.height = Math.max(1, Math.round(view.vh * dpr));
+  canvas.width = Math.max(1, Math.ceil(lw * dpr));
+  canvas.height = Math.max(1, Math.ceil(lh * dpr));
   const ctx = canvas.getContext('2d');
-  if (ctx) paintField(ctx, view, dpr);
-  return { canvas, key: fieldKey(view, dpr) };
+  if (ctx) paintField(ctx, view, dpr, pitch, canvas.width / dpr / 2, canvas.height / dpr / 2);
+  return { canvas, key: fieldKey(view, dpr, pitch) };
 }
-export const fieldKey = (v: View, dpr: number): string => `${v.vw}x${v.vh}@${dpr}/${v.portrait ? 'p' : 'l'}${v.scale.toFixed(4)}`;
+export const fieldKey = (v: View, dpr: number, pitch: Pitch): string => `${pitch.id}@${dpr}/${v.portrait ? 'p' : 'l'}${v.scale.toFixed(4)}`;
 
-function paintField(ctx: CanvasRenderingContext2D, v: View, dpr: number): void {
+function paintField(ctx: CanvasRenderingContext2D, v: View, dpr: number, P: Pitch, cx: number, cy: number): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = VOID; ctx.fillRect(0, 0, v.vw, v.vh);
-  // 이후는 논리 단위: 원점 = 경기장 가운데, 세로면 -90도 돌려 +x 가 화면 위로.
-  ctx.translate(v.ox, v.oy);
+  // 이후는 논리 단위: 원점 = 경기장 가운데(캔버스 한가운데), 세로면 -90도 돌려 +x 가 화면 위로.
+  ctx.translate(cx, cy);
   if (v.portrait) ctx.rotate(-Math.PI / 2);
   ctx.scale(v.scale, v.scale);
-  const hw = PITCH.w / 2, hh = PITCH.h / 2, gd = PITCH.goalDepth, gh = PITCH.goalW / 2;
+  const hw = P.w / 2, hh = P.h / 2, gd = P.goalDepth, gh = P.goalW / 2;
 
   // 선 밖 여백 — 선수가 나갈 수 있는 자리. 안쪽 잔디보다 어둡게 깔아 "여기까지 갈 수 있다"가 보이게.
-  const mx = PITCH.marginX, my = PITCH.marginY;
-  ctx.fillStyle = RUNOFF; ctx.fillRect(-hw - mx, -hh - my, PITCH.w + mx * 2, PITCH.h + my * 2);
+  const mx = P.marginX, my = P.marginY;
+  ctx.fillStyle = RUNOFF; ctx.fillRect(-hw - mx, -hh - my, P.w + mx * 2, P.h + my * 2);
   // 잔디 줄무늬 — 12줄(짝수라 하프라인이 줄 경계에 떨어진다) + 알갱이.
-  const bands = 12, bw = PITCH.w / bands;
-  for (let i = 0; i < bands; i++) { ctx.fillStyle = i % 2 ? GRASS_B : GRASS_A; ctx.fillRect(-hw + i * bw, -hh, bw + 0.5, PITCH.h); }
+  const bands = 12, bw = P.w / bands;
+  for (let i = 0; i < bands; i++) { ctx.fillStyle = i % 2 ? GRASS_B : GRASS_A; ctx.fillRect(-hw + i * bw, -hh, bw + 0.5, P.h); }
   ctx.fillStyle = GRAIN;
   const tile = 30;
   for (let x = -hw; x < hw; x += tile) for (let y = -hh; y < hh; y += tile) {
@@ -111,7 +114,7 @@ function paintField(ctx: CanvasRenderingContext2D, v: View, dpr: number): void {
   // 골 상자 — 그물 느낌(어두운 바탕 + 격자) + 바깥 테두리.
   for (const s of [-1, 1]) {
     const x0 = s < 0 ? -hw - gd : hw;
-    ctx.fillStyle = NET_BG; ctx.fillRect(x0, -gh, gd, PITCH.goalW);
+    ctx.fillStyle = NET_BG; ctx.fillRect(x0, -gh, gd, P.goalW);
     ctx.strokeStyle = NET; ctx.lineWidth = 1.5;
     ctx.beginPath();
     for (let x = x0; x <= x0 + gd + 0.1; x += 14) { ctx.moveTo(x, -gh); ctx.lineTo(x, gh); }
@@ -130,16 +133,16 @@ function paintField(ctx: CanvasRenderingContext2D, v: View, dpr: number): void {
   ctx.moveTo(-hw, gh); ctx.lineTo(-hw, hh); ctx.lineTo(hw, hh); ctx.lineTo(hw, gh);
   ctx.moveTo(0, -hh); ctx.lineTo(0, hh);
   ctx.stroke();
-  ctx.beginPath(); ctx.arc(0, 0, PITCH.centerR, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, P.centerR, 0, Math.PI * 2); ctx.stroke();
   ctx.fillStyle = LINE; ctx.fillRect(-5, -5, 10, 10);
   // 골 앞 작은 상자(골 에어리어)
   ctx.lineWidth = 3;
-  for (const s of [-1, 1]) ctx.strokeRect(s < 0 ? -hw : hw - 90, -gh - 60, 90, PITCH.goalW + 120);
+  for (const s of [-1, 1]) ctx.strokeRect(s < 0 ? -hw : hw - 90, -gh - 60, 90, P.goalW + 120);
 
   // 기둥
   ctx.fillStyle = POST;
   for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
-    ctx.beginPath(); ctx.arc(sx * hw, sy * gh, PITCH.postR, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx * hw, sy * gh, P.postR, 0, Math.PI * 2); ctx.fill();
   }
 }
 
@@ -164,14 +167,18 @@ export function blend(prev: MatchState, cur: MatchState, a: number): MatchState 
 }
 
 export function drawFrame(ctx: CanvasRenderingContext2D, st: MatchState, config: MatchConfig, view: View, field: Field, sprites: Sprites, o: FrameOpts): void {
+  const P = pitchOf(config.field);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(field.canvas, 0, 0);
+  ctx.fillStyle = VOID; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  // 바닥 그림의 한가운데 = 경기장 가운데(논리 0,0). 카메라가 움직이면 그만큼 옮겨 찍는다(정수 픽셀로 — 도트가 번지지 않게).
+  const c0 = toScreen(view, 0, 0);
+  ctx.drawImage(field.canvas, Math.round(c0.x * o.dpr - field.canvas.width / 2), Math.round(c0.y * o.dpr - field.canvas.height / 2));
   ctx.setTransform(o.dpr, 0, 0, o.dpr, 0, 0);
   ctx.imageSmoothingEnabled = false;
 
-  const R = PITCH.playerR * view.scale;
-  const ballR = Math.max(PITCH.ballR * view.scale, 3.5);   // 실제 크기 그대로 — 전엔 1.15배로 키워 그렸다("공 좀 더 작게")
+  const R = P.playerR * view.scale;
+  const ballR = Math.max(P.ballR * view.scale, 3.5);   // 실제 크기 그대로 — 전엔 1.15배로 키워 그렸다("공 좀 더 작게")
 
   // 그림자 먼저(모든 몸 아래)
   ctx.fillStyle = 'rgba(0, 0, 0, .35)';
@@ -225,6 +232,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, st: MatchState, config:
   ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(1.5, ballR * 0.25);
   ctx.beginPath(); ctx.arc(bs.x, bs.y, ballR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
+  if (view.follow) drawBallArrow(ctx, view, bs);
   drawHud(ctx, st, config, view, o);
 }
 
@@ -267,11 +275,31 @@ function banner(ctx: CanvasRenderingContext2D, view: View, y: number, big: strin
   ctx.textBaseline = 'top';
 }
 
+/** 공이 화면(그릴 칸) 밖이면 칸 가장자리에 공 쪽을 가리키는 작은 화살표(스펙 2026-11-07 §2). */
+function drawBallArrow(ctx: CanvasRenderingContext2D, view: View, bs: { x: number; y: number }): void {
+  const pad = 14;
+  const x0 = view.ox - view.aw / 2 + pad, x1 = view.ox + view.aw / 2 - pad, y0 = view.oy - view.ah / 2 + pad, y1 = view.oy + view.ah / 2 - pad;
+  if (bs.x >= x0 && bs.x <= x1 && bs.y >= y0 && bs.y <= y1) return;
+  // 칸 가운데에서 공 쪽으로 그은 선이 가장자리와 만나는 점
+  const dx = bs.x - view.ox, dy = bs.y - view.oy;
+  const k = Math.min(dx !== 0 ? (dx > 0 ? x1 - view.ox : x0 - view.ox) / dx : Infinity, dy !== 0 ? (dy > 0 ? y1 - view.oy : y0 - view.oy) / dy : Infinity);
+  if (!Number.isFinite(k)) return;
+  const ax = view.ox + dx * k, ay = view.oy + dy * k;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / len, uy = dy / len;
+  const size = 10;
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(ax + ux * size, ay + uy * size);
+  ctx.lineTo(ax - ux * size * 0.6 - uy * size * 0.8, ay - uy * size * 0.6 + ux * size * 0.8);
+  ctx.lineTo(ax - ux * size * 0.6 + uy * size * 0.8, ay - uy * size * 0.6 - ux * size * 0.8);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+
 // ── 한마디 말풍선(2단계 온라인) ──
 /** 그 선수 머리 위에 말풍선. drawFrame 뒤에 부른다(같은 dpr 변환 그대로). 몸이 화면 위 끝이면 아래로 붙여 잘리지 않게. */
-export function drawBubbles(ctx: CanvasRenderingContext2D, st: MatchState, view: View, bubbles: { id: number; text: string }[]): void {
+export function drawBubbles(ctx: CanvasRenderingContext2D, st: MatchState, config: MatchConfig, view: View, bubbles: { id: number; text: string }[]): void {
   if (!bubbles.length) return;
-  const R = PITCH.playerR * view.scale;
+  const R = pitchOf(config.field).playerR * view.scale;
   ctx.font = `14px ${F14}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const b of bubbles) {
     const body = st.players[b.id];

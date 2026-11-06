@@ -7,7 +7,8 @@
 import type { Input, MatchConfig, MatchState } from './sim.ts';
 import { NO_INPUT, step } from './sim.ts';
 import type { RoomState } from './room.ts';
-import { MAX_MEMBERS, isRoomCode } from './room.ts';
+import { FIELD_IDS } from './sim.ts';
+import { FIELD_CHOICES, MAX_MEMBERS, MAX_PER_SIDE, isRoomCode } from './room.ts';
 
 // 방장이 보내는 것(deny·room·start·snap·stop·pong)에도 from(= 방장 clientId)을 싣는다 — 손님은 처음 받은 방의 hostId 와 같은 from 만 믿는다.
 // room 의 sid = 방장 세션 고유값(방장 탭이 새로 열릴 때마다 새로). 방장이 새로고침하면 rev 가 0 부터라, sid 가 바뀌면 손님이 rev 비교를 새로 시작한다.
@@ -79,7 +80,8 @@ export function quantize(i: Input): Input { return decodeInput(encodeInput(i)); 
 // ═══════════════════════════ 메시지 검사 ═══════════════════════════
 // 바깥에서 온 JSON 을 믿지 않는다. 모양(타입·범위·길이)만 보고, 맞으면 받은 객체를 그대로 돌려준다.
 // 계산(step)이 NaN·잘못된 길이에서 죽지 않는 건 sim.ts 쪽 몫이고, 여기서는 "크기를 부풀려 먹통 만들기"를 막는다.
-const MAX_PLAYERS = 8, MAX_ROSTER = 200, MAX_STR = 64;
+// 한 경기 선수는 한 편 6 × 2 = 12 까지(2026-11-07 — 사람은 8명까지지만 봇이 채운다).
+const MAX_PLAYERS = MAX_PER_SIDE * 2, MAX_ROSTER = 200, MAX_STR = 64;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -100,17 +102,20 @@ function okRoom(r: unknown): boolean {
   return typeof r.code === 'string' && isRoomCode(r.code) && isStr(r.hostId) && isInt(r.rev, 0)
     && (r.phase === 'lobby' || r.phase === 'match')
     && isArr(r.members, MAX_MEMBERS) && r.members.every(okMember)
-    && isObj(s) && isInt(s.perSide, 1, 4) && isInt(s.minutes, 1, 60) && isInt(s.scoreLimit, 0, 99);
+    && isObj(s) && isInt(s.perSide, 0, MAX_PER_SIDE) && isInt(s.minutes, 1, 60) && isInt(s.scoreLimit, 0, 99)
+    && (FIELD_CHOICES as readonly unknown[]).includes(s.field);
 }
 function okPerf(p: unknown): boolean {
   return isObj(p) && isNum(p.maxSpeed) && isNum(p.accel) && isNum(p.kick) && isNum(p.mass) && p.mass > 0;
 }
 function okConfig(c: unknown): boolean {
   if (!isObj(c)) return false;
-  if (!isInt(c.perSide, 1, 4) || !isInt(c.minutes, 1, 60) || !isInt(c.scoreLimit, 0, 99)) return false;
-  if (!isArr(c.players, MAX_PLAYERS) || c.players.length !== (c.perSide as number) * 2) return false;
-  return c.players.every((p, i) => isObj(p) && p.id === i && isInt(p.num, 0) && isName(p.name)
+  if (!(FIELD_IDS as readonly unknown[]).includes(c.field) || !isInt(c.minutes, 1, 60) || !isInt(c.scoreLimit, 0, 99)) return false;
+  if (!isArr(c.players, MAX_PLAYERS) || c.players.length < 1) return false;
+  const ok = c.players.every((p, i) => isObj(p) && p.id === i && isInt(p.num, 0) && isName(p.name)
     && (p.side === 0 || p.side === 1) && typeof p.bot === 'boolean' && okPerf(p.perf));
+  // 두 편 인원은 달라도 되지만 한 편 6명을 넘지 않는다.
+  return ok && [0, 1].every((side) => (c.players as Record<string, unknown>[]).filter((p) => p.side === side).length <= MAX_PER_SIDE);
 }
 function okState(s: unknown): boolean {
   if (!isObj(s)) return false;

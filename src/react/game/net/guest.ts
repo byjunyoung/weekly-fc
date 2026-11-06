@@ -19,8 +19,8 @@ import type { RoomState, Who } from '../../../lib/game/room.ts';
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView, Stage } from './common.ts';
 import {
-  DENY_TEXT, GIVE_UP_MS, HELLO_EVERY_MS, HOST_SILENCE_LOBBY_MS, HOST_SILENCE_MATCH_MS, HOST_SLOW_MS, IN_MIN_GAP_MS, JOIN_SLOW_MS,
-  KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, SAY_GAP_MS, SLACK_MS, STEP_MS,
+  DENY_TEXT, GIVE_UP_MS, HELLO_EVERY_MS, HOST_SILENCE_LOBBY_MS, HOST_SILENCE_MATCH_MS, HOST_SLOW_MS, JOIN_SLOW_MS,
+  KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, SAY_GAP_MS, SLACK_MS, SPECTATOR_PING_MS, STEP_MS, inputGapMs,
   createStore, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import type { Offsets } from './smooth.ts';
@@ -266,12 +266,14 @@ export function createGuestSession(o: GuestOptions): GuestSession {
       if (quiet > (stage === 'match' ? HOST_SILENCE_MATCH_MS : HOST_SILENCE_LOBBY_MS)) { end(LOST); return; }
       store.set({ hostSlow: quiet > HOST_SLOW_MS });
       if (pausedSince !== null && now - pausedSince >= GIVE_UP_MS) { end('방장이 돌아오지 않아 방에서 나왔습니다'); return; }
-      if (!hidden && now - lastPing >= PING_EVERY_MS - SLACK_MS) { lastPing = now; send({ t: 'ping', from: me.clientId, at: now }); }
+      const pingEvery = pred && pred.myId === null ? SPECTATOR_PING_MS : PING_EVERY_MS;   // 구경은 5초마다
+      if (!hidden && now - lastPing >= pingEvery - SLACK_MS) { lastPing = now; send({ t: 'ping', from: me.clientId, at: now }); }
       // 방은 경기 중인데 경기 설정을 못 받았다(놓쳤다) — hello 를 다시 보내면 방장이 start 를 다시 보낸다.
       if (room?.phase === 'match' && !pred && now - lastHello >= HELLO_EVERY_MS - SLACK_MS) hello(now);
       const p0 = pred;
       if (!p0 || stage !== 'match') return;
       const playing = p0.myId !== null;
+      const inGap = inputGapMs(p0.config.players.filter((x) => !x.bot).length);
       acc += Math.min(Math.max(0, dt), MAX_CATCHUP * STEP_MS);
       let n = 0, q = Q_IDLE;
       let p = p0;
@@ -284,11 +286,11 @@ export function createGuestSession(o: GuestOptions): GuestSession {
       if (n === MAX_CATCHUP) acc = 0;
       pred = p;
       // 입력은 바뀔 때만 + 0.5초마다 살아 있음 알림(스펙 §2.4). 한 번 부를 때 많아야 하나, 가려진 동안은 안 보낸다.
-      // 바뀌어도 마지막 전송에서 50ms 는 띄운다(떨리는 스틱) — 킥 여부가 바뀐 건 바로(누른 순간이 늦으면 안 된다).
+      // 바뀌어도 마지막 전송에서 max(50, 손님 수 × 28)ms 는 띄운다(떨리는 스틱·사람 많은 방) — 킥 여부가 바뀐 건 바로(누른 순간이 늦으면 안 된다).
       if (playing && !hidden && n > 0) {
         const since = now - lastInAt;
         const kickFlip = lastSentQ !== null && (q >= KICK_Q) !== (lastSentQ >= KICK_Q);
-        const changed = q !== lastSentQ && (kickFlip || since >= IN_MIN_GAP_MS);
+        const changed = q !== lastSentQ && (kickFlip || since >= inGap);
         if (changed || since >= KEEPALIVE_MS - SLACK_MS) {
           lastSentQ = q; lastInAt = now;
           send({ t: 'in', from: me.clientId, seq: seq++, i: q });

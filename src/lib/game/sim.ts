@@ -7,7 +7,7 @@
 //   1) 난수는 상태 안의 seed(uint32)에서만 뽑는다(rand). 상태는 JSON 으로 그대로 오갈 수 있는 값만 담는다.
 //   2) 브라우저마다 끝자리가 달라질 수 있는 sin·cos·exp·hypot 대신 사칙연산과 sqrt(정확히 반올림되는 연산)만 쓴다.
 //
-// 단위: 길이는 논리 단위(경기장 1200 × 720), 속도는 단위/초, 시간은 틱(1/60초).
+// 단위: 길이는 논리 단위(보통 경기장 1200 × 720 — 크기는 경기마다 config.field), 속도는 단위/초, 시간은 틱(1/60초).
 // 원점은 경기장 가운데, x 가 긴 쪽. 0 편은 왼쪽(x<0)에서 시작해 오른쪽 골대(x=+w/2)로 공격한다.
 import type { Perf } from './stats.ts';
 
@@ -15,17 +15,27 @@ import type { Perf } from './stats.ts';
 // 값은 이 경기장(1200×720, 선수 반지름 22, 공 반지름 12)에서 직접 해 보며 잡은 것이다.
 // 다른 게임의 값을 가져오지 않는다(스펙 §2).
 
-/** 경기장·몸 크기. centerR = 킥오프 때 수비 편이 못 들어오는 가운데 원, postR = 골대 기둥 굵기. */
-export const PITCH = {
-  w: 1200, h: 720,
-  goalW: 200,        // 골문 폭. 선수 지름(44)의 4.5배 — 좁으면 골이 안 나고 넓으면 시시하다.
+// ── 경기장 크기(2026-11-07 "최대 인원 같은거 헥스볼처럼 자유롭게 맵 크기도 크기별로 하고") ──
+// 스펙 2026-11-07-game-fields-teams-design.md §1. 크기는 우리 값이다(다른 게임의 경기장 치수를 가져오지 않는다).
+// 크기마다 다른 것은 가로·세로·골문 폭·가운데 원뿐이고, 몸·공·골 깊이·기둥·선 밖 여백은 모든 크기에서 같다.
+export type FieldId = 'S' | 'M' | 'L' | 'XL';
+export const FIELD_IDS: readonly FieldId[] = ['S', 'M', 'L', 'XL'];
+const FIELD_DIMS: Record<FieldId, { w: number; h: number; goalW: number; centerR: number }> = {
+  S: { w: 900, h: 540, goalW: 170, centerR: 70 },      // 작게 — 경기장 위 4명까지
+  M: { w: 1200, h: 720, goalW: 200, centerR: 90 },     // 보통 — 6명까지(1단계부터 쓰던 것). 골문은 선수 지름(44)의 4.5배
+  L: { w: 1560, h: 900, goalW: 230, centerR: 100 },    // 크게 — 10명까지
+  XL: { w: 1920, h: 1080, goalW: 260, centerR: 110 },  // 아주 크게 — 그 이상
+};
+const FIELD_COMMON = {
   goalDepth: 56,     // 골라인 뒤 공간 깊이. 공이 들어가 뒷벽에 맞고 멈출 만큼만.
   playerR: 22, ballR: 10,   // 공은 12 였다가 줄임(2026-11-06 "공 좀 더 작게")
-  centerR: 90, postR: 6,
+  postR: 6,
   // 터치라인·골라인 밖 여백 — 선수는 여기까지 나갈 수 있고 공은 선 안에서 튕긴다(2026-11-07 "터치라인 밖 여백도 추가해줘").
   // 벽에 붙은 공 뒤로 돌아 들어갈 자리가 생긴다. 골대 그물은 공만 막고 선수는 지나다닌다(기둥은 선수도 막는다).
   marginX: 70, marginY: 40,
 };
+/** 경기장·몸 크기. centerR = 킥오프 때 수비 편이 못 들어오는 가운데 원, postR = 골대 기둥 굵기. */
+export type Pitch = { id: FieldId; w: number; h: number; goalW: number; centerR: number } & typeof FIELD_COMMON;
 
 /** 능력치가 평균인 선수의 성능. stats.ts 의 BASE_PERF 가 이걸 그대로 쓴다(숫자는 한 곳에서만 고치려고).
  *  maxSpeed 단위/초 — 감쇠 방식 이동에서 계속 누르고 있을 때 닿는 정상 상태 속도(아래 steer).
@@ -73,13 +83,16 @@ const SUBSTEPS = 4;
 /** 킥오프 때 선수 세로 위치를 이만큼(±) 흔든다 — 매번 똑같은 그림이 되지 않게 씨앗을 쓰는 자리. */
 const KICKOFF_JITTER = 8;
 
-/** 편성. 0 편 기준(왼쪽 진영, x<0), 1 편은 x 부호만 뒤집는다. slot 0 이 가장 뒤.
- *  4 는 뒤 하나·허리 둘·앞 하나, 3 은 뒤 하나·좌우 하나씩, 2 는 뒤·앞. 앞 선수도 가운데 원(반지름 90+22) 밖이다. */
+/** 편성(보통 경기장 1200×720 좌표, 크기에 비례해 늘인다). 0 편 기준(왼쪽 진영, x<0), 1 편은 x 부호만 뒤집는다. slot 0 이 가장 뒤.
+ *  4 는 뒤 하나·허리 둘·앞 하나, 3 은 뒤 하나·좌우 하나씩, 2 는 뒤·앞. 5·6 은 뒤 하나 + 두 줄.
+ *  앞 선수도 어느 크기에서나 가운데 원(반지름 + 22) 밖이다 — 가장 가까운 앞자리 x=-150 은 작은 경기장에서 -112.5(원 70+22=92 밖). */
 const FORMATIONS: Record<number, { x: number; y: number }[]> = {
   1: [{ x: -260, y: 0 }],
   2: [{ x: -440, y: 0 }, { x: -170, y: 0 }],
   3: [{ x: -450, y: 0 }, { x: -200, y: -170 }, { x: -200, y: 170 }],
   4: [{ x: -460, y: 0 }, { x: -280, y: -200 }, { x: -280, y: 200 }, { x: -150, y: 0 }],
+  5: [{ x: -460, y: 0 }, { x: -300, y: -170 }, { x: -300, y: 170 }, { x: -150, y: -110 }, { x: -150, y: 110 }],
+  6: [{ x: -470, y: 0 }, { x: -330, y: -130 }, { x: -330, y: 130 }, { x: -210, y: -250 }, { x: -210, y: 250 }, { x: -150, y: 0 }],
 };
 // ═══════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -91,7 +104,8 @@ export type Side = 0 | 1;
 export type Input = { x: number; y: number; kick: boolean };
 export const NO_INPUT: Input = { x: 0, y: 0, kick: false };
 export type MatchPlayer = { id: number; num: number; name: string; side: Side; bot: boolean; perf: Perf };
-export type MatchConfig = { perSide: 1 | 2 | 3 | 4; minutes: number; scoreLimit: number; players: MatchPlayer[] };
+/** 경기 설정. 두 편 인원은 달라도 된다(한 편 0~6명, players 의 side 로 센다). field 가 그 경기의 경기장. */
+export type MatchConfig = { field: FieldId; minutes: number; scoreLimit: number; players: MatchPlayer[] };
 export type Body = { x: number; y: number; vx: number; vy: number };
 export type Phase = 'kickoff' | 'play' | 'goal' | 'end';
 export type MatchState = {
@@ -110,26 +124,51 @@ export type MatchEvent =
   | { type: 'goal'; side: Side; scorer: number | null }
   | { type: 'end'; winner: Side | 'draw' };
 
-const HW = PITCH.w / 2, HH = PITCH.h / 2, GH = PITCH.goalW / 2, GD = PITCH.goalDepth;
-const OW = HW + PITCH.marginX, OH = HH + PITCH.marginY;   // 선수가 갈 수 있는 바깥 테두리
-
 type Seg = [number, number, number, number];
-/** 공이 부딪치는 벽 — 바깥 사각형(골문 자리는 비움) + 양쪽 골대 상자(옆·뒤 벽). 기둥은 따로 POSTS. */
-const BALL_WALLS: Seg[] = [
-  [-HW, -HH, HW, -HH], [-HW, HH, HW, HH],
-  [-HW, -HH, -HW, -GH], [-HW, GH, -HW, HH], [HW, -HH, HW, -GH], [HW, GH, HW, HH],
-  [-HW, -GH, -HW - GD, -GH], [-HW, GH, -HW - GD, GH], [-HW - GD, -GH, -HW - GD, GH],
-  [HW, -GH, HW + GD, -GH], [HW, GH, HW + GD, GH], [HW + GD, -GH, HW + GD, GH],
-];
-const POSTS: [number, number][] = [[-HW, -GH], [-HW, GH], [HW, -GH], [HW, GH]];
-/** 선수가 부딪치는 벽 — 골문까지 막힌 통짜 사각형. 선수는 골대 상자에 못 들어간다(가장 단순하고 안정적인 방법). */
-const PLAYER_WALLS: Seg[] = [[-OW, -OH, OW, -OH], [-OW, OH, OW, OH], [-OW, -OH, -OW, OH], [OW, -OH, OW, OH]];
+/** 경기장 하나에서 나오는 벽·기둥. 크기 넷을 모듈을 읽을 때 한 번 만들어 두는 상수 표다 — step() 은 config.field 로 꺼내 쓰기만 해서
+ *  부르는 순서와 상관없이 같은 결과다(숨은 상태 없음). */
+type Geo = {
+  pitch: Pitch;
+  HW: number; HH: number; GH: number; GD: number;
+  OW: number; OH: number;                 // 선수가 갈 수 있는 바깥 테두리(선 밖 여백까지)
+  ballWalls: Seg[]; posts: [number, number][]; playerWalls: Seg[];
+  fx: number; fy: number;                 // 킥오프 자리 배율(보통 경기장 = 1)
+};
+function buildGeo(id: FieldId): Geo {
+  const pitch: Pitch = { id, ...FIELD_DIMS[id], ...FIELD_COMMON };
+  const HW = pitch.w / 2, HH = pitch.h / 2, GH = pitch.goalW / 2, GD = pitch.goalDepth;
+  const OW = HW + pitch.marginX, OH = HH + pitch.marginY;
+  return {
+    pitch, HW, HH, GH, GD, OW, OH,
+    // 공이 부딪치는 벽 — 바깥 사각형(골문 자리는 비움) + 양쪽 골대 상자(옆·뒤 벽). 기둥은 따로.
+    ballWalls: [
+      [-HW, -HH, HW, -HH], [-HW, HH, HW, HH],
+      [-HW, -HH, -HW, -GH], [-HW, GH, -HW, HH], [HW, -HH, HW, -GH], [HW, GH, HW, HH],
+      [-HW, -GH, -HW - GD, -GH], [-HW, GH, -HW - GD, GH], [-HW - GD, -GH, -HW - GD, GH],
+      [HW, -GH, HW + GD, -GH], [HW, GH, HW + GD, GH], [HW + GD, -GH, HW + GD, GH],
+    ],
+    posts: [[-HW, -GH], [-HW, GH], [HW, -GH], [HW, GH]],
+    // 선수가 부딪치는 벽 — 선 밖 여백까지의 통짜 사각형(그물은 공만 막는다, 기둥은 선수도 막는다).
+    playerWalls: [[-OW, -OH, OW, -OH], [-OW, OH, OW, OH], [-OW, -OH, -OW, OH], [OW, -OH, OW, OH]],
+    fx: HW / 600, fy: HH / 360,
+  };
+}
+const GEO: Record<FieldId, Geo> = { S: buildGeo('S'), M: buildGeo('M'), L: buildGeo('L'), XL: buildGeo('XL') };
+const geoOf = (field: unknown): Geo => (FIELD_IDS.includes(field as FieldId) ? GEO[field as FieldId] : GEO.M);
 
-/** 0 편 slot 번째 선수의 킥오프 자리. side 1 이면 좌우를 뒤집는다. 봇이 쉬는 자리를 잡을 때도 쓴다. */
-export function formationSpot(perSide: number, slot: number, side: Side): { x: number; y: number } {
-  const f = FORMATIONS[perSide] ?? FORMATIONS[4];
+/** 그 경기의 경기장. 모르는 값이면 보통(M) — 바깥에서 온 설정을 믿지 않는다. */
+export function pitchOf(field: unknown): Pitch { return geoOf(field).pitch; }
+/** 보통(M) 경기장. 테스트와 "크기와 상관없는 몸 크기(playerR·ballR)"를 읽는 곳만 쓴다 — 경기 계산·그리기는 pitchOf(config.field). */
+export const PITCH: Pitch = GEO.M.pitch;
+
+/** 한 편 count 명 중 slot 번째의 킥오프 자리(0 편 기준, 1 편은 좌우를 뒤집는다). 봇이 쉬는 자리를 잡을 때도 쓴다.
+ *  편성 표는 보통 경기장 좌표로 적고 경기장 크기에 비례해 늘인다 — 두 편 인원이 달라도 각자 자기 수로 고른다. */
+export function formationSpot(field: unknown, count: number, slot: number, side: Side): { x: number; y: number } {
+  const g = geoOf(field);
+  const f = FORMATIONS[Math.min(6, Math.max(1, Math.round(count) || 1))];
   const s = f[Math.min(Math.max(slot, 0), f.length - 1)];
-  return { x: side === 0 ? s.x : -s.x, y: s.y };
+  const x = s.x * g.fx, y = s.y * g.fy;
+  return { x: side === 0 ? x : 0 - x, y };
 }
 
 /** 상태 안의 씨앗에서 0 이상 1 미만 값 하나를 뽑고 씨앗을 앞으로 보낸다(mulberry32). 상태를 직접 바꾸므로 복사본에만 쓴다. */
@@ -155,15 +194,23 @@ function clone(s: MatchState): MatchState {
 /** 모두를 킥오프 자리로, 공은 가운데로. 세로 위치만 씨앗으로 살짝 흔든다. */
 function placeForKickoff(s: MatchState, config: MatchConfig): void {
   s.ball = { x: 0, y: 0, vx: 0, vy: 0 };
+  const per = sideCounts(config);
   const count = [0, 0];
   config.players.forEach((mp, i) => {
-    const spot = formationSpot(config.perSide, count[mp.side]++, mp.side);
+    const spot = formationSpot(config.field, per[mp.side], count[mp.side]++, mp.side);
     const p = s.players[i];
     p.x = spot.x;
     p.y = spot.y + (rand(s) - 0.5) * 2 * KICKOFF_JITTER;
     p.vx = 0; p.vy = 0; p.kickCooldown = 0; p.kicking = false;
   });
   s.lastTouch = null;
+}
+
+/** 편마다 몇 명인가 [0 편, 1 편]. */
+export function sideCounts(config: MatchConfig): [number, number] {
+  const c: [number, number] = [0, 0];
+  for (const p of config.players) c[p.side === 1 ? 1 : 0]++;
+  return c;
 }
 
 export function createMatch(config: MatchConfig, seed: number): MatchState {
@@ -236,8 +283,8 @@ function collideSegment(b: Body, r: number, seg: Seg, e: number): void {
 }
 
 /** 킥오프 규칙 — 모두 자기 진영에, 상대 편은 가운데 원 밖에. 공이 건드려지면(phase 가 play 로) 풀린다. */
-function kickoffLimits(s: MatchState, config: MatchConfig): void {
-  const keepOut = PITCH.centerR + PITCH.playerR;
+function kickoffLimits(s: MatchState, config: MatchConfig, g: Geo): void {
+  const keepOut = g.pitch.centerR + g.pitch.playerR;
   config.players.forEach((mp, i) => {
     const p = s.players[i];
     if (mp.side === 0 && p.x > 0) { p.x = 0; if (p.vx > 0) p.vx = 0; }
@@ -276,7 +323,9 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
   s.tick += 1;
   s.phaseTicks += 1;
   const controlled = s.phase === 'kickoff' || s.phase === 'play';
-  const R = PITCH.playerR, BR = PITCH.ballR;
+  const g = geoOf(config.field);
+  const { HW, GH } = g;
+  const R = g.pitch.playerR, BR = g.pitch.ballR, postR = g.pitch.postR;
   const n = s.players.length;
   const mass: number[] = config.players.map((mp) => PLAYER_MASS * mp.perf.mass);
 
@@ -320,8 +369,8 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
     for (let i = 0; i < n; i++)
       if (collideCircles(s.players[i], R, mass[i], s.ball, BR, BALL_MASS, E_PLAYER_BALL) && controlled) s.lastTouch = i;
 
-    for (const w of BALL_WALLS) collideSegment(s.ball, BR, w, E_BALL_WALL);
-    for (const [px, py] of POSTS) collidePoint(s.ball, BR, px, py, PITCH.postR, E_BALL_POST);
+    for (const w of g.ballWalls) collideSegment(s.ball, BR, w, E_BALL_WALL);
+    for (const [px, py] of g.posts) collidePoint(s.ball, BR, px, py, postR, E_BALL_POST);
     // 공이 선수와 벽 사이에 끼면 위 처리만으론 겹침이 남는다 — 이때는 공을 못 움직이는 것으로 보고 선수를 비킨다.
     for (const p of s.players) {
       const dx = p.x - s.ball.x, dy = p.y - s.ball.y;
@@ -333,10 +382,10 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
       }
     }
     for (const p of s.players) {
-      for (const w of PLAYER_WALLS) collideSegment(p, R, w, E_PLAYER_WALL);
-      for (const [px, py] of POSTS) collidePoint(p, R, px, py, PITCH.postR, E_PLAYER_WALL);
+      for (const w of g.playerWalls) collideSegment(p, R, w, E_PLAYER_WALL);
+      for (const [px, py] of g.posts) collidePoint(p, R, px, py, postR, E_PLAYER_WALL);
     }
-    if (s.phase === 'kickoff') kickoffLimits(s, config);
+    if (s.phase === 'kickoff') kickoffLimits(s, config, g);
   }
 
   // 4) 공 구르기 감속·속도 상한. 마지막 안전망으로 몸이 판 밖에 나가거나 숫자가 깨지면 되돌린다.
@@ -345,7 +394,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
   let sp = Math.sqrt(s.ball.vx * s.ball.vx + s.ball.vy * s.ball.vy);
   if (sp > BALL_MAX_SPEED) { s.ball.vx *= BALL_MAX_SPEED / sp; s.ball.vy *= BALL_MAX_SPEED / sp; sp = BALL_MAX_SPEED; }
   if (sp < BALL_REST_SPEED) { s.ball.vx = 0; s.ball.vy = 0; }
-  guardBodies(s);
+  guardBodies(s, g);
 
   // 5) 단계 진행
   if (s.phase === 'kickoff') {
@@ -381,10 +430,11 @@ function finish(s: MatchState): void {
 }
 
 /** 마지막 안전망. 정상이면 아무 일도 안 한다 — 숫자가 깨지거나 몸이 판을 벗어난 경우만 되돌린다. */
-function guardBodies(s: MatchState): void {
+function guardBodies(s: MatchState, g: Geo): void {
+  const { HW, HH, GH, GD, OW, OH } = g;
   const b = s.ball;
   if (!Number.isFinite(b.x + b.y + b.vx + b.vy)) { b.x = 0; b.y = 0; b.vx = 0; b.vy = 0; }
-  const BR = PITCH.ballR;
+  const BR = g.pitch.ballR;
   if (b.x > HW + GD - BR) { b.x = HW + GD - BR; b.vx = 0; }
   if (b.x < -HW - GD + BR) { b.x = -HW - GD + BR; b.vx = 0; }
   if (b.y > HH - BR) { b.y = HH - BR; if (b.vy > 0) b.vy = 0; }
@@ -395,7 +445,7 @@ function guardBodies(s: MatchState): void {
   }
   for (const p of s.players) {
     if (!Number.isFinite(p.x + p.y + p.vx + p.vy)) { p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; }
-    const R = PITCH.playerR;
+    const R = g.pitch.playerR;
     p.x = Math.min(OW - R, Math.max(-OW + R, p.x));
     p.y = Math.min(OH - R, Math.max(-OH + R, p.y));
   }
