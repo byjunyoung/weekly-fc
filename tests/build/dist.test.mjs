@@ -24,6 +24,7 @@ export const PAGES = [
   'guide/index.html',
   'about/index.html',
   'game/index.html',
+  'game3d/index.html',
 ];
 export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
@@ -291,4 +292,25 @@ test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단
     assert.ok(nav.join('').includes('/weekly-fc/game/'), `${p}: 상단 메뉴에 /game/ 링크가 없다`);
   }
   assert.match(html, /<a href="\/weekly-fc\/game\/"[^>]*class="active"|<a[^>]*class="active"[^>]*href="\/weekly-fc\/game\/"/, '/game/ 에선 게임 메뉴가 켜진다');
+});
+
+// 3D 축구 시제품(2026-11-07) — 주소로만 들어온다(상단 메뉴에 없다). three.js 는 이 페이지 섬이 따로 받는 경기 화면 묶음에만 있다.
+test('3D 시제품 페이지는 Game3DApp 섬을 담고, 상단 메뉴에는 없고, three.js 는 다른 페이지에 안 실린다', () => {
+  const html = read('game3d/index.html');
+  assert.match(html, /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/Game3DApp\.[^"]+\.js"[^>]*client="load"/, 'Game3DApp 섬');
+  assert.ok(html.includes('<title>3D 축구 시제품 · WEEKLY FC</title>'), '제목');
+  assert.ok(html.includes('class="loading"'), '빌드 때는 불러오는 중 화면');
+  assert.ok(!html.includes('class="g3-overlay"'), '경기 오버레이는 시작한 뒤에만');
+  for (const p of ['index.html', 'game/index.html', 'game3d/index.html', 'tier/index.html']) {
+    const nav = (read(p).match(/<nav[\s\S]*?<\/nav>/g) ?? []).join('');
+    assert.ok(nav.length > 0, `${p}: 메뉴를 못 찾았다`);
+    assert.ok(!nav.includes('/weekly-fc/game3d/'), `${p}: 상단 메뉴에 3D 시제품이 있다`);
+  }
+  // 경기 화면 묶음(Match3D — three.js 포함)은 Game3DApp 묶음만 부른다
+  const files = readdirSync('dist/_astro').filter((f) => f.endsWith('.js'));
+  const match3d = files.filter((f) => /^Match3D\./.test(f));
+  assert.equal(match3d.length, 1, '경기 화면 묶음 하나');
+  const users = files.filter((f) => f !== match3d[0] && readFileSync(`dist/_astro/${f}`, 'utf8').includes(match3d[0]));
+  assert.deepEqual(users.map((f) => f.split('.')[0]), ['Game3DApp']);
+  for (const p of SHELL_PAGES.filter((x) => x !== 'game3d/index.html')) assert.ok(!read(p).includes(match3d[0]), `${p} 가 three.js 묶음을 부른다`);
 });
