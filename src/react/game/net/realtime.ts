@@ -42,6 +42,8 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let joinTimer: ReturnType<typeof setTimeout> | undefined;
   let stableTimer: ReturnType<typeof setTimeout> | undefined;
+  let rejoinTimer: ReturnType<typeof setTimeout> | undefined;
+  let chAttempt = 0;   // 소켓은 그대로인데 채널만 닫혀 다시 입장한 횟수(늘려 가며)
   /** 열리기 전에 보낸 hello 는 마지막 하나만 들고 있다가 입장하자마자 보낸다 — 들어가는 첫 말이라 놓치면 1초를 더 기다린다.
    *  다른 메시지는 버린다(방 상태·스냅샷·입력은 어차피 곧 다시 보낸다). */
   let pendingHello: NetMsg | null = null;
@@ -59,7 +61,8 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
     if (hbTimer) clearInterval(hbTimer);
     if (joinTimer) clearTimeout(joinTimer);
     if (stableTimer) clearTimeout(stableTimer);
-    hbTimer = undefined; joinTimer = undefined; stableTimer = undefined;
+    if (rejoinTimer) clearTimeout(rejoinTimer);
+    hbTimer = undefined; joinTimer = undefined; stableTimer = undefined; rejoinTimer = undefined;
   };
 
   const scheduleRetry = (): void => {
@@ -88,6 +91,24 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
     joinTimer = setTimeout(() => drop(), JOIN_TIMEOUT_MS);
   };
 
+  /** 소켓은 살아 있는데 우리 채널만 닫혔다 — 2026-11-07 실측: 프로젝트 전체가 초당 ~86건을 넘으면 서버가
+   *  system {"message":"Too many messages per second","status":"error"} 을 보내고 phx_close 로 채널을 닫는다(소켓은 열린 채).
+   *  예전엔 소켓이 끊길 때만 다시 붙어서 그대로 먹통이 됐다. 1초 뒤부터 늘려 가며 같은 소켓으로 다시 입장한다. */
+  const channelLost = (): void => {
+    if (closedByMe) return;
+    joinRef = null;
+    if (joinTimer) { clearTimeout(joinTimer); joinTimer = undefined; }
+    if (stableTimer) { clearTimeout(stableTimer); stableTimer = undefined; }
+    setStatus('connecting');
+    if (rejoinTimer) return;
+    const wait = BACKOFF_MS[Math.min(chAttempt, BACKOFF_MS.length - 1)];
+    chAttempt++;
+    rejoinTimer = setTimeout(() => {
+      rejoinTimer = undefined;
+      if (ws && ws.readyState === 1 && joinRef === null) join();   // 그새 소켓이 끊겼으면 소켓 재접속 쪽이 다시 입장한다
+    }, wait);
+  };
+
   const onFrame = (f: Frame): void => {
     if (f.event === 'phx_reply') {
       const p = f.payload as { status?: unknown } | null;
@@ -95,7 +116,7 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
         if (joinTimer) { clearTimeout(joinTimer); joinTimer = undefined; }
         if (p && p.status === 'ok') {
           if (stableTimer) clearTimeout(stableTimer);
-          stableTimer = setTimeout(() => { stableTimer = undefined; attempt = 0; }, STABLE_MS);
+          stableTimer = setTimeout(() => { stableTimer = undefined; attempt = 0; chAttempt = 0; }, STABLE_MS);
           setStatus('open');
           if (pendingHello) { const h = pendingHello; pendingHello = null; api.send(h); }
         } else {
@@ -108,7 +129,12 @@ export function createRealtimeTransport(code: string, opts: RealtimeOptions = {}
       return;
     }
     if (f.topic !== topic) return;
-    if (f.event === 'phx_error' || f.event === 'phx_close') { drop(); return; }
+    if (f.event === 'phx_error' || f.event === 'phx_close') { channelLost(); return; }
+    if (f.event === 'system') {
+      const p = f.payload as { status?: unknown } | null;
+      if (p && p.status === 'error') channelLost();   // "Too many messages per second" 등 — 곧 phx_close 가 따라온다
+      return;
+    }
     if (f.event === 'broadcast') {
       const p = f.payload as { event?: unknown; payload?: unknown } | null;
       if (p && p.event === 'm') for (const cb of msgCbs) cb(p.payload);
