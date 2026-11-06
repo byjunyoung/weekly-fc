@@ -91,6 +91,7 @@ export function createTouch(layer: HTMLElement, keys: readonly TouchKey[], label
     on = v;
     for (const k of all) btn[k].classList.toggle('is-shown', v && keys.includes(k));
   };
+  paint();   // 터치 기기면 처음부터 보인다
   return {
     base, knob, btn,
     onTouch: (): void => { touch = true; paint(); },

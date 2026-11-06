@@ -1340,7 +1340,7 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 /* 훈련장 — 위 줄은 폰에선 ✕·♪ 줄 아래로, 시점 버튼은 [공 모으기] 아래로 */
 @media (max-width: 520px) { .f3-hud { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 48px); } }
 .g3-view.is-below-acts { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 96px); }
-.g3-goal b.f3-start { font-size: var(--fs-pixel-md); }
+.g3-goal b.f3-start { font-size: var(--fs-pixel-md); white-space: nowrap; }
 /* 훈련장 "골!" — 경기의 골 문구보다 작고 높이(골이 자주 나서 화면을 덮지 않게, 2D 훈련장의 작은 "골!"과 같은 뜻) */
 .g3-goal.f3-pop { top: 20%; padding: var(--s-xxs) var(--s-sm); }
 .g3-goal.f3-pop b { font-size: var(--fs-pixel-md); }
