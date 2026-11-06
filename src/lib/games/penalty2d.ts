@@ -57,7 +57,7 @@ export const SD_MAX = 20;             // 서든데스 안전장치(쌍)
 export const AIM_STEP = 5, AIM_STEPS = 38;     // 조준은 5단위로, ±190 까지(골문 밖도 겨눌 수 있다 — 일부러 빗나가게)
 export const AIM_MAX = AIM_STEP * AIM_STEPS;
 /** 조준 표시가 스틱 끝까지 밀었을 때 움직이는 속도(단위/초) — 화면(키커 쪽)에서만 쓴다. */
-export const AIM_SPEED = 260;
+export const AIM_SPEED = 200;
 /** 봇 키퍼 — 공이 나간 뒤 반응(틱) 최소·폭, 공을 읽는 비율(나머지는 짐작). 사람 키퍼의 손 반응(0.2~0.3초)과 비슷하게. */
 // 2026-11-07 봇끼리 400판으로 맞춘 값: 반응 18~29틱(0.3~0.5초), 20% 만 공을 읽음 → 성공률 약 69%(목표 65~80%).
 const KEEPER_REACT_MIN = 18, KEEPER_REACT_SPAN = 12;

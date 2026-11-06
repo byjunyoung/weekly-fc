@@ -20,14 +20,14 @@ export const penalty2dView: GameView<PenConfig, PenState, PenInput, PenSettings>
     const ctx = canvas.getContext('2d', { alpha: false });
     if (!ctx) return null;
     const sprites = buildSprites(config, roster);
-    let lay: { l: PenLayout; dpr: number; top: number } | null = null;
+    let lay: { l: PenLayout; dpr: number } | null = null;
     const layout = (): void => {
       const vw = root.clientWidth, vh = root.clientHeight;
       if (!vw || !vh) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 3);
       canvas.width = Math.round(vw * dpr); canvas.height = Math.round(vh * dpr);
       const ins = readInsets();
-      lay = { l: penLayout(vw, vh, ins), dpr, top: ins.top };
+      lay = { l: penLayout(vw, vh, ins), dpr };
     };
     layout();
     const ro = new ResizeObserver(layout);
@@ -43,7 +43,7 @@ export const penalty2dView: GameView<PenConfig, PenState, PenInput, PenSettings>
         if (st.kickNo !== local.kickNo) local = { ...AIM_START, kickNo: st.kickNo };   // 새 차기 — 조준은 가운데에서
         role = f.myId === null ? null : st.kicker === f.myId ? 'kick' : st.keeper === f.myId ? 'keep' : null;
         phase = st.phase;
-        drawPenalty(ctx, st, f.config, lay.l, sprites, { me: f.myId, aim: role === 'kick' ? local.aim : null, bubbles: f.bubbles }, lay.dpr, lay.top);
+        drawPenalty(ctx, st, f.config, lay.l, sprites, { me: f.myId, aim: role === 'kick' ? local.aim : null, bubbles: f.bubbles }, lay.dpr);
       },
       toInput(h) {
         const r = penInput(local, h, role, phase);

@@ -68,7 +68,7 @@ function drawBoard(ctx: CanvasRenderingContext2D, st: PenState, config: PenConfi
     const mine = st.log.filter((e) => e.side === side).map((e) => (e.out === 'goal' ? 'goal' : 'no') as 'goal' | 'no');
     const n = Math.max(config.kicks, mine.length + (st.phase !== 'end' && st.side === side && st.phase !== 'result' ? 1 : 0));
     const all = [...mine, ...Array.from({ length: Math.max(0, n - mine.length) }, () => 'wait' as const)];
-    return all.slice(-7);
+    return all.slice(l.vw < 520 ? -5 : -7);   // 서든데스가 길어지면 최근 것만(폰은 다섯)
   };
   const r = 5, gap = 15;
   for (const side of [0, 1] as const) {
@@ -121,7 +121,7 @@ function drawWho(ctx: CanvasRenderingContext2D, st: PenState, config: PenConfig,
   put(g.id, right, rw);
 }
 
-export function drawPenalty(ctx: CanvasRenderingContext2D, st: PenState, config: PenConfig, l: PenLayout, sprites: Sprites, o: PenDrawOpts, dpr: number, topInset: number): void {
+export function drawPenalty(ctx: CanvasRenderingContext2D, st: PenState, config: PenConfig, l: PenLayout, sprites: Sprites, o: PenDrawOpts, dpr: number): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.imageSmoothingEnabled = false;
   drawPitch(ctx, l);
@@ -171,7 +171,7 @@ export function drawPenalty(ctx: CanvasRenderingContext2D, st: PenState, config:
   drawPenBubbles(ctx, st, l, o.bubbles, R);
 
   // 위 띠 — 점수·차례·누가
-  const y0 = topInset + 6;
+  const y0 = l.hud + 6;
   ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, 0, l.vw, l.top - 4);
   drawBoard(ctx, st, config, l, y0);
   drawWho(ctx, st, config, l, sprites, y0, o.me);
@@ -201,7 +201,8 @@ export function drawPenalty(ctx: CanvasRenderingContext2D, st: PenState, config:
   if (hint) {
     ctx.font = `14px ${F14}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
-    const hy = l.vh - l.bottom + 30;
+    // 그린 칸 바로 아래 — 폰에선 오른쪽 아래 킥 버튼(92px)에 가리지 않게 화면 맨 아래보다 위에 둔다.
+    const hy = Math.min(toScreen(l, 0, Y1).y + 22, l.vh - l.bottom + 30);
     // 폰에선 길어서 두 줄로
     const parts = l.vw < 520 ? hint.split(' · ') : [hint];
     parts.forEach((t, i) => { ctx.strokeText(t, l.vw / 2, hy + i * 18); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText(t, l.vw / 2, hy + i * 18); });
