@@ -197,9 +197,9 @@ function pixelsFor(p: Player | undefined, num: number): NonNullable<ReturnType<t
 /** 화면 쪽이 매 프레임 넘기는 시점 정보. heading = 1인칭 시선 각(라디안, 화면 쪽에서 부드럽게 돌린 값). snap = 첫 프레임(날아오지 말고 바로).
  *  아래는 3D 미니게임(2026-11-07 5단계)이 더한 것 — 경기는 안 쓴다:
  *  cam = 시점 대신 이 자리로(승부차기의 키커 뒤·골대 뒤 카메라), poses[i] = 몸 i 를 숨기거나(hide) 옆으로 눕히고(roll, 라디안) 띄우기(lift, m),
- *  focus = 카메라·화면 밖 화살표가 따라갈 공 번호(공 여럿일 때). */
+ *  focus = 카메라·화면 밖 화살표가 따라갈 공 번호(공 여럿일 때), noMarker = 내 선수 머리 위 금색 표시를 숨긴다(카메라가 바로 뒤에 있을 때). */
 export type ScenePose = { hide?: boolean; roll?: number; lift?: number };
-export type SceneView = { mode: ViewMode; portrait: boolean; heading: number; snap: boolean; cam?: CamGoal; poses?: (ScenePose | undefined)[]; focus?: number };
+export type SceneView = { mode: ViewMode; portrait: boolean; heading: number; snap: boolean; cam?: CamGoal; poses?: (ScenePose | undefined)[]; focus?: number; noMarker?: boolean };
 
 /** 장면이 그리는 몸·공 — 3D 경기 상태(MatchState)가 그대로 맞고, 미니게임은 자기 상태를 이 모양으로 옮겨 넘긴다(5단계).
  *  balls 가 있으면 공 여럿(ball 은 안 본다). */
@@ -398,7 +398,7 @@ export function createScene(canvas: HTMLCanvasElement, config: SceneCast, roster
         tmpM.compose(tmpV.set(0, -9, 0), tmpQ.identity(), tmpS.set(0, 0, 0));
         rings.setMatrixAt(i, tmpM); shadows.setMatrixAt(i, tmpM);
       }
-      if (me && !fp && !view.poses?.[humanId]?.hide) { marker.visible = true; marker.position.set(me.x, 2.0 + Math.sin(time * 4) * 0.05, me.y); } else marker.visible = false;
+      if (me && !fp && !view.noMarker && !view.poses?.[humanId]?.hide) { marker.visible = true; marker.position.set(me.x, 2.0 + Math.sin(time * 4) * 0.05, me.y); } else marker.visible = false;
       // 내 선수가 순간 이동했으면(킥오프 자리로) 카메라도 천천히 날아가게
       if (me && lastMe && Math.abs(me.x - lastMe.x) + Math.abs(me.y - lastMe.y) > 3) switchLeft = SWITCH_TIME;
       lastMe = me ? { x: me.x, y: me.y } : null;

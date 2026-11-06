@@ -6,8 +6,10 @@ import { match2dView } from './match2d';
 import { match3dView } from './match3d';
 import { penalty2dView } from './penalty2d';
 import { free2dView } from './free2d';
+import { penalty3dView } from './penalty3d';
+import { free3dView } from './free3d';
 
-const VIEWS: Record<string, AnyView> = { match2d: match2dView, penalty2d: penalty2dView, free2d: free2dView, match3d: match3dView };
+const VIEWS: Record<string, AnyView> = { match2d: match2dView, penalty2d: penalty2dView, free2d: free2dView, match3d: match3dView, penalty3d: penalty3dView, free3d: free3dView };
 
 /** id → 그 게임의 화면. 모르면 undefined. */
 export function viewOf(id: string | null | undefined): AnyView | undefined {
