@@ -227,7 +227,7 @@ function okLane(l: unknown, gates: number, cones: number): boolean {
   if (!isObj(l)) return false;
   const p = l.p as Record<string, unknown>;
   return okBody(p) && isNum(p.kickCooldown) && typeof p.kicking === 'boolean' && isNum(p.kickFlash) && okBody(l.b)
-    && isInt(l.gate, 0, gates) && isInt(l.hit, 0, 2 ** cones - 1) && isInt(l.pen, 0, cones) && isInt(l.fin, -1) && typeof l.gone === 'boolean';
+    && isInt(l.gate, 0, gates) && isInt(l.hit, 0, (1 << cones) - 1) && isInt(l.pen, 0, cones) && isInt(l.fin, -1) && typeof l.gone === 'boolean';
 }
 function okState(s: unknown, config: DrConfig): s is DrState {
   if (!isObj(s)) return false;

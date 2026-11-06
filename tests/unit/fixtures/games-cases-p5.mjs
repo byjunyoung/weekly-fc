@@ -26,6 +26,8 @@ export const P5_CASES = [
       (s) => ({ ...s, gk: { ...s.gk, diveH: 3 } }),
       (s) => ({ ...s, ball: { ...s.ball, z: undefined } }),
       (s) => ({ ...s, outcome: 'zz' }),
+      (s) => ({ ...s, ball: { ...s.ball, x: 1e308, y: -1e308, z: 1e308 } }),   // 리뷰 #5 — 터무니없이 먼 공
+      (s) => ({ ...s, gk: { ...s.gk, vy: -1e308 } }),
     ],
     mangleConfig: [
       (c) => ({ ...c, kicks: 4 }),
