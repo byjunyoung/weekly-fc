@@ -23,7 +23,7 @@ import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView, Stage } from './common.ts';
 import {
   DENY_TEXT, GIVE_UP_MS, HELLO_EVERY_MS, HOST_SILENCE_LOBBY_MS, HOST_SILENCE_MATCH_MS, HOST_SLOW_MS, JOIN_SLOW_MS,
-  KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, SAY_GAP_MS, SLACK_MS, SPECTATOR_PING_MS, STEP_MS, inputGapMs,
+  KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, SAY_GAP_MS, SLACK_MS, SPECTATOR_PING_MS, STEP_MS, inputGapMs, inRate, takeToken, fullBucket,
   createStore, humansIn, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import type { Offsets, Smoother } from './smooth.ts';
@@ -99,6 +99,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
   let prevShown: unknown = null;   // 직전 틱의 예측(틱 사이 섞기)
   let offsets: Offsets = noOffsets(0);
   let seq = 0, lastSentQ: number | null = null, lastInAt = -Infinity;
+  let bucket = fullBucket(o.now());   // 손님 입력 양동이(리뷰 #1)
   let bubbles: Bubble[] = [];
   let matchKey = 0;
 
@@ -277,7 +278,12 @@ export function createGuestSession(o: GuestOptions): GuestSession {
       store.set({ hostSlow: quiet > HOST_SLOW_MS });
       if (pausedSince !== null && now - pausedSince >= GIVE_UP_MS) { end('방장이 돌아오지 않아 방에서 나왔습니다'); return; }
       const pingEvery = pred && pred.myId === null ? SPECTATOR_PING_MS : PING_EVERY_MS;   // 구경은 5초마다
-      if (!hidden && now - lastPing >= pingEvery - SLACK_MS) { lastPing = now; send({ t: 'ping', from: me.clientId, at: now }); }
+      // ping 도 같은 양동이에서 표를 쓴다(리뷰 #1) — in 이 표를 다 쓰는 8명 판에서 ping·pong(초당 7건)까지 얹으면 70건을 넘는다. 표가 없으면 다음 틱에.
+      if (!hidden && now - lastPing >= pingEvery - SLACK_MS) {
+        const tk = takeToken(bucket, now, inRate(pred ? humansIn(pred.game, pred.config) : 2));
+        bucket = tk.b;
+        if (tk.ok) { lastPing = now; send({ t: 'ping', from: me.clientId, at: now }); }
+      }
       // 방은 경기 중인데 경기 설정을 못 받았다(놓쳤다) — hello 를 다시 보내면 방장이 start 를 다시 보낸다.
       if (room?.phase === 'match' && !pred && now - lastHello >= HELLO_EVERY_MS - SLACK_MS) hello(now);
       const p0 = pred;
@@ -303,8 +309,13 @@ export function createGuestSession(o: GuestOptions): GuestSession {
         const urgent = lastSentQ !== null && !!g.urgent && g.urgent(lastSentQ, q);   // 2D 경기: 킥을 누르거나 뗀 순간
         const changed = q !== lastSentQ && (urgent || since >= inGap);
         if (changed || since >= KEEPALIVE_MS - SLACK_MS) {
-          lastSentQ = q; lastInAt = now;
-          send({ t: 'in', from: me.clientId, seq: seq++, i: q });
+          // 양동이(리뷰 #1) — 표가 없으면 이번엔 안 보낸다. 조건은 다음 틱에도 남아 있어 표가 차면 그때의 최신 입력이 나간다.
+          const tk = takeToken(bucket, now, inRate(humansIn(g, p0.config)));
+          bucket = tk.b;
+          if (tk.ok) {
+            lastSentQ = q; lastInAt = now;
+            send({ t: 'in', from: me.clientId, seq: seq++, i: q });
+          }
         }
       }
     },
