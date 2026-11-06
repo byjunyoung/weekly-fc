@@ -528,8 +528,13 @@ a.card:hover { background: var(--charcoal); }
 .bd-list-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
   clip-path: inset(50%); white-space: nowrap; border: 0; }
 .bd-list-head { display: flex; flex-wrap: wrap; gap: var(--s-xs); align-items: center; }
+/* 필터 줄 바로 아래 목록(선수 화면 표·아바타) — 검색칸이 표·카드에 붙어 있었다(2026-11-06 간격 일괄 점검).
+   라인업은 필터가 위 줄(.bd-toprow)에 따로 있어 이 규칙에 안 걸린다(피치 윗변과 명단 첫 줄 맞춤 유지). */
+.bd-list-head + #list-body { margin-top: var(--s-sm); }
 /* 선수 화면 「티어」 탭 — 탭 줄 아래 티어의 두 버튼(2026-11-06). */
 .tier-embed-head { display: flex; flex-wrap: wrap; gap: var(--s-xs); align-items: center; margin-bottom: var(--s-md); }
+/* 두 버튼 사이 — 제목 줄(.page-head .actions)에 있을 땐 그쪽 규칙이 띄워 줬는데, 옮겨 오며 붙어 버려 탭처럼 보였다(2026-11-06). */
+.tier-embed-head .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); }
 #list-body { max-height: calc(100dvh - var(--header-h) - 220px); overflow-y: auto; }
 .bd-rows { display: flex; flex-direction: column; background: var(--card); border-radius: var(--r-md); }
 .bd-row { display: flex; align-items: center; border-bottom: 1px solid var(--hairline); }
