@@ -120,6 +120,8 @@ export type Surface<S, C, I> = {
   camera(): Camera | null;
   /** 디버그 훅(?debug=1)에 덧붙일 것(예: getInfo, goalPatch). 없으면 안 붙인다. */
   debug?(): Record<string, unknown>;
+  /** 게임 버튼(GameView.actions)을 눌렀다 — Scene.act 와 같은 뜻(2026-11-07 5단계, 3D 훈련장의 [공 모으기]). */
+  act?(id: string): void;
   dispose(): void;
 };
 

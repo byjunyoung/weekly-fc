@@ -183,6 +183,19 @@ export const PITCH3D = {
   HW: HALF_LEN, HH: HALF_WID, goalHalfW: GOAL_HALF_W, goalH: GOAL_H, goalDepth: GOAL_DEPTH, postR: POST_R,
   boardH: BOARD_H, ceiling: CEILING, centerR: CENTER_R, playerR: PLAYER_R, playerH: PLAYER_H, ballR: BALL_R,
 } as const;
+/** 경기 계산의 조절 값을 읽기만 하게 묶어 둔다(2026-11-07 5단계) — 3D 미니게임(공 여러 개 훈련장·승부차기)이 경기와 같은 몸·공 느낌을 쓰려고.
+ *  값은 위 상수 그대로(여기서 바꾸지 않는다). */
+export const TUNE3D = {
+  DT, SUBSTEPS, SUB_DT, GRAVITY, AIR_DRAG, ROLL_DRAG, BALL_REST, BALL_MAX_SPEED, BODY_E, PLAYER_MASS,
+  CARRY_SPEED, CHARGE_SPEED, TURN_RATE, TURN_RATE_BALL, CONTROL_REACH, PICKUP_MAX_Z, PICKUP_MAX_REL, CARRY_PULL, KICK_LOCK, KICK_ANIM,
+  LOOSE_SPEED, LOOSE_COS, LOOSE_P, LOOSE_LOCK, LOOSE_KEEP, FIRST_TOUCH_REACH, FIRST_TOUCH_Z,
+  STEAL_REACH, STEAL_WIN, STEAL_FREE_SPEED, STEAL_IMMUNE, STEAL_LOSER_LOCK, STEAL_FREE_LIFT, STEAL_FREE_CARRY, STEAL_TACKLER_LOCK,
+  PASS_COS, PASS_MAX, PASS_MIN, PASS_ARRIVE, PASS_FREE_DIST, PASS_ERR, PASS_W_DIR, PASS_W_DIST,
+  CHARGE_TICKS, SHOT_MIN, SHOT_MAX, LOFT_MIN, LOFT_MAX, AIM_COS, AIM_ASSIST, AIM_INSET,
+  THROUGH_AHEAD, THROUGH_ARRIVE, THROUGH_FREE_DIST, LOB_COS, LOB_MIN, LOB_T_BASE, LOB_T_PER_M, LOB_FREE_MIN, LOB_FREE_MAX, LOB_CHARGE,
+  SPRINT_SPEED, SPRINT_LOOSE, SPRINT_LOOSE_SPEED, STAMINA_DRAIN, STAMINA_GAIN, SPRINT_RESUME,
+} as const;
+
 /** 봇·화면이 쓰는 몇 가지 규칙 값(조절 값을 한 곳에만 두려고 여기서 내보낸다). */
 export const RULES3D = {
   chargeTicks: CHARGE_TICKS, controlDist: PLAYER_R + BALL_R + CONTROL_REACH, keeperHold: KEEPER_HOLD,
@@ -270,7 +283,7 @@ export function slotOf(config: MatchConfig, id: number): number {
 }
 
 /** 상태 안의 씨앗에서 0 이상 1 미만 값 하나(mulberry32). 상태를 직접 바꾸므로 복사본에만. */
-function rand(s: MatchState): number {
+export function rand(s: { seed: number }): number {
   s.seed = (s.seed + 0x6d2b79f5) >>> 0;
   let t = s.seed;
   t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -341,14 +354,17 @@ export function createMatch(config: MatchConfig, seed: number): MatchState {
 
 // ───────────────────────────── 작은 도구 ─────────────────────────────
 
+/** 바닥 위 몸 하나(위치·속도) — 3D 미니게임의 몸도 이 모양이면 경기의 이동·충돌 함수를 그대로 쓴다(5단계). */
+export type Body2 = { x: number; y: number; vx: number; vy: number };
+
 /** 길이를 1로. 0 벡터면 fallback. */
-function unit(x: number, y: number, fx: number, fy: number): { x: number; y: number } {
+export function unit(x: number, y: number, fx: number, fy: number): { x: number; y: number } {
   const l = Math.sqrt(x * x + y * y);
   return l > 1e-6 ? { x: x / l, y: y / l } : { x: fx, y: fy };
 }
 
 /** 보는 방향 f 를 목표 방향 d 쪽으로 rate 만큼 돌린다(정규화 선형 보간 — 삼각함수 없이). 정반대면 옆으로 먼저 튼다. */
-function turnToward(p: PlayerState, dx: number, dy: number, rate: number): void {
+export function turnToward(p: { fx: number; fy: number }, dx: number, dy: number, rate: number): void {
   let tx = dx, ty = dy;
   if (p.fx * dx + p.fy * dy < -0.95) { tx = dx + 0 - p.fy * 0.6; ty = dy + p.fx * 0.6; }   // 정반대 — 그냥 섞으면 0 을 지나 뒤집힌다
   const u = unit(p.fx + (tx - p.fx) * rate, p.fy + (ty - p.fy) * rate, p.fx, p.fy);
@@ -365,7 +381,7 @@ export function carrySpot(p: { x: number; y: number; vx: number; vy: number; fx:
 // ───────────────────────────── 충돌 ─────────────────────────────
 
 /** 바닥 위 원 둘. 겹친 만큼 질량 반비례로 밀고, 다가오던 속도에 반발. */
-function collidePlayers(a: PlayerState, ma: number, b: PlayerState, mb: number): boolean {
+export function collidePlayers(a: Body2, ma: number, b: Body2, mb: number): boolean {
   const dx = b.x - a.x, dy = b.y - a.y, min = PLAYER_R * 2;
   const d2 = dx * dx + dy * dy;
   if (d2 >= min * min) return false;
@@ -383,7 +399,7 @@ function collidePlayers(a: PlayerState, ma: number, b: PlayerState, mb: number):
 }
 
 /** 공(구)과 선분(골대 기둥·크로스바, 굵기 POST_R). 가장 가까운 점에서 밀어내고 반발. */
-function ballVsSegment(b: Ball, ax: number, ay: number, az: number, bx: number, by: number, bz: number): void {
+export function ballVsSegment(b: Ball, ax: number, ay: number, az: number, bx: number, by: number, bz: number): void {
   const ex = bx - ax, ey = by - ay, ez = bz - az;
   const len2 = ex * ex + ey * ey + ez * ez;
   let t = ((b.x - ax) * ex + (b.y - ay) * ey + (b.z - az) * ez) / len2;
@@ -401,7 +417,7 @@ function ballVsSegment(b: Ball, ax: number, ay: number, az: number, bx: number, 
 }
 
 /** 공을 경기장 안에 가둔다 — 땅·옆 벽·끝 벽(골문 자리 빼고)·천장, 골문 안이면 그물 상자. */
-function containBall(b: Ball): void {
+export function containBall(b: Ball): void {
   const HW = HALF_LEN, HH = HALF_WID, R = BALL_R;
   // 땅 — 튕기거나 구른다
   if (b.z < R) {
@@ -444,7 +460,7 @@ function containBall(b: Ball): void {
 }
 
 /** 선수를 벽 안에(골라인 안쪽까지만 — 골대 안으로는 못 들어간다). */
-function containPlayer(p: PlayerState): void {
+export function containPlayer(p: Body2): void {
   const lx = HALF_LEN - PLAYER_R, ly = HALF_WID - PLAYER_R;
   if (p.x > lx) { p.x = lx; if (p.vx > 0) p.vx = 0; }
   if (p.x < -lx) { p.x = -lx; if (p.vx < 0) p.vx = 0; }
@@ -628,7 +644,7 @@ function tackle(s: MatchState, config: MatchConfig, i: number): void {
 // ───────────────────────────── 한 틱 ─────────────────────────────
 
 /** 이동: 입력 방향으로 gain 을 더하고 감쇠를 곱한다(정상 상태 = 최고 속도). */
-function steer(p: PlayerState, mp: MatchPlayer, ix0: number, iy0: number, mult: number): void {
+export function steer(p: Body2, mp: { gk: boolean; perf: Perf }, ix0: number, iy0: number, mult: number): void {
   let ix = fin(ix0), iy = fin(iy0);
   const len = Math.sqrt(ix * ix + iy * iy);
   if (len > 1) { ix /= len; iy /= len; }

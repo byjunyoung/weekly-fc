@@ -103,21 +103,26 @@ const POSTS: [number, number][] = [[-HALF, 0], [HALF, 0]];
 
 // ── 편 명단 ──
 /** 편마다 자리 목록(config.players 차례). */
-export function sideSlots(config: PenConfig): [number[], number[]] {
+export function sideSlots(config: { players: { side: Side }[] }): [number[], number[]] {
   const out: [number[], number[]] = [[], []];
   config.players.forEach((p, i) => out[p.side].push(i));
   return out;
 }
 
-/** 다음 차기를 세운다 — 편·키커·키퍼, 몸 자리, 봇 씨앗. */
-function setupKick(s: PenState, config: PenConfig): void {
-  const k = s.kickNo;
-  const side = ((config.first + k) % 2) as Side;
+/** k 번째 차기의 편·키커·키퍼(2026-11-07 5단계에 꺼냄 — 3D 승부차기가 같은 차례 규칙을 쓴다). 키커 차례는 그 편이 찬 수, 키퍼 차례는 막은 수(= 상대가 찬 수). */
+export function turnOf(config: { first: Side; players: { side: Side }[] }, kickNo: number, taken: [number, number]): { side: Side; kicker: number; keeper: number } {
+  const side = ((config.first + kickNo) % 2) as Side;
   const lists = sideSlots(config);
   const mine = lists[side], theirs = lists[1 - side];
-  s.side = side;
-  s.kicker = mine[s.taken[side] % mine.length];
-  s.keeper = theirs[s.taken[side] % theirs.length];   // 막은 수 = 상대가 찬 수
+  return { side, kicker: mine[taken[side] % mine.length], keeper: theirs[taken[side] % theirs.length] };
+}
+
+/** 다음 차기를 세운다 — 편·키커·키퍼, 몸 자리, 봇 씨앗. */
+function setupKick(s: PenState, config: PenConfig): void {
+  const t = turnOf(config, s.kickNo, s.taken);
+  s.side = t.side;
+  s.kicker = t.kicker;
+  s.keeper = t.keeper;   // 막은 수 = 상대가 찬 수
   s.ball = { x: SPOT.x, y: SPOT.y, vx: 0, vy: 0 };
   s.gk = { x: 0, y: KEEPER_Y, vx: 0, vy: 0, dive: 0, diveT: 0, lie: 0, dived: false, armed: false };
   s.st = { x: STRIKER_HOME.x, y: STRIKER_HOME.y, vx: 0, vy: 0, charge: 0, held: false, armed: false, kickFlash: 0 };
@@ -388,7 +393,8 @@ const PHASES: readonly string[] = ['ready', 'aim', 'flight', 'result', 'end'];
 const OUTCOMES: readonly string[] = ['goal', 'save', 'miss', 'post'];
 const MAX_LOG = (5 + SD_MAX) * 2;
 
-function okConfig(c: unknown): c is PenConfig {
+/** 설정 모양 검사 — 3D 승부차기도 같은 설정을 쓴다(5단계에 내보냄). */
+export function okConfig(c: unknown): c is PenConfig {
   if (!isObj(c) || (c.kicks !== 3 && c.kicks !== 5) || (c.first !== 0 && c.first !== 1)) return false;
   if (!Array.isArray(c.players) || c.players.length < 2 || c.players.length > MAX_PER_SIDE * 2) return false;
   const ok = c.players.every((p, i) => isObj(p) && p.id === i && isInt(p.num, 0) && isInt(p.jersey, 0) && isName(p.name)

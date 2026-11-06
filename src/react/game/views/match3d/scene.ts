@@ -13,10 +13,10 @@ import {
 } from 'three';
 import { avatarPixels } from '../../../../components/avatar.ts';
 import { avatarSpecFor, isUnsetAvatar, randomAvatar } from '../../../../lib/avatar.ts';
-import { PITCH3D, RULES3D, type MatchConfig, type MatchState } from '../../../../lib/game3d/sim.ts';
+import { PITCH3D, RULES3D } from '../../../../lib/game3d/sim.ts';
 import { VESTS } from '../../../../lib/teams.ts';
 import type { Player } from '../../../../lib/types.ts';
-import { cameraGoal, chaseGoal, firstPersonGoal, type ViewMode } from './view3d.ts';
+import { cameraGoal, chaseGoal, firstPersonGoal, type CamGoal, type ViewMode } from './view3d.ts';
 import { buildFigure, type Part } from './voxel.ts';
 
 const { HW, HH, goalHalfW: GW, goalH: GH, goalDepth: GD, boardH: BH, ballR: BR, centerR } = PITCH3D;
@@ -194,8 +194,22 @@ function pixelsFor(p: Player | undefined, num: number): NonNullable<ReturnType<t
   return avatarPixels(isUnsetAvatar(spec) ? randomAvatar(num) : spec) ?? (avatarPixels(randomAvatar(num + 1)) as NonNullable<ReturnType<typeof avatarPixels>>);
 }
 
-/** 화면 쪽이 매 프레임 넘기는 시점 정보. heading = 1인칭 시선 각(라디안, 화면 쪽에서 부드럽게 돌린 값). snap = 첫 프레임(날아오지 말고 바로). */
-export type SceneView = { mode: ViewMode; portrait: boolean; heading: number; snap: boolean };
+/** 화면 쪽이 매 프레임 넘기는 시점 정보. heading = 1인칭 시선 각(라디안, 화면 쪽에서 부드럽게 돌린 값). snap = 첫 프레임(날아오지 말고 바로).
+ *  아래는 3D 미니게임(2026-11-07 5단계)이 더한 것 — 경기는 안 쓴다:
+ *  cam = 시점 대신 이 자리로(승부차기의 키커 뒤·골대 뒤 카메라), poses[i] = 몸 i 를 숨기거나(hide) 옆으로 눕히고(roll, 라디안) 띄우기(lift, m),
+ *  focus = 카메라·화면 밖 화살표가 따라갈 공 번호(공 여럿일 때). */
+export type ScenePose = { hide?: boolean; roll?: number; lift?: number };
+export type SceneView = { mode: ViewMode; portrait: boolean; heading: number; snap: boolean; cam?: CamGoal; poses?: (ScenePose | undefined)[]; focus?: number };
+
+/** 장면이 그리는 몸·공 — 3D 경기 상태(MatchState)가 그대로 맞고, 미니게임은 자기 상태를 이 모양으로 옮겨 넘긴다(5단계).
+ *  balls 가 있으면 공 여럿(ball 은 안 본다). */
+export type SceneBody = { x: number; y: number; vx: number; vy: number; fx: number; fy: number; kickTicks: number; shootHeld: boolean; charge: number; shootVoid?: boolean };
+export type SceneBall = { x: number; y: number; z: number; vx: number; vy: number };
+export type SceneFrame = { players: SceneBody[]; ball: SceneBall; balls?: SceneBall[]; phase: string };
+/** 장면을 만들 때 — 몸마다 명단 번호(얼굴)와 편(고리 색). side 가 없으면 rings 의 색. */
+export type SceneCast = { players: { id: number; num: number; side?: 0 | 1 }[] };
+/** 장면 옵션(5단계) — balls = 공 개수(기본 1), rings = 몸마다 고리 색(없으면 편 색, 내 선수 금색). */
+export type SceneOpts = { balls?: number; rings?: string[] };
 
 type FigureObj = { root: Group; inner: Group; legL: Mesh | null; legR: Mesh | null; phase: number };
 
@@ -203,7 +217,7 @@ export type SceneHandle = {
   renderer: WebGLRenderer;
   camera: PerspectiveCamera;
   /** prev → next 사이 alpha 만큼 섞은 자리로 몸·공을 옮긴다. dt = 지난 그리기에서 흐른 초(걸음·카메라용). */
-  update(prev: MatchState, next: MatchState, alpha: number, dt: number, view: SceneView): void;
+  update(prev: SceneFrame, next: SceneFrame, alpha: number, dt: number, view: SceneView): void;
   render(): void;
   resize(w: number, h: number): void;
   setPixelRatio(r: number): void;
@@ -216,11 +230,13 @@ export type SceneHandle = {
   ballPoint(out: Vector3): Vector3;
   /** 지난 render() 의 그리기 호출·삼각형 수. */
   info(): { drawCalls: number; triangles: number };
+  /** three 장면 — 미니게임이 자기 표시(조준 표시 등)를 더한다(5단계). 더한 것은 dispose 가 같이 치운다. */
+  root: Scene;
   dispose(): void;
 };
 
 /** 장면을 만든다. WebGL 을 못 열면 던진다 — 부르는 쪽이 글로 된 안내를 띄운다. */
-export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, roster: Player[], humanId: number, pixelRatio: number): SceneHandle {
+export function createScene(canvas: HTMLCanvasElement, config: SceneCast, roster: Player[], humanId: number, pixelRatio: number, opts: SceneOpts = {}): SceneHandle {
   const renderer = new WebGLRenderer({ canvas, antialias: pixelRatio < 2, alpha: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(pixelRatio);
   renderer.setClearColor(BG, 1);
@@ -264,6 +280,7 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
       return m;
     };
     const legL = leg(f.legL), legR = leg(f.legR);
+    root.rotation.order = 'YXZ';   // 몸을 옆으로 눕힐 때(roll) 몸 앞을 축으로 돌게 — 서 있을 땐 z 가 0 이라 그림이 같다
     scene.add(root);
     return { root, inner, legL, legR, phase: mp.id * 1.7 };
   });
@@ -273,7 +290,7 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
   const ringGeo = new RingGeometry(0.5, 0.64, 28).rotateX(-Math.PI / 2);
   const ringMat = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9, depthWrite: false });
   const rings = new InstancedMesh(ringGeo, ringMat, n);
-  const ringBase = config.players.map((mp, i) => new Color(i === humanId ? GOLD : TEAM_COLOR[mp.side]));
+  const ringBase = config.players.map((mp, i) => new Color(i === humanId ? GOLD : opts.rings?.[i] ?? TEAM_COLOR[mp.side ?? 0]));
   ringBase.forEach((c, i) => rings.setColorAt(i, c));
   const ringHot = config.players.map(() => false), HOT = new Color('#ffffff');
   let colorDirty = false;
@@ -281,15 +298,18 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
   scene.add(rings);
   const shadowGeo = new CircleGeometry(1, 20).rotateX(-Math.PI / 2);
   const shadowMat = new MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.4, depthWrite: false });
-  const shadows = new InstancedMesh(shadowGeo, shadowMat, n + 1);
+  const nb = Math.max(1, opts.balls ?? 1);
+  const shadows = new InstancedMesh(shadowGeo, shadowMat, n + nb);
   shadows.renderOrder = 1;
   scene.add(shadows);
   rings.frustumCulled = false; shadows.frustumCulled = false;   // 인스턴스는 처음 자리로 경계가 잡혀 엉뚱하게 잘릴 수 있다
 
   // 공
   const ballMat = new MeshLambertMaterial({ vertexColors: true, flatShading: true });
-  const ball = new Mesh(buildBall(), ballMat);
-  scene.add(ball);
+  const ballGeo = buildBall();
+  const ballMeshes = Array.from({ length: nb }, () => { const m = new Mesh(ballGeo, ballMat); scene.add(m); return m; });
+  const ball = ballMeshes[0];
+  let focusBall = ball;
   // 내 선수 표시 — 머리 위 금색 역삼각뿔
   const marker = new Mesh(new ConeGeometry(0.2, 0.38, 4).rotateX(Math.PI), new MeshBasicMaterial({ color: GOLD }));
   scene.add(marker);
@@ -317,8 +337,10 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
         pos[i].x = x; pos[i].y = y;
         const fx = lerp(a.fx, b.fx, t), fy = lerp(a.fy, b.fy, t);
         const f = figs[i];
-        f.root.position.set(x, 0, y);
+        const pose = view.poses?.[i];
+        f.root.position.set(x, pose?.lift ?? 0, y);
         if (fx * fx + fy * fy > 1e-4) f.root.rotation.y = Math.atan2(fx, fy);
+        f.root.rotation.z = pose?.roll ?? 0;   // 옆으로 눕기(승부차기 키퍼가 몸을 던질 때) — 차례 'YXZ' 라 몸 앞을 축으로 돈다
         const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
         f.phase += sp * dt * RUN_FREQ;
         const run = Math.min(1, sp / 3.5);
@@ -335,19 +357,27 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
         tmpM.compose(tmpV.set(x, 0.004, y), tmpQ.identity(), tmpS.set(0.55, 1, 0.55));
         shadows.setMatrixAt(i, tmpM);
       }
-      // 공(높이 z → three 의 y)
-      const pb = prev.ball, nb = next.ball;
-      const bx = snapOr(pb.x, nb.x, t), by = snapOr(pb.y, nb.y, t), bz = snapOr(pb.z, nb.z, t);
-      ball.position.set(bx, bz, by);
-      const sp = Math.sqrt(nb.vx * nb.vx + nb.vy * nb.vy);
-      if (sp > 0.05 && dt > 0) {
-        axis.set(nb.vy, 0, 0 - nb.vx).normalize();
-        spin.setFromAxisAngle(axis, (sp * dt) / BR);
-        ball.quaternion.premultiply(spin);
+      // 공(높이 z → three 의 y). 공이 여럿이면(5단계 훈련장) 공마다 같은 그리기, 카메라는 focus 공을 본다.
+      const nextBalls = next.balls ?? [next.ball], prevBalls = prev.balls ?? [prev.ball];
+      let bx = 0, by = 0, bz: number = BR;
+      for (let j = 0; j < nb; j++) {
+        const mesh = ballMeshes[j], cb = nextBalls[j];
+        if (!cb) { mesh.visible = false; tmpM.compose(tmpV.set(0, -9, 0), tmpQ.identity(), tmpS.set(0, 0, 0)); shadows.setMatrixAt(n + j, tmpM); continue; }
+        mesh.visible = true;
+        const pb = prevBalls[j] ?? cb;
+        const x = snapOr(pb.x, cb.x, t), y = snapOr(pb.y, cb.y, t), z = snapOr(pb.z, cb.z, t);
+        mesh.position.set(x, z, y);
+        const sp = Math.sqrt(cb.vx * cb.vx + cb.vy * cb.vy);
+        if (sp > 0.05 && dt > 0) {
+          axis.set(cb.vy, 0, 0 - cb.vx).normalize();
+          spin.setFromAxisAngle(axis, (sp * dt) / BR);
+          mesh.quaternion.premultiply(spin);
+        }
+        const hs = (BR * 1.5) / (1 + (z - BR) * 0.35);   // 높이 뜰수록 그림자가 작아진다 — 공이 얼마나 떴는지 읽는 단서
+        tmpM.compose(tmpV.set(x, 0.005, y), tmpQ.identity(), tmpS.set(hs, 1, hs));
+        shadows.setMatrixAt(n + j, tmpM);
+        if (j === Math.min(nb - 1, Math.max(0, view.focus ?? 0))) { bx = x; by = y; bz = z; focusBall = mesh; }
       }
-      const hs = (BR * 1.5) / (1 + (bz - BR) * 0.35);   // 높이 뜰수록 그림자가 작아진다 — 공이 얼마나 떴는지 읽는 단서
-      tmpM.compose(tmpV.set(bx, 0.005, by), tmpQ.identity(), tmpS.set(hs, 1, hs));
-      shadows.setMatrixAt(n, tmpM);
       rings.instanceMatrix.needsUpdate = true;
       if (colorDirty && rings.instanceColor) { rings.instanceColor.needsUpdate = true; colorDirty = false; }
       shadows.instanceMatrix.needsUpdate = true;
@@ -362,14 +392,20 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
         const dx = pos[i].x - me.x, dy = pos[i].y - me.y;
         figs[i].root.visible = dx * dx + dy * dy > NEAR_HIDE * NEAR_HIDE;
       } else for (let i = 0; i < n; i++) if (i !== humanId) figs[i].root.visible = true;
-      if (me && !fp) { marker.visible = true; marker.position.set(me.x, 2.0 + Math.sin(time * 4) * 0.05, me.y); } else marker.visible = false;
+      // 숨긴 몸(5단계 — 승부차기에서 지금 차고 막는 둘 말고는 경기장에 없다)은 고리·그림자도 치운다
+      if (view.poses) for (let i = 0; i < n; i++) if (view.poses[i]?.hide) {
+        figs[i].root.visible = false;
+        tmpM.compose(tmpV.set(0, -9, 0), tmpQ.identity(), tmpS.set(0, 0, 0));
+        rings.setMatrixAt(i, tmpM); shadows.setMatrixAt(i, tmpM);
+      }
+      if (me && !fp && !view.poses?.[humanId]?.hide) { marker.visible = true; marker.position.set(me.x, 2.0 + Math.sin(time * 4) * 0.05, me.y); } else marker.visible = false;
       // 내 선수가 순간 이동했으면(킥오프 자리로) 카메라도 천천히 날아가게
       if (me && lastMe && Math.abs(me.x - lastMe.x) + Math.abs(me.y - lastMe.y) > 3) switchLeft = SWITCH_TIME;
       lastMe = me ? { x: me.x, y: me.y } : null;
       // 카메라 — 시점마다 가려는 자리, 거기로 따라간다
       const ballP = { x: bx, y: by };
-      const g = !me || mode === 'broadcast' ? cameraGoal(portrait, camera.aspect, ballP, me)
-        : mode === 'first' ? firstPersonGoal(me, heading, camera.aspect) : chaseGoal(me, ballP, camera.aspect);
+      const g = view.cam ?? (!me || mode === 'broadcast' ? cameraGoal(portrait, camera.aspect, ballP, me)
+        : mode === 'first' ? firstPersonGoal(me, heading, camera.aspect) : chaseGoal(me, ballP, camera.aspect));
       goalPos.set(g.px, g.pz, g.py); goalLook.set(g.lx, g.lz, g.ly);
       // 골 세리머니·끝난 뒤의 1인칭은 공 쪽을 본다(골문 안 공이 보이게)
       if (fp && (next.phase === 'goal' || next.phase === 'end')) goalLook.set(bx, Math.max(0.3, bz), by);
@@ -396,7 +432,8 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
       return { x: tmpV.x, y: tmpV.z };
     },
     headPoint(i, out) { const p = pos[i]; return out.set(p?.x ?? 0, 2.3, p?.y ?? 0); },   // 내 선수 표시(2.0) 위
-    ballPoint(out) { return out.copy(ball.position); },
+    ballPoint(out) { return out.copy(focusBall.position); },
+    root: scene,
     footPoint(i, out) { const p = pos[i]; return out.set(p?.x ?? 0, 0, p?.y ?? 0); },
     info: () => lastInfo,
     dispose() {
