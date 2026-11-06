@@ -141,5 +141,7 @@ function attack(state: MatchState, id: number, dir: number, ballProg: number, he
   tx = clamp(tx, -HW + PITCH.playerR, HW - PITCH.playerR);
   ty = clamp(ty, -HH + PITCH.playerR, HH - PITCH.playerR);
   const m = moveTo(me.x, me.y, tx, ty, 0);
+  // 킥은 뗐다 눌러야 다시 나간다 — 방금 찼으면(쿨다운 중) 손을 뗀다.
+  if (me.kickCooldown > 0) kick = false;
   return { x: m.x * hesitate, y: m.y * hesitate, kick };
 }

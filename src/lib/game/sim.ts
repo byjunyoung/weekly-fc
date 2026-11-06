@@ -31,31 +31,37 @@ export const PITCH = {
  *           820 이면 공은 한 번 차서 약 890 단위 간다(경기장 길이의 74%). 자기 진영 가운데 3분의 1 끝(x=-200,
  *           골대까지 800)에서 간신히 닿아 골이 되고, 그보다 깊은 곳에선 한 번에 못 닿는다.
  *  mass     몸 무게 배율(1 = 평균). 실제 질량은 PLAYER_MASS × 이 값. */
-// 2026-11-06 손맛 조정("쫀득함이 덜하다", "공 무게가 안 느껴진다"): 가속을 1100 → 560 으로 낮춰 몸에 관성을 주고(최고 속도까지
-// 0.26초 → 0.52초), 킥은 1050 → 820 으로 — 공이 무거워진 만큼 "툭" 이 아니라 "묵직하게" 나간다. 아래 공 질량·반발·감속과 한 묶음.
-// 같은 날 한 번 더("아바타 움직임도 좀 가벼운 느낌"): 가속 560 → 400(최고 속도까지 0.69초), 최고 속도 290 → 275. 몸이 묵직하게 출발하고 방향을 천천히 튼다.
-export const BASE_PERF_TUNE: Perf = { maxSpeed: 275, accel: 400, kick: 820, mass: 1 };
+// 2026-11-06 "헥스볼 최대한 벤치마킹해" — 움직임의 **구조**를 그 장르의 표준대로 바꿨다(이름·그림·경기장 모양은 우리 것 그대로):
+//  · 몸: 매 틱 입력 방향으로 속도를 더하고, 매 틱 속도에 감쇠를 곱한다(지수 감쇠). 처음엔 바로 반응하고 최고 속도엔 천천히 닿으며,
+//    손을 떼면 길게 미끄러진다 — 앞서 쓰던 "일정 가속 + 일정 감속" 은 이 쫀득한 맛이 안 났다.
+//  · 공: 몸 무게의 절반, 구르기 감쇠는 틱당 1%. 킥은 정해진 속도를 더한다.
+//  · 킥: 누르고 있으면 "장전" 상태, 공이 닿는 순간 한 번 나가고, 다시 차려면 뗐다 눌러야 한다. 장전 중엔 가속이 줄어든다.
+// maxSpeed 235 면 경기장 길이를 5.3초쯤에 건넌다. accel 은 이제 "반응 속도" — 평균(400)이면 감쇠 PLAYER_DAMP 그대로,
+// 높으면 더 빨리 최고 속도에 닿고 더 빨리 선다. kick 486 이면 공이 약 810 단위 간다(경기장 길이의 68%).
+export const BASE_PERF_TUNE: Perf = { maxSpeed: 235, accel: 400, kick: 486, mass: 1 };
 
-/** 손을 떼면 가속의 이 배수로 멈춘다 — 크면 칼같이 서고 작으면 미끄러진다. */
-const BRAKE_MULT = 0.75;  // 1.4 → 0.8 → 0.75. 손을 떼면 0.9초쯤 미끄러지다 선다(관성)
-/** 킥을 누르고 있는 동안 몸이 이만큼 굼떠진다(속도·가속 모두). 계속 누른 채 뛰어다니는 것보다 맞춰 누르는 쪽이 낫게. */
-const KICK_HOLD_MULT = 0.82;
+/** 몸의 틱당 속도 감쇠(능력치 평균 기준). 0.96 이면 속도가 0.28초마다 반으로 — 반응은 빠르고 멈춤은 길다. */
+const PLAYER_DAMP = 0.96;
+/** 이보다 느리고 입력이 없으면 선 것으로 친다(지수 감쇠는 0 에 닿지 않는다). */
+const PLAYER_REST_SPEED = 3;
+/** 킥을 장전하고 있는 동안의 가속 배수 — 누른 채 뛰어다니면 느리다. */
+const KICK_HOLD_MULT = 0.7;
 /** 질량. 선수끼리 부딪칠 때 누가 얼마나 밀리는지, 공이 얼마나 가벼운지의 비율만 의미가 있다. */
 const PLAYER_MASS = 10;
-const BALL_MASS = 4.5;    // 1 이었다 — 공이 깃털 같아 몸에 닿으면 튕겨 나가기만 했다. 이제 밀면 내 몸이 느려진다(무게가 느껴진다)
+const BALL_MASS = 5;      // 몸(10)의 절반 — 밀면 내 몸이 느려지고 공은 튕겨 나가지 않는다(1 → 4.5 → 5)
 /** 반발 계수(0 = 붙음, 1 = 완전 탄성). */
-const E_PLAYER_PLAYER = 0.2;    // 0.35 였다 — 몸끼리 부딪치면 튕기지 않고 묵직하게 밀린다
-const E_PLAYER_BALL = 0.18;   // 몸에 맞고 튀는 공. 크면 드리블이 잘 안 붙는다(0.55 였다 — 공이 발에 붙게 낮춤).
+const E_PLAYER_PLAYER = 0.25;
+const E_PLAYER_BALL = 0.25;   // 몸에 맞고 튀는 공. 크면 드리블이 잘 안 붙는다.
 const E_PLAYER_WALL = 0.15;
-const E_BALL_WALL = 0.6;
-const E_BALL_POST = 0.66;
+const E_BALL_WALL = 0.5;
+const E_BALL_POST = 0.5;
 /** 공 구르기 감속(1/초). 속도가 이 비율로 줄어 한 번 찬 공이 v0 / BALL_DRAG 만큼 가고 선다. */
-const BALL_DRAG = 0.92;   // 1.2 였다 — 무거운 공은 천천히 나가 오래 구른다(킥 820 / 0.92 = 약 890 단위)
+const BALL_DRAG = 0.6;    // 틱당 1% 감쇠(1 - 0.6/60 = 0.99). 한 번 찬 공이 kick / 0.6 만큼 간다
 const BALL_MAX_SPEED = 1250;  // 킥이 겹쳐도 이 이상은 안 나간다(벽을 뚫지 않게 하는 안전선이기도 하다).
 const BALL_REST_SPEED = 4;    // 이보다 느리면 선 것으로 친다.
 /** 공이 닿는 거리(몸이 맞닿은 거리에 더하는 여유)와 킥 뒤 쉬는 틱. 누르고 있어도 기관총처럼 안 나가게. */
-const KICK_REACH = 8;
-const KICK_COOLDOWN = 18;     // 0.3초
+const KICK_REACH = 6;
+const KICK_COOLDOWN = 4;      // 킥 뒤 다시 장전되기까지의 틱 — **킥을 뗀 뒤부터** 센다(누르고 있으면 안 줄어든다)
 /** 골 뒤 멈춰 세리머니하는 틱. */
 const GOAL_TICKS = 90;        // 1.5초
 /** 킥오프에서 아무도 공을 안 건드려도 이 틱이 지나면 경기를 시작한다(봇끼리일 때 멈추지 않게). */
@@ -249,17 +255,16 @@ function kickoffLimits(s: MatchState, config: MatchConfig): void {
 
 /** 입력 방향으로 가속하고, 최고 속도·손 뗌 제동을 건다. 목표 속도에 가속 한도(accel·dt)만큼씩 다가가는 방식이라
  *  부딪쳐서 최고 속도를 넘긴 몸도 자연스럽게 되돌아온다. */
-function steer(p: Body, perf: Perf, inp: Input): void {
+function steer(p: Body, perf: Perf, inp: Input, armed: boolean): void {
   let ix = fin(inp.x), iy = fin(inp.y);
-  let len = Math.sqrt(ix * ix + iy * iy);
-  if (len > 1) { ix /= len; iy /= len; len = 1; }
-  const hold = inp.kick ? KICK_HOLD_MULT : 1;
-  const tx = ix * perf.maxSpeed * hold, ty = iy * perf.maxSpeed * hold;
-  const maxDv = perf.accel * hold * DT * (len < 0.05 ? BRAKE_MULT : 1);
-  const dvx = tx - p.vx, dvy = ty - p.vy;
-  const dl = Math.sqrt(dvx * dvx + dvy * dvy);
-  if (dl <= maxDv) { p.vx = tx; p.vy = ty; }
-  else { p.vx += (dvx / dl) * maxDv; p.vy += (dvy / dl) * maxDv; }
+  const len = Math.sqrt(ix * ix + iy * iy);
+  if (len > 1) { ix /= len; iy /= len; }
+  // 반응 속도(accel)가 평균보다 높으면 감쇠가 세다 = 최고 속도에 빨리 닿고 빨리 선다. 최고 속도는 maxSpeed 그대로.
+  const damp = 1 - (1 - PLAYER_DAMP) * (perf.accel / BASE_PERF_TUNE.accel);
+  const gain = perf.maxSpeed * (1 - damp) / damp * (armed ? KICK_HOLD_MULT : 1);   // 틱마다 더하는 속도 — 정상 상태가 maxSpeed 가 되게
+  p.vx = (p.vx + ix * gain) * damp;
+  p.vy = (p.vy + iy * gain) * damp;
+  if (len < 0.05 && p.vx * p.vx + p.vy * p.vy < PLAYER_REST_SPEED * PLAYER_REST_SPEED) { p.vx = 0; p.vy = 0; }
 }
 
 /** 한 틱 진행. 받은 state 는 건드리지 않고 새 state 를 돌려준다. */
@@ -275,9 +280,11 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
   // 1) 입력 → 속도. 세리머니·끝난 뒤엔 입력을 무시하고 서서히 선다.
   for (let i = 0; i < n; i++) {
     const p = s.players[i];
-    if (p.kickCooldown > 0) p.kickCooldown -= 1;
-    p.kicking = controlled && !!inputs[i]?.kick;
-    steer(p, config.players[i].perf, controlled ? (inputs[i] ?? NO_INPUT) : NO_INPUT);
+    const held = controlled && !!inputs[i]?.kick;
+    // 킥은 한 번 나가면 뗐다 눌러야 다시 장전된다 — 누르고 있는 동안엔 쿨다운이 줄지 않는다.
+    if (p.kickCooldown > 0 && !held) p.kickCooldown -= 1;
+    p.kicking = held && p.kickCooldown === 0;   // 장전 중(고리가 밝다). 차고 나면 꺼진다.
+    steer(p, config.players[i].perf, controlled ? (inputs[i] ?? NO_INPUT) : NO_INPUT, p.kicking);
   }
 
   // 2) 킥 — 닿는 거리 안이고 쉬는 중이 아니면 공에 속도를 더해 준다.
@@ -293,6 +300,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
       s.ball.vx += nx * config.players[i].perf.kick;
       s.ball.vy += ny * config.players[i].perf.kick;
       p.kickCooldown = KICK_COOLDOWN;
+      p.kicking = false;   // 나갔으니 장전 표시를 끈다
       s.lastTouch = i;
       kicked = true;
     }

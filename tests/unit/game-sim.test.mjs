@@ -160,7 +160,7 @@ test('킥 — 붙어 있는 공은 킥이 걷기보다 훨씬 빨리 보낸다',
   let kicked = step(base, cfg, [{ x: 0, y: 0, kick: true }, NO_INPUT]);
   let walked = base, walkMax = 0;
   for (let t = 0; t < 10; t++) { walked = step(walked, cfg, [{ x: 1, y: 0, kick: false }, NO_INPUT]); walkMax = Math.max(walkMax, speed(walked.ball)); }
-  assert.ok(speed(kicked.ball) > 800, `킥 속도 ${speed(kicked.ball)}`);
+  assert.ok(speed(kicked.ball) > BASE_PERF.kick * 0.9, `킥 속도 ${speed(kicked.ball)}`);
   assert.ok(speed(kicked.ball) > walkMax * 1.5, `킥 ${speed(kicked.ball)} vs 걷기 ${walkMax}`);
   assert.ok(kicked.ball.vx > 0 && Math.abs(kicked.ball.vy) < 1, '선수→공 방향으로 간다');
   assert.equal(kicked.lastTouch, 0);
@@ -195,22 +195,27 @@ test('이동 — 최고 속도를 넘지 않고, 손을 떼면 선다', () => {
   const cfg = mk(1);
   let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: 0, y: 300 }, players: { 0: { x: -500, y: 0 }, 1: { x: 300, y: 300 } } });
   let max = 0;
-  for (let t = 0; t < 40; t++) { s = step(s, cfg, [{ x: 5, y: 5, kick: false }, NO_INPUT]); max = Math.max(max, speed(s.players[0])); }   // 길이 1 넘는 입력은 1 로
+  let at10 = 0;
+  for (let t = 0; t < 100; t++) { s = step(s, cfg, [{ x: 5, y: 5, kick: false }, NO_INPUT]); max = Math.max(max, speed(s.players[0])); if (t === 9) at10 = speed(s.players[0]); }   // 길이 1 넘는 입력은 1 로
+  // 감쇠 방식("헥스볼 최대한 벤치마킹해"): 처음엔 바로 반응하고(0.17초에 최고 속도의 3분의 1 넘게), 최고 속도엔 천천히 닿는다
+  assert.ok(at10 > BASE_PERF.maxSpeed * 0.3 && at10 < BASE_PERF.maxSpeed * 0.5, `10틱 뒤 ${at10}`);
   assert.ok(max <= BASE_PERF.maxSpeed + 1e-6, `최고 속도 ${max}`);
   assert.ok(max > BASE_PERF.maxSpeed * 0.95);
-  // 손을 떼면 바로 서지 않고 미끄러지다 선다(2026-11-06 "쫀득함" — 관성). 0.25초 뒤엔 아직 움직이고, 1초 안엔 선다.
+  // 손을 떼면 바로 서지 않고 길게 미끄러지다 선다(2026-11-06 "쫀득함" — 관성). 0.25초 뒤엔 반쯤 속도, 1초 뒤에도 조금, 2.5초 안엔 선다.
   for (let t = 0; t < 15; t++) s = step(s, cfg, idle(cfg));
-  assert.ok(speed(s.players[0]) > BASE_PERF.maxSpeed * 0.3, '0.25초 뒤에도 미끄러지는 중');
+  assert.ok(speed(s.players[0]) > BASE_PERF.maxSpeed * 0.45, '0.25초 뒤에도 미끄러지는 중');
   for (let t = 0; t < 45; t++) s = step(s, cfg, idle(cfg));
-  assert.ok(speed(s.players[0]) < 1e-6, '1초 안에 선다');
+  assert.ok(speed(s.players[0]) > 1 && speed(s.players[0]) < BASE_PERF.maxSpeed * 0.15, '1초 뒤엔 거의 다 줄었다');
+  for (let t = 0; t < 90; t++) s = step(s, cfg, idle(cfg));
+  assert.ok(speed(s.players[0]) < 1e-6, '2.5초 안에 선다');
 });
 
-test('이동 — 경기장 길이를 4~5초 안에 건넌다', () => {
+test('이동 — 경기장 길이를 4.5~6초에 건넌다', () => {
   const cfg = mk(1);
   let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: 0, y: 300 }, players: { 0: { x: -PITCH.w / 2 + PITCH.playerR, y: 0 }, 1: { x: 300, y: 300 } } });
   let t = 0;
   while (s.players[0].x < PITCH.w / 2 - PITCH.playerR - 5 && t < 600) { s = step(s, cfg, [{ x: 1, y: 0, kick: false }, NO_INPUT]); t++; }
-  assert.ok(t / TICK_HZ >= 3.5 && t / TICK_HZ <= 5, `건너는 데 ${t / TICK_HZ}초`);
+  assert.ok(t / TICK_HZ >= 4.5 && t / TICK_HZ <= 6, `건너는 데 ${t / TICK_HZ}초`);
 });
 
 test('시계와 끝 — 시간이 다 되면 end, 점수 앞선 편이 승자, 같으면 draw', () => {
@@ -330,4 +335,30 @@ test('공에 무게가 있다 — 달려가 부딪치면 내 몸이 느려지고
   for (let t = 0; t < 60; t++) s = step(s, cfg, run);
   const gap = s.ball.x - s.players[0].x - PITCH.playerR - PITCH.ballR;
   assert.ok(gap < 40, `1초 뒤 공과 몸 사이 ${gap}`);
+});
+
+test('킥은 장전식 — 누르고 있으면 공이 닿는 순간 한 번 나가고, 계속 눌러도 다시 안 나가며, 뗐다 누르면 다시 나간다', () => {
+  const cfg = mk(1);
+  const near = { ball: { x: 0, y: 0 }, players: { 0: { x: -31, y: 0 }, 1: { x: 400, y: 300 } } };
+  const hold = [{ x: 0, y: 0, kick: true }, { ...NO_INPUT }];
+  let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ...near });
+  const k1 = step(s, cfg, hold);
+  assert.equal(eventsBetween(s, k1).filter((e) => e.type === 'kick').length, 1, '첫 킥');
+  assert.equal(k1.players[0].kicking, false, '나가면 장전 표시가 꺼진다');
+  // 계속 누른 채 0.5초 — 공을 다시 붙여 놔도 안 나간다
+  s = k1; let extra = 0;
+  for (let t = 0; t < 30; t++) { const b = put(s, near); const n = step(b, cfg, hold); extra += eventsBetween(b, n).filter((e) => e.type === 'kick').length; s = n; }
+  assert.equal(extra, 0, '누르고만 있으면 다시 안 찬다');
+  // 뗐다가(쿨다운 몇 틱) 다시 누르면 나간다
+  for (let t = 0; t < 6; t++) s = step(put(s, near), cfg, idle(cfg));
+  const b = put(s, near); const k2 = step(b, cfg, hold);
+  assert.equal(eventsBetween(b, k2).filter((e) => e.type === 'kick').length, 1, '뗐다 누르면 다시 찬다');
+});
+
+test('킥을 장전하고 있으면 몸이 굼떠진다', () => {
+  const cfg = mk(1);
+  const start = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: 0, y: 300 }, players: { 0: { x: -500, y: 0 }, 1: { x: 300, y: 300 } } });
+  let free = start, armed = start;
+  for (let t = 0; t < 120; t++) { free = step(free, cfg, [{ x: 1, y: 0, kick: false }, NO_INPUT]); armed = step(armed, cfg, [{ x: 1, y: 0, kick: true }, NO_INPUT]); }
+  assert.ok(armed.players[0].vx < free.players[0].vx * 0.8, `${armed.players[0].vx} vs ${free.players[0].vx}`);
 });
