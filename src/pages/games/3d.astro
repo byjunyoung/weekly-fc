@@ -1,9 +1,12 @@
 ---
-// 게임 > 3D 모드(2026-11-07). 입체로 보는 게임들. 지금은 시제품 하나 — 만든 게임을 이 목록에 하나씩 더한다.
+// 게임 > 3D 모드(2026-11-07). 입체로 보는 게임들. 카드는 게임 등록부(src/lib/games/registry.ts)의 3D 게임 + 아직 등록부에 오르지 않은
+// 3D 시제품(/game3d/ — 공용 어댑터로 옮기는 건 게임 묶음 스펙 §4 의 4단계) 한 장. 등록부에 3D 경기가 오르면 손으로 쓴 줄을 지운다.
 import Shell from '../../layouts/Shell.astro';
 import SubTabs from '../../components/SubTabs.astro';
 import GameCards from '../../components/GameCards.astro';
+import { gamesOf } from '../../lib/games/registry';
 const games = [
+  ...gamesOf('3d').map((g) => ({ to: `/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe, tags: [...g.tags] })),
   { to: '/game3d/', name: '경기', desc: '입체로 보는 5대5. 내 선수 하나로 드리블·패스·슛. 혼자서 봇과 합니다.', tags: ['시제품', '봇', '5대5'] },
 ];
 ---
