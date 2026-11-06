@@ -8,6 +8,7 @@ import { GAMES } from '../../src/lib/games/registry.ts';
 import { match2d } from '../../src/lib/games/match2d.ts';
 import { TICK_HZ as SIM_HZ } from '../../src/lib/game/sim.ts';
 import { BASE_PERF } from '../../src/lib/game/stats.ts';
+import { P2_CASES } from './fixtures/games-cases-p2.mjs';
 
 const cfg2d = (a, b, field = 'M', minutes = 2) => ({
   field, minutes, scoreLimit: 0,
@@ -37,6 +38,7 @@ const CASES = [
     ],
     optionalStateKeys: ['lastAssist', 'prevTouch'],   // 도움 기록 전의 상태도 받던 너그러움(예전 net.ts 그대로)
   },
+  ...P2_CASES,
 ];
 
 // ── 도구 ──
@@ -170,7 +172,7 @@ for (const C of CASES) {
     }
   });
 
-  test(`[${g.id}] 짧은 판은 끝난다(ended), 끝난 뒤 판정이 바뀌지 않는다`, () => {
+  if (C.short) test(`[${g.id}] 짧은 판은 끝난다(ended), 끝난 뒤 판정이 바뀌지 않는다`, () => {
     const { config, maxTicks } = C.short;
     let s = g.create(config, 4);
     const idle = Array.from({ length: g.slots(config) }, () => g.idle);
@@ -182,6 +184,17 @@ for (const C of CASES) {
     assert.ok(g.ended(s), `${maxTicks} 틱 안에 안 끝났다`);
     assert.ok(g.okState(s, config));
     assert.ok(g.ended(g.step(s, config, idle)), '끝난 판은 끝난 채');
+  });
+
+  // 저절로 끝나지 않는 게임(자유 훈련장 — 2026-11-07 2단계): short 대신 neverEnds. 봇 입력으로 오래 돌려도 끝나지 않고 상태가 성하다.
+  if (C.neverEnds) test(`[${g.id}] 저절로 끝나지 않는다 — 봇끼리 오래 돌려도 ended 가 거짓, 상태는 성하다`, () => {
+    const { config, ticks } = C.neverEnds;
+    let s = g.create(config, 4);
+    for (let t = 0; t < ticks; t++) {
+      s = g.step(s, config, Array.from({ length: g.slots(config) }, (_, i) => g.decode(g.encode(g.botInput ? g.botInput(s, config, i) : g.idle))));
+      assert.equal(g.ended(s), false, `틱 ${t}`);
+    }
+    assert.ok(g.okState(s, config));
   });
 
   if (g.bodies) test(`[${g.id}] 몸 목록 — 읽고 그대로 쓰면 같은 상태, 개수는 한 판 동안 같다`, () => {
