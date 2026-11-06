@@ -1,0 +1,9 @@
+---
+// 3D 축구 시제품(2026-11-07) — 손맛을 보려는 실험. 주소로만 들어온다(상단 메뉴 nav.ts 에 넣지 않는다). 2D 게임은 /game/ 그대로.
+// 설계: docs/superpowers/specs/2026-11-07-game3d-spike-design.md. three.js 는 이 페이지의 섬에서만 불러온다.
+import Shell from '../../layouts/Shell.astro';
+import Game3DApp from '../../react/game3d/Game3DApp.tsx';
+---
+<Shell title="3D 축구 시제품" description="WEEKLY FC 3D 축구 시제품 — 실험 중, 내 선수로 봇과 5대5">
+  <Game3DApp client:load />
+</Shell>
