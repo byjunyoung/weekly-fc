@@ -90,7 +90,7 @@ export const dribble2dView: GameView<DrConfig, DrState, Input, DrSettings> = {
     if (solo || config.players.length === 1) {
       const l = final.lanes[0], t = laneTime(l), m = medalOf(c, t);
       const b = t !== null && solo ? offerBest(dribbleBestKey(c.id), t, (a, z) => a < z) : { prev: readBest(dribbleBestKey(c.id)), isNew: false };
-      const bestText = b.isNew && b.prev !== null ? ' · 새 최고 기록' : b.prev !== null ? ` · 최고 ${secText(b.prev)}` : '';
+      const bestText = b.isNew ? (b.prev !== null ? ' · 새 최고 기록' : ' · 첫 기록') : b.prev !== null ? ` · 최고 ${secText(b.prev)}` : '';
       out = {
         outcome: t === null ? '시간 끝' : m !== null ? `${MEDAL[m].name}메달` : '완주', tone: m === 0 || m === 1 ? 'win' : t === null ? 'lose' : 'draw',
         score: t === null ? <>문 {l.gate}/{c.gates.length}</> : <>{secText(t)}</>, sub: `${c.name}${l.pen ? ` · 콘 ${l.pen}개(+${l.pen}초)` : ''}${bestText} · ${medalLine}`,

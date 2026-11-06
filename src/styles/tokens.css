@@ -1079,6 +1079,9 @@ details.year[open] > summary::before { content: "▾ "; }
 .game-opts { display: flex; flex-direction: column; gap: var(--s-sm); }
 .game-opt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs) var(--s-md); }
 .game-opt > .muted { width: 5em; }
+/* 고르기 줄이 화면보다 길면 줄을 바꾼다(2026-11-07 3단계 — 2D 게임이 다섯이 되어 방장 폰 화면의 게임 종류가 390px 를 넘었다). */
+.game-opt .ant-segmented { max-width: 100%; }
+.game-opt .ant-segmented-group { flex-wrap: wrap; }
 .game-hint { margin-top: var(--s-md); font-size: var(--fs-xs); }
 .game-start { margin-top: var(--s-md); }
 

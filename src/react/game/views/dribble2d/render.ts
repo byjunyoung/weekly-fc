@@ -111,6 +111,7 @@ export function drawDribble(ctx: CanvasRenderingContext2D, st: DrState, config: 
 
   // 위 띠 — 코스 · 문 · 내 시계(달린 시간 + 콘 벌점)
   const y0 = o.topInset + 6, cx = v.vw / 2;
+  ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(0, 0, v.vw, o.topInset + 52);   // 띠 — 따라가는 화면에서 레인 위에 글이 겹쳐도 읽히게
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   const run = st.phase === 'count' ? 0 : me.fin >= 0 ? me.fin : st.phase === 'end' ? me.fin : st.phaseTicks;
   const t = me.fin >= 0 ? (laneTime(me) ?? 0) : (Math.max(0, run) + me.pen * 60) / 60;

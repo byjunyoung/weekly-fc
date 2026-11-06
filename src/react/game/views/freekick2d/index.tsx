@@ -88,7 +88,7 @@ export const freekick2dView: GameView<FkConfig, FkState, PenInput, FkSettings> =
     if (solo || config.players.length === 1) {
       const pts = final.points[0];
       const b = solo ? offerBest(FK_BEST_KEY, pts, (a, c) => a > c) : { prev: null, isNew: false };
-      const sub = `다섯 자리 · 골 ${goals(0)}개${b.isNew && b.prev !== null ? ' · 새 최고 기록' : b.prev !== null ? ` · 최고 기록 ${b.prev}점` : ''}`;
+      const sub = `다섯 자리 · 골 ${goals(0)}개${b.isNew ? (b.prev !== null ? ' · 새 최고 기록' : ' · 첫 기록') : b.prev !== null ? ` · 최고 기록 ${b.prev}점` : ''}`;
       out = { outcome: `${pts}점`, tone: pts >= 6 ? 'win' : 'draw', score: <>{pts} / {FK_MAX_POINTS}점</>, sub, detail };
     } else {
       const rank = myId === null ? -1 : order.indexOf(myId);
