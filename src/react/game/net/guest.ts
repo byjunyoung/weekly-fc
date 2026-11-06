@@ -352,5 +352,5 @@ export function snapFits(snap: SnapMsg, config: MatchConfig): boolean {
   if (st.players.length !== n) return false;
   for (let i = 0; i < n; i++) if (st.players[i].id !== i) return false;
   const inRange = (v: number | null): boolean => v === null || (Number.isInteger(v) && v >= 0 && v < n);
-  return inRange(st.lastTouch) && inRange(st.lastScorer);
+  return inRange(st.lastTouch) && inRange(st.lastScorer) && inRange(st.lastAssist ?? null) && inRange(st.prevTouch ?? null);
 }

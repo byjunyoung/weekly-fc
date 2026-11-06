@@ -156,7 +156,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
           </div>
           {host && <p className="muted game-hint">한 편이 봇으로 채울 수보다 적으면 봇이 들어갑니다 · 두 편 인원이 달라도 됩니다 · 한 편 6명까지</p>}
           {block && <p className="muted game-hint">{block}</p>}
-          <p className="muted game-hint">PC: 방향키·WASD 이동, 스페이스 킥, 숫자 1~6 한마디 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 킥</p>
+          <p className="muted game-hint">PC: 방향키·WASD 이동, 스페이스·Shift 킥, 숫자 1~6 한마디 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 킥</p>
         </div>
       </div>
 

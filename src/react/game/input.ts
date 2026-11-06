@@ -21,7 +21,7 @@ const LEFT = new Set(['ArrowLeft', 'a']);
 const RIGHT = new Set(['ArrowRight', 'd']);
 const UP = new Set(['ArrowUp', 'w']);
 const DOWN = new Set(['ArrowDown', 's']);
-const KICK = new Set([' ', 'x']);
+const KICK = new Set([' ', 'x', 'Shift']);   // Shift 도 킥(2026-11-07 "슛키 스페이스바 말고도 쉬프트도")
 const GAME_KEYS = new Set([...LEFT, ...RIGHT, ...UP, ...DOWN, ...KICK]);
 
 /** 눌린 키 집합 → 방향(대각선은 길이 1로 맞춘다 — 안 하면 대각선이 41% 빠르다)과 킥. */

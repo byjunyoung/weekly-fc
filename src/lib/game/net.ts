@@ -127,6 +127,7 @@ function okState(s: unknown): boolean {
       && isNum((p as Record<string, unknown>).kickCooldown) && typeof (p as Record<string, unknown>).kicking === 'boolean')
     && (s.kickoffSide === 0 || s.kickoffSide === 1)
     && (s.lastTouch === null || isInt(s.lastTouch, 0)) && (s.lastScorer === null || isInt(s.lastScorer, 0))
+    && (s.lastAssist === undefined || s.lastAssist === null || isInt(s.lastAssist, 0)) && (s.prevTouch === undefined || s.prevTouch === null || isInt(s.prevTouch, 0))
     && (s.winner === null || s.winner === 0 || s.winner === 1 || s.winner === 'draw') && isNum(s.seed);
 }
 

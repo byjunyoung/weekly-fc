@@ -76,7 +76,7 @@ test('골 — 공이 골문으로 들어가면 goal 단계·점수 1·사건 하
   assert.ok(goalAt >= 0, '120틱 안에 골이 나야 한다');
   assert.deepEqual(s.score, [1, 0]);
   assert.equal(events.filter((e) => e.type === 'goal').length, 1);
-  assert.deepEqual(events.find((e) => e.type === 'goal'), { type: 'goal', side: 0, scorer: null });
+  assert.deepEqual(events.find((e) => e.type === 'goal'), { type: 'goal', side: 0, scorer: null, assist: null });
   assert.equal(s.kickoffSide, 1);
   for (let t = 0; t < 200 && s.phase === 'goal'; t++) {
     const n = step(s, cfg, idle(cfg));
@@ -382,4 +382,44 @@ test('골대 기둥은 선수도 막는다 — 골라인을 따라 달려도 기
   let minDist = Infinity;
   for (let t = 0; t < 150; t++) { s = step(s, cfg, [{ x: 0, y: -1, kick: false }, NO_INPUT]); const p = s.players[0]; minDist = Math.min(minDist, Math.hypot(p.x - W, p.y - G)); }
   assert.ok(minDist >= R + PITCH.postR - 1.5, `기둥과 가장 가까웠던 거리 ${minDist}`);
+});
+
+test('도움 — 같은 편이 넘겨준 공으로 넣으면 득점자와 도움이 함께 남는다. 상대가 사이에 만지면 도움 없음', () => {
+  const cfg = mk(2);   // 0·1 = 왼편(오른쪽 골대로 공격), 2·3 = 오른편
+  const W = PITCH.w / 2;
+  const far = { 2: { x: -400, y: 300 }, 3: { x: -400, y: -300 } };
+  // 0번이 공을 차서 1번 쪽으로 보내고, 1번이 골대 앞에서 차 넣는다
+  let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: W - 300, y: 0 }, players: { 0: { x: W - 300 - 31, y: 0 }, 1: { x: W - 120, y: 0 }, ...far } });
+  const idle4 = () => cfg.players.map(() => ({ ...NO_INPUT }));
+  let inp = idle4(); inp[0] = { x: 0, y: 0, kick: true };
+  s = step(s, cfg, inp);
+  assert.equal(s.lastTouch, 0);
+  // 공이 1번 발 앞(골대 80 앞)에 왔다고 치고, 1번이 공 뒤에서 골대 쪽으로 찬다
+  s = put(s, { ball: { x: W - 80, y: 0 }, players: { 1: { x: W - 80 - 31, y: 0 } } });
+  let goal = null;
+  for (let t = 0; t < 120 && !goal; t++) {
+    inp = idle4(); if (t === 0) inp[1] = { x: 0, y: 0, kick: true };
+    const n = step(s, cfg, inp);
+    goal = eventsBetween(s, n).find((e) => e.type === 'goal') ?? null;
+    s = n;
+  }
+  assert.ok(goal, '골이 들어갔다');
+  assert.equal(goal.scorer, 1); assert.equal(goal.assist, 0);
+  assert.equal(s.lastScorer, 1); assert.equal(s.lastAssist, 0);
+  // 득점자 앞에 상대가 만졌으면 도움이 아니다
+  const st = put(createMatch(cfg, 1), { state: { phase: 'play', lastTouch: 1, prevTouch: 2, lastTouchTick: 10, prevTouchTick: 5, tick: 20 }, ball: { x: W - 4, y: 0, vx: 600, vy: 0 }, players: { 0: { x: 0, y: 200 }, 1: { x: 0, y: -200 }, ...far } });
+  let g2 = null, q = st;
+  for (let t = 0; t < 30 && !g2; t++) { const n = step(q, cfg, idle4()); g2 = eventsBetween(q, n).find((e) => e.type === 'goal') ?? null; q = n; }
+  assert.ok(g2); assert.equal(g2.scorer, 1); assert.equal(g2.assist, null);
+});
+
+test('킥 직후 표시 — 봇처럼 차는 순간에만 눌러도 0.2초쯤 고리가 밝다', () => {
+  const cfg = mk(1);
+  let s = put(createMatch(cfg, 1), { state: { phase: 'play' }, ball: { x: 0, y: 0 }, players: { 0: { x: -31, y: 0 }, 1: { x: 400, y: 300 } } });
+  s = step(s, cfg, [{ x: 0, y: 0, kick: true }, { ...NO_INPUT }]);
+  assert.ok(s.players[0].kickFlash > 0, '찬 순간 켜진다');
+  for (let t = 0; t < 6; t++) s = step(s, cfg, idle(cfg));
+  assert.ok(s.players[0].kickFlash > 0, '0.1초 뒤에도 켜져 있다');
+  for (let t = 0; t < 10; t++) s = step(s, cfg, idle(cfg));
+  assert.equal(s.players[0].kickFlash, 0, '0.3초 안에 꺼진다');
 });

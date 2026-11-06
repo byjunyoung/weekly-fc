@@ -12,6 +12,9 @@ import { perfOf } from '../../lib/game/stats';
 import type { Player } from '../../lib/types';
 import { attachInput } from './input';
 import { blend, buildField, buildSprites, drawFrame, fieldKey, HUD_H, TEAM, type Field } from './render';
+import { detectSfx } from './sfx-detect';
+import { play as playSfx } from './sfx';
+import SoundToggle from './SoundToggle';
 import { readInsets } from './stage';
 import { aimCamera, clockText, makeView, pickLineup, rngFrom, stickToSim, type View } from './view';
 
@@ -118,8 +121,9 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
         while (acc >= STEP_MS && n < MAX_CATCHUP && state.phase !== 'end') {
           const next = step(state, config, collectInputs(state));
           for (const ev of eventsBetween(state, next)) {
-            if (ev.type === 'end') ended = true;   // 골·킥 소리 등은 아직 없다(이 자리에서 이벤트를 쓰면 된다)
+            if (ev.type === 'end') ended = true;
           }
+          for (const fx of detectSfx(state, next)) playSfx(fx);   // 효과음(2026-11-07) — 틱마다 상태 변화로 알아낸다
           prev = state; state = next; acc -= STEP_MS; n++;
         }
         if (n === MAX_CATCHUP) acc = 0;
@@ -166,6 +170,7 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
     <div className="game-overlay" ref={rootRef}>
       <canvas ref={canvasRef} className="game-canvas" />
       {!result && <button type="button" className="game-x" aria-label="경기 나가기" onClick={confirmExit}>✕</button>}
+      {!result && <SoundToggle />}
       <div className="game-stick" ref={baseRef} aria-hidden="true"><div className="game-stick-knob" ref={knobRef} /></div>
       <button type="button" ref={kickRef} className={`game-kick${touch && !result ? ' is-shown' : ''}`} aria-label="킥">킥</button>
       {result && (

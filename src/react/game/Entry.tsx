@@ -98,7 +98,7 @@ export function Entry({ players, roomCode, reopen = false, message, onSolo, onCr
               <label className="game-opt"><span className="muted">점수 제한</span>
                 <Segmented<number> value={scoreLimit} onChange={setScoreLimit} options={SCORE_LIMITS.map((n) => ({ value: n, label: n ? `${n}점` : '없음' }))} /></label>
             </div>
-            <p className="muted game-hint">PC: 방향키·WASD로 이동, 스페이스로 킥 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 킥</p>
+            <p className="muted game-hint">PC: 방향키·WASD로 이동, 스페이스나 Shift로 킥 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 킥</p>
             {max < 1 && <p className="muted">명단이 두 명은 있어야 판을 만들 수 있습니다.</p>}
             <div className="game-start">
               <Button type="primary" size="large" disabled={!ok} onClick={() => ok && onSolo({ num, perSide: per, minutes, scoreLimit, field }, players)}>

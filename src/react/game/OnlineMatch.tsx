@@ -6,7 +6,7 @@
 import { App, Button } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { PHRASES } from '../../lib/game/net';
-import type { Input } from '../../lib/game/sim';
+import type { Input, MatchState } from '../../lib/game/sim';
 import type { Player } from '../../lib/types';
 import { attachInput } from './input';
 import type { GuestSession, HostSession, SessionView } from './net/session';
@@ -14,6 +14,9 @@ import { connText } from './Lobby';
 import { pitchOf } from '../../lib/game/sim';
 import { buildSprites, drawBubbles, drawFrame, TEAM } from './render';
 import { cameraOf, sidesText, type Live } from './SoloMatch';
+import { detectSfx } from './sfx-detect';
+import { play as playSfx } from './sfx';
+import SoundToggle from './SoundToggle';
 import { attachStage } from './stage';
 import { aimCamera, clockText, stickToSim } from './view';
 
@@ -67,11 +70,15 @@ export function OnlineMatch({ session, view, roster, live, onLeaveRoom }: {
     window.addEventListener('keydown', onKey);
 
     let raf = 0;
+    let lastShown: MatchState | null = null;
     const frame = (now: number): void => {
       raf = requestAnimationFrame(frame);
       session.advance(now);
       const f = session.frame(now), st = stage.get();
       if (!f || !st) return;
+      // 효과음 — 그리는 상태가 바뀐 것으로 알아낸다(방장·손님·구경 모두 같은 길). 틱이 뒤로 가면(새 경기) 비교하지 않는다.
+      if (lastShown && f.state.tick >= lastShown.tick) for (const fx of detectSfx(lastShown, f.state)) playSfx(fx);
+      lastShown = f.state;
       // 큰 경기장이면 화면이 따라간다 — 내 선수, 구경이면 공(스펙 2026-11-07 §2).
       const focus = f.myId !== null && f.state.players[f.myId] ? f.state.players[f.myId] : f.state.ball;
       const cam = aimCamera(st.view, focus);
@@ -116,6 +123,7 @@ export function OnlineMatch({ session, view, roster, live, onLeaveRoom }: {
     <div className="game-overlay" ref={rootRef}>
       <canvas ref={canvasRef} className="game-canvas" />
       {!result && <button type="button" className="game-x" aria-label={isHost ? '경기 멈추기' : '방에서 나가기'} onClick={confirmExit}>✕</button>}
+      {!result && <SoundToggle />}
       {!result && playing && (
         <div className="game-say">
           <button type="button" className="game-say-btn" aria-expanded={sayOpen} aria-label="한마디" onClick={() => setSayOpen((v) => !v)}>한마디</button>
