@@ -1,10 +1,12 @@
 // src/react/game3d/input3d.ts — 3D 시제품의 키보드·터치 → 화면 기준 입력(오른쪽 +x, 아래 +y). 경기장 방향으로 돌리는 건 부르는 쪽(view3d.stickToWorld).
 // 2D 게임 input.ts 와 같은 방식이다(그 파일은 킥 버튼 하나라 가져다 쓰지 않고 버튼 둘로 다시 짰다):
-//   PC — 방향키·WASD 이동, 스페이스 = 슛(누르는 동안 모이고 떼면 나간다), X 또는 Shift = 패스.
-//   폰 — 왼쪽 절반 아무 데나 누르면 그 자리에 조이스틱, 오른쪽 아래 버튼 둘(패스, 더 큰 슛).
+//   PC — 2026-11-07 "3d 게임은 키를 FC온라인이랑 동일하게 해주면 좋을듯" — 키 자리만 그 관례를 따르고 이름·동작은 우리 것:
+//        방향키 = 이동(WASD 는 이제 동작 키라 이동에서 뺐다), S = 패스, D = 슛(공 없을 땐 태클), W = 스루 패스, A = 로빙 패스, E = 질주.
+//        전에 익힌 키도 남긴다 — 스페이스 = 슛, X = 패스, Shift = 질주(전엔 패스였다).
+//   폰 — 왼쪽 절반 아무 데나 누르면 그 자리에 조이스틱, 오른쪽 아래 큰 버튼 둘(패스, 슛)과 작은 버튼 셋(스루, 로빙, 질주).
 // 터치는 포인터 id 별로 따로 잡는다 — 왼손 조이스틱과 오른손 버튼이 동시에 눌려야 한다.
 
-export type ScreenInput = { x: number; y: number; shoot: boolean; pass: boolean };
+export type ScreenInput = { x: number; y: number; shoot: boolean; pass: boolean; through: boolean; lob: boolean; sprint: boolean };
 
 export const STICK_MAX = 56;   // 조이스틱 최대 반지름(CSS px)
 export const STICK_DEAD = 8;   // 데드존
@@ -18,24 +20,27 @@ export function stickVector(dx: number, dy: number, maxR = STICK_MAX, dead = STI
 }
 
 // 한 글자 키는 소문자로 — Shift 를 먼저 떼면 keyup 이 'A' 가 아니라 'a' 로 와서 눌림이 안 풀린다(2D 에서 겪은 것).
-const LEFT = new Set(['ArrowLeft', 'a']);
-const RIGHT = new Set(['ArrowRight', 'd']);
-const UP = new Set(['ArrowUp', 'w']);
-const DOWN = new Set(['ArrowDown', 's']);
-const SHOOT = new Set([' ']);
-const PASS = new Set(['x', 'Shift']);
-const GAME_KEYS = new Set([...LEFT, ...RIGHT, ...UP, ...DOWN, ...SHOOT, ...PASS]);
+const LEFT = new Set(['ArrowLeft']);
+const RIGHT = new Set(['ArrowRight']);
+const UP = new Set(['ArrowUp']);
+const DOWN = new Set(['ArrowDown']);
+const SHOOT = new Set(['d', ' ']);
+const PASS = new Set(['s', 'x']);
+const THROUGH = new Set(['w']);
+const LOB = new Set(['a']);
+const SPRINT = new Set(['e', 'Shift']);
+const GAME_KEYS = new Set([...LEFT, ...RIGHT, ...UP, ...DOWN, ...SHOOT, ...PASS, ...THROUGH, ...LOB, ...SPRINT]);
 
 export function keysToInput(down: ReadonlySet<string>): ScreenInput {
   const any = (set: Set<string>): number => ([...set].some((k) => down.has(k)) ? 1 : 0);
   let x = any(RIGHT) - any(LEFT), y = any(DOWN) - any(UP);
   if (x && y) { x *= Math.SQRT1_2; y *= Math.SQRT1_2; }
-  return { x, y, shoot: any(SHOOT) === 1, pass: any(PASS) === 1 };
+  return { x, y, shoot: any(SHOOT) === 1, pass: any(PASS) === 1, through: any(THROUGH) === 1, lob: any(LOB) === 1, sprint: any(SPRINT) === 1 };
 }
 
 export type InputParts = {
   root: HTMLElement; base: HTMLElement; knob: HTMLElement;
-  shootBtn: HTMLElement; passBtn: HTMLElement;
+  shootBtn: HTMLElement; passBtn: HTMLElement; throughBtn: HTMLElement; lobBtn: HTMLElement; sprintBtn: HTMLElement;
   /** 처음 터치가 들어오면 — 터치 버튼을 그제야 보이게(마우스 PC 에선 안 보임). */
   onTouch: () => void;
 };
@@ -44,7 +49,7 @@ export type InputHandle = { read(): ScreenInput; dispose(): void };
 export function attachInput(p: InputParts): InputHandle {
   const keys = new Set<string>();
   let stickId: number | null = null, ox = 0, oy = 0, sv = { x: 0, y: 0 };
-  let shootId: number | null = null, passId: number | null = null;
+  let shootId: number | null = null, passId: number | null = null, throughId: number | null = null, lobId: number | null = null, sprintId: number | null = null;
   const off: Array<() => void> = [];
   const onWin = <K extends keyof WindowEventMap>(e: K, f: (ev: WindowEventMap[K]) => void): void => { window.addEventListener(e, f); off.push(() => window.removeEventListener(e, f)); };
   const onEl = (t: HTMLElement, e: string, f: (ev: any) => void, o?: AddEventListenerOptions): void => { t.addEventListener(e, f, o); off.push(() => t.removeEventListener(e, f, o)); };
@@ -97,6 +102,9 @@ export function attachInput(p: InputParts): InputHandle {
   };
   button(p.shootBtn, (id) => { shootId = id; }, () => shootId);
   button(p.passBtn, (id) => { passId = id; }, () => passId);
+  button(p.throughBtn, (id) => { throughId = id; }, () => throughId);
+  button(p.lobBtn, (id) => { lobId = id; }, () => lobId);
+  button(p.sprintBtn, (id) => { sprintId = id; }, () => sprintId);
 
   // 스크롤·확대·길게 눌러 메뉴 막기. touchmove 는 passive:false 여야 preventDefault 가 먹는다(iOS).
   onEl(p.root, 'touchmove', (e: Event) => e.preventDefault(), { passive: false });
@@ -109,7 +117,10 @@ export function attachInput(p: InputParts): InputHandle {
     read() {
       const k = keysToInput(keys);
       const useStick = sv.x * sv.x + sv.y * sv.y > k.x * k.x + k.y * k.y;
-      return { x: useStick ? sv.x : k.x, y: useStick ? sv.y : k.y, shoot: k.shoot || shootId !== null, pass: k.pass || passId !== null };
+      return {
+        x: useStick ? sv.x : k.x, y: useStick ? sv.y : k.y, shoot: k.shoot || shootId !== null, pass: k.pass || passId !== null,
+        through: k.through || throughId !== null, lob: k.lob || lobId !== null, sprint: k.sprint || sprintId !== null,
+      };
     },
     dispose() { off.forEach((f) => f()); off.length = 0; keys.clear(); },
   };

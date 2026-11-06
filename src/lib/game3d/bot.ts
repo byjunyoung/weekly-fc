@@ -30,6 +30,14 @@ const HESITATE_P = 0.1;       // 머뭇거릴 확률
 const HESITATE_SPEED = 0.4;   // 머뭇거릴 때 속도 배수
 const AIM_ERR = 0.85;         // 슛 조준이 골문 가운데에서 빗나가는 폭(골문 반폭 비율)
 const CHARGE_ERR = 0.15;      // 슛 세기 오차
+// 키 배치 이후(2026-11-07 "3d 게임은 키를 FC온라인이랑 동일하게 해주면 좋을듯") — 봇도 스루·로빙·질주·태클을 가끔 쓴다
+const SPRINT_CHASE = 4;       // 공까지 이보다 멀면 질주해서 쫓는다(체력 SPRINT_MIN 넘을 때)
+const SPRINT_MIN = 0.45;      // 체력이 이보다 적으면 봇은 질주를 아낀다
+const SPRINT_FREE = 5;        // 공을 몰 때 앞 이 거리 안에 상대가 없으면 질주(골대 8m 밖에서)
+const TACKLE_P = 0.12;        // 태클이 닿는 자리에서 실제로 태클할 확률(제비 — 사람이 피할 틈)
+const THROUGH_RUN = 2.5;      // 동료가 상대 골대 쪽으로 이보다 빨리(m/s) 뛰고 있으면 스루를 생각한다
+const THROUGH_SPACE = 3;      // 그 동료 앞 THROUGH 자리 둘레에 상대가 이보다 멀어야
+const LOB_OPEN = 3;           // 로빙: 먼 동료 둘레에 상대가 이보다 멀어야(가는 길은 막혀 있어도 된다)
 const KEEPER_ARC = 1.3;       // 골키퍼가 서는 호(골대 가운데에서의 거리)
 const KEEPER_REACT = 12;      // 슛을 보고 움직이기까지 틱(0.15초) — 이게 작을수록 골키퍼가 세다
 const KEEPER_RUSH = 4.5;      // 골대에서 이 안의 느린 공은 골키퍼가 나와 줍는다
@@ -120,7 +128,15 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
   if (ownerSide !== mp.side && chaser === id) {
     // 공을 다툰다 — 흘러가는 공은 조금 앞을, 상대가 가진 공은 그 공에 몸을 붙인다
     const lead = state.owner === null ? 0.2 : 0.05;
-    return inp(scale(moveTo(me.x, me.y, ball.x + ball.vx * lead, ball.y + ball.vy * lead, 0)));
+    const v = scale(moveTo(me.x, me.y, ball.x + ball.vx * lead, ball.y + ball.vy * lead, 0));
+    const bdx = ball.x - me.x, bdy = ball.y - me.y, bd = Math.sqrt(bdx * bdx + bdy * bdy);
+    const sprint = bd > SPRINT_CHASE && me.stamina > SPRINT_MIN;
+    // 태클 — 상대 공이 닿는 자리·보는 쪽이면 가끔(누름 → 다음 틱에 뗀다)
+    if (state.owner !== null && me.tackleCD === 0 && !me.shootHeld && bd < PITCH3D.playerR + PITCH3D.ballR + RULES3D.tackleReach - 0.1
+      && bd > 1e-3 && (bdx * me.fx + bdy * me.fy) / bd > 0.5 && noise(id * 13, state.tick >> 3) < -1 + 2 * TACKLE_P) {
+      return inp(v, { shoot: true, sprint });
+    }
+    return inp(v, { sprint });
   }
 
   // 자리 지키기 — 우리 편이 공을 가졌으면 공 가진 사람과 겹치지 않는 쪽으로 길을 연다
@@ -155,7 +171,17 @@ function carrierInput(state: MatchState, config: MatchConfig, id: number): Input
   if (dGoal < SHOOT_TURN) return inp({ x: ux, y: uy });
 
   // 패스 — 눌러 둔 상태면 뗀다
-  if (me.passHeld) return inp({ x: me.fx * 0.3, y: me.fy * 0.3 });
+  if (me.passHeld || me.throughHeld || me.lobHeld) return inp({ x: me.fx * 0.3, y: me.fy * 0.3 });
+  // 스루 — 앞으로 뛰는 동료 앞이 비었으면. 로빙 — 땅볼 길은 막혔는데 먼 동료 둘레가 비었으면. 보는 쪽이 맞으면 누른다(다음 틱에 뗀다).
+  const special = specialPass(state, config, id);
+  if (special) {
+    const m = state.players[special.mate];
+    const dx = m.x - me.x, dy = m.y - me.y, d = Math.sqrt(dx * dx + dy * dy);
+    const cos = (dx * me.fx + dy * me.fy) / d;
+    const want = special.kind === 'through' ? passTarget(state, config, id) : passTarget(state, config, id, 0.45, RULES3D.lobMin);
+    if (cos > PASS_AIM_COS && want === special.mate) return inp({ x: dx / d * 0.4, y: dy / d * 0.4 }, special.kind === 'through' ? { through: true } : { lob: true });
+    return inp({ x: dx / d * 0.5, y: dy / d * 0.5 });
+  }
   const pressured = nearestOpp(state, config, mp.side, me.x + me.fx * 1.2, me.y + me.fy * 1.2) < PRESS_R;
   const mate = bestMate(state, config, id);
   if (mate >= 0) {
@@ -193,7 +219,29 @@ function carrierInput(state: MatchState, config: MatchConfig, id: number): Input
   // 옆 벽에 붙으면 안쪽으로
   if (Math.abs(me.y) > HH - 1.5) my -= Math.sign(me.y) * 0.8;
   const l = Math.sqrt(mx * mx + my * my) || 1;
-  return inp({ x: mx / l, y: my / l });
+  // 앞이 비었고 골대가 아직 멀면 질주(체력이 있을 때) — 공이 더 앞서 굴러 흘리기 쉬워지니 막히면 바로 멈춘다
+  const sprint = blockD === Infinity && dGoal > 8 && me.stamina > SPRINT_MIN
+    && nearestOpp(state, config, mp.side, me.x + ux * SPRINT_FREE * 0.6, me.y + uy * SPRINT_FREE * 0.6) > SPRINT_FREE * 0.6;
+  return inp({ x: mx / l, y: my / l }, { sprint });
+}
+
+/** 스루·로빙이 확실히 나은 때만 — 결정 제비(DECIDE_HOLD 마다)로 가끔. 없으면 null. */
+function specialPass(state: MatchState, config: MatchConfig, id: number): { kind: 'through' | 'lob'; mate: number } | null {
+  const mp = config.players[id], me = state.players[id], dir = attackDir(mp.side);
+  if (noise(id * 7 + 3, Math.floor(state.tick / DECIDE_HOLD)) < 0.2) return null;
+  for (const q of config.players) {
+    if (q.side !== mp.side || q.id === id || q.gk) continue;
+    const m = state.players[q.id];
+    const dx = m.x - me.x, dy = m.y - me.y, d = Math.sqrt(dx * dx + dy * dy);
+    if (d < 4 || d > RULES3D.passMax - 2) continue;
+    // 스루: 상대 골대 쪽으로 뛰는 중이고, 그 앞이 비었다
+    if (m.vx * dir > THROUGH_RUN && (m.x - me.x) * dir > 0
+      && nearestOpp(state, config, mp.side, m.x + dir * 4.5, m.y) > THROUGH_SPACE) return { kind: 'through', mate: q.id };
+    // 로빙: 멀고 둘레는 비었는데 가는 길 가운데에 상대가 있다
+    if (d > RULES3D.lobMin + 2 && nearestOpp(state, config, mp.side, m.x, m.y) > LOB_OPEN
+      && nearestOpp(state, config, mp.side, me.x + dx * 0.5, me.y + dy * 0.5) < 1.5) return { kind: 'lob', mate: q.id };
+  }
+  return null;
 }
 
 /** 패스할 만한 동료 — 비었고(둘레에 상대 없음), 너무 가깝거나 멀지 않은 사람 중 앞쪽·사람 우선. 없으면 -1. */

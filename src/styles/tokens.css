@@ -1173,7 +1173,7 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
 .g3-gauge { position: absolute; z-index: 2; left: 50%; bottom: max(var(--s-xl), env(safe-area-inset-bottom)); width: 220px; height: 14px; margin-left: -110px; display: none;
   border: 2px solid rgba(255, 255, 255, .8); background: rgba(0, 0, 0, .55); pointer-events: none; }
 .g3-gauge.is-on { display: block; }
-.g3-gauge.is-touch { left: auto; margin-left: 0; width: 110px; right: max(var(--s-lg), env(safe-area-inset-right)); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 112px); }
+.g3-gauge.is-touch { left: auto; margin-left: 0; width: 110px; right: max(var(--s-lg), env(safe-area-inset-right)); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 172px); }
 .g3-gauge i { display: block; width: 100%; height: 100%; background: var(--gold); transform: scaleX(0); transform-origin: left center; }
 .g3-x { position: absolute; top: max(var(--s-sm), env(safe-area-inset-top)); right: max(var(--s-sm), env(safe-area-inset-right)); z-index: 3;
   width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: var(--r-full); background: rgba(0, 0, 0, .55); font-family: var(--font); font-size: 18px; }
@@ -1189,6 +1189,12 @@ html.g3-lock, html.g3-lock body { overflow: hidden; overscroll-behavior: none; }
 .g3-shoot.is-down { background: rgba(213, 59, 0, .92); }
 .g3-pass { right: calc(max(var(--s-lg), env(safe-area-inset-right)) + 108px); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 12px); width: 68px; height: 68px; background: rgba(0, 112, 209, .55); font-size: var(--fs-pixel-xs); }
 .g3-pass.is-down { background: rgba(0, 112, 209, .9); }
+/* 작은 버튼 셋(스루·로빙·질주) — 슛 위로 호를 그리며, 오른손 엄지가 닿는 자리. 경기장을 덜 가리게 작게 */
+.g3-small { width: 52px; height: 52px; font-size: var(--fs-pixel-xs); background: rgba(0, 0, 0, .5); border-width: 2px; }
+.g3-small.is-down { background: rgba(255, 255, 255, .35); }
+.g3-through { right: max(var(--s-lg), env(safe-area-inset-right)); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 108px); }
+.g3-lob { right: calc(max(var(--s-lg), env(safe-area-inset-right)) + 66px); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 92px); }
+.g3-sprint { right: calc(max(var(--s-lg), env(safe-area-inset-right)) + 186px); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 8px); width: 56px; height: 56px; }
 .g3-result { position: absolute; inset: 0; z-index: 4; display: flex; align-items: center; justify-content: center; padding: var(--s-md); background: rgba(0, 0, 0, .72); }
 .g3-result-box { display: flex; flex-direction: column; align-items: center; gap: var(--s-sm); padding: var(--s-xl) var(--s-lg); background: var(--card); border: 1px solid var(--hairline); text-align: center; max-width: 360px; width: 100%; }
 .g3-outcome { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }

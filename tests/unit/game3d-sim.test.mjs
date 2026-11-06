@@ -277,3 +277,137 @@ test('보는 방향을 입력으로 주면(1인칭) 서 있어도 그쪽을 보�
   for (let t = 0; t < 30; t++) w = step(w, cfg, [{ x: -1, y: 0, shoot: false, pass: false, fx: 1, fy: 0 }, NO_INPUT]);
   assert.ok(w.players[0].x < -1 && w.players[0].fx === 1, '뒷걸음');
 });
+
+// ── 키 배치(2026-11-07 "3d 게임은 키를 FC온라인이랑 동일하게 해주면 좋을듯") — 스루·로빙·질주·태클 ──
+const I = (o = {}) => ({ x: 0, y: 0, shoot: false, pass: false, ...o });
+/** 0 번이 공을 가진 상태(x0, 보는 방향 +x)에서 한 번 누르고 뗀다. */
+const pressRelease = (s, cfg, key, hold = 1, i = 0) => {
+  const n = cfg.players.length;
+  const row = (on) => Array.from({ length: n }, (_, k) => (k === i ? I(on ? { [key]: true } : {}) : { ...NO_INPUT }));
+  for (let t = 0; t < hold; t++) s = step(s, cfg, row(true));
+  return step(s, cfg, row(false));
+};
+
+test('스루 패스 — 앞으로 뛰는 동료의 앞(상대 골대 쪽) 빈 곳으로, 짧은 패스보다 더 앞에 떨어진다', () => {
+  const cfg = few([0, 0, 1]);
+  const setup = () => {
+    let s = put(createMatch(cfg, 3), { ball: { x: -9.3, y: 0 }, players: { 0: { x: -10, y: 0, fx: 1, fy: 0 }, 1: { x: -2, y: 1, vx: 5, vy: 0 }, 2: FAR(2) } });
+    return step(s, cfg, [NO_INPUT, I({ x: 1 }), NO_INPUT]);
+  };
+  // 공이 선 자리(멈춘 곳) — 받는 사람은 계속 앞으로 뛴다고 보고, 공만 따로 굴려 본다(받으러 가는 사람 없이)
+  const restSpot = (s) => {
+    const solo = { ...cfg, players: cfg.players };
+    let cur = s;
+    for (let t = 0; t < 300; t++) {
+      cur = JSON.parse(JSON.stringify(cur));
+      cur.players[1].x = -30 + 0;   // 받는 사람을 비켜 세워 공이 끝까지 구르게
+      cur.players[1].noTouch = 999;
+      cur = step(cur, solo, [NO_INPUT, NO_INPUT, NO_INPUT]);
+      if (cur.ball.vx === 0 && cur.ball.vy === 0) break;
+    }
+    return cur.ball;
+  };
+  const a = setup();
+  assert.equal(a.owner, 0);
+  const th = pressRelease(a, cfg, 'through');
+  assert.equal(th.lastKick?.kind, 'pass'); assert.equal(th.passTo, 1); assert.equal(th.count.throughs[0], 1);
+  const sh = pressRelease(setup(), cfg, 'pass');
+  const thRest = restSpot(th), shRest = restSpot(sh);
+  assert.ok(thRest.x > shRest.x + 3, `스루가 더 앞 ${thRest.x.toFixed(1)} vs 짧은 ${shRest.x.toFixed(1)}`);
+  assert.ok(thRest.x > -2 + 4, '받는 사람보다 앞');
+  assert.ok(Math.sqrt(th.ball.vx ** 2 + th.ball.vy ** 2) > Math.sqrt(sh.ball.vx ** 2 + sh.ball.vy ** 2), '더 빠르다');
+  // 동료가 없으면 보는 쪽으로
+  const lone = few([0, 1]);
+  let l = put(createMatch(lone, 3), { ball: { x: -9.3, y: 0 }, players: { 0: { x: -10, y: 0, fx: 1, fy: 0 }, 1: FAR(1) } });
+  l = step(l, lone, idle(lone));
+  l = pressRelease(l, lone, 'through');
+  assert.ok(l.ball.vx > 0 && Math.abs(l.ball.vy) < 0.15 * l.ball.vx && l.passTo === null);
+});
+
+test('로빙 패스 — 가는 길의 상대 머리 위로 넘어가, 먼 동료 가까이 떨어진다', () => {
+  const cfg = few([0, 0, 1]);
+  let s = put(createMatch(cfg, 4), { ball: { x: -9.3, y: 0 }, players: { 0: { x: -10, y: 0, fx: 1, fy: 0 }, 1: { x: 6, y: 0 }, 2: { x: -2, y: 0 } } });
+  s = step(s, cfg, idle(cfg));
+  assert.equal(s.owner, 0);
+  s = pressRelease(s, cfg, 'lob', 4);
+  assert.equal(s.passTo, 1); assert.equal(s.count.lobs[0], 1);
+  assert.ok(s.ball.vz > 3, '뜬다');
+  let overOpp = null, land = null;
+  for (let t = 0; t < 200 && land === null; t++) {
+    const prev = s;
+    // 상대는 제자리, 받는 사람도 제자리(땅에 닿는 곳만 본다)
+    s = step(s, cfg, [NO_INPUT, NO_INPUT, NO_INPUT]);
+    if (overOpp === null && prev.ball.x < -2 && s.ball.x >= -2) overOpp = s.ball.z;
+    if (prev.ball.vz < 0 && s.ball.vz >= 0 && s.ball.z <= PITCH3D.ballR + 0.05) land = { x: s.ball.x, y: s.ball.y };
+    if (s.owner !== null) land = land ?? { x: s.ball.x, y: s.ball.y };
+  }
+  assert.ok(overOpp !== null && overOpp > PITCH3D.playerH, `상대 위 높이 ${overOpp}`);
+  assert.ok(land && Math.abs(land.x - 6) < 2.5 && Math.abs(land.y) < 1.5, `떨어진 곳 ${JSON.stringify(land)}`);
+  assert.ok(s.owner !== 2, '가운데 상대가 가로채지 못했다');
+});
+
+test('질주 — 더 빠르지만 공이 더 앞서 구르고, 꺾으면 더 잘 흘리고, 체력이 닳는다', () => {
+  const cfg = few([0, 1]);
+  const run = (sprint, ticks = 90) => {
+    let s = put(createMatch(cfg, 5), { ball: { x: -14.3, y: 0 }, players: { 0: { x: -15, y: 0, fx: 1, fy: 0 }, 1: FAR(1) } });
+    s = step(s, cfg, idle(cfg));
+    let gapMax = 0;
+    for (let t = 0; t < ticks; t++) {
+      s = step(s, cfg, [I({ x: 1, sprint }), NO_INPUT]);
+      const p = s.players[0];
+      gapMax = Math.max(gapMax, Math.sqrt((s.ball.x - p.x) ** 2 + (s.ball.y - p.y) ** 2));
+    }
+    return { s, gapMax };
+  };
+  const walk = run(false), dash = run(true);
+  assert.ok(dash.s.players[0].x > walk.s.players[0].x + 1.2, `질주가 더 멀리 ${dash.s.players[0].x} vs ${walk.s.players[0].x}`);
+  assert.ok(dash.gapMax > walk.gapMax + 0.15, `공이 더 앞 ${dash.gapMax} vs ${walk.gapMax}`);
+  assert.ok(dash.s.players[0].stamina < 0.75 && walk.s.players[0].stamina === 1, '체력');
+  // 다 닳면 질주가 꺼진다
+  const tired = run(true, 300);
+  assert.ok(tired.s.players[0].stamina < 0.25, '다 닳았다가 숨 고르는 중'); assert.equal(tired.s.players[0].sprint, false);
+  // 급히 꺾을 때 흘리는 횟수 — 질주가 더 많다
+  let lostWalk = 0, lostDash = 0;
+  for (let seed = 0; seed < 30; seed++) for (const sprint of [false, true]) {
+    let s = put(createMatch(cfg, seed), { ball: { x: -9.3, y: 0 }, players: { 0: { x: -10, y: 0, fx: 1, fy: 0 }, 1: FAR(1) } });
+    s = step(s, cfg, idle(cfg));
+    for (let t = 0; t < 50; t++) s = step(s, cfg, [I({ x: 1, sprint }), NO_INPUT]);
+    for (let t = 0; t < 10; t++) s = step(s, cfg, [I({ x: 0, y: t < 5 ? 1 : -1, sprint }), NO_INPUT]);
+    for (let t = 0; t < 10; t++) s = step(s, cfg, [I({ x: -1, sprint }), NO_INPUT]);
+    if (s.owner !== 0) { if (sprint) lostDash++; else lostWalk++; }
+  }
+  assert.ok(lostDash > lostWalk, `흘림 질주 ${lostDash} vs 보통 ${lostWalk}`);
+});
+
+test('태클(공 없을 때 슛 키) — 닿으면 공을 가져오고, 멀면 헛손질, 회복 동안 다시 못 하고 그 누름은 슛이 안 된다', () => {
+  const cfg = few([0, 1]);
+  const setup = (gap) => {
+    // 1 번(상대)이 공을 가졌고, 0 번이 그 공을 보고 gap 만큼 떨어져 있다
+    let s = put(createMatch(cfg, 6), { ball: { x: 0.7, y: 0 }, players: { 1: { x: 0, y: 0, fx: 1, fy: 0 }, 0: { x: 0.7 + 0.6 + gap, y: 0, fx: -1, fy: 0 } } });
+    s.stealLock = 999;   // 몸 부딪치기 빼앗기는 끈다 — 태클만 본다
+    s = step(s, cfg, idle(cfg));
+    assert.equal(s.owner, 1);
+    return s;
+  };
+  let s = setup(0.2);
+  s = step(s, cfg, [I({ shoot: true }), NO_INPUT]);
+  assert.equal(s.owner, 0, '닿았다 — 가져왔다');
+  assert.ok(s.players[0].tackleCD > 0 && s.players[0].shootVoid);
+  for (let t = 0; t < 5; t++) s = step(s, cfg, [I({ shoot: true }), NO_INPUT]);
+  s = step(s, cfg, idle(cfg));
+  assert.equal(s.count.shots[0], 0, '태클한 누름을 떼도 슛은 안 나간다');
+  let far = setup(2.5);
+  far = step(far, cfg, [I({ shoot: true }), NO_INPUT]);
+  assert.equal(far.owner, 1, '멀면 헛손질');
+  assert.equal(far.players[0].tackleCD, RULES3D.tackleRecover - 0 || far.players[0].tackleCD);
+  assert.ok(far.players[0].tackleCD > 0, '빗나가도 회복');
+  // 회복 중엔 붙어서 눌러도 못 뺏는다
+  far = step(far, cfg, idle(cfg));
+  Object.assign(far.players[0], { x: far.ball.x + 0.75, y: 0, fx: -1, fy: 0, vx: 0, vy: 0 });
+  far = step(far, cfg, [I({ shoot: true }), NO_INPUT]);
+  assert.equal(far.owner, 1, '회복 중');
+  // 회복이 끝나면 다시
+  for (let t = 0; t < RULES3D.tackleRecover + 2; t++) { far = step(far, cfg, idle(cfg)); far.players[0].x = far.ball.x + 0.75; far.players[0].y = far.ball.y; far.players[0].vx = 0; far.players[0].fx = -1; far.players[0].fy = 0; }
+  far = step(far, cfg, [I({ shoot: true }), NO_INPUT]);
+  assert.equal(far.owner, 0, '회복 뒤 다시 태클');
+});

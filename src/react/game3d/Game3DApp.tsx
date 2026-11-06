@@ -137,8 +137,8 @@ function Setup({ players, onStart }: { players: Player[]; onStart: (roster: Play
             <Segmented<number> value={minutes} onChange={setMinutes} options={[1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n}분` }))} /></label>
           <label className="g3-opt"><span className="muted">시점</span>
             <Segmented<ViewMode> value={view} onChange={(v) => { setView(v); saveView(v); }} options={VIEW_MODES.map((m) => ({ value: m, label: VIEW_LABEL[m] }))} /></label>
-          <p className="muted g3-hint">PC: 방향키·WASD 이동, 스페이스 누르고 떼면 슛, X·Shift 패스 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼</p>
-          <p className="muted g3-hint">1인칭: 좌우(←→·A D)는 돌기, 위아래(↑↓·W S)는 앞뒤 — 보는 쪽으로 패스·슛. 경기 중에도 [시점]으로 바꿉니다.</p>
+          <p className="muted g3-hint">PC: 방향키 이동 · S 패스 · D 슛(누르고 떼기, 공 없을 땐 태클) · W 스루 · A 로빙 · E 질주 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼</p>
+          <p className="muted g3-hint">1인칭: ←→ 돌기, ↑↓ 앞뒤 — 보는 쪽으로 패스·슛. 경기 중에도 [시점]으로 바꿉니다.</p>
           <div className="g3-start">
             <Button type="primary" size="large" disabled={num === null} onClick={() => num !== null && onStart(players, num, minutes)}>
               {num === null ? '내 선수를 골라 주세요' : '시작'}

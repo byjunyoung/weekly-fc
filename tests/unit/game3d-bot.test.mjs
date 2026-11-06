@@ -26,6 +26,7 @@ test('봇 입력은 순수 — 같은 상태면 같은 입력, 상태를 안 바
 
 const SEEDS = [1, 2, 3, 4, 5];
 const results = [];
+const specials = [];
 for (const seed of SEEDS) {
   test(`봇끼리 5대5 3분(씨앗 ${seed}) — 끝까지 가고, 패스가 나오고, 몸·공이 판 밖으로 안 나가고, NaN 이 없다`, () => {
     const cfg = five();
@@ -46,6 +47,7 @@ for (const seed of SEEDS) {
     assert.ok(s.count.passes[0] > 5 && s.count.passes[1] > 5, `패스 ${s.count.passes}`);
     assert.ok(s.count.shots[0] > 0 && s.count.shots[1] > 0, `두 편 다 슛 ${s.count.shots}`);
     results.push(s.score[0] + s.score[1]);
+    specials.push([s.count.throughs[0] + s.count.throughs[1], s.count.lobs[0] + s.count.lobs[1]]);
   });
 }
 // 2026-11-07 "골이 너무 안 난다" — 목표는 3분에 3~5골. 씨앗 1~16 실측 평균 3.4(판마다 1~7). 다섯 판 평균이라 범위를 넉넉히 둔다.
@@ -53,6 +55,11 @@ test('봇끼리 3분 경기 — 평균 2~6골(목표 3~5)', () => {
   assert.equal(results.length, SEEDS.length);
   const avg = results.reduce((a, b) => a + b, 0) / results.length;
   assert.ok(avg >= 2 && avg <= 6, `평균 ${avg} (${results})`);
+});
+test('봇도 스루·로빙을 가끔 쓴다(다섯 판 합)', () => {
+  const th = specials.reduce((a, b) => a + b[0], 0), lb = specials.reduce((a, b) => a + b[1], 0);
+  assert.ok(th >= 3, `스루 ${th}`);
+  assert.ok(lb >= 1, `로빙 ${lb}`);
 });
 
 test('같은 편 봇이 사람(가만히 서 있어도)에게 패스한다', () => {

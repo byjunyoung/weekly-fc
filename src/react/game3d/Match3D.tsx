@@ -37,6 +37,9 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
   const knobRef = useRef<HTMLDivElement>(null);
   const shootRef = useRef<HTMLButtonElement>(null);
   const passRef = useRef<HTMLButtonElement>(null);
+  const throughRef = useRef<HTMLButtonElement>(null);
+  const lobRef = useRef<HTMLButtonElement>(null);
+  const sprintRef = useRef<HTMLButtonElement>(null);
   const clockRef = useRef<HTMLSpanElement>(null);
   const gaugeRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLElement>(null);
@@ -55,7 +58,7 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
 
   useEffect(() => {
     const root = rootRef.current, canvas = canvasRef.current;
-    if (!root || !canvas || !baseRef.current || !knobRef.current || !shootRef.current || !passRef.current || !labelsRef.current) return;
+    if (!root || !canvas || !baseRef.current || !knobRef.current || !shootRef.current || !passRef.current || !throughRef.current || !lobRef.current || !sprintRef.current || !labelsRef.current) return;
     document.documentElement.classList.add('g3-lock');
     if (window.matchMedia?.('(any-pointer: coarse)').matches) setTouch(true);
 
@@ -69,7 +72,7 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
       document.documentElement.classList.remove('g3-lock');
       return;
     }
-    const input = attachInput({ root, base: baseRef.current, knob: knobRef.current, shootBtn: shootRef.current, passBtn: passRef.current, onTouch: () => setTouch(true) });
+    const input = attachInput({ root, base: baseRef.current, knob: knobRef.current, shootBtn: shootRef.current, passBtn: passRef.current, throughBtn: throughRef.current, lobBtn: lobRef.current, sprintBtn: sprintRef.current, onTouch: () => setTouch(true) });
 
     let state = createMatch(config, seed);
     let prev = state;
@@ -111,11 +114,11 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
         // 탱크식: 좌우 = 돌기, 위아래 = 앞뒤. 보는 쪽을 그대로 선수가 보게 fx·fy 로 넘긴다 — 패스·슛이 보는 쪽으로 간다
         const t = tankStep(h.x, h.y, heading, turnVel, 1 / TICK_HZ);
         heading = t.heading; turnVel = t.turnVel;
-        return { x: t.move.x, y: t.move.y, shoot: h.shoot, pass: h.pass, fx: t.face.x, fy: t.face.y };
+        return { x: t.move.x, y: t.move.y, shoot: h.shoot, pass: h.pass, through: h.through, lob: h.lob, sprint: h.sprint, fx: t.face.x, fy: t.face.y };
       }
       const f = sc.groundForward();
       const d = stickToWorld(h.x, h.y, f.x, f.y);   // 화면 기준 → 경기장 방향(카메라가 실제로 보는 방향으로)
-      return { x: d.x, y: d.y, shoot: h.shoot, pass: h.pass };
+      return { x: d.x, y: d.y, shoot: h.shoot, pass: h.pass, through: h.through, lob: h.lob, sprint: h.sprint };
     });
 
     let raf = 0, last = performance.now(), acc = 0, ended = false, lost = false;
@@ -278,6 +281,9 @@ export default function Match3D({ setup, live, onRestart, onExit }: { setup: Set
       <div className="g3-stick" ref={baseRef} aria-hidden="true"><div className="g3-stick-knob" ref={knobRef} /></div>
       <button type="button" ref={passRef} className={`g3-btn g3-pass${touch && !result ? ' is-shown' : ''}`} aria-label="패스">패스</button>
       <button type="button" ref={shootRef} className={`g3-btn g3-shoot${touch && !result ? ' is-shown' : ''}`} aria-label="슛">슛</button>
+      <button type="button" ref={throughRef} className={`g3-btn g3-small g3-through${touch && !result ? ' is-shown' : ''}`} aria-label="스루 패스">스루</button>
+      <button type="button" ref={lobRef} className={`g3-btn g3-small g3-lob${touch && !result ? ' is-shown' : ''}`} aria-label="로빙 패스">로빙</button>
+      <button type="button" ref={sprintRef} className={`g3-btn g3-small g3-sprint${touch && !result ? ' is-shown' : ''}`} aria-label="질주(누르는 동안)">질주</button>
       {result && (
         <div className="g3-result" role="dialog" aria-label="경기 결과">
           <div className="g3-result-box">

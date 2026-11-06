@@ -133,6 +133,31 @@ const GOAL_TICKS = 150;       // 골 뒤 멈추는 틱(2.5초)
 const KICKOFF_TIMEOUT = 180;  // 킥오프에서 아무도 안 건드려도 3초 뒤 시작
 const KICKOFF_JITTER = 0.4;   // 킥오프 자리를 옆으로 이만큼(±) 흔든다(씨앗을 쓰는 자리)
 const KICKOFF_GAP = 0.12;     // 킥오프 차는 사람이 공 뒤에 서는 틈 — 잡는 거리 안이라 첫 틱에 발밑으로 온다
+// ── 키 배치(2026-11-07 "3d 게임은 키를 FC온라인이랑 동일하게 해주면 좋을듯") — 스루·로빙·질주·태클. 이름·동작은 우리 것 ──
+const THROUGH_AHEAD = 4.5;    // 스루 패스: 받는 사람 앞(상대 골대 쪽)으로 더 보내는 거리(m)
+const THROUGH_LEAD = 1;       // 스루 패스: 뛰는 쪽으로 보내는 비율(짧은 패스는 PASS_LEAD)
+const THROUGH_ARRIVE = 6;     // 스루 패스가 그 자리에 닿을 때 남는 속도 — 짧은 패스보다 빠르게
+const THROUGH_FREE_DIST = 14; // 동료가 없을 때 보는 쪽으로 이만큼
+const LOB_COS = 0.45;         // 로빙 패스가 보는 동료의 원뿔(±63도) — 짧은 패스보다 넓게
+const LOB_MIN = 6;            // 이보다 가까운 동료에겐 로빙을 안 한다(땅볼이 낫다)
+const LOB_T_BASE = 0.55;      // 로빙 체공 시간(초) = BASE + 거리 × PER_M — 길수록 높이 뜬다
+const LOB_T_PER_M = 0.045;
+const LOB_LEAD = 0.8;         // 로빙: 뛰는 동료 앞으로 보내는 비율
+const LOB_FREE_MIN = 8, LOB_FREE_MAX = 22;   // 동료가 없을 때: 짧게 누르면 8m, 꽉 누르면(LOB_CHARGE) 22m
+const LOB_CHARGE = 30;        // 로빙을 끝까지 모으는 틱(0.5초)
+const SPRINT_SPEED = 1.25;    // 질주 중 최고 속도 배수
+const SPRINT_LEAD = 0.07;     // 질주 중 공이 발에서 더 떨어지는 정도(속도 m/s 당 초) — CARRY_LEAD 에 더한다
+const SPRINT_LOOSE = 2.2;     // 질주 중 급히 꺾을 때 공을 흘릴 확률 배수
+const SPRINT_LOOSE_SPEED = 3.5; // 질주 중엔 이 속도부터 흘릴 수 있다(평소 LOOSE_SPEED)
+const SPRINT_STEAL = 1.35;    // 질주하며 공을 몰 때 몸싸움에 빼앗길 확률 배수
+const STAMINA_DRAIN = 1 / 240;// 질주 한 틱에 닳는 체력(가득 → 4초)
+const STAMINA_GAIN = 1 / 420; // 안 달리는 한 틱에 차는 체력(빈 → 7초) — 계속 질주할 수는 없다
+const SPRINT_RESUME = 0.25;   // 다 닳은 뒤 이만큼 차야 다시 질주(숨 고르기)
+const TACKLE_REACH = 0.62;    // 태클: 공 가진 상대의 공이 몸+공 맞닿는 거리에서 이만큼 안이면 닿는다
+const TACKLE_COS = 0.2;       // 태클: 공이 보는 쪽 ±78도 안에 있어야 한다
+const TACKLE_BURST = 3;       // 태클할 때 앞으로 뛰어드는 속도(m/s)
+const TACKLE_RECOVER = 45;    // 태클 뒤 다시 못 하는 틱(0.75초) — 닿든 빗나가든. 그동안은 느리다
+const TACKLE_SLOW = 0.6;      // 태클 회복 중 속도 배수
 const SUBSTEPS = 4;           // 한 틱을 쪼개 움직인다 — 30m/s 공이 쪼갠 한 번에 0.13m(공 반지름보다 작게)
 
 /** 편성(0 편 기준, 1 편은 x 부호를 뒤집는다). slot 0 = 골키퍼, 1·2 = 뒤, 3·4 = 앞. 사람은 앞(3)에 선다. */
@@ -154,13 +179,18 @@ export const PITCH3D = {
 export const RULES3D = {
   chargeTicks: CHARGE_TICKS, controlDist: PLAYER_R + BALL_R + CONTROL_REACH, keeperHold: KEEPER_HOLD,
   passCos: PASS_COS, passMax: PASS_MAX, rollDrag: ROLL_DRAG, goalTicks: GOAL_TICKS, keeperReach: KEEPER_REACH, kickAnim: KICK_ANIM,
+  tackleReach: TACKLE_REACH, tackleRecover: TACKLE_RECOVER, lobCharge: LOB_CHARGE, lobMin: LOB_MIN,
 } as const;
 
 export type Side = 0 | 1;
 /** 한 틱의 입력. x·y 는 경기장 방향(길이 0~1), shoot·pass 는 지금 누르고 있나(누름·뗌은 상태의 shootHeld·passHeld 와 비교해 안다).
  *  fx·fy(있으면) = 보는 방향을 직접 준다 — 1인칭 화면처럼 "보는 쪽 = 선수가 보는 쪽"이어야 할 때(2026-11-07 "1인칭도 구현해줘").
  *  화면 쪽이 각도·부드럽게 돌리기를 계산해 단위 벡터로 넘긴다. 이 계산은 그 숫자를 그대로 쓸 뿐 시계·시점을 모른다(멈춰 서 있어도 돈다). */
-export type Input = { x: number; y: number; shoot: boolean; pass: boolean; fx?: number; fy?: number };
+export type Input = {
+  x: number; y: number; shoot: boolean; pass: boolean; fx?: number; fy?: number;
+  /** 스루 패스(뗄 때), 로빙 패스(누르는 동안 모으고 뗄 때), 질주(누르는 동안). 없으면 false. */
+  through?: boolean; lob?: boolean; sprint?: boolean;
+};
 export const NO_INPUT: Input = { x: 0, y: 0, shoot: false, pass: false };
 /** gk = 골키퍼(봇만). bot = 봇이 조종. */
 export type MatchPlayer = { id: number; num: number; name: string; side: Side; bot: boolean; gk: boolean; perf: Perf };
@@ -171,6 +201,9 @@ export type Ball = { x: number; y: number; z: number; vx: number; vy: number; vz
 export type PlayerState = {
   id: number; x: number; y: number; vx: number; vy: number; fx: number; fy: number;
   charge: number; shootHeld: boolean; passHeld: boolean; noTouch: number; kickTicks: number; hold: number;
+  /** throughHeld·lobHeld = 그 키를 누르고 있나, lobTicks = 로빙을 모은 틱. sprint = 지금 질주 중(체력이 있어야), stamina 0~1.
+   *  tackleCD = 태클 회복 남은 틱. shootVoid = 이번 슛 누름은 태클로 썼다(떼도 슛이 안 나간다). */
+  throughHeld: boolean; lobHeld: boolean; lobTicks: number; sprint: boolean; stamina: number; tackleCD: number; shootVoid: boolean;
 };
 export type Phase = 'kickoff' | 'play' | 'goal' | 'end';
 export type KickKind = 'pass' | 'shot';
@@ -189,7 +222,7 @@ export type MatchState = {
   lastScorer: number | null;
   kickoffSide: Side; winner: Side | 'draw' | null;
   /** 경기 기록(테스트·화면용). [0 편, 1 편]. */
-  count: { passes: [number, number]; shots: [number, number]; steals: [number, number] };
+  count: { passes: [number, number]; shots: [number, number]; steals: [number, number]; throughs: [number, number]; lobs: [number, number] };
   seed: number;
 };
 export type MatchEvent =
@@ -233,7 +266,10 @@ function clone(s: MatchState): MatchState {
     ball: { ...s.ball },
     players: s.players.map((p) => ({ ...p })),
     lastKick: s.lastKick ? { ...s.lastKick } : null,
-    count: { passes: [s.count.passes[0], s.count.passes[1]], shots: [s.count.shots[0], s.count.shots[1]], steals: [s.count.steals[0], s.count.steals[1]] },
+    count: {
+      passes: [s.count.passes[0], s.count.passes[1]], shots: [s.count.shots[0], s.count.shots[1]], steals: [s.count.steals[0], s.count.steals[1]],
+      throughs: [s.count.throughs[0], s.count.throughs[1]], lobs: [s.count.lobs[0], s.count.lobs[1]],
+    },
   };
 }
 
@@ -255,6 +291,7 @@ function placeForKickoff(s: MatchState, config: MatchConfig): void {
     if (mp.id === taker) { p.x = 0 - dir * (PLAYER_R + BALL_R + KICKOFF_GAP); p.y = 0; }
     p.vx = 0; p.vy = 0; p.fx = dir; p.fy = 0;
     p.charge = 0; p.shootHeld = false; p.passHeld = false; p.noTouch = 0; p.kickTicks = 0; p.hold = 0;
+    p.throughHeld = false; p.lobHeld = false; p.lobTicks = 0; p.sprint = false; p.tackleCD = 0; p.shootVoid = false;   // 체력은 그대로 이어진다
   });
   s.owner = null; s.passTo = null; s.passTicks = 0; s.stealLock = 0; s.lastTouch = null; s.lastKick = null;
 }
@@ -267,10 +304,11 @@ export function createMatch(config: MatchConfig, seed: number): MatchState {
     players: config.players.map((mp) => ({
       id: mp.id, x: 0, y: 0, vx: 0, vy: 0, fx: attackDir(mp.side), fy: 0,
       charge: 0, shootHeld: false, passHeld: false, noTouch: 0, kickTicks: 0, hold: 0,
+      throughHeld: false, lobHeld: false, lobTicks: 0, sprint: false, stamina: 1, tackleCD: 0, shootVoid: false,
     })),
     owner: null, passTo: null, passTicks: 0, stealLock: 0, lastTouch: null, lastKick: null, lastScorer: null,
     kickoffSide: 0, winner: null,
-    count: { passes: [0, 0], shots: [0, 0], steals: [0, 0] },
+    count: { passes: [0, 0], shots: [0, 0], steals: [0, 0], throughs: [0, 0], lobs: [0, 0] },
     seed: seed >>> 0,
   };
   placeForKickoff(s, config);
@@ -294,9 +332,9 @@ function turnToward(p: PlayerState, dx: number, dy: number, rate: number): void 
 }
 
 /** 발밑 공이 놓일 자리 — 보는 방향 앞, 달리면 조금 더 앞. */
-export function carrySpot(p: { x: number; y: number; vx: number; vy: number; fx: number; fy: number }): { x: number; y: number } {
+export function carrySpot(p: { x: number; y: number; vx: number; vy: number; fx: number; fy: number; sprint?: boolean }): { x: number; y: number } {
   const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-  const d = PLAYER_R + BALL_R + CARRY_GAP + sp * CARRY_LEAD;
+  const d = PLAYER_R + BALL_R + CARRY_GAP + sp * (CARRY_LEAD + (p.sprint ? SPRINT_LEAD : 0));   // 질주하면 공이 더 앞서 구른다
   return { x: p.x + p.fx * d, y: p.y + p.fy * d };
 }
 
@@ -460,7 +498,7 @@ function shoot(s: MatchState, config: MatchConfig, i: number, c: number): void {
 }
 
 /** 패스 대상 — 보는 방향 원뿔 안 동료 중 방향이 잘 맞고 가까운 사람. 없으면 -1. 봇도 이걸로 "누가 받을지"를 미리 본다. */
-export function passTarget(s: MatchState, config: MatchConfig, i: number): number {
+export function passTarget(s: MatchState, config: MatchConfig, i: number, cone = PASS_COS, minD = PASS_MIN): number {
   const p = s.players[i], side = config.players[i].side;
   let best = -1, bestScore = -Infinity;
   for (const q of config.players) {
@@ -468,9 +506,9 @@ export function passTarget(s: MatchState, config: MatchConfig, i: number): numbe
     const m = s.players[q.id];
     const dx = m.x - p.x, dy = m.y - p.y;
     const d = Math.sqrt(dx * dx + dy * dy);
-    if (d < PASS_MIN || d > PASS_MAX) continue;
+    if (d < minD || d > PASS_MAX) continue;
     const cos = (dx * p.fx + dy * p.fy) / d;
-    if (cos < PASS_COS) continue;
+    if (cos < cone) continue;
     const score = cos * PASS_W_DIR - d * PASS_W_DIST;   // 방향이 먼저, 거리는 그다음
     if (score > bestScore) { bestScore = score; best = q.id; }
   }
@@ -479,19 +517,22 @@ export function passTarget(s: MatchState, config: MatchConfig, i: number): numbe
 
 /** 땅볼 패스 — 받는 사람 앞(뛰는 쪽)으로, 닿을 때 PASS_ARRIVE 가 남게 세기를 맞춘다.
  *  구르는 공은 v ← v·(1 − k·dt) 로 줄어 v0 에서 v 까지 정확히 (v0 − v)/k 를 간다 → v0 = v + k·거리. */
-function pass(s: MatchState, config: MatchConfig, i: number): void {
+/** 스루 패스(through)는 받는 사람 앞 빈 곳 — 상대 골대 쪽으로 THROUGH_AHEAD 더, 뛰는 쪽으로 더 많이, 더 빠르게. */
+function pass(s: MatchState, config: MatchConfig, i: number, through = false): void {
   const p = s.players[i], mp = config.players[i], b = s.ball;
   const t = passTarget(s, config, i);
-  let ux = p.fx, uy = p.fy, dist = PASS_FREE_DIST;
+  const arrive = through ? THROUGH_ARRIVE : PASS_ARRIVE, lead = through ? THROUGH_LEAD : PASS_LEAD;
+  const ahead = through ? attackDir(mp.side) * THROUGH_AHEAD : 0;
+  let ux = p.fx, uy = p.fy, dist = through ? THROUGH_FREE_DIST : PASS_FREE_DIST;
   if (t >= 0) {
     const m = s.players[t];
-    let tx = m.x, ty = m.y;
+    let tx = m.x + ahead, ty = m.y;
     // 도착 시각을 한 번 어림해 그만큼 앞으로(되풀이 없이 — 대충이면 충분하다)
     for (let k = 0; k < 2; k++) {
       const d = Math.sqrt((tx - b.x) * (tx - b.x) + (ty - b.y) * (ty - b.y));
-      const v0 = PASS_ARRIVE + ROLL_DRAG * d;
-      const time = d / ((v0 + PASS_ARRIVE) / 2);
-      tx = m.x + m.vx * time * PASS_LEAD; ty = m.y + m.vy * time * PASS_LEAD;
+      const v0 = arrive + ROLL_DRAG * d;
+      const time = d / ((v0 + arrive) / 2);
+      tx = m.x + ahead + m.vx * time * lead; ty = m.y + m.vy * time * lead;
     }
     tx = clamp(tx, -HALF_LEN + 0.5, HALF_LEN - 0.5); ty = clamp(ty, -HALF_WID + 0.5, HALF_WID - 0.5);
     const u = unit(tx - b.x, ty - b.y, p.fx, p.fy);
@@ -501,11 +542,57 @@ function pass(s: MatchState, config: MatchConfig, i: number): void {
   // 정확도 — 옆으로 조금 빗나간다(패스 능력치가 높을수록 덜)
   const err = (rand(s) - 0.5) * 2 * PASS_ERR * (2 - mp.perf.pass);
   const e = unit(ux + (0 - uy) * err, uy + ux * err, ux, uy);
-  const v0 = PASS_ARRIVE + ROLL_DRAG * dist;
+  const v0 = arrive + ROLL_DRAG * dist;
   b.z = BALL_R; b.vx = e.x * v0; b.vy = e.y * v0; b.vz = 0;
   releaseBall(s, i, 'pass');
   s.passTo = t >= 0 ? t : null; s.passTicks = t >= 0 ? PASS_TO_TICKS : 0;
   s.count.passes[mp.side] += 1;
+  if (through) s.count.throughs[mp.side] += 1;
+}
+
+/** 로빙 패스 — 먼 동료(LOB_MIN 넘게)에게 띄워서. 체공 시간을 거리로 정하면 세로 속도 = 중력 × 시간 / 2, 가로 속도 = 거리 / 시간.
+ *  공기 감속(AIR_DRAG)만큼 조금 세게. 동료가 없으면 모은 만큼(LOB_FREE_MIN~MAX) 보는 쪽으로. 가는 길의 상대 머리 위로 넘어간다. */
+function lob(s: MatchState, config: MatchConfig, i: number, c: number): void {
+  const p = s.players[i], mp = config.players[i], b = s.ball;
+  const t = passTarget(s, config, i, LOB_COS, LOB_MIN);
+  let tx: number, ty: number;
+  if (t >= 0) {
+    const m = s.players[t];
+    const d0 = Math.sqrt((m.x - b.x) * (m.x - b.x) + (m.y - b.y) * (m.y - b.y));
+    const T0 = LOB_T_BASE + d0 * LOB_T_PER_M;
+    tx = m.x + m.vx * T0 * LOB_LEAD; ty = m.y + m.vy * T0 * LOB_LEAD;
+  } else {
+    const d0 = LOB_FREE_MIN + (LOB_FREE_MAX - LOB_FREE_MIN) * clamp(c, 0, 1);
+    tx = b.x + p.fx * d0; ty = b.y + p.fy * d0;
+  }
+  tx = clamp(tx, -HALF_LEN + 0.5, HALF_LEN - 0.5); ty = clamp(ty, -HALF_WID + 0.5, HALF_WID - 0.5);
+  const dx = tx - b.x, dy = ty - b.y, d = Math.sqrt(dx * dx + dy * dy);
+  const u = unit(dx, dy, p.fx, p.fy);
+  const err = (rand(s) - 0.5) * 2 * PASS_ERR * (2 - mp.perf.pass);
+  const e = unit(u.x + (0 - u.y) * err, u.y + u.x * err, u.x, u.y);
+  const T = LOB_T_BASE + d * LOB_T_PER_M;
+  const vh = (d / T) * (1 + AIR_DRAG * T * 0.5);
+  if (p.hold > 0) b.z = BALL_R;
+  b.vx = e.x * vh; b.vy = e.y * vh; b.vz = (GRAVITY * T) / 2;
+  releaseBall(s, i, 'pass');
+  s.passTo = t >= 0 ? t : null; s.passTicks = t >= 0 ? PASS_TO_TICKS : 0;
+  s.count.passes[mp.side] += 1;
+  s.count.lobs[mp.side] += 1;
+}
+
+/** 태클(공 없을 때 슛 키) — 상대가 가진 공이 보는 쪽 가까이(TACKLE_REACH) 있으면 그 공을 가져온다. 닿든 빗나가든 회복 시간.
+ *  공식 자료로 확인한 수비 키가 없어 우리가 정한 것이다(2026-11-07): 공 가진 상대 앞에서 D = 짧게 뛰어들기. */
+function tackle(s: MatchState, config: MatchConfig, i: number): void {
+  const p = s.players[i], mp = config.players[i], b = s.ball;
+  p.tackleCD = TACKLE_RECOVER; p.kickTicks = KICK_ANIM;
+  p.vx += p.fx * TACKLE_BURST; p.vy += p.fy * TACKLE_BURST;
+  const o = s.owner;
+  if (o === null || config.players[o].side === mp.side || s.players[o].hold > 0) return;
+  const dx = b.x - p.x, dy = b.y - p.y, d = Math.sqrt(dx * dx + dy * dy);
+  if (d > PLAYER_R + BALL_R + TACKLE_REACH || (d > 1e-6 && (dx * p.fx + dy * p.fy) / d < TACKLE_COS)) return;
+  s.players[o].noTouch = STEAL_LOSER_LOCK;
+  s.owner = i; s.lastTouch = i; s.stealLock = STEAL_IMMUNE; s.passTo = null; s.passTicks = 0;
+  s.count.steals[mp.side] += 1;
 }
 
 // ───────────────────────────── 한 틱 ─────────────────────────────
@@ -594,7 +681,7 @@ function tryTackle(s: MatchState, config: MatchConfig): void {
     const bx = b.x - q.x, by = b.y - q.y, px = op.x - q.x, py = op.y - q.y;
     const rb = PLAYER_R + BALL_R + STEAL_REACH, rp = PLAYER_R * 2 + STEAL_REACH;
     if (bx * bx + by * by > rb * rb && px * px + py * py > rp * rp) continue;
-    const win = STEAL_WIN * mp.perf.tackle / omp.perf.mass;
+    const win = STEAL_WIN * mp.perf.tackle / omp.perf.mass * (op.sprint ? SPRINT_STEAL : 1);   // 질주하며 몰면 더 쉽게 뺏긴다
     s.stealLock = STEAL_IMMUNE;
     op.noTouch = STEAL_LOSER_LOCK;
     if (rand(s) < win) {
@@ -629,10 +716,14 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
     if (p.noTouch > 0) p.noTouch -= 1;
     if (p.kickTicks > 0) p.kickTicks -= 1;
     if (p.hold > 0) p.hold -= 1;
+    if (p.tackleCD > 0) p.tackleCD -= 1;
     const has = s.owner === i;
     const ix = fin(inp.x), iy = fin(inp.y);
     const il = Math.sqrt(ix * ix + iy * iy);
-    const mult = (has ? CARRY_SPEED : 1) * (inp.shoot ? CHARGE_SPEED : 1);
+    // 질주 — 체력이 있을 때만, 움직이고 있을 때만 닳는다
+    p.sprint = !!inp.sprint && p.stamina > 0 && (p.sprint || p.stamina >= SPRINT_RESUME) && il > 0.15 && !mp.gk;   // 다 닳면 SPRINT_RESUME 까지 찰 때까지 못 달린다
+    p.stamina = p.sprint ? Math.max(0, p.stamina - STAMINA_DRAIN) : Math.min(1, p.stamina + STAMINA_GAIN);
+    const mult = (has ? CARRY_SPEED : 1) * (inp.shoot && !p.shootVoid ? CHARGE_SPEED : 1) * (p.sprint ? SPRINT_SPEED : 1) * (p.tackleCD > 0 ? TACKLE_SLOW : 1);
     steer(p, mp, ix, iy, mult);
     // 보는 방향을 직접 받았으면 그대로(길이만 1로) — 아래 "꺾다 흘리기"는 그 방향과 움직임을 비교한다
     const ffx = fin(inp.fx ?? NaN), ffy = fin(inp.fy ?? NaN), fl = Math.sqrt(ffx * ffx + ffy * ffy);
@@ -643,7 +734,8 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
       // 달리다 급히 꺾으면 공이 떨어질 수 있다(공 간수가 좋으면 덜)
       if (has && p.hold === 0) {
         const sp2 = p.vx * p.vx + p.vy * p.vy;
-        if (sp2 > LOOSE_SPEED * LOOSE_SPEED && dx * p.fx + dy * p.fy < LOOSE_COS && rand(s) < LOOSE_P * (2 - mp.perf.control)) {
+        const ls = p.sprint ? SPRINT_LOOSE_SPEED : LOOSE_SPEED;
+        if (sp2 > ls * ls && dx * p.fx + dy * p.fy < LOOSE_COS && rand(s) < LOOSE_P * (2 - mp.perf.control) * (p.sprint ? SPRINT_LOOSE : 1)) {
           const b = s.ball;
           b.vx = p.vx * LOOSE_KEEP; b.vy = p.vy * LOOSE_KEEP; b.vz = 0;
           s.owner = null; p.noTouch = LOOSE_LOCK;
@@ -651,16 +743,28 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
       }
       if (!faced) turnToward(p, dx, dy, s.owner === i ? TURN_RATE_BALL : TURN_RATE);
     }
-    // 슛: 누르는 동안 모으고, 떼는 순간 찬다. 패스: 뗄 때 찬다. 찰 수 없으면 그냥 풀린다.
-    const shootNow = !!inp.shoot, passNow = !!inp.pass;
-    if (shootNow) p.charge = Math.min(CHARGE_TICKS, p.charge + 1);
+    // 슛: 누르는 동안 모으고, 떼는 순간 찬다. 패스·스루: 뗄 때 찬다. 로빙: 누르는 동안 모으고 뗄 때. 찰 수 없으면 그냥 풀린다.
+    // 상대가 공을 가졌을 때 슛 키를 누르는 순간 = 태클(그 누름은 떼도 슛이 안 된다).
+    const shootNow = !!inp.shoot, passNow = !!inp.pass, throughNow = !!inp.through, lobNow = !!inp.lob;
+    if (shootNow && !p.shootHeld && controlled && !mp.gk && s.owner !== null && s.owner !== i
+      && config.players[s.owner].side !== mp.side) {
+      p.shootVoid = true;
+      if (p.tackleCD === 0) tackle(s, config, i);
+    }
+    if (shootNow && !p.shootVoid) p.charge = Math.min(CHARGE_TICKS, p.charge + 1);
+    if (lobNow) p.lobTicks = Math.min(LOB_CHARGE, p.lobTicks + 1);
     if (p.shootHeld && !shootNow) {
-      if (controlled && canKick(s, i)) shoot(s, config, i, p.charge / CHARGE_TICKS);
-      p.charge = 0;
+      if (!p.shootVoid && controlled && canKick(s, i)) shoot(s, config, i, p.charge / CHARGE_TICKS);
+      p.charge = 0; p.shootVoid = false;
     } else if (p.passHeld && !passNow) {
       if (controlled && canKick(s, i)) pass(s, config, i);
+    } else if (p.throughHeld && !throughNow) {
+      if (controlled && canKick(s, i)) pass(s, config, i, true);
+    } else if (p.lobHeld && !lobNow) {
+      if (controlled && canKick(s, i)) lob(s, config, i, p.lobTicks / LOB_CHARGE);
     }
-    p.shootHeld = shootNow; p.passHeld = passNow;
+    if (!lobNow) p.lobTicks = 0;
+    p.shootHeld = shootNow; p.passHeld = passNow; p.throughHeld = throughNow; p.lobHeld = lobNow;
   }
 
   // 2) 움직임과 충돌 — 한 틱을 쪼개서
