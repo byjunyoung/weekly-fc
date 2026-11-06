@@ -62,7 +62,7 @@ export type FkOutcome = 'goal' | 'save' | 'wall' | 'miss' | 'post' | 'gone';
 export type FkInput = PenInput & { gone?: true };
 export const FK_ABSENT: FkInput = { x: 0, kick: false, aim: null, gone: true };
 /** 빈 자리 차기는 준비 화면을 이만큼 보여 준 뒤 넘기고, 판정 띠도 짧게(0.5초). */
-const GONE_AFTER = 24, GONE_SHOW = 30;
+export const GONE_AFTER = 24, GONE_SHOW = 30;   // 3D 프리킥도 같은 값(6단계 합치기)
 export type FkPlayer = { id: number; num: number; jersey: number; name: string; bot: boolean; perf: Perf };
 export type FkConfig = { players: FkPlayer[] };
 export type FkLog = { kicker: number; spot: number; out: FkOutcome };

@@ -3,8 +3,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { freekick3d, createFreekick3, stepFreekick3, FK3_SPOTS, FK_SCALE, fk3Path, fk3Wall, wallCapsules } from '../../src/lib/games/freekick3d.ts';
-import { FK_SPOTS, buildFreekick, fkTurn } from '../../src/lib/games/freekick2d.ts';
-import { PEN3_IDLE } from '../../src/lib/games/penalty3d.ts';
+import { FK_SPOTS, buildFreekick, fkGone, fkTurn } from '../../src/lib/games/freekick2d.ts';
+import { PEN3_CODES, PEN3_IDLE } from '../../src/lib/games/penalty3d.ts';
+import { MAX_CODES } from '../../src/lib/games/net.ts';
 import { PITCH3D } from '../../src/lib/game3d/sim.ts';
 import { fk3Cfg } from './fixtures/games-cases-p6.mjs';
 
@@ -120,4 +121,23 @@ test('6단계 계산 소스에 삼각함수·시계·난수 함수가 없다', (
     const code = readFileSync(f, 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
     assert.doesNotMatch(code, /Math\.(sin|cos|tan|atan2?|hypot|pow|exp|log|random)\b|Date\.now|performance\.now|\*\*/, f);
   }
+});
+
+test('빈 자리(리뷰 #2) — 입력 정수 하나 더, 차례가 빠르게 넘어가고(점수 없음) 기록은 gone, pack 에 실린다', () => {
+  const a = freekick3d;
+  assert.equal(a.codes, PEN3_CODES + 1);
+  assert.ok(a.codes <= MAX_CODES);
+  assert.equal(a.encode(a.absentInput), PEN3_CODES);
+  assert.equal(a.decode(PEN3_CODES).gone, true);
+  const cfg = fk3Cfg(2);
+  let s = createFreekick3(cfg, 3);
+  const k = s.kicker, ins = (who) => [0, 1].map((i) => (i === who ? a.absentInput : PEN3_IDLE));
+  let t = 0;
+  while (s.log.length === 0 && t < 400) { s = stepFreekick3(s, cfg, ins(k)); t++; }
+  assert.deepEqual(s.log[0], { kicker: k, spot: s.spot, out: 'gone' });
+  assert.equal(s.outcome, 'gone');
+  assert.ok(t <= 30, `넘김까지 ${t}틱`);
+  assert.equal(s.points[k], 0);
+  assert.deepEqual(a.unpack(JSON.parse(JSON.stringify(a.pack(s))), cfg), s);
+  assert.ok(fkGone(s.log, k));
 });

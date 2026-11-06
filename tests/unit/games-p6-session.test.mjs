@@ -6,6 +6,8 @@ import { createHostSession, createGuestSession, STEP_MS } from '../../src/react/
 import { createLoopbackHub } from '../../src/react/game/net/transport.ts';
 import { gameOf } from '../../src/lib/games/registry.ts';
 import { COUNT_TICKS } from '../../src/lib/games/dribble2d.ts';
+import { fkGone, fkRanking } from '../../src/lib/games/freekick2d.ts';
+import { dr3Ranking } from '../../src/lib/games/dribble3d.ts';
 
 const roster = Array.from({ length: 14 }, (_, i) => ({ num: 100 + i, jersey: i + 1, name: `선수${i}`, pace: 60, dribble: 60, pass: 60, shoot: 60, defend: 60, stamina: 60, avatar: '' }));
 const who = (i) => ({ clientId: `c${i}`, num: 100 + i, name: `선수${i}` });
@@ -88,4 +90,45 @@ test('3D 드리블 — 3·2·1 동안 손님 입력은 안 먹고, 그 뒤 손�
   assert.ok(w.run(8000, () => w.guest.getView().stage === 'lobby'));
   assert.ok(w.hostEp.sent - h0 > 0 && w.guestEp.sent - g0 > 0);
   assert.ok(Math.max(...w.snaps) < 2500);
+});
+
+// ── 리뷰 #2(합치기): 3D 기록 게임도 나간 사람 자리를 봇이 대신하지 않는다(absent 'idle') — 2D 시험과 같은 흐름 ──
+test('3D 드리블 — 출발 직후 나간 손님 레인은 서 있고 "나감", 방장이 도착하면 바로 끝, 나간 사람은 1등이 아니다', () => {
+  const w = world('dribble3d');
+  w.run(1500);
+  w.host.setSettings({ course: 3 });
+  w.run(200);
+  assert.ok(w.host.start());
+  w.run(4000);   // 3·2·1 지나 출발
+  const x1 = w.host.getState().lanes[1].p.x;
+  w.guest.leave();
+  const a = gameOf('dribble3d').adapter;
+  w.host.setInputReader(() => { const s = w.host.getState(); return s ? a.botInput(s, w.host.getConfig(), 0) : a.idle; });
+  w.run(5000);
+  const mid = w.host.getState();
+  assert.equal(mid.lanes[1].gone, true, '나간 레인 표시');
+  assert.ok(mid.lanes[1].gate === 0 && Math.abs(mid.lanes[1].p.x - x1) < 1.5, `나간 레인을 아무도 대신 달리지 않는다(x ${x1} → ${mid.lanes[1].p.x})`);
+  assert.ok(w.run(60000, () => !!w.host.getView().result), '안 끝났다');
+  const r = w.host.getView().result;
+  assert.ok(r.lanes[0].fin >= 0 && r.lanes[1].fin < 0 && r.lanes[1].gone);
+  assert.ok(r.tick - COUNT_TICKS - r.lanes[0].fin < 60, `방장 도착 뒤 곧 끝(${r.tick - COUNT_TICKS - r.lanes[0].fin}틱)`);
+  assert.deepEqual(dr3Ranking(r), [0, 1], '나간 사람은 맨 아래');
+});
+
+test('3D 프리킥 — 시작 직후 나간 손님 차례는 바로 넘어가고(점수 없음) 1등이 아니다, 방은 멈추지 않는다', () => {
+  const w = world('freekick3d');
+  w.run(1500);
+  assert.ok(w.host.start());
+  w.run(300);
+  w.guest.leave();
+  const a = gameOf('freekick3d').adapter;
+  w.host.setInputReader(() => { const s = w.host.getState(); return s ? a.botInput(s, w.host.getConfig(), 0) : a.idle; });
+  assert.ok(w.run(200000, () => !!w.host.getView().result), '안 끝났다');
+  const r = w.host.getView().result;
+  const guestKicks = r.log.filter((e) => e.kicker === 1);
+  assert.equal(guestKicks.length, 5);
+  assert.ok(guestKicks.every((e) => e.out === 'gone'), '나간 사람 차례는 모두 넘김');
+  assert.equal(r.points[1], 0);
+  assert.equal(fkRanking(r.points, r.log)[0], 0, '나간 사람은 1등이 아니다');
+  assert.ok(fkGone(r.log, 1));
 });

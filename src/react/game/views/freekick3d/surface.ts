@@ -90,7 +90,7 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
   canvas.addEventListener('webglcontextlost', onLost);
   const marks = (st: Fk3State, i: number): string => FK3_SPOTS.map((_, s) => {
     const e = st.log.find((x) => x.kicker === i && x.spot === s);
-    const m = e ? (e.out === 'goal' ? '●' : '✕') : '○';
+    const m = e ? (e.out === 'goal' ? '●' : e.out === 'gone' ? '－' : '✕') : '○';   // － = 자리 비움(2D 결과 상자와 같은 표)
     return `<i class="p3-mark${m === '●' ? ' is-goal' : m === '✕' ? ' is-no' : ''}">${m}</i>`;
   }).join('');
 
@@ -163,7 +163,7 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
         }
         let b = '', s = '', tone = '';
         if (st.phase === 'result' && st.outcome) {
-          b = FK_OUT_TEXT[st.outcome]; s = st.outcome === 'goal' ? `${config.players[st.kicker].name} +${spot.pts}점` : '';
+          b = FK_OUT_TEXT[st.outcome]; s = st.outcome === 'goal' ? `${config.players[st.kicker].name} +${spot.pts}점` : st.outcome === 'gone' ? `${config.players[st.kicker].name} 차례를 넘깁니다` : '';
           tone = st.outcome === 'goal' ? 'is-goal' : st.outcome === 'save' ? 'is-save' : 'is-miss';
         } else if (st.phase === 'ready') {
           b = kicker ? '내 차례' : `${config.players[st.kicker].name} 차례`; s = `${spot.name} · ${spot.pts}점`; tone = kicker ? 'is-turn' : 'is-save';

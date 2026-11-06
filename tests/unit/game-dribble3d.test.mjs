@@ -3,7 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { dribble3d, createDribble3, stepDribble3, course3, DR3_SCALE, LANE_X, LANE_Y, MEDALS3, lane3Time, dr3Ranking } from '../../src/lib/games/dribble3d.ts';
 import { COURSES, COUNT_TICKS, courseCones } from '../../src/lib/games/dribble2d.ts';
-import { IDLE3 } from '../../src/lib/game3d/quant.ts';
+import { IDLE3, Q3_COUNT } from '../../src/lib/game3d/quant.ts';
+import { MAX_CODES } from '../../src/lib/games/net.ts';
 import { PITCH3D } from '../../src/lib/game3d/sim.ts';
 import { dr3Cfg } from './fixtures/games-cases-p6.mjs';
 
@@ -89,4 +90,26 @@ test('8명 레인 스냅샷(pack) 2.5KB 이하', () => {
     if (t % 6 === 0) max = Math.max(max, JSON.stringify({ t: 'snap', from: 'c-0123456789abcdef', seed: 4294967295, tick: s.tick, state: g.pack(s), inputs: qs, paused: false }).length);
   }
   assert.ok(max <= 2500, `${max}B`);
+});
+
+test('빈 자리(리뷰 #2) — 입력 정수 하나 더, 그 레인은 서고 "나감"·맨 아래, 다시 오면 이어 달린다, pack 에 실린다', () => {
+  const a = dribble3d;
+  assert.equal(a.codes, Q3_COUNT + 1);
+  assert.ok(a.codes <= MAX_CODES);
+  assert.equal(a.encode(a.absentInput), Q3_COUNT);
+  assert.equal(a.decode(Q3_COUNT).gone, true);
+  assert.equal(a.decode(a.encode(IDLE3)).gone, undefined);
+  const cfg = dr3Cfg(3, 2);   // 왕복, 두 명
+  let s = createDribble3(cfg, 7);
+  while (s.phase === 'count') s = stepDribble3(s, cfg, [IDLE3, IDLE3]);
+  const run = { ...IDLE3, x: 1, y: 0 };
+  const x0 = s.lanes[1].p.x;
+  for (let i = 0; i < 60; i++) s = stepDribble3(s, cfg, [run, a.absentInput]);
+  assert.equal(s.lanes[1].gone, true);
+  assert.ok(Math.abs(s.lanes[1].p.x - x0) < 1e-6, '나간 레인은 서 있다');
+  assert.deepEqual(dr3Ranking(s), [0, 1]);
+  assert.deepEqual(a.unpack(JSON.parse(JSON.stringify(a.pack(s))), cfg), s, 'pack 에 나감이 실린다');
+  for (let i = 0; i < 30; i++) s = stepDribble3(s, cfg, [run, run]);
+  assert.equal(s.lanes[1].gone, false, '돌아오면 나감이 아니다');
+  assert.ok(s.lanes[1].p.x > x0);
 });

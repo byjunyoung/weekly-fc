@@ -52,15 +52,19 @@ const to2 = (p: { x: number; y: number }): Point => ({ x: p.x / K, y: p.y / K })
 
 export type Dr3Player = { id: number; num: number; jersey: number; name: string; bot: boolean; perf: Perf };
 export type Dr3Config = { course: number; players: Dr3Player[] };
-/** 레인 하나 — 몸 p, 공 b(3D 경기 몸·공), 다음 문 gate, 넘어뜨린 콘 hit(비트), 콘 벌점 수 pen, 도착 fin(달린 틱, 못 했으면 −1). */
-export type Lane3 = { p: MBPlayer; b: MBBall; gate: number; hit: number; pen: number; fin: number };
+/** 레인 하나 — 몸 p, 공 b(3D 경기 몸·공), 다음 문 gate, 넘어뜨린 콘 hit(비트), 콘 벌점 수 pen, 도착 fin(달린 틱, 못 했으면 −1),
+ *  gone = 그 레인 사람이 자리를 비웠다(방장이 넣은 빈 자리 입력 — 2D 레인과 같은 뜻, 2026-11-07 리뷰 #2). 돌아오면 거짓으로. */
+export type Lane3 = { p: MBPlayer; b: MBBall; gate: number; hit: number; pen: number; fin: number; gone: boolean };
+/** 3D 드리블 입력 = 3D 경기 입력 + "빈 자리". */
+export type Dr3Input = Input & { gone?: true };
+export const DR3_ABSENT: Dr3Input = { ...IDLE3, gone: true };
 export type Dr3Phase = 'count' | 'run' | 'end';
 export type Dr3State = { tick: number; phase: Dr3Phase; phaseTicks: number; lanes: Lane3[]; first: number; seed: number };
 
 function startLane(c: Course): Lane3 {
   const s = c.start, g = c.gates[0];
   const d = unit(g ? g.x - s.x : 1, g ? g.y - s.y : 0, 1, 0);
-  return { p: newPlayer(0, s.x * K, s.y * K, d.x, d.y), b: newBall(s.x * K + d.x * 0.76, s.y * K + d.y * 0.76), gate: 0, hit: 0, pen: 0, fin: -1 };
+  return { p: newPlayer(0, s.x * K, s.y * K, d.x, d.y), b: newBall(s.x * K + d.x * 0.76, s.y * K + d.y * 0.76), gate: 0, hit: 0, pen: 0, fin: -1, gone: false };
 }
 
 export function createDribble3(config: Dr3Config, seed: number): Dr3State {
@@ -81,14 +85,15 @@ function containLane(l: Lane3): void {
   if (b.y < -by) { b.y = -by; if (b.vy < 0) b.vy = 0 - b.vy * 0.6; }
 }
 
-export function stepDribble3(state: Dr3State, config: Dr3Config, inputs: Input[]): Dr3State {
+export function stepDribble3(state: Dr3State, config: Dr3Config, inputs: Dr3Input[]): Dr3State {
   const s: Dr3State = { ...state, tick: state.tick + 1, phaseTicks: state.phaseTicks + 1, lanes: state.lanes.map((l) => ({ ...l, p: { ...l.p }, b: { ...l.b } })) };
   if (s.phase === 'end') return s;
   const c = course3(config.course), cones = courseCones(c);
   const run = s.phase === 'run';
   s.lanes.forEach((l, i) => {
     const from = to2(l.p), bfrom = to2(l.b);
-    const inp = run && l.fin < 0 ? inputs[i] ?? IDLE3 : IDLE3;
+    if (l.fin < 0) l.gone = !!inputs[i]?.gone;   // 빈 자리 — 레인은 서고(대신 달리지 않는다) 결과에 "나감"(2D 와 같다)
+    const inp = run && l.fin < 0 && !l.gone ? inputs[i] ?? IDLE3 : IDLE3;
     // 레인마다 따로 — 씨앗은 판 하나를 차례로 쓴다(레인 순서가 늘 같아 결정적)
     const w = { seed: s.seed, players: [l.p], balls: [l.b], kicks: 0 };
     stepWorld(w, [config.players[i].perf], [inp]);
@@ -106,7 +111,7 @@ export function stepDribble3(state: Dr3State, config: Dr3Config, inputs: Input[]
   });
   if (s.phase === 'count' && s.phaseTicks >= COUNT_TICKS) { s.phase = 'run'; s.phaseTicks = 0; }
   else if (run) {
-    const all = s.lanes.every((l) => l.fin >= 0);
+    const all = s.lanes.every((l) => l.fin >= 0 || l.gone);   // 나간 레인은 기다리지 않는다
     const late = s.lanes.length > 1 && s.first >= 0 && s.phaseTicks - s.first >= AFTER_FIRST;
     if (all || late || s.phaseTicks >= RUN_CAP) { s.phase = 'end'; s.phaseTicks = 0; }
   }
@@ -115,14 +120,14 @@ export function stepDribble3(state: Dr3State, config: Dr3Config, inputs: Input[]
 
 /** 기록(초) = 달린 틱 + 콘 벌점. 못 했으면 null(2D laneTime 과 같은 셈). */
 export const lane3Time = (l: Lane3): number | null => (l.fin < 0 ? null : (l.fin + l.pen * CONE_PENALTY) / 60);
-/** 순위 — 2D 와 같은 규칙(도착한 사람은 기록 순, 못 한 사람은 지난 문 순, 같으면 레인 순). */
+/** 순위 — 2D 와 같은 규칙(도착한 사람은 기록 순, 못 한 사람은 지난 문 순 — 나간 사람은 그 아래, 같으면 레인 순). */
 export function dr3Ranking(s: Dr3State): number[] {
   return s.lanes.map((_, i) => i).sort((a, b) => {
     const ta = lane3Time(s.lanes[a]), tb = lane3Time(s.lanes[b]);
     if (ta !== null && tb !== null) return ta - tb || a - b;
     if (ta !== null) return -1;
     if (tb !== null) return 1;
-    return s.lanes[b].gate - s.lanes[a].gate || a - b;
+    return Number(s.lanes[a].gone) - Number(s.lanes[b].gone) || s.lanes[b].gate - s.lanes[a].gate || a - b;
   });
 }
 
@@ -176,7 +181,7 @@ function okLane(l: unknown, gates: number, cones: number): boolean {
   const p = l.p as Record<string, unknown>, b = l.b as Record<string, unknown>;
   return isObj(p) && p.id === 0 && P_NUMS.every((k) => isNum(p[k])) && P_BOOLS.every((k) => isBool(p[k]))
     && isObj(b) && B_NUMS.every((k) => isNum(b[k])) && (b.owner === null || b.owner === 0)
-    && isInt(l.gate, 0, gates) && isInt(l.hit, 0, (1 << cones) - 1) && isInt(l.pen, 0, cones) && isInt(l.fin, -1);
+    && isInt(l.gate, 0, gates) && isInt(l.hit, 0, (1 << cones) - 1) && isInt(l.pen, 0, cones) && isInt(l.fin, -1) && isBool(l.gone);
 }
 function okState(s: unknown, config: Dr3Config): s is Dr3State {
   if (!isObj(s)) return false;
@@ -186,21 +191,21 @@ function okState(s: unknown, config: Dr3Config): s is Dr3State {
     && isInt(s.first, -1) && isNum(s.seed);
 }
 
-// 레인 8개를 그대로 보내면 키 이름만으로 4KB 를 넘는다 — 레인마다 숫자 한 줄(몸 11 + 비트 + 공 7 + 주인 + 문·콘·벌점·도착 = 24). 잃는 것 없음.
-const PACK_V = 1;
+// 레인 8개를 그대로 보내면 키 이름만으로 4KB 를 넘는다 — 레인마다 숫자 한 줄(몸 11 + 비트 + 공 7 + 주인 + 문·콘·벌점·도착·나감 = 25). 잃는 것 없음.
+const PACK_V = 2;
 function pack(s: Dr3State): Record<string, unknown> {
   return {
     v: PACK_V, t: s.tick, ph: s.phase, pt: s.phaseTicks, f: s.first, sd: s.seed,
     L: s.lanes.map((l) => [
       ...P_NUMS.map((k) => l.p[k]), P_BOOLS.reduce((bits, k, i) => bits | (l.p[k] ? 1 << i : 0), 0),
-      ...B_NUMS.map((k) => l.b[k]), l.b.owner === null ? -1 : 0, l.gate, l.hit, l.pen, l.fin,
+      ...B_NUMS.map((k) => l.b[k]), l.b.owner === null ? -1 : 0, l.gate, l.hit, l.pen, l.fin, l.gone ? 1 : 0,
     ]),
   };
 }
 function unpack(v: unknown, config: Dr3Config): Dr3State | null {
   // 키가 정확히 이것이어야 한다(더 있거나 빠지면 다른 무엇이다 — 2D 드리블과 같은 태도)
   if (!isObj(v) || v.v !== PACK_V || !Array.isArray(v.L) || v.L.length !== config.players.length || Object.keys(v).sort().join() !== 'L,f,ph,pt,sd,t,v') return null;
-  const W = P_NUMS.length + 1 + B_NUMS.length + 5;
+  const W = P_NUMS.length + 1 + B_NUMS.length + 6;
   const lanes: Lane3[] = [];
   for (const r of v.L) {
     if (!Array.isArray(r) || r.length !== W || !r.every(isNum)) return null;
@@ -212,21 +217,26 @@ function unpack(v: unknown, config: Dr3Config): Dr3State | null {
     B_NUMS.forEach((k, i) => { b[k] = r[o + i]; });
     const q = o + B_NUMS.length;
     b.owner = r[q] === -1 ? null : r[q];
-    lanes.push({ p: p as unknown as MBPlayer, b: b as unknown as MBBall, gate: r[q + 1], hit: r[q + 2], pen: r[q + 3], fin: r[q + 4] });
+    lanes.push({ p: p as unknown as MBPlayer, b: b as unknown as MBBall, gate: r[q + 1], hit: r[q + 2], pen: r[q + 3], fin: r[q + 4], gone: r[q + 5] === 1 });
   }
   const s = { tick: v.t, phase: v.ph, phaseTicks: v.pt, lanes, first: v.f, seed: v.sd };
   return okState(s, config) ? (s as Dr3State) : null;
 }
 
 // ═══════════════════════════ 어댑터 · 등록부 ═══════════════════════════
-export const dribble3d: GameAdapter<Dr3Config, Dr3State, Input> = {
+// 입력 정수 — 3D 경기 Q3_COUNT 가지 + 마지막 하나 = 빈 자리(free3d 의 [공 모으기]와 같은 자리 — MAX_CODES 안).
+const encodeDr3 = (i: Dr3Input): number => (i && i.gone ? Q3_COUNT : encodeInput3(i));
+const decodeDr3 = (q: number): Dr3Input => (q === Q3_COUNT ? { ...DR3_ABSENT } : decodeInput3(q));
+
+export const dribble3d: GameAdapter<Dr3Config, Dr3State, Dr3Input> = {
   id: 'dribble3d',
   create: createDribble3,
   step: stepDribble3,
   idle: IDLE3,
-  encode: encodeInput3,
-  decode: decodeInput3,
-  codes: Q3_COUNT,
+  encode: encodeDr3,
+  decode: decodeDr3,
+  codes: Q3_COUNT + 1,
+  absentInput: DR3_ABSENT,
   okConfig,
   okState,
   tick: (s) => s.tick,
@@ -260,12 +270,13 @@ export function buildDribble3(humans: { num: number; name: string }[], course: n
   };
 }
 
-export const DRIBBLE3D: GameEntry<Dr3Config, Dr3State, Input, DrSettings> = {
-  ...(DRIBBLE2D as unknown as GameEntry<Dr3Config, Dr3State, Input, DrSettings>),
+export const DRIBBLE3D: GameEntry<Dr3Config, Dr3State, Dr3Input, DrSettings> = {
+  ...(DRIBBLE2D as unknown as GameEntry<Dr3Config, Dr3State, Dr3Input, DrSettings>),
   adapter: dribble3d,
   mode: '3d',
   describe: '콘 사이 문을 차례대로 지나 결승선까지 공을 몰고 가는 기록 경기. 선수 뒤에서 따라가며 봅니다. 코스 넷, 같이 하면 나란한 레인에서 동시에.',
   tags: ['온라인', '기록', '코스 넷'],
+  absent: 'idle',   // 나간 레인을 대본 주자가 대신 달리지 않는다(2D 와 같다 — 리뷰 #2)
   buildConfig(room, roster) {
     const playing = room.members.slice(0, 8);
     return { config: buildDribble3(playing.map((m) => ({ num: m.num, name: m.name })), room.settings.course, roster), slots: playing.map((m) => m.clientId) };

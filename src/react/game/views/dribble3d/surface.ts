@@ -143,7 +143,7 @@ export function createDribbleSurface(o: SurfaceIn<Dr3Config>): Surface<Dr3State,
         if (!rows.includes(lane)) rows.push(lane);
         const html = rows.map((i) => {
           const l = st.lanes[i], tm = lane3Time(l);
-          return `<li class="${i === lane ? 'is-me' : ''}"><span>${order.indexOf(i) + 1} ${Array.from(config.players[i].name).slice(0, 4).join('')}</span><span>${tm !== null ? secText(tm) : `문 ${l.gate}/${c.gates.length}`}</span></li>`;
+          return `<li class="${i === lane ? 'is-me' : ''}"><span>${order.indexOf(i) + 1} ${Array.from(config.players[i].name).slice(0, 4).join('')}</span><span>${tm !== null ? secText(tm) : l.gone ? '나감' : `문 ${l.gate}/${c.gates.length}`}</span></li>`;
         }).join('');
         if (html !== lastRanks) { ranks.innerHTML = html; lastRanks = html; }
       }

@@ -17,7 +17,7 @@ import type { Ball } from '../game3d/sim.ts';
 import { PITCH3D, TUNE3D, rand } from '../game3d/sim.ts';
 import { BASE_PERF } from '../game/stats.ts';
 import type { FkConfig, FkLog, FkOutcome, FkSettings } from './freekick2d.ts';
-import { FK_SPOTS, FREEKICK2D, fkKeeperPlan, fkTotal, fkTurn, nearSide, READY_TICKS, AIM_TICKS, RESULT_TICKS, CURL_RATE, CURL_TICKS } from './freekick2d.ts';
+import { FK_SPOTS, FREEKICK2D, fkKeeperPlan, fkTotal, fkTurn, nearSide, READY_TICKS, AIM_TICKS, RESULT_TICKS, CURL_RATE, CURL_TICKS, GONE_AFTER, GONE_SHOW } from './freekick2d.ts';
 import { AUTO_POWER, CHARGE_TICKS, planRand } from './penalty2d.ts';
 import type { Aim3, Capsule, Keeper3, Pen3Input, Striker3 } from './penalty3d.ts';
 import {
@@ -163,12 +163,23 @@ function judge(s: Fk3State, keeper: boolean, wall: boolean, frame: boolean): FkO
 
 const KEEPER_PERF = { ...BASE_PERF };
 
-export function stepFreekick3(state: Fk3State, config: FkConfig, inputs: Pen3Input[]): Fk3State {
+/** 3D 프리킥 입력 = 3D 승부차기 입력 + "빈 자리"(방장이 나간 사람 자리에 넣는다 — 2D FK_ABSENT 와 같은 뜻, 2026-11-07 리뷰 #2). */
+export type Fk3Input = Pen3Input & { gone?: true };
+export const FK3_ABSENT: Fk3Input = { ...PEN3_IDLE, gone: true };
+
+export function stepFreekick3(state: Fk3State, config: FkConfig, inputs: Fk3Input[]): Fk3State {
   if (state.phase === 'end') return { ...state, tick: state.tick + 1, phaseTicks: state.phaseTicks + 1 };
   const s: Fk3State = { ...state, points: [...state.points], ball: { ...state.ball }, gk: { ...state.gk }, st: { ...state.st } };
   s.tick += 1; s.phaseTicks += 1;
-  const kin = inputs[s.kicker] ?? PEN3_IDLE;
+  const kin: Fk3Input = inputs[s.kicker] ?? PEN3_IDLE;
   if (s.st.kickFlash > 0) s.st.kickFlash -= 1;
+  // 차례인 사람의 자리가 비었다 — 2D 와 같이 준비 화면을 잠깐 보여 준 뒤 그 차기를 넘긴다(점수 없음, 판정 띠 짧게)
+  if (kin.gone && (s.phase === 'aim' || (s.phase === 'ready' && s.phaseTicks >= GONE_AFTER))) {
+    s.outcome = 'gone';
+    s.log = [...s.log, { kicker: s.kicker, spot: s.spot, out: 'gone' }];
+    s.phase = 'result'; s.phaseTicks = RESULT_TICKS - GONE_SHOW;
+    return s;
+  }
 
   if (s.phase === 'ready') {
     if (!kin.kick) s.st.armed = true;
@@ -290,7 +301,7 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 const isInt = (v: unknown, lo = -Infinity, hi = Infinity): v is number => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
 const isBool = (v: unknown): v is boolean => typeof v === 'boolean';
 const PHASES: readonly string[] = ['ready', 'aim', 'flight', 'result', 'end'];
-const OUTS: readonly FkOutcome[] = ['goal', 'save', 'wall', 'miss', 'post'];
+const OUTS: readonly FkOutcome[] = ['goal', 'save', 'wall', 'miss', 'post', 'gone'];   // 순서가 pack 번호 — 끝에만 더한다
 const okBall = (b: unknown): boolean => isObj(b) && ['x', 'y', 'z', 'vx', 'vy', 'vz'].every((k) => isNum(b[k]));
 
 function okState(s: unknown, config: FkConfig): s is Fk3State {
@@ -326,14 +337,19 @@ function unpack(x: unknown, config: FkConfig): Fk3State | null {
 }
 
 // ═══════════════════════════ 어댑터 · 등록부 ═══════════════════════════
-export const freekick3d: GameAdapter<FkConfig, Fk3State, Pen3Input> = {
+// 입력 정수 — 3D 승부차기 PEN3_CODES 가지 + 마지막 하나 = 빈 자리.
+const encodeFk3 = (i: Fk3Input): number => (i && i.gone ? PEN3_CODES : encodePen3(i));
+const decodeFk3 = (q: number): Fk3Input => (q === PEN3_CODES ? { ...FK3_ABSENT } : decodePen3(q));
+
+export const freekick3d: GameAdapter<FkConfig, Fk3State, Fk3Input> = {
   id: 'freekick3d',
   create: createFreekick3,
   step: stepFreekick3,
   idle: PEN3_IDLE,
-  encode: encodePen3,
-  decode: decodePen3,
-  codes: PEN3_CODES,
+  encode: encodeFk3,
+  decode: decodeFk3,
+  codes: PEN3_CODES + 1,
+  absentInput: FK3_ABSENT,
   okConfig: FREEKICK2D.adapter.okConfig,
   okState,
   tick: (s) => s.tick,
@@ -354,10 +370,11 @@ export const freekick3d: GameAdapter<FkConfig, Fk3State, Pen3Input> = {
   unpack,
 };
 
-export const FREEKICK3D: GameEntry<FkConfig, Fk3State, Pen3Input, FkSettings> = {
+export const FREEKICK3D: GameEntry<FkConfig, Fk3State, Fk3Input, FkSettings> = {
   ...FREEKICK2D,
   adapter: freekick3d,
   mode: '3d',
   describe: '정해진 다섯 자리에서 수비벽과 키퍼를 상대로 한 번씩. 벽을 넘길 높이와 세기를 고르고, 감아차기로 벽을 돌아 넣습니다.',
   tags: ['온라인', '차례대로', '벽 넘기기'],
+  absent: 'idle',   // 나간 사람 차례는 봇이 대신 차지 않고 넘긴다(2D 와 같다 — 리뷰 #2)
 };
