@@ -6,7 +6,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { PHRASES } from '../../lib/games/net';
 import { attachInput } from './input';
 import SoundToggle from './SoundToggle';
-import type { AnyView, Camera, ResultView, Scene, Surface } from './views/types';
+import { mountSurface } from './surface-mount';
+import type { AnyView, Camera, ResultView, Scene } from './views/types';
 
 /** 디버그 훅(?debug=1)과 경기 화면이 나눠 쓰는 살아 있는 값. 리액트 상태가 아니다. camera 는 경기 화면이 프레임마다 써 둔다.
  *  state·config 는 혼자 하기에서만(온라인은 세션이 들고 있다), override = 내 입력 덮어쓰기(그 게임의 입력 모양).
@@ -22,22 +23,6 @@ type Refs = {
   layer: React.RefObject<HTMLDivElement | null>;
 };
 
-/** 스스로 여닫는 화면(Surface)을 루프가 쓰는 Scene 모양으로 — 루프(혼자·온라인)는 그대로 scene.draw 만 부른다. dt 는 여기서 잰다. */
-function sceneOf(sf: Surface<unknown, unknown, unknown>): Scene<unknown, unknown, unknown> {
-  let last = -1;
-  return {
-    draw(f) {
-      const now = performance.now();
-      const dt = last < 0 ? 0 : Math.min(0.25, (now - last) / 1000);
-      last = now;
-      sf.render({ ...f, dt });
-    },
-    toInput: () => (sf.readInput ? sf.readInput() : null),
-    camera: () => sf.camera(),
-    dispose: () => sf.dispose(),
-  };
-}
-
 /** 장면을 열고 조작을 단 뒤 run(루프)을 돌린다. 한 판 동안 한 번(부르는 쪽이 경기마다 key 로 새로 마운트한다).
  *  playing 이 거짓(구경)이면 조작을 달지 않는다 — 키·터치를 먹지 않게. readHuman = 디버그 덮어쓰기 > 화면 조작을 그 게임 입력으로. */
 export function usePlaySurface(o: {
@@ -51,45 +36,42 @@ export function usePlaySurface(o: {
   const [touch, setTouch] = useState(false);
   const [wait, setWait] = useState(false);
   const [fail, setFail] = useState<string | null>(null);
-  const { view, config, roster, playing, live, run } = o;
-  const myId = o.myId ?? null;
+  const { view, playing, live, run } = o;
+  // 한 판의 설정·명단·내 자리는 처음 받은 것으로 고정한다(2026-11-07 4단계 리뷰). 명단(useData)은 캐시 다음 네트워크 것으로,
+  // 또 다른 화면이 새로 불러올 때마다 새 배열이 된다 — 그걸 효과의 의존으로 두면 경기 중에 장면을 닫았다 다시 열어
+  // 혼자 하기는 새 판(틱 0)으로 돌아가고, 3D 는 이미 문맥을 잃은 캔버스에 WebGL 을 다시 열려 한다. 판이 바뀌면 부르는 쪽이 key 로 새로 마운트한다.
+  const fixed = useRef<{ config: unknown; roster: typeof o.roster; myId: number | null } | null>(null);
+  if (fixed.current === null && o.config != null) fixed.current = { config: o.config, roster: o.roster, myId: o.myId ?? null };
+  const ready = fixed.current !== null;
   const runRef = useRef(run);
   runRef.current = run;
   useEffect(() => {
     const root = refs.root.current, canvas = refs.canvas.current, layer = refs.layer.current;
-    if (config == null || !root || !canvas || !layer || !refs.base.current || !refs.knob.current || !refs.kick.current) return;
+    const f = fixed.current;
+    if (!f || !root || !canvas || !layer || !refs.base.current || !refs.knob.current || !refs.kick.current) return;
+    const { config, roster, myId } = f;
     // 스스로 여닫는 화면(3D) — 묶음을 받고(그동안 "불러오는 중"), 만들고, 크기를 대 주고, 조작은 화면 것을 쓴다(2D 조이스틱·킥은 달지 않는다).
     const kit = view.surface;
     if (kit) {
-      let alive = true, stop: (() => void) | null = null;
-      setWait(true);
       document.documentElement.classList.add('game-lock');
-      kit.load().then(() => {
-        if (!alive) return;
-        setWait(false);
-        const sf = kit.create({ root, canvas, layer, config, roster, myId, playing });
-        if (typeof sf === 'string') { setFail(sf); return; }
-        const scene = sceneOf(sf);
-        const resize = (): void => { if (root.clientWidth && root.clientHeight) sf.resize(root.clientWidth, root.clientHeight); };
-        resize();
-        const ro = new ResizeObserver(resize);
-        ro.observe(root);
-        window.addEventListener('orientationchange', resize);
-        live.current.extra = sf.debug ? sf.debug() : null;
-        const reader = sf.readInput;
-        const readHuman = playing && reader ? (): unknown => live.current.override ?? reader() : null;
-        const end = runRef.current({ scene, readHuman });
-        stop = () => {
-          end();
-          ro.disconnect();
-          window.removeEventListener('orientationchange', resize);
-          scene.dispose();
-          live.current.extra = null;
-        };
-      }).catch(() => { if (alive) { setWait(false); setFail('화면을 불러오지 못했습니다 — 연결을 확인하고 다시 열어 주세요.'); } });
+      const close = mountSurface(kit, { root, canvas, layer, config, roster, myId, playing }, {
+        onWait: setWait,
+        onFail: setFail,
+        watchSize(el, cb) {
+          const ro = new ResizeObserver(cb);
+          ro.observe(el);
+          window.addEventListener('orientationchange', cb);
+          return () => { ro.disconnect(); window.removeEventListener('orientationchange', cb); };
+        },
+        run({ scene, readHuman, surface }) {
+          live.current.extra = surface.debug ? surface.debug() : null;
+          const human = readHuman ? (): unknown => live.current.override ?? readHuman() : null;
+          const end = runRef.current({ scene, readHuman: human });
+          return () => { end(); live.current.extra = null; };
+        },
+      });
       return () => {
-        alive = false;
-        stop?.();
+        close();
         document.documentElement.classList.remove('game-lock');
         live.current.camera = null;
       };
@@ -111,7 +93,7 @@ export function usePlaySurface(o: {
     };
     // 경기마다 새로 마운트(key)되므로 한 판 동안 view·config·playing 은 그대로다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, config, roster, playing, live, myId]);
+  }, [view, ready, playing, live]);
   return { refs, touch, wait, fail };
 }
 
