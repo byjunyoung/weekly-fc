@@ -1,0 +1,49 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import GuideStart from '../../react/guide/GuideStart.tsx';
+import { MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS } from '../../lib/rules.ts';
+import { href } from '../../lib/url.ts';
+---
+<Shell title="처음 왔다면" description="WEEKLY FC 새 멤버 안내 — 한 주 흐름, 시간·장소·정산, 경기 영상, 포털 쓰는 법.">
+  <div class="page-head"><h1>처음 왔다면</h1></div>
+  <article class="prose stack">
+    <p>WEEKLY FC 에 오신 걸 환영합니다. 매주 토요일 풋살을 하는 팀입니다.</p>
+
+    <div class="guide-part">꼭 알아 둘 것</div>
+    <section id="flow"><h2>한 주 흐름</h2>
+      <ol><li>주중에 단톡방 투표로 참석 여부 표시</li><li>{MATCH_MIN}명 이상 모이면 진행 — {MATCH_TIME}</li><li>경기 끝나고 단톡방에서 당일 정산</li></ol>
+    </section>
+    <section id="when"><h2>언제 어디서</h2>
+      <ul><li>시간: {MATCH_TIME}</li><li>장소: {PLACES.join(' / ')}</li><li>비가 오면 논의 후 결정</li></ul>
+    </section>
+    <section id="fees"><h2>비용 · 모임 통장</h2>
+      <ul><li>대관비·음료비는 그날 참석자끼리 나눕니다</li><li>{BANK.name} {BANK.number} ({BANK.holder}) · 통장 초대 문의: {BANK.contact}</li><li>지각·노쇼 벌금 등 자세한 건 <a href={href('/rules/')}>규칙 →</a></li></ul>
+    </section>
+
+    <div class="guide-part">재미로 하는 것</div>
+    <section id="video"><h2>경기 영상</h2>
+      <p>경기 영상은 유튜브 채널에 올라갑니다. 지난 경기는 매치 탭에서도 볼 수 있습니다.</p>
+      <div class="chips"><a class="chip" href={LINKS.youtube} target="_blank" rel="noopener">유튜브 채널 →</a><a class="chip" href={href('/matches/')}>매치 →</a><a class="chip" href={LINKS.instagram} target="_blank" rel="noopener">인스타그램 →</a></div>
+    </section>
+    <section id="portal"><h2>포털</h2>
+      <p>지금 보고 있는 이 사이트입니다. 필수는 아니고 재미로 쓰는 곳입니다. 이름을 고르면 내 선수 카드를 꾸미고, 티어 대결에서 팀원 능력치를 판정할 수 있습니다.</p>
+      <GuideStart client:load />
+    </section>
+
+    <div class="guide-part">마무리</div>
+    <section id="manner"><h2>에티켓</h2>
+      <ul><li>투표에 꼭 참여하기</li><li>불참 등 특이사항은 미리 공유</li><li>서로 존중하는 채팅</li></ul>
+      <p>궁금한 건 단톡방에 편하게 물어보세요.</p>
+    </section>
+  </article>
+</Shell>
+<style>
+  /* rules.astro 의 본문 갈무리와 같다 — 한 줄 길이·행간·소제목 도트 */
+  .prose section { max-width: var(--prose-max); }
+  .prose p, .prose li { line-height: 1.6; }
+  .prose h2 { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; margin: 0 0 var(--m-md); }
+  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: 4px; background: var(--accent); margin-top: var(--m-sm); }
+  .prose ul, .prose ol { padding-left: 1.2em; margin: 0; }
+  .prose li { margin-bottom: var(--m-xs); }
+  .prose p { margin: 0 0 var(--m-md); }
+</style>

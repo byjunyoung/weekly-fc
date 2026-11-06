@@ -21,6 +21,7 @@ export const PAGES = [
   'record/duty/index.html',
   'tactics/index.html',
   'kit/index.html',
+  'guide/index.html',
   'about/index.html',
 ];
 export const INDEXABLE = [];
@@ -239,4 +240,11 @@ test('POTM 은 뺐다(2026-11-06) — 옛 투표 주소는 매치 목록으로 �
 test('벌금은 규칙 표만 남는다 — 기록 코드는 없다', () => {
   assert.deepEqual(grepSrc('writeFine|deleteFine|normalizeFine|unpaidRows|fineSummary'), []);
   assert.ok(read('rules/index.html').includes('노쇼'), '규칙의 벌금표는 그대로');
+});
+
+test('안내 > 처음 왔다면(2026-11-06) — 꼭 알아 둘 것과 재미로 하는 것을 나눈다, 가입은 필수가 아니다', () => {
+  const html = read('guide/index.html');
+  for (const s of ['꼭 알아 둘 것', '재미로 하는 것', '필수는 아니고', 'youtube.com/@WEEKLYFC2020', '카카오뱅크', '토요일 오전 10–12시']) assert.ok(html.includes(s), s);
+  assert.ok(html.includes('/weekly-fc/og.png'));
+  assert.ok(!html.includes('자기소개 양식'), '양식은 봇이 보낸다');
 });

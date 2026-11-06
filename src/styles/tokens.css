@@ -337,6 +337,13 @@ a.card:hover { background: var(--charcoal); }
 .row { display: flex; flex-wrap: wrap; gap: var(--s-xs); align-items: center; }
 .stack { display: flex; flex-direction: column; gap: var(--s-xl); }
 
+/* ══ 안내 > 처음 왔다면 ═══════════════════════════════════════ */
+/* 묶음 제목 — h2 보다 작고 흐린 라벨 + 윗줄 구분선. 색·면을 더하지 않고 두 묶음만 한눈에 나눈다. */
+.guide-part { max-width: var(--prose-max); padding-top: var(--s-sm); border-top: 1px solid var(--line-hi);
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-xs); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--muted); }
+.guide-start { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-sm); margin: 0; }
+.guide-start p { margin: 0; }
+
 /* ══ 메인 메뉴(홈) ══════════════════════════════════════════ */
 .rail { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: repeat(3, minmax(150px, auto));
   grid-auto-rows: minmax(150px, 1fr); gap: var(--s-sm); }
