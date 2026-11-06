@@ -206,7 +206,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, st: MatchState, config:
     }
     ctx.restore();
     // 킥을 누르고 있는 동안 고리가 하얗게 밝아진다 — 눌렸다는 걸 눈으로 알 수 있게(2026-11-06 "키 누를 때 피드백이 없네").
-    const kicking = !!st.players[i].kicking;
+    const kicking = !!st.players[i].kicking || st.players[i].kickFlash > 0;   // 장전 중이거나 방금 찼다(봇도 똑같이 보인다)
     const ring = Math.max(2.5, R * 0.24);
     ctx.lineWidth = ring; ctx.strokeStyle = kicking ? KICK_RING : team.color;
     ctx.beginPath(); ctx.arc(s.x, s.y, R - ring / 2, 0, Math.PI * 2); ctx.stroke();
@@ -257,7 +257,9 @@ function drawHud(ctx: CanvasRenderingContext2D, st: MatchState, config: MatchCon
   const midY = view.oy;
   if (st.phase === 'goal') {
     const who = st.lastScorer !== null ? config.players[st.lastScorer]?.name : null;
-    banner(ctx, view, midY, '골!', who ?? '', 54);
+    const helper = st.lastAssist != null ? config.players[st.lastAssist]?.name : null;
+    // 득점자 아래 도움(2026-11-07 "골할 때 어시스트 기록도 뜨게") — 없으면 득점자만.
+    banner(ctx, view, midY, '골!', who ? (helper ? `${who} · 도움 ${helper}` : who) : '', 54);
   } else if (st.phase === 'kickoff' && st.phaseTicks < 100) {
     const side = st.kickoffSide;
     banner(ctx, view, midY - Math.min(view.vh, view.vw) * 0.12, `${TEAM[side].short} 선공`, '', 24, TEAM[side].color);

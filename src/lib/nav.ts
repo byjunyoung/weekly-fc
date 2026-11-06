@@ -18,8 +18,12 @@ export const NAV: NavItem[] = [
     { to: '/guide/', label: '가이드', also: ['/rules/'] },
     { to: '/kit/', label: '자료' },
   ] },
-  // 게임(2026-11-06 2단계 온라인과 함께 메뉴에 올림 — 스펙 2026-11-06-game-online-design.md §3 "상단 메뉴에 「게임」, 탭 줄 없음").
-  { to: '/game/', label: '게임' },
+  // 게임 = 2D 모드 | 3D 모드(2026-11-07 "게임 메뉴는 아래 게임 여러개 고를 수 있게", "그냥 모드를 2d 모드, 3d 모드로 정의하고").
+  // 메뉴는 목록 화면(/games/)으로 가고, 만든 게임을 모드별 목록에 하나씩 더한다. 게임 화면(/game/·/game3d/)에서도 메뉴와 그 모드 탭이 켜진다.
+  { to: '/games/', label: '게임', sub: [
+    { to: '/games/', label: '2D 모드', also: ['/game/'] },
+    { to: '/games/3d/', label: '3D 모드', also: ['/game3d/'] },
+  ] },
 ];
 
 const hit = (path: string, to: string) => (to === '/' ? path === '/' : path.startsWith(to));
@@ -29,7 +33,13 @@ const hitSub = (path: string, s: SubItem) => hit(path, s.to) || (s.also ?? []).s
 export function activeNav(path: string): { top: NavItem | null; sub: SubItem | null } {
   for (const top of NAV) {
     if (top.sub) {
-      const sub = top.sub.find((s) => hitSub(path, s));
+      // 여러 탭이 맞으면 주소가 가장 길게 맞는 탭 — '/games/3d/' 는 '/games/' 로도 시작하지만 3D 탭이어야 한다.
+      let sub: SubItem | null = null, best = -1;
+      for (const c of top.sub) {
+        if (!hitSub(path, c)) continue;
+        const len = Math.max(hit(path, c.to) ? c.to.length : 0, ...(c.also ?? []).map((p) => (hit(path, p) ? p.length : 0)));
+        if (len > best) { best = len; sub = c; }
+      }
       if (sub) return { top, sub };
     } else if (hit(path, top.to) || (top.also ?? []).some((p) => hit(path, p))) return { top, sub: null };
   }

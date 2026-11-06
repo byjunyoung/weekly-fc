@@ -236,3 +236,13 @@ test('카메라 — 화면↔논리 왕복이 카메라가 움직여도 제자�
     assert.ok(b.x - a.x > 0 && Math.abs(b.y - a.y) < 1e-6);
   }
 });
+
+test('혼자 연습 라인업 — 고른 봇을 우리 편·상대 차례대로, 나머지 무작위, 내 선수·명단 밖·겹침은 건너뜀(2026-11-07 "그리고 봇도 선수를 고를 수 있게 해줘")', () => {
+  const roster = Array.from({ length: 16 }, (_, i) => 100 + i);
+  const l = pickLineup(roster, 100, 3, rngFrom(4), [[105, 106, 107], [108, 100, 999, 105, 109]]);
+  const side = (s) => l.filter((x) => x.side === s && !x.human).map((x) => x.num);
+  assert.deepEqual(side(0), [105, 106], '우리 편 봇 자리 둘 — 셋째는 안 씀');
+  assert.deepEqual(side(1).slice(0, 2), [108, 109], '내 선수·명단 밖·이미 쓴 선수는 건너뛴다');
+  assert.equal(new Set(l.map((x) => x.num)).size, 6, '겹침 없음');
+  assert.deepEqual(pickLineup(roster, 100, 3, rngFrom(4)), pickLineup(roster, 100, 3, rngFrom(4), [[], []]), '안 고르면 예전과 같다');
+});

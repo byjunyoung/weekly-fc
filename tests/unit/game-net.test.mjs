@@ -274,3 +274,16 @@ test('parseMsg — 경기장 넷·두 편 인원이 달라도·6대6(선수 12)�
   for (const field of ['auto', 'S', 'M', 'L', 'XL'])
     for (const perSide of [0, 6]) assert.ok(parseMsg({ t: 'room', from: 'h', sid: 's', room: { ...room, settings: { ...room.settings, perSide, field } }, roster: [] }), `${field} ${perSide}`);
 });
+
+test('parseMsg — room 의 botPicks: 있으면 검사, 없으면(예전 방장) 빈 둘로 읽는다', () => {
+  const room = createRoom('ABCD', { clientId: 'h', num: 1, name: '방장' });
+  const ok = parseMsg({ t: 'room', from: 'h', sid: 's', room: { ...room, botPicks: [[3, 4], [5]] }, roster: [] });
+  assert.deepEqual(ok.room.botPicks, [[3, 4], [5]]);
+  const { botPicks: _, ...old } = room;
+  const raw = { t: 'room', from: 'h', sid: 's', room: old, roster: [] };
+  const fixed = parseMsg(raw);
+  assert.deepEqual(fixed.room.botPicks, [[], []]);
+  assert.equal(raw.room.botPicks, undefined, '받은 객체는 안 건드린다');
+  for (const bad of [[[1]], [[1], [2], [3]], [[1.5], []], [[-1], []], [Array(7).fill(1), []], 'x', [[], 'y']])
+    assert.equal(parseMsg({ t: 'room', from: 'h', sid: 's', room: { ...room, botPicks: bad }, roster: [] }), null, JSON.stringify(bad));
+});

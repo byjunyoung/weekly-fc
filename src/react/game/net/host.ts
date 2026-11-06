@@ -11,7 +11,7 @@ import { botInput } from '../../../lib/game/bot.ts';
 import type { NetMsg } from '../../../lib/game/net.ts';
 import { Q_IDLE, decodeInput, encodeInput, parseMsg } from '../../../lib/game/net.ts';
 import type { RoomSettings, RoomState, Team, Who } from '../../../lib/game/room.ts';
-import { autoBalance, buildMatch, createRoom, join, leave as leaveRoom, move, pick, setPhase, setSettings, startBlock } from '../../../lib/game/room.ts';
+import { autoBalance, buildMatch, createRoom, join, leave as leaveRoom, move, pick, setBotPick, setPhase, setSettings, startBlock } from '../../../lib/game/room.ts';
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView } from './common.ts';
 import {
@@ -54,6 +54,8 @@ export type HostSession = {
   setSettings(patch: Partial<RoomSettings>): void;
   move(clientId: string, team: Team): void;
   autoBalance(): void;
+  /** 봇 자리 고르기(로비에서만) — side 편 slot 번째 봇을 num 선수로, null 이면 무작위로. 사용자: "그리고 봇도 선수를 고를 수 있게 해줘". */
+  setBotPick(side: 0 | 1, slot: number, num: number | null): void;
   /** 시작할 수 없는 이유(없으면 null). [시작] 을 미리 막는 데 쓴다. */
   startBlock(): string | null;
   start(): boolean;
@@ -103,6 +105,7 @@ export function createHostSession(o: HostOptions): HostSession {
   let hiddenSince: number | null = null, dormant = false;
   const sid = o.sid ?? `${Math.floor(rnd() * 0x100000000).toString(36)}${Math.floor(rnd() * 0x100000000).toString(36)}`;
   const inRoster = new Set(o.roster.map((p) => p.num));
+  const allNums = o.roster.map((p) => p.num);
   const lastHelloAt = new Map<string, number>();
   let bubbles: Bubble[] = [];
   /** 손님별 마지막으로 들은 때·받은 입력·입력 번호. 침묵 판정과 "그 자리를 봇이 맡나"가 이 값의 함수다(상태 기계를 따로 두지 않는다). */
@@ -320,6 +323,7 @@ export function createHostSession(o: HostOptions): HostSession {
     setSettings(patch) { if (!match && room.phase === 'lobby') setRoom(setSettings(room, patch), o.now()); },
     move(cid, team) { if (!match && room.phase === 'lobby') setRoom(move(room, cid, team), o.now()); },
     autoBalance() { if (!match && room.phase === 'lobby') setRoom(autoBalance(room, o.roster), o.now()); },
+    setBotPick(side, slot, num) { if (!match && room.phase === 'lobby') setRoom(setBotPick(room, side, slot, num, allNums), o.now()); },
     startBlock() { return startBlockOf(room, o.roster); },
 
     start() {

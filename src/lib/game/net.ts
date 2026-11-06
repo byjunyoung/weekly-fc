@@ -103,7 +103,12 @@ function okRoom(r: unknown): boolean {
     && (r.phase === 'lobby' || r.phase === 'match')
     && isArr(r.members, MAX_MEMBERS) && r.members.every(okMember)
     && isObj(s) && isInt(s.perSide, 0, MAX_PER_SIDE) && isInt(s.minutes, 1, 60) && isInt(s.scoreLimit, 0, 99)
-    && (FIELD_CHOICES as readonly unknown[]).includes(s.field);
+    && (FIELD_CHOICES as readonly unknown[]).includes(s.field)
+    && (r.botPicks === undefined || okPicks(r.botPicks));
+}
+/** 고른 봇 — 두 편 배열, 각각 한 편 최대 인원 이하의 0 이상 정수. 없으면(예전 방장) 빈 둘로 읽는다(parseMsg). */
+function okPicks(b: unknown): boolean {
+  return Array.isArray(b) && b.length === 2 && b.every((l) => isArr(l, MAX_PER_SIDE) && l.every((n) => isInt(n, 0)));
 }
 function okPerf(p: unknown): boolean {
   return isObj(p) && isNum(p.maxSpeed) && isNum(p.accel) && isNum(p.kick) && isNum(p.mass) && p.mass > 0;
@@ -127,6 +132,7 @@ function okState(s: unknown): boolean {
       && isNum((p as Record<string, unknown>).kickCooldown) && typeof (p as Record<string, unknown>).kicking === 'boolean')
     && (s.kickoffSide === 0 || s.kickoffSide === 1)
     && (s.lastTouch === null || isInt(s.lastTouch, 0)) && (s.lastScorer === null || isInt(s.lastScorer, 0))
+    && (s.lastAssist === undefined || s.lastAssist === null || isInt(s.lastAssist, 0)) && (s.prevTouch === undefined || s.prevTouch === null || isInt(s.prevTouch, 0))
     && (s.winner === null || s.winner === 0 || s.winner === 1 || s.winner === 'draw') && isNum(s.seed);
 }
 
@@ -140,7 +146,10 @@ export function parseMsg(raw: unknown): NetMsg | null {
     case 'deny':
       return isStr(m.from) && isStr(m.to) && (m.reason === 'taken' || m.reason === 'full' || m.reason === 'closed') ? (raw as NetMsg) : null;
     case 'room':
-      return isStr(m.from) && isStr(m.sid) && okRoom(m.room) && isArr(m.roster, MAX_ROSTER) && m.roster.every((n) => isInt(n, 0)) ? (raw as NetMsg) : null;
+      if (!(isStr(m.from) && isStr(m.sid) && okRoom(m.room) && isArr(m.roster, MAX_ROSTER) && m.roster.every((n) => isInt(n, 0)))) return null;
+      // botPicks 가 없는 방(봇 고르기 전의 방장) — 빈 둘로 채워 넘긴다. 모양을 고치는 건 여기 한 곳뿐이다.
+      if ((m.room as Record<string, unknown>).botPicks === undefined) return { ...(raw as Extract<NetMsg, { t: 'room' }>), room: { ...(m.room as RoomState), botPicks: [[], []] } };
+      return raw as NetMsg;
     case 'start':
       return isStr(m.from) && okConfig(m.config) && isNum(m.seed) ? (raw as NetMsg) : null;
     case 'in':

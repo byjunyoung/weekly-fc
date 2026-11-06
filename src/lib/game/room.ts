@@ -20,7 +20,10 @@ export type Member = { clientId: string; num: number; name: string; team: Team }
 export type PerSide = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type FieldChoice = 'auto' | FieldId;
 export type RoomSettings = { perSide: PerSide; minutes: number; scoreLimit: number; field: FieldChoice };
-export type RoomState = { code: string; hostId: string; members: Member[]; settings: RoomSettings; phase: 'lobby' | 'match'; rev: number };
+/** botPicks = 편마다 봇 자리에 세울 선수(명단 num)를 고른 차례대로. 비면 지금처럼 무작위(2026-11-07 "그리고 봇도 선수를 고를 수 있게 해줘").
+ *  고른 수가 봇 자리보다 많으면 남는 건 안 쓰이지만 지우지 않는다 — "봇으로 채움" 수를 줄였다 늘려도 고른 게 남게. */
+export type BotPicks = [number[], number[]];
+export type RoomState = { code: string; hostId: string; members: Member[]; settings: RoomSettings; phase: 'lobby' | 'match'; rev: number; botPicks: BotPicks };
 export type Who = { clientId: string; num: number; name: string };
 export type JoinResult = { ok: true; room: RoomState } | { ok: false; reason: 'taken' | 'full' | 'closed' };
 
@@ -94,7 +97,49 @@ export function createRoom(code: string, host: Who): RoomState {
     code, hostId: host.clientId, phase: 'lobby', rev: 0,
     members: [{ clientId: host.clientId, num: host.num, name: host.name, team: null }],
     settings: { ...DEFAULT_SETTINGS },
+    botPicks: [[], []],
   };
+}
+
+/** 아무것도 안 고름(전부 무작위). 읽기 전용으로만 쓴다. */
+export const NO_PICKS: BotPicks = [[], []];
+
+// ── 봇 고르기(2026-11-07 "그리고 봇도 선수를 고를 수 있게 해줘") ──
+/** 고른 봇 목록 하나를 고친다(방과 혼자 연습이 같이 쓰는 순수 함수). slot 번째 봇 자리를 num 으로, null 이면 그 자리를 무작위로 되돌린다.
+ *  목록은 빈칸 없이 차례대로라 — slot 이 목록 길이 이상이면 끝에 붙고, null 로 빼면 뒤의 것이 한 칸씩 당겨진다.
+ *  못 고르는 선수(allowed 가 거짓, 다른 편·같은 편 다른 자리에 이미 있음)이거나 한 편 MAX_PER_SIDE 를 넘으면 그대로(같은 객체). */
+export function updatePicks(picks: BotPicks, side: 0 | 1, slot: number, num: number | null, allowed: (num: number) => boolean): BotPicks {
+  if ((side !== 0 && side !== 1) || !Number.isInteger(slot) || slot < 0 || slot >= MAX_PER_SIDE) return picks;
+  const list = picks[side];
+  if (num === null) {
+    if (slot >= list.length) return picks;
+    const next = list.filter((_, i) => i !== slot);
+    return side === 0 ? [next, picks[1]] : [picks[0], next];
+  }
+  if (!Number.isInteger(num) || !allowed(num)) return picks;
+  if (list[slot] === num) return picks;
+  if (picks[1 - side].includes(num) || list.some((n, i) => n === num && i !== slot)) return picks;   // 한 선수는 한 자리만
+  let next: number[];
+  if (slot < list.length) next = list.map((n, i) => (i === slot ? num : n));
+  else if (list.length < MAX_PER_SIDE) next = [...list, num];
+  else return picks;
+  return side === 0 ? [next, picks[1]] : [picks[0], next];
+}
+
+/** 방의 봇 고르기. 명단에 있고(rosterNums), 방 사람 누구의 선수도 아니어야 한다. 안 바뀌면 같은 객체, 바뀌면 rev + 1. */
+export function setBotPick(room: RoomState, side: 0 | 1, slot: number, num: number | null, rosterNums: readonly number[]): RoomState {
+  const held = new Set(room.members.map((m) => m.num));
+  const cur = room.botPicks ?? NO_PICKS;
+  const next = updatePicks(cur, side, slot, num, (n) => rosterNums.includes(n) && !held.has(n));
+  return next === cur ? room : bump(room, { botPicks: next });
+}
+
+/** 사람이 그 선수를 잡으면(들어오기·선수 바꾸기) 봇 목록에서 뺀다. 빠질 게 없으면 같은 배열. */
+function withoutHeld(given: BotPicks | undefined, nums: readonly number[]): BotPicks {
+  const picks = given ?? NO_PICKS;
+  const drop = (l: number[]): number[] => (l.some((n) => nums.includes(n)) ? l.filter((n) => !nums.includes(n)) : l);
+  const a = drop(picks[0]), b = drop(picks[1]);
+  return a === picks[0] && b === picks[1] ? picks : [a, b];
 }
 
 const bump = (room: RoomState, patch: Partial<RoomState>): RoomState => ({ ...room, ...patch, rev: room.rev + 1 });
@@ -114,7 +159,7 @@ export function join(room: RoomState, who: Who): JoinResult {
   }
   if (room.members.some((m) => m.num === who.num)) return { ok: false, reason: 'taken' };
   if (room.members.length >= MAX_MEMBERS) return { ok: false, reason: 'full' };
-  return { ok: true, room: bump(room, { members: [...room.members, { ...who, team: null }] }) };
+  return { ok: true, room: bump(room, { members: [...room.members, { ...who, team: null }], botPicks: withoutHeld(room.botPicks, [who.num]) }) };
 }
 
 export function leave(room: RoomState, clientId: string): RoomState {
@@ -129,7 +174,7 @@ export function pick(room: RoomState, clientId: string, num: number, name: strin
   if (!me) return room;
   if (room.members.some((m) => m.clientId !== clientId && m.num === num)) return room;
   if (me.num === num && me.name === name) return room;
-  return bump(room, { members: room.members.map((m) => (m === me ? { ...m, num, name } : m)) });
+  return bump(room, { members: room.members.map((m) => (m === me ? { ...m, num, name } : m)), botPicks: withoutHeld(room.botPicks, [num]) });
 }
 
 /** 칸 옮기기. 팀 칸은 한 편 MAX_PER_SIDE(6)명까지 — perSide 는 봇을 채우는 수라 옮기기를 막지 않는다(2026-11-07). 대기 칸(null)은 정원이 없다.
@@ -209,8 +254,27 @@ export function buildMatch(room: RoomState, roster: Player[], rnd: () => number)
   const sizes = sideSizes(room);
   const humans: Member[][] = [0, 1].map((t) => room.members.filter((m) => m.team === t));
   const taken = new Set(room.members.map((m) => m.num));
+  // 고른 봇 — 편마다 봇 자리 수만큼 앞에서부터. 그새 못 쓰게 된 것(명단에 없음·방 사람이 잡음·겹침)은 건너뛴다. 남는 건 안 쓴다.
+  const inRoster = new Set(roster.map((p) => p.num));
+  const usedPick = new Set<number>();
+  const chosen = ([0, 1] as const).map((side) => {
+    const need = Math.max(0, sizes[side] - humans[side].length);
+    const out: number[] = [];
+    for (const n of room.botPicks?.[side] ?? []) {
+      if (out.length >= need) break;
+      if (!inRoster.has(n) || taken.has(n) || usedPick.has(n)) continue;
+      usedPick.add(n); out.push(n);
+    }
+    return out;
+  });
+  // 나머지는 지금처럼 무작위 — 고른 게 없으면 난수를 쓰는 순서까지 예전과 같다. 고른 선수는 자리가 모자라 안 쓰였어도 무작위에서 뺀다
+  // (주황 봇으로 고른 선수가 흰 편 무작위 봇으로 나오면 고른 뜻과 어긋난다).
+  const picked = new Set<number>([...(room.botPicks?.[0] ?? []), ...(room.botPicks?.[1] ?? [])]);
   const seenNum = new Set<number>();
-  const free = roster.filter((p) => !taken.has(p.num) && !seenNum.has(p.num) && (seenNum.add(p.num), true)).map((p) => p.num);
+  const uniqFree = roster.filter((p) => !taken.has(p.num) && !usedPick.has(p.num) && !seenNum.has(p.num) && (seenNum.add(p.num), true)).map((p) => p.num);
+  const needRandom = ([0, 1] as const).reduce<number>((t, side) => t + Math.max(0, sizes[side] - humans[side].length) - chosen[side].length, 0);
+  const strict = uniqFree.filter((n) => !picked.has(n));
+  const free = strict.length >= needRandom ? strict : uniqFree;   // 명단이 빠듯하면 남는 고른 선수도 무작위에 넣는다(시작은 막지 않는다)
   const pool = shuffle(free, rnd);
   const players: MatchPlayer[] = [];
   const slots: (string | null)[] = [];
@@ -220,9 +284,10 @@ export function buildMatch(room: RoomState, roster: Player[], rnd: () => number)
     const humanOrder = [...Array.from({ length: Math.max(0, n - 1) }, (_, i) => i + 1), 0];   // 1, 2, …, n-1, 0
     const bySlot: (Member | null)[] = Array.from({ length: n }, () => null);
     humans[side].forEach((m, i) => { bySlot[humanOrder[i]] = m; });
+    let c = 0;
     for (let slot = 0; slot < n; slot++) {
       const m = bySlot[slot], id = players.length;
-      const num = m ? m.num : pool[k++];
+      const num = m ? m.num : c < chosen[side].length ? chosen[side][c++] : pool[k++];
       const r = roster.find((p) => p.num === num);
       players.push({ id, num, name: m ? m.name : (r?.name ?? String(num)), side, bot: !m, perf: r ? perfOf(r, roster) : { ...BASE_PERF } });
       slots.push(m ? m.clientId : null);

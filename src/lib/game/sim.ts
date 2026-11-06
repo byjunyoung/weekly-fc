@@ -74,6 +74,10 @@ const BALL_REST_SPEED = 4;    // 이보다 느리면 선 것으로 친다.
 /** 공이 닿는 거리(몸이 맞닿은 거리에 더하는 여유)와 킥 뒤 쉬는 틱. 누르고 있어도 기관총처럼 안 나가게. */
 const KICK_REACH = 6;
 const KICK_COOLDOWN = 4;      // 킥 뒤 다시 장전되기까지의 틱 — **킥을 뗀 뒤부터** 센다(누르고 있으면 안 줄어든다)
+/** 찬 직후 고리가 밝은 틱(0.2초) — 봇의 킥도 눈에 보이게. */
+const KICK_FLASH_TICKS = 12;
+/** 이 시간 안에 같은 편이 넘겨준 공으로 넣어야 도움(8초). */
+const ASSIST_TICKS = 480;
 /** 골 뒤 멈춰 세리머니하는 틱. */
 const GOAL_TICKS = 90;        // 1.5초
 /** 킥오프에서 아무도 공을 안 건드려도 이 틱이 지나면 경기를 시작한다(봇끼리일 때 멈추지 않게). */
@@ -113,15 +117,20 @@ export type MatchState = {
   score: [number, number]; ticksLeft: number;
   // kicking = 지금 킥을 누르고 있나. 화면이 고리를 밝혀 "눌렀다"를 보여 주는 데 쓴다(2026-11-06 "키 누를 때 피드백이 없네").
   // 입력이 아니라 상태에 두는 이유: 2단계에서 다른 사람 화면에도 같은 표시가 떠야 한다.
-  ball: Body; players: (Body & { id: number; kickCooldown: number; kicking: boolean })[];
+  // kickFlash = 방금 찼다는 표시가 남은 틱. 봇은 차는 순간에만 누르므로 장전 표시가 안 보인다 — 찬 직후 잠깐 같은 표시를 띄워
+  // 사람이든 봇이든 "찼다"가 똑같이 보이게(2026-11-07 "봇들도 똑같이 적용되어야해 애니메이션은").
+  ball: Body; players: (Body & { id: number; kickCooldown: number; kicking: boolean; kickFlash: number })[];
   kickoffSide: Side; lastTouch: number | null;
+  // 도움(2026-11-07 "골할 때 어시스트 기록도 뜨게") — 득점자 바로 앞에 공을 만진 같은 편 선수. prevTouch = 마지막 터치 직전에 만진 다른 사람,
+  // lastTouchTick·prevTouchTick = 각자 마지막으로 만진 틱. lastAssist 는 골 순간에 정한다(없으면 null).
+  prevTouch: number | null; lastTouchTick: number; prevTouchTick: number; lastAssist: number | null;
   /** 골 넣은 사람. 자책골이거나 마지막으로 공 만진 사람이 없으면 null(화면은 편 이름만 띄운다). */
   lastScorer: number | null; winner: Side | 'draw' | null;
   seed: number;
 };
 export type MatchEvent =
   | { type: 'kick'; by: number }
-  | { type: 'goal'; side: Side; scorer: number | null }
+  | { type: 'goal'; side: Side; scorer: number | null; assist: number | null }
   | { type: 'end'; winner: Side | 'draw' };
 
 type Seg = [number, number, number, number];
@@ -201,9 +210,9 @@ function placeForKickoff(s: MatchState, config: MatchConfig): void {
     const p = s.players[i];
     p.x = spot.x;
     p.y = spot.y + (rand(s) - 0.5) * 2 * KICKOFF_JITTER;
-    p.vx = 0; p.vy = 0; p.kickCooldown = 0; p.kicking = false;
+    p.vx = 0; p.vy = 0; p.kickCooldown = 0; p.kicking = false; p.kickFlash = 0;
   });
-  s.lastTouch = null;
+  s.lastTouch = null; s.prevTouch = null; s.lastTouchTick = 0; s.prevTouchTick = 0;
 }
 
 /** 편마다 몇 명인가 [0 편, 1 편]. */
@@ -218,8 +227,8 @@ export function createMatch(config: MatchConfig, seed: number): MatchState {
     tick: 0, phase: 'kickoff', phaseTicks: 0,
     score: [0, 0], ticksLeft: Math.max(1, Math.round(config.minutes * 60 * TICK_HZ)),
     ball: { x: 0, y: 0, vx: 0, vy: 0 },
-    players: config.players.map((mp) => ({ id: mp.id, x: 0, y: 0, vx: 0, vy: 0, kickCooldown: 0, kicking: false })),
-    kickoffSide: 0, lastTouch: null, lastScorer: null, winner: null,
+    players: config.players.map((mp) => ({ id: mp.id, x: 0, y: 0, vx: 0, vy: 0, kickCooldown: 0, kicking: false, kickFlash: 0 })),
+    kickoffSide: 0, lastTouch: null, prevTouch: null, lastTouchTick: 0, prevTouchTick: 0, lastAssist: null, lastScorer: null, winner: null,
     seed: seed >>> 0,
   };
   placeForKickoff(s, config);
@@ -317,6 +326,12 @@ function steer(p: Body, perf: Perf, inp: Input, armed: boolean): void {
   if (len < 0.05 && p.vx * p.vx + p.vy * p.vy < PLAYER_REST_SPEED * PLAYER_REST_SPEED) { p.vx = 0; p.vy = 0; }
 }
 
+/** 공을 만졌다(킥·몸) — 만진 사람이 바뀌면 직전 사람을 prevTouch 로 밀어 둔다(도움 판정용). */
+function touched(s: MatchState, i: number): void {
+  if (s.lastTouch !== i) { s.prevTouch = s.lastTouch; s.prevTouchTick = s.lastTouchTick; s.lastTouch = i; }
+  s.lastTouchTick = s.tick;
+}
+
 /** 한 틱 진행. 받은 state 는 건드리지 않고 새 state 를 돌려준다. */
 export function step(state: MatchState, config: MatchConfig, inputs: Input[]): MatchState {
   const s = clone(state);
@@ -335,6 +350,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
     const held = controlled && !!inputs[i]?.kick;
     // 킥은 한 번 나가면 뗐다 눌러야 다시 장전된다 — 누르고 있는 동안엔 쿨다운이 줄지 않는다.
     if (p.kickCooldown > 0 && !held) p.kickCooldown -= 1;
+    if (p.kickFlash > 0) p.kickFlash -= 1;
     p.kicking = held && p.kickCooldown === 0;   // 장전 중(고리가 밝다). 차고 나면 꺼진다.
     steer(p, config.players[i].perf, controlled ? (inputs[i] ?? NO_INPUT) : NO_INPUT, p.kicking);
   }
@@ -353,7 +369,8 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
       s.ball.vy += ny * config.players[i].perf.kick;
       p.kickCooldown = KICK_COOLDOWN;
       p.kicking = false;   // 나갔으니 장전 표시를 끈다
-      s.lastTouch = i;
+      p.kickFlash = KICK_FLASH_TICKS;
+      touched(s, i);
       kicked = true;
     }
   }
@@ -367,7 +384,7 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
       for (let j = i + 1; j < n; j++)
         collideCircles(s.players[i], R, mass[i], s.players[j], R, mass[j], E_PLAYER_PLAYER);
     for (let i = 0; i < n; i++)
-      if (collideCircles(s.players[i], R, mass[i], s.ball, BR, BALL_MASS, E_PLAYER_BALL) && controlled) s.lastTouch = i;
+      if (collideCircles(s.players[i], R, mass[i], s.ball, BR, BALL_MASS, E_PLAYER_BALL) && controlled) touched(s, i);
 
     for (const w of g.ballWalls) collideSegment(s.ball, BR, w, E_BALL_WALL);
     for (const [px, py] of g.posts) collidePoint(s.ball, BR, px, py, postR, E_BALL_POST);
@@ -409,6 +426,10 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
       s.score[side] += 1;
       const lt = s.lastTouch;
       s.lastScorer = lt !== null && config.players[lt].side === side ? lt : null;   // 자책이면 null
+      // 도움 — 득점자 바로 앞에 만진 같은 편 다른 선수, 그 터치가 ASSIST_TICKS 안일 때만.
+      const pt = s.prevTouch;
+      s.lastAssist = s.lastScorer !== null && pt !== null && pt !== s.lastScorer && config.players[pt]?.side === side
+        && s.tick - s.prevTouchTick <= ASSIST_TICKS ? pt : null;
       s.kickoffSide = side === 0 ? 1 : 0;
       s.phase = 'goal'; s.phaseTicks = 0;
     } else if (s.ticksLeft <= 0) {
@@ -460,7 +481,7 @@ export function eventsBetween(prev: MatchState, next: MatchState): MatchEvent[] 
   });
   for (const side of [0, 1] as const)
     for (let g = prev.score[side]; g < next.score[side]; g++)
-      out.push({ type: 'goal', side, scorer: g === next.score[side] - 1 && next.lastScorer !== null ? next.lastScorer : null });
+      out.push({ type: 'goal', side, scorer: g === next.score[side] - 1 && next.lastScorer !== null ? next.lastScorer : null, assist: g === next.score[side] - 1 ? (next.lastAssist ?? null) : null });
   if (prev.phase !== 'end' && next.phase === 'end' && next.winner !== null) out.push({ type: 'end', winner: next.winner });
   return out;
 }

@@ -12,6 +12,9 @@ import { perfOf } from '../../lib/game/stats';
 import type { Player } from '../../lib/types';
 import { attachInput } from './input';
 import { blend, buildField, buildSprites, drawFrame, fieldKey, HUD_H, TEAM, type Field } from './render';
+import { detectSfx } from './sfx-detect';
+import { play as playSfx } from './sfx';
+import SoundToggle from './SoundToggle';
 import { readInsets } from './stage';
 import { aimCamera, clockText, makeView, pickLineup, rngFrom, stickToSim, type View } from './view';
 
@@ -19,7 +22,8 @@ const STEP_MS = 1000 / TICK_HZ;
 const MAX_CATCHUP = 5;                     // 한 프레임에 따라잡는 최대 틱 — 느린 기기가 계산에 먹혀 더 느려지는 걸 막는다
 
 /** 혼자 연습 설정 — 인원 1대1~6대6, 경기장 자동/작게/보통/크게/아주 크게(2026-11-07). */
-export type Req = { num: number; perSide: 1 | 2 | 3 | 4 | 5 | 6; minutes: number; scoreLimit: number; field: FieldChoice };
+/** botPicks = 우리 편·상대 봇으로 고른 선수(차례대로, 비면 무작위) — "그리고 봇도 선수를 고를 수 있게 해줘". */
+export type Req = { num: number; perSide: 1 | 2 | 3 | 4 | 5 | 6; minutes: number; scoreLimit: number; field: FieldChoice; botPicks?: [number[], number[]] };
 export type MatchSetup = { key: number; req: Req; config: MatchConfig; seed: number; humanId: number; roster: Player[] };
 
 /** 지금 화면의 카메라(디버그 훅 getView 용). */
@@ -39,7 +43,7 @@ export function sidesText(config: MatchConfig): string {
 /** 설정 → 경기. 씨앗은 여기(화면 쪽 시계)에서 만든다 — 계산 코드는 시계·난수를 모른다. */
 export function buildSoloMatch(req: Req, roster: Player[], key: number): MatchSetup {
   const seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
-  const lineup = pickLineup(roster.map((p) => p.num), req.num, req.perSide, rngFrom(seed ^ 0x9e3779b9));
+  const lineup = pickLineup(roster.map((p) => p.num), req.num, req.perSide, rngFrom(seed ^ 0x9e3779b9), req.botPicks);
   const players: MatchPlayer[] = lineup.map((l, id) => {
     const p = roster.find((r) => r.num === l.num) as Player;
     return { id, num: l.num, name: p.name, side: l.side, bot: !l.human, perf: perfOf(p, roster) };
@@ -118,8 +122,9 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
         while (acc >= STEP_MS && n < MAX_CATCHUP && state.phase !== 'end') {
           const next = step(state, config, collectInputs(state));
           for (const ev of eventsBetween(state, next)) {
-            if (ev.type === 'end') ended = true;   // 골·킥 소리 등은 아직 없다(이 자리에서 이벤트를 쓰면 된다)
+            if (ev.type === 'end') ended = true;
           }
+          for (const fx of detectSfx(state, next)) playSfx(fx);   // 효과음(2026-11-07) — 틱마다 상태 변화로 알아낸다
           prev = state; state = next; acc -= STEP_MS; n++;
         }
         if (n === MAX_CATCHUP) acc = 0;
@@ -166,6 +171,7 @@ export function SoloMatch({ setup, live, onRestart, onExit }: { setup: MatchSetu
     <div className="game-overlay" ref={rootRef}>
       <canvas ref={canvasRef} className="game-canvas" />
       {!result && <button type="button" className="game-x" aria-label="경기 나가기" onClick={confirmExit}>✕</button>}
+      {!result && <SoundToggle />}
       <div className="game-stick" ref={baseRef} aria-hidden="true"><div className="game-stick-knob" ref={knobRef} /></div>
       <button type="button" ref={kickRef} className={`game-kick${touch && !result ? ' is-shown' : ''}`} aria-label="킥">킥</button>
       {result && (
