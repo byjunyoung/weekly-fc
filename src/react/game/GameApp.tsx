@@ -42,6 +42,8 @@ function GameRoot() {
   const live = useRef<Live>({ state: null, config: null, override: null, camera: null });
   const [match, setMatch] = useState<SoloRun | null>(null);
   const [game, setGame] = useState(DEFAULT_GAME);
+  /** 마지막으로 있던 방의 게임(방장이 닫아 입장 화면으로 돌아왔을 때 제목에 쓴다). */
+  const [roomGame, setRoomGame] = useState<string | null>(null);
   const [online, setOnline] = useState<Online | null>(null);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -171,10 +173,13 @@ function GameRoot() {
     // 이유 없이 끝난 건 내가 나간 것(나가기 또는 탭을 떠나며 pagehide) — 표시를 지우면 새로고침 복원이 깨진다. 나가기는 leaveRoom 이 지운다.
     if (view.endedWhy !== null) clearMarks();
     setMsg(view.endedWhy);
+    // 방장이 방을 닫아 입장 화면으로 왔다 — 제목은 주소의 ?g= 가 아니라 그 방의 게임으로(2026-11-07 3단계).
+    setRoomGame(view.room?.game ?? null);
     setOnline(null);
   }, [online, view]);
 
   const leaveRoom = useCallback(() => {
+    setRoomGame(null);
     onlineRef.current?.session.leave();
     clearMarks();
     setRoomInUrl(null);
@@ -223,7 +228,7 @@ function GameRoot() {
 
   // 내가 연 방을 다시 여는 입장 화면이면 그 방의 게임 이름을 보인다(주소의 ?g= 가 아니라).
   const back = roomCode && hostedCode() === roomCode ? hostedGame(roomCode) : null;
-  const entryGame = back && gameOf(back.game) ? back.game : game;
+  const entryGame = back && gameOf(back.game) ? back.game : roomCode && roomGame && gameOf(roomGame) ? roomGame : game;
   return (
     <>
       <Entry game={entryGame} players={data.players} roomCode={roomCode} reopen={!!roomCode && hostedCode() === roomCode} message={msg}

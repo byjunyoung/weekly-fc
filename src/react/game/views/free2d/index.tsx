@@ -61,4 +61,5 @@ export const free2dView: GameView<FreeConfig, FreeState, FreeInput, FreeSettings
   controls: 'PC: 방향키·WASD 이동, 스페이스·Shift 킥, 숫자 1~6 한마디 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 킥 · 방장은 [공 모으기]',
   Solo,
   actions: [{ id: 'gather', label: '공 모으기', who: 'host' }],
+  quit: { title: '훈련장을 나갈까요?', content: '들어간 골 수는 남지 않습니다.' },
 };

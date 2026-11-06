@@ -84,7 +84,7 @@ export function SoloMatch({ run, adapter, view, live, onRestart, onExit }: {
   const confirmExit = (): void => {
     paused.current = true;
     modal.confirm({
-      title: '경기를 그만할까요?', content: '지금까지 한 판은 저장되지 않습니다.', okText: '그만하기', cancelText: '계속',
+      title: view.quit?.title ?? '경기를 그만할까요?', content: view.quit?.content ?? '지금까지 한 판은 저장되지 않습니다.', okText: '그만하기', cancelText: '계속',
       centered: true, onOk: onExit, afterClose: () => { paused.current = false; },
     });
   };
