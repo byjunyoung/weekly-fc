@@ -164,8 +164,8 @@ function Actions() {
           <div className="pick-confirm" id="me-confirm">
             <p className="pick-confirm-name"><b>{picked.num}</b> {picked.name}</p>
             <p className="muted">{step === 'change'
-              ? `${me.name ?? ''}에서 ${picked.name}(으)로 바꿉니다. 지금까지 한 대결 판정·방명록도 ${picked.name} 이름으로 옮겨집니다. 직접 바꾸기는 한 번뿐입니다.`
-              : '이 선수가 맞나요? 대결 판정·방명록이 이 이름으로 남습니다.'}</p>
+              ? `${me.name ?? ''}에서 ${picked.name}(으)로 바꿉니다. 지금까지 한 대결 판정도 ${picked.name} 이름으로 옮겨집니다. 직접 바꾸기는 한 번뿐입니다.`
+              : '이 선수가 맞나요? 대결 판정이 이 이름으로 남습니다.'}</p>
           </div>
         )}
         {choosing && !picked && (

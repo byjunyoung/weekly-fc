@@ -334,7 +334,7 @@ a.card:hover { background: var(--charcoal); }
 /* 「내 선수」 칸이 왼쪽 절반(2fr = 오른쪽 두 칸 합)을 쓰고 두 행을 가로지른다 — 오른쪽은 타일 넷이 2×2(2026-09-28
    "선수 카드를 더 넓게, 영역 절반까지"). 칸 높이는 --locker-h 한 곳에서 정한다. */
 .tile-locker { grid-row: 1 / span 3; --locker-h: 520px; }
-/* 오른쪽 타일 다섯 — 내 티어·최근 방명록 / 봉사·매치 영상 / 오늘의 전술(두 칸 폭)(2026-09-28). */
+/* 오른쪽 타일 다섯 — 내 티어·팀 안내 / 봉사·매치 영상 / 오늘의 전술(두 칸 폭)(2026-09-28). */
 .tile-wide { grid-column: span 2; }
 /* 라커룸 맨 위 단체 사진 칸(2026-09-30) — 칸 전체가 팀 자료 링크. 그림은 도트라 확대해도 뭉개지지 않게. */
 .hm-squad { display: flex; flex-direction: column; gap: var(--s-xs); margin-bottom: var(--s-sm); padding: var(--s-md); border: 2px solid var(--line); border-radius: 0; color: inherit; text-decoration: none; }
@@ -917,21 +917,6 @@ details.year[open] > summary::before { content: "▾ "; }
   }
 }
 
-/* ── 선수 방명록(2026-09-25) — 카드 아래 한 줄씩. */
-.gb-form { display: flex; gap: var(--s-xs); align-items: flex-start; margin-bottom: var(--s-sm); }
-.gb-form .ant-input { flex: 1; }
-.gb-hint { margin: 0 0 var(--s-sm); font-size: var(--fs-xs); }
-.gb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-xs); }
-.gb-row { display: flex; align-items: flex-start; gap: var(--s-xs); padding: var(--s-xs) 0; border-top: 1px solid var(--line); }
-.gb-row:first-child { border-top: 0; }
-.gb-face { display: flex; flex: 0 0 auto; }
-.gb-body { flex: 1; min-width: 0; }
-.gb-who { display: flex; align-items: baseline; gap: var(--s-xs); }
-.gb-who b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
-.gb-who .muted { font-size: var(--fs-xs); }
-.gb-text { margin: 2px 0 0; overflow-wrap: anywhere; }
-.gb-del { flex: 0 0 auto; }
-
 /* ── 전술 법칙(2026-09-26) — 카드뉴스의 전술 보드를 그대로. 보드 위, 번호·제목·한 문장 아래. */
 .tl-jump { display: flex; flex-wrap: wrap; gap: var(--s-xs); margin-bottom: var(--s-lg); }
 .tl-jump a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 2px solid var(--line); border-left: 6px solid var(--tc); color: var(--fg); text-decoration: none;
@@ -1006,7 +991,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .sh-log li:last-child { border-bottom: 0; }
 .sh-why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sh-move { font-variant-numeric: tabular-nums; }
-/* 라커룸 제목 옆 오늘 숫자(2026-09-28) — 방문(기기 수)·대결·방명록, POTM 표는 있을 때만. */
+/* 라커룸 제목 옆 오늘 숫자(2026-09-28) — 방문(기기 수)·대결, POTM 표는 있을 때만. */
 .today-stats { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 var(--s-sm); margin: 0; font-size: var(--fs-xs); color: var(--muted); }
 .today-stats b { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--fg); }
 @media (max-width: 639px) { .today-stats { justify-content: flex-start; } }
@@ -1050,13 +1035,10 @@ details.year[open] > summary::before { content: "▾ "; }
 @keyframes wfc-shadow { 0% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(.5); opacity: .4; } }
 @media (prefers-reduced-motion: reduce) { .loading-ball, .loading-spin, .loading-shadow { animation: none; } }
 
-/* 라커룸 새 타일(2026-09-28) — 내 티어(티어 글자 + 종합), 최근 방명록 두 줄, 오늘의 전술(보드 그림 + 제목·설명). */
+/* 라커룸 새 타일(2026-09-28) — 내 티어(티어 글자 + 종합), 오늘의 전술(보드 그림 + 제목·설명). */
 .hm-tier { display: flex; align-items: center; gap: var(--s-xs); }
 .hm-tier-badge { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: #000;
   font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
-.hm-guests { list-style: none; margin: auto 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-xxs); min-width: 0; }
-.hm-guests li { display: flex; flex-direction: column; min-width: 0; font-size: var(--fs-xs); }
-.hm-guest-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
 .hm-law { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: var(--s-sm); align-items: center; margin-top: var(--s-xs); }
 .hm-law-board svg { display: block; width: 100%; height: auto; }
 .hm-law-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-xs); }

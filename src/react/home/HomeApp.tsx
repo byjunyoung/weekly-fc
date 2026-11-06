@@ -9,7 +9,7 @@ import { tierByNum } from '../../lib/card';
 import { currentPotm } from '../../lib/matches';
 import PlayerCard from '../PlayerCard';
 import { getMe } from '../../lib/me';
-import { fetchRecentGuestbook, fetchStatHistory, fetchTodayStats, type RecentGuest, type TodayStats } from '../../lib/api';
+import { fetchStatHistory, fetchTodayStats, type TodayStats } from '../../lib/api';
 import { change, series } from '../../lib/history';
 import { tierRows } from '../../lib/tier';
 import { lawOfDay, BOARDS } from '../../lib/tactics';
@@ -159,9 +159,7 @@ function App() {
     return () => window.clearInterval(t);
   }, []);
 
-  // 최근 방명록(팀 전체)·내 능력치 기록(이번 주 변화) — 2026-09-28 명단·라인업 타일을 바꾼 자리.
-  const [guests, setGuests] = useState<RecentGuest[] | null>(null);
-  useEffect(() => { fetchRecentGuestbook(2).then(setGuests).catch(() => setGuests([])); }, []);
+  // 내 능력치 기록(이번 주 변화) — 2026-09-28 명단·라인업 타일을 바꾼 자리.
   const [myHist, setMyHist] = useState<StatLogRow[] | null>(null);
   useEffect(() => {
     if (me == null) { setMyHist(null); return; }
@@ -190,7 +188,6 @@ function App() {
           <p className="today-stats" aria-label="오늘 활동">
             <span>오늘 <b>{today.visitors}</b>명 방문</span>
             <span>대결 <b>{today.duels}</b>판</span>
-            <span>방명록 <b>{today.guestbook}</b></span>
             {today.potm > 0 && <span>POTM 표 <b>{today.potm}</b></span>}
           </p>
         )}</div>
@@ -210,7 +207,7 @@ function App() {
             </Card>
           )
           : <EmptyMeTile onOpen={openMe} side={side} />}
-        {/* 명단·라인업 타일은 뺐다(2026-09-28 "의미가 없다" — 상단 탭으로 충분). 대신 내 티어·최근 방명록·오늘의 전술. */}
+        {/* 명단·라인업 타일은 뺐다(2026-09-28 "의미가 없다" — 상단 탭으로 충분). 대신 내 티어·팀 안내·오늘의 전술. */}
         {mePlayer ? (
           <LinkTile to={href(`/squad/${mePlayer.num}/#stathist`)}>
             <span className="tile-label">내 티어</span>
@@ -224,15 +221,11 @@ function App() {
         ) : (
           <LinkTile to={href('/tier/')}><span className="tile-label">내 티어</span><b className="tile-big">티어표</b><span className="tile-sub">로그인하고 이름을 고르면 내 순위가 보입니다</span></LinkTile>
         )}
-        <LinkTile to={href(guests?.[0] ? `/squad/${guests[0].num}/` : '/squad/')}>
-          <span className="tile-label">최근 방명록</span>
-          {guests && guests.length > 0 ? (
-            <ul className="hm-guests">
-              {guests.map((g) => (
-                <li key={g.id}><span className="muted">{g.authorName || '누군가'} → {g.toName}</span><span className="hm-guest-text">{g.text}</span></li>
-              ))}
-            </ul>
-          ) : <span className="tile-sub">{guests ? '아직 방명록이 없습니다 — 선수 페이지 아래에 한 줄 남겨 보세요' : '불러오는 중…'}</span>}
+        {/* 옛 최근 글 칸 자리(2026-11-06) — 새 멤버 안내로. */}
+        <LinkTile to={href('/guide/')}>
+          <span className="tile-label">처음 왔다면</span>
+          <b className="tile-big">팀 안내</b>
+          <span className="tile-sub">한 주 흐름 · 경기 영상 · 포털 쓰는 법</span>
         </LinkTile>
         {/* 봉사는 이번 달·다음 달 두 칸이던 걸 한 칸으로(2026-09-28 "봉사에 영역을 너무 많이 배정"). 다음 달은 아래 한 줄. */}
         <LinkTile to={href('/rules/#duty')}>

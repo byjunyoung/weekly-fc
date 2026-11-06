@@ -45,7 +45,7 @@ function Card({ m, players, today, admin, onPotmImage, onTeamsImage }: { m: Matc
     catch (e) { message.error((e as Error).message); }
     finally { setSavingScore(false); }
   }
-  // 지우기 확인은 다른 관리자 삭제(선수·벌금·방명록)와 같은 Popconfirm 으로(2026-09-28 일관성 정리).
+  // 지우기 확인은 다른 관리자 삭제(선수·벌금)와 같은 Popconfirm 으로(2026-09-28 일관성 정리).
   const [deleting, setDeleting] = useState(false);
   async function onDelete(): Promise<void> {
     setDeleting(true);

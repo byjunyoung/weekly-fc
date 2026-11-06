@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 
 // 태스크가 페이지를 추가할 때마다 여기에 줄을 더한다.
 export const PAGES = [
@@ -211,4 +212,9 @@ test('링크 미리보기 — 셸 페이지마다 og:image 가 절대 주소로 
   assert.ok(read('tactics/index.html').includes('/weekly-fc/og-tactics.png'), '전술은 자기 그림');
   assert.ok(read('matches/potm/index.html').includes('/weekly-fc/og-potm.png'), 'POTM 투표는 자기 그림');
   assert.ok(read('teams/index.html').includes('property="og:image"'), '넘김 페이지도 미리보기');
+});
+
+const grepSrc = (re) => execSync(`grep -rilE "${re}" src || true`, { encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+test('방명록은 화면·코드에서 뺐다(2026-11-06) — src 어디에도 남지 않는다', () => {
+  assert.deepEqual(grepSrc('guestbook|방명록'), []);
 });

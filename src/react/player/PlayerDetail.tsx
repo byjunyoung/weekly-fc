@@ -17,7 +17,6 @@ import CardShareModal from '../CardShareModal';
 import PlayerCard from '../PlayerCard';
 import { avatarSpecFor, serializeAvatar } from '../../lib/avatar';
 import AvatarEditor from './AvatarEditor';
-import Guestbook from './Guestbook';
 import StatHistory from './StatHistory';
 import type { AvatarSpec } from '../../lib/avatar';
 import { STAT_KEYS } from '../../lib/types';
@@ -288,7 +287,7 @@ function Detail({ num }: { num: number }) {
                   <Select size="small" placeholder="진짜 이름" style={{ width: 120 }} value={moveTo ?? undefined} onChange={setMoveTo}
                     showSearch optionFilterProp="label"
                     options={(data?.players ?? []).filter((p) => !claimed.includes(p.num)).map((p) => ({ value: p.num, label: `${p.num} ${p.name}` }))} />
-                  <Popconfirm title="이 계정을 고른 선수로 옮길까요? 이 계정이 남긴 판정·방명록도 따라갑니다." okText="옮기기" cancelText="취소"
+                  <Popconfirm title="이 계정을 고른 선수로 옮길까요? 이 계정이 남긴 판정도 따라갑니다." okText="옮기기" cancelText="취소"
                     onConfirm={move} disabled={moveTo == null}>
                     <Button size="small" loading={releasing} disabled={moveTo == null}>옮기기</Button>
                   </Popconfirm>
@@ -369,10 +368,8 @@ function Detail({ num }: { num: number }) {
               )}
             </div>
           </div>
-          {/* 방명록(2026-09-25) — 카드 아래 한 줄씩. 꾸미는 중엔 숨긴다(옵션 목록이 길다). */}
           {/* 능력치 기록(2026-09-28) — 차트·게임 로그(팬/천적은 2026-09-29 뺌). 옛 「고친 기록」 여덟 줄 목록을 대신한다. */}
           {!avatarOpen && <StatHistory player={player} />}
-          {!avatarOpen && data && <Guestbook player={player} players={data.players} />}
         </div>
       )}
       {editModal()}

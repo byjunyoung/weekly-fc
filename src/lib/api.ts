@@ -6,7 +6,7 @@
 import { accessToken, adminOn, cachedMe, session, setCachedMe, type Me } from './auth.ts';
 import { SUPABASE_KEY, SUPABASE_URL } from './backend.ts';
 import { applyPotm } from './matches.ts';
-import { STAT_KEYS, type Data, type Fine, type GuestbookRow, type Match, type MatchTeam, type Placing, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
+import { STAT_KEYS, type Data, type Fine, type Match, type MatchTeam, type Placing, type Player, type RotationRow, type StatKey, type StatLogRow, type VestKey } from './types.ts';
 
 // v3: matches 가 생겼다(2026-09-25) — 옛 캐시엔 그 칸이 없어 화면이 깨지므로 키를 올려 한 번 버린다.
 const CACHE_KEY = 'wfc_cache_v3';
@@ -178,7 +178,7 @@ export async function claimedNums(): Promise<number[]> { const r = await rpc('cl
 export type MemberRow = { num: number; email: string; claimed_at: string };
 export async function adminMembers(): Promise<MemberRow[]> { const r = await rpc('admin_members'); return Array.isArray(r) ? (r as MemberRow[]) : []; }
 export async function adminRelease(num: number): Promise<void> { await rpc('admin_release', { p_num: num }); }
-/** 잘못 고른 이름 바꾸기 — 본인은 한 번만. 그 계정이 옛 이름으로 한 판정·방명록도 따라 옮겨진다. */
+/** 잘못 고른 이름 바꾸기 — 본인은 한 번만. 그 계정이 옛 이름으로 한 판정도 따라 옮겨진다. */
 export async function changeClaim(num: number): Promise<Me> { await rpc('change_claim', { p_num: num }); return refreshMe(); }
 /** 관리자: from 번에 붙은 계정을 to 번으로(기록도 같이). */
 export async function adminMove(from: number, to: number): Promise<void> { await rpc('admin_move', { p_from: from, p_to: to }); }
@@ -303,36 +303,16 @@ export async function votePotm(id: number, target: number): Promise<Record<numbe
   return tally;
 }
 
-// ── 방명록 (2026-09-25) ───────────────────────────────────────
-export function normalizeGuestbook(r: Raw): GuestbookRow | null {
-  const id = num(r.id);
-  const text = String(r.text ?? '').trim();
-  if (id <= 0 || !text) return null;
-  return { id, num: num(r.num), authorNum: numOrNull(r.author_num), authorName: String(r.author_name ?? '').trim(), text, ts: String(r.ts ?? '') };
-}
-/** 한 선수의 방명록(최신이 위). 누구나. get_all 에 안 싣고 선수 페이지에서 따로 읽는다. */
-export async function fetchGuestbook(playerNum: number): Promise<GuestbookRow[]> {
-  const r = await rpc('guestbook', { p_num: playerNum });
-  return (Array.isArray(r) ? (r as Raw[]) : []).map(normalizeGuestbook).filter((x): x is GuestbookRow => x !== null);
-}
-/** 한 줄 남기기 — 로그인 + 이름 차지. 쓴 사람 이름은 서버가 붙인다. 응답 한 줄을 돌려준다. */
-export async function writeGuestbook(playerNum: number, text: string): Promise<GuestbookRow> {
-  const r = normalizeGuestbook(await rpc('guestbook_write', { p_num: playerNum, p_text: text }));
-  if (!r) throw new Error('저장 결과를 읽지 못했습니다');
-  return r;
-}
-export async function deleteGuestbook(id: number): Promise<void> { await rpc('guestbook_delete', { p_id: id }); }
-
 // ── 능력치 기록 전체 · 오늘 활동 (2026-09-28) ─────────────────
 /** 한 선수의 능력치 기록 전부(오래된 것부터). get_all 은 선수마다 8줄만 싣는다 — 선수 페이지에서 따로 읽는다. */
 export async function fetchStatHistory(playerNum: number): Promise<StatLogRow[]> {
   const r = await rpc('stat_history', { p_num: playerNum });
   return (Array.isArray(r) ? (r as Raw[]) : []).map(normalizeStatLog).filter((x): x is StatLogRow => x !== null);
 }
-export type TodayStats = { visitors: number; members: number; duels: number; guestbook: number; potm: number };
+export type TodayStats = { visitors: number; members: number; duels: number; potm: number };
 export async function fetchTodayStats(): Promise<TodayStats> {
   const r = await rpc('today_stats');
-  return { visitors: num(r.visitors), members: num(r.members), duels: num(r.duels), guestbook: num(r.guestbook), potm: num(r.potm) };
+  return { visitors: num(r.visitors), members: num(r.members), duels: num(r.duels), potm: num(r.potm) };
 }
 /** 페이지를 볼 때마다 한 번 — 서버는 기기·하루 한 줄에 페이지뷰를 더한다(관리자 통계, 2026-09-28).
  *  기기 id 는 이 브라우저가 만든 난수라 누구인지 알 수 없다. 로그인 중이면 서버가 선수 번호를 같이 남긴다.
@@ -348,7 +328,7 @@ export function hit(): void {
 // ── 관리자 통계 (2026-09-28) ─────────────────────────────────
 export type StatDay = { day: string; devices: number; members: number; views: number; duels: number };
 export type StatPerson = { num: number; name: string; claimedAt: string | null; lastVisit: string | null; visitDays: number; views: number;
-  duels: number; lastDuel: string | null; guestbook: number; potmVotes: number };
+  duels: number; lastDuel: string | null; potmVotes: number };
 /** 기간 요약(서버 계산) — 방문 기기(서로 다른)·접속 팀원·페이지뷰·대결·활동 팀원(방문 또는 대결). */
 export type StatSummary = { devices: number; members: number; views: number; duels: number; active: number };
 export type AdminStats = { today: string; from: string; summary: StatSummary; days: StatDay[]; people: StatPerson[] };
@@ -364,7 +344,7 @@ export async function fetchAdminStats(days: number | null = 7): Promise<AdminSta
     days: arr(r.days).map((d) => ({ day: String(d.day ?? ''), devices: num(d.devices), members: num(d.members), views: num(d.views), duels: num(d.duels) })),
     people: arr(r.people).map((p) => ({ num: num(p.num), name: String(p.name ?? ''), claimedAt: str(p.claimed_at), lastVisit: str(p.last_visit),
       visitDays: num(p.visit_days), views: num(p.views), duels: num(p.duels), lastDuel: str(p.last_duel),
-      guestbook: num(p.guestbook), potmVotes: num(p.potm_votes) })),
+      potmVotes: num(p.potm_votes) })),
   };
 }
 
@@ -374,10 +354,4 @@ export async function setMatchScore(id: number, us: number | null, them: number 
   await rpc('set_match_score', { p_id: id, p_us: us, p_them: them });
   if (inflight) await inflight.catch(() => {});
   await refresh();
-}
-/** 라커룸 「최근 방명록」 — 팀 전체 최근 글(받는 선수 이름 포함). 누구나. */
-export type RecentGuest = GuestbookRow & { toName: string };
-export async function fetchRecentGuestbook(limit = 2): Promise<RecentGuest[]> {
-  const r = await rpc('recent_guestbook', { p_limit: limit });
-  return (Array.isArray(r) ? (r as Raw[]) : []).flatMap((x) => { const g = normalizeGuestbook(x); return g ? [{ ...g, toName: String(x.to_name ?? '') }] : []; });
 }

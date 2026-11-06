@@ -1,6 +1,6 @@
 // src/react/stats/StatsApp.tsx — 관리자 통계(2026-09-28 "누가 얼마나 접속했고 사용자 현황 파악"). 관리자 모드에서만.
 // 위: 요약 숫자 넷. 가운데: 날짜별 막대 둘(방문 기기 · 대결 판수) — 단위가 달라 한 차트에 겹치지 않는다.
-// 아래: 선수별 표(계정 연결·최근 활동·방문·대결·방명록·POTM 표)와 아직 계정을 안 붙인 선수.
+// 아래: 선수별 표(계정 연결·최근 활동·방문·대결·POTM 표)와 아직 계정을 안 붙인 선수.
 // 방문 기록은 2026-09-28 부터 쌓인다 — 로그인 안 한 방문은 기기 수로만 잡히고 누구인지 모른다.
 import { Button, Segmented, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
@@ -95,7 +95,6 @@ function Stats() {
     { title: '방문일', dataIndex: 'visitDays', align: 'right', sorter: (a, b) => a.visitDays - b.visitDays },
     { title: '페이지뷰', dataIndex: 'views', align: 'right', sorter: (a, b) => a.views - b.views },
     { title: '대결', dataIndex: 'duels', align: 'right', sorter: (a, b) => a.duels - b.duels },
-    { title: '방명록', dataIndex: 'guestbook', align: 'right', sorter: (a, b) => a.guestbook - b.guestbook },
     { title: 'POTM 표', dataIndex: 'potmVotes', align: 'right', sorter: (a, b) => a.potmVotes - b.potmVotes },
   ];
 

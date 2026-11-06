@@ -25,5 +25,3 @@ export type Placing = { need: number; count: Record<number, number> };
 export type Data = { players: Player[]; rotation: RotationRow[]; fines: Fine[]; statLog: StatLogRow[]; matches: Match[]; placing?: Placing };
 export const STAT_KEYS = ['pace', 'dribble', 'pass', 'shoot', 'defend', 'stamina'] as const;
 export type StatKey = (typeof STAT_KEYS)[number];
-/** 선수 방명록 한 줄(2026-09-25). 이름은 쓴 시점의 것 — 서버가 붙인다. */
-export type GuestbookRow = { id: number; num: number; authorNum: number | null; authorName: string; text: string; ts: string };
