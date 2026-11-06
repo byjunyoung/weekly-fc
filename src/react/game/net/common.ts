@@ -37,6 +37,8 @@ export const HOST_SILENCE_MATCH_MS = 20000;
 export const HOST_SLOW_MS = 3000;
 /** 상대가 HOST_SLOW_MS 넘게 조용하면 길을 떠본다(transport.probe) — 이 간격에 한 번까지(리뷰 #3). */
 export const PROBE_EVERY_MS = 5000;
+/** 방장의 bye 를 받은 손님이 방장의 room(새로고침해 다시 연 방)을 기다리는 시간 — 그 뒤에도 없으면 "방장이 방을 닫았습니다". */
+export const HOST_BYE_WAIT_MS = 8000;
 // 무료 메시지 한도는 프로젝트 전체가 나눠 쓴다 — 잊힌 탭이 끝없이 보내지 않게.
 /** 방장 탭이 이만큼 가려져 있으면 경기를 접고 주기 방송을 멈춘다. 손님도 이만큼 못 들어가거나 방장이 멈춰 있으면 나온다. */
 export const GIVE_UP_MS = 180000;

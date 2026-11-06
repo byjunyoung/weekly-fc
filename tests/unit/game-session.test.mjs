@@ -216,13 +216,33 @@ test('로비에서 방장이 30초 조용하면 손님은 "방장과 연결이 �
   }
 });
 
-test('방장이 나가면(bye) 손님은 바로 끝난다', () => {
+test('방장이 나가면(bye) 손님은 8초 기다렸다가(새로고침일 수 있다) 끝난다', () => {
   const w = world({ guests: 1 });
   w.run(1500);
   w.host.leave();
-  w.run(100);
+  w.run(1000);
+  assert.equal(w.gs[0].getView().stage, 'lobby', '바로 나가지 않는다');
+  assert.equal(w.gs[0].getView().hostSlow, true, '방장을 기다리는 띠');
+  w.run(7500);
   assert.equal(w.gs[0].getView().stage, 'ended');
   assert.equal(w.gs[0].getView().endedWhy, '방장이 방을 닫았습니다');
+});
+
+test('방장이 새로고침하면(bye 뒤 같은 clientId 로 방을 다시 연다) 손님은 기다렸다가 다시 들어간다 — 방에서 안 튕긴다', () => {
+  const w = world({ guests: 1 });
+  w.run(1500);
+  w.host.move('c1', 1);
+  w.run(200);
+  w.host.leave();          // 새로고침 — pagehide 의 bye
+  w.run(1200);
+  w.state.host = createHostSession({ transport: w.hub.endpoint(), roster: w.R, me: who(0), code: 'ABCD', now: w.now, rnd: rngFrom(9), ...G });
+  w.run(4000);
+  const v = w.gs[0].getView();
+  assert.equal(v.stage, 'lobby');
+  assert.equal(v.endedWhy, null);
+  assert.ok(w.state.host.getRoom().members.some((m) => m.clientId === 'c1'), '다시 들어왔다');
+  w.run(10000);
+  assert.equal(w.gs[0].getView().stage, 'lobby', '기다림이 끝나도 그대로');
 });
 
 test('stop → 모두 로비로, 같은 사람들로 다시 시작할 수 있다', () => {

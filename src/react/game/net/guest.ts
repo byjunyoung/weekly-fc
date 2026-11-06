@@ -23,7 +23,7 @@ import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView, Stage } from './common.ts';
 import {
   DENY_TEXT, GIVE_UP_MS, HELLO_EVERY_MS, HOST_SILENCE_LOBBY_MS, HOST_SILENCE_MATCH_MS, HOST_SLOW_MS, JOIN_SLOW_MS,
-  KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, PROBE_EVERY_MS, SAY_GAP_MS, SLACK_MS, SPECTATOR_PING_MS, STEP_MS, inputGapMs, inRate, takeToken, fullBucket,
+  KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, PROBE_EVERY_MS, HOST_BYE_WAIT_MS, SAY_GAP_MS, SLACK_MS, SPECTATOR_PING_MS, STEP_MS, inputGapMs, inRate, takeToken, fullBucket,
   createStore, humansIn, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
 import type { Offsets, Smoother } from './smooth.ts';
@@ -101,6 +101,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
   let seq = 0, lastSentQ: number | null = null, lastInAt = -Infinity;
   let bucket = fullBucket(o.now());   // 손님 입력 양동이(리뷰 #1)
   let lastProbe = -Infinity, liveSet = false;   // 길 떠보기·경기 중 박동(리뷰 #3)
+  let hostByeAt: number | null = null;   // 방장 bye 를 받은 때(새로고침이면 곧 room 이 온다)
   let bubbles: Bubble[] = [];
   let matchKey = 0;
 
@@ -188,6 +189,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
         // 같은 방장 세션의 옛 상태는 버린다. 세션이 바뀌었으면(방장이 새로고침해 rev 0 부터) 새로 센다.
         if (room && roomSid === m.sid && m.room.rev <= room.rev) { lastHostAt = now; return; }
         lastHostAt = now;
+        hostByeAt = null;   // 방장이 돌아왔다(새로고침)
         hostId = m.from;
         roomSid = m.sid;
         room = m.room;
@@ -251,7 +253,13 @@ export function createGuestSession(o: GuestOptions): GuestSession {
         if (pred && sayIsValid(room, pred.game, pred.config, m)) bubbles = pushBubble(bubbles, m.id, m.k, now);
         return;
       }
-      case 'bye': if (fromHost(m.from)) end('방장이 방을 닫았습니다'); return;
+      case 'bye': {
+        if (!fromHost(m.from)) return;
+        // 방장 탭은 새로고침할 때도 bye 를 남긴다(pagehide) — 방에 있던 손님은 곧 올 수 있는 room 을 잠깐 기다린다(조정자 (a)).
+        if (stage === 'lobby' || stage === 'match') { hostByeAt = now; store.set({ hostSlow: true }); }
+        else end('방장이 방을 닫았습니다');
+        return;
+      }
       default: return;   // hello·pick·in·ping 은 방장에게 가는 것
     }
   });
@@ -273,6 +281,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
         return;
       }
       if (stage === 'ended') return;
+      if (hostByeAt !== null) { if (now - hostByeAt >= HOST_BYE_WAIT_MS) end('방장이 방을 닫았습니다'); return; }   // bye 뒤 기다리는 중
       if (conn !== 'open') { lastHostAt = now; return; }   // 내 쪽 길이 끊긴 동안은 방장 침묵으로 치지 않는다(다시 붙는 중 안내만)
       const quiet = now - lastHostAt;
       if (quiet > (stage === 'match' ? HOST_SILENCE_MATCH_MS : HOST_SILENCE_LOBBY_MS)) { end(LOST); return; }
