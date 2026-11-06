@@ -262,3 +262,28 @@ function banner(ctx: CanvasRenderingContext2D, view: View, y: number, big: strin
   if (small) { ctx.font = `${Math.max(10, Math.round(fs / 20) * 10)}px ${F9}`; ctx.fillStyle = '#fff'; ctx.fillText(small, view.vw / 2, y + fs * 0.5); }
   ctx.textBaseline = 'top';
 }
+
+// ── 한마디 말풍선(2단계 온라인) ──
+/** 그 선수 머리 위에 말풍선. drawFrame 뒤에 부른다(같은 dpr 변환 그대로). 몸이 화면 위 끝이면 아래로 붙여 잘리지 않게. */
+export function drawBubbles(ctx: CanvasRenderingContext2D, st: MatchState, view: View, bubbles: { id: number; text: string }[]): void {
+  if (!bubbles.length) return;
+  const R = PITCH.playerR * view.scale;
+  ctx.font = `14px ${F14}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const b of bubbles) {
+    const body = st.players[b.id];
+    if (!body || !b.text) continue;
+    const s = toScreen(view, body.x, body.y);
+    const w = Math.ceil(ctx.measureText(b.text).width) + 14, h = 24;
+    let y = s.y - R - 14 - h;            // 내 선수 화살표 위
+    let tail = 1;
+    if (y < 2) { y = s.y + R + 22; tail = -1; }   // 위가 모자라면 이름표 아래로
+    const x = Math.min(Math.max(2, s.x - w / 2), view.vw - w - 2);
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
+    // 꼬리 — 말한 사람 쪽으로
+    const ty = tail > 0 ? y + h : y;
+    ctx.beginPath(); ctx.moveTo(s.x - 5, ty); ctx.lineTo(s.x, ty + tail * 7); ctx.lineTo(s.x + 5, ty); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.fillText(b.text, x + w / 2, y + h / 2 + 1);
+  }
+  ctx.textBaseline = 'top';
+}

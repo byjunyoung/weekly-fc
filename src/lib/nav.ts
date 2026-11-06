@@ -1,4 +1,4 @@
-// 상단 메뉴 구성(2026-11-06 여덟 → 여섯 → 다섯, "명단이랑 티어도 하나로 합치자"). 경로는 전부 base 없는 '/…/' 꼴 — 링크로 쓸 때 href() 를 씌운다.
+// 상단 메뉴 구성(2026-11-06 여덟 → 여섯 → 다섯, "명단이랑 티어도 하나로 합치자" → 같은 날 「게임」을 더해 여섯). 경로는 전부 base 없는 '/…/' 꼴 — 링크로 쓸 때 href() 를 씌운다.
 // 화면을 모르는 순수 모듈이라 node 단위 테스트가 그대로 가져온다.
 export type SubItem = { to: string; label: string; also?: string[] };   // also = 이 탭이 켜지는 다른 경로 접두
 export type NavItem = { to: string; label: string; sub?: SubItem[]; also?: string[] };
@@ -18,6 +18,8 @@ export const NAV: NavItem[] = [
     { to: '/guide/', label: '가이드', also: ['/rules/'] },
     { to: '/kit/', label: '자료' },
   ] },
+  // 게임(2026-11-06 2단계 온라인과 함께 메뉴에 올림 — 스펙 2026-11-06-game-online-design.md §3 "상단 메뉴에 「게임」, 탭 줄 없음").
+  { to: '/game/', label: '게임' },
 ];
 
 const hit = (path: string, to: string) => (to === '/' ? path === '/' : path.startsWith(to));

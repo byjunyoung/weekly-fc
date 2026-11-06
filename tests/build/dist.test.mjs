@@ -47,9 +47,9 @@ test('내부 링크는 전부 /weekly-fc/ 로 시작한다', () => {
     for (const h of hrefs) assert.ok(h.startsWith('/weekly-fc/'), `${p}: ${h}`);
   }
 });
-test('상단 탭은 라커룸·선수·매치·전술·안내 다섯 갈래(2026-11-06 여덟 → 여섯 → 다섯, 티어는 명단 아래로; 이전: 2026-09-28 운영 규칙 → 규칙, 2026-09-30 자료) — 라인업·규칙·자료는 하위 탭으로', () => {
+test('상단 탭은 라커룸·선수·매치·전술·안내·게임 여섯 갈래(2026-11-06 여덟 → 여섯 → 다섯 → 게임을 더해 여섯, 티어는 명단 아래로; 이전: 2026-09-28 운영 규칙 → 규칙, 2026-09-30 자료) — 라인업·규칙·자료는 하위 탭으로', () => {
   const html = read('index.html');
-  for (const l of ['라커룸', '선수', '매치', '전술', '안내']) assert.ok(html.includes(`<span>${l}</span>`), l);
+  for (const l of ['라커룸', '선수', '매치', '전술', '안내', '게임']) assert.ok(html.includes(`<span>${l}</span>`), l);
   for (const l of ['스쿼드', '명단', '기록', '소개', '팀짜기', '라인업', '티어', '규칙', '자료']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
 test('묶인 메뉴는 하위 탭 줄을 보인다(2026-11-06) — 규칙에선 안내 > 규칙, 라인업에선 매치 > 라인업 짜기', () => {
@@ -276,17 +276,19 @@ test('안내 > 가이드(2026-11-06) — 시작하기와 규칙을 한 페이지
 });
 
 
-// 게임(2026-11-06) — 1단계는 주소(/game/)로만 들어온다. 사용자가 해 보기 전엔 상단 메뉴에 올리지 않는다.
-test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단 메뉴에는 아직 게임이 없다', () => {
+// 게임(2026-11-06) — 1단계는 주소로만 들어왔고, 2단계(온라인)와 함께 상단 메뉴 여섯째로 올렸다(탭 줄은 없다).
+test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단 메뉴에 게임(/game/)이 있다', () => {
   const html = read('game/index.html');
   assert.match(html, /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/GameApp\.[^"]+\.js"[^>]*client="load"/, 'GameApp 섬');
   assert.ok(html.includes('<title>게임 · WEEKLY FC</title>'), '제목');
   assert.ok(html.includes('class="loading"') && html.includes('불러오는 중'), '빌드 때는 불러오는 중 화면');
   assert.ok(!html.includes('class="game-overlay"'), '경기 오버레이는 시작한 뒤에만 생긴다');
+  assert.ok(!html.includes('class="subnav"'), '게임은 탭 줄이 없다');
   for (const p of ['index.html', 'game/index.html', 'tier/index.html']) {
     const nav = read(p).match(/<nav[\s\S]*?<\/nav>/g) ?? [];
     assert.ok(nav.length > 0, `${p}: 메뉴를 못 찾았다`);
-    assert.ok(!nav.join('').includes('게임'), `${p}: 상단 메뉴에 게임이 있다`);
-    assert.ok(!nav.join('').includes('/weekly-fc/game/'), `${p}: 상단 메뉴에 /game/ 링크가 있다`);
+    assert.ok(nav.join('').includes('게임'), `${p}: 상단 메뉴에 게임이 없다`);
+    assert.ok(nav.join('').includes('/weekly-fc/game/'), `${p}: 상단 메뉴에 /game/ 링크가 없다`);
   }
+  assert.match(html, /<a href="\/weekly-fc\/game\/"[^>]*class="active"|<a[^>]*class="active"[^>]*href="\/weekly-fc\/game\/"/, '/game/ 에선 게임 메뉴가 켜진다');
 });

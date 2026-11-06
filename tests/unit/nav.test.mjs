@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { NAV, activeNav } from '../../src/lib/nav.ts';
 const at = (p) => { const a = activeNav(p); return [a.top?.label ?? null, a.sub?.label ?? null]; };
-test('상단 메뉴는 다섯', () => assert.deepEqual(NAV.map((n) => n.label), ['라커룸', '선수', '매치', '전술', '안내']));
+test('상단 메뉴는 여섯(2026-11-06 「게임」 추가)', () => assert.deepEqual(NAV.map((n) => n.label), ['라커룸', '선수', '매치', '전술', '안내', '게임']));
 test('activeNav: 경로마다 정확히 하나', () => {
   assert.deepEqual(at('/'), ['라커룸', null]);
   assert.deepEqual(at('/squad/12/'), ['선수', null]);
@@ -14,5 +14,6 @@ test('activeNav: 경로마다 정확히 하나', () => {
   assert.deepEqual(at('/guide/'), ['안내', '가이드']);
   assert.deepEqual(at('/rules/'), ['안내', '가이드']);
   assert.deepEqual(at('/kit/'), ['안내', '자료']);
+  assert.deepEqual(at('/game/'), ['게임', null]);
   assert.deepEqual(at('/stats/'), [null, null]);
 });

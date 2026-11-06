@@ -1104,3 +1104,42 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .game-outcome.is-lose { color: var(--warn); }
 .game-final { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-synthesis: none; letter-spacing: 0; }
 .game-result-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-xs); margin-top: var(--s-sm); }
+
+/* ── 게임 2단계 온라인(2026-11-06): 입장 버튼·방(로비)·경기 화면 위 안내 ──
+   방은 주황 | 대기 | 흰 세 칸을 폰(390px)에서도 나란히 — 칩은 얼굴 + 이름만(내 칩은 금색 테두리). 빈자리는 흐린 "봇". */
+.game-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-xs); margin-top: var(--s-sm); }
+.game-join-msg { margin: 0; color: var(--fg); }
+.game-code { color: var(--gold); }
+.game-conn { margin: 0; padding: var(--s-xs) var(--s-sm); border: 1px solid var(--hairline-strong); background: var(--elevated); color: var(--fg); }
+.game-pick.is-held { opacity: .35; cursor: not-allowed; }
+.game-invite-url { word-break: break-all; user-select: all; -webkit-user-select: all; }
+.game-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-xs); }
+.game-col { display: flex; flex-direction: column; gap: var(--s-xxs); min-width: 0; padding: var(--s-xxs); background: var(--card); border: 1px solid var(--hairline); }
+.game-col.is-target { border-color: var(--link); cursor: pointer; }
+.game-col-head { display: flex; align-items: center; justify-content: flex-start; gap: var(--s-xxs); width: 100%; min-height: 36px; padding: 0 var(--s-xxs); border: 0; border-bottom: 2px solid var(--hairline-strong);
+  background: transparent; color: var(--fg); font-family: var(--font); font-size: var(--fs-xs); text-align: left; }
+.game-col-head:disabled { cursor: default; color: var(--fg); }
+.game-col-head .muted { margin-left: auto; }
+.game-col-dot { width: 10px; height: 10px; flex: none; }
+.game-col-list { display: flex; flex-direction: column; gap: var(--s-xxs); min-height: 120px; }
+.game-chip { display: flex; align-items: center; justify-content: flex-start; gap: var(--s-xxs); width: 100%; min-width: 0; min-height: 34px; padding: 2px var(--s-xxs); border: 1px solid var(--hairline);
+  background: var(--elevated); color: var(--fg); font-family: var(--font); font-size: var(--fs-xs); text-align: left; }
+.game-col-list > button.game-chip:hover { border-color: var(--fg); }
+.game-chip.is-me { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.game-chip.is-picked { background: var(--link); color: var(--canvas); border-color: var(--link); }
+.game-chip.is-bot { justify-content: center; border-style: dashed; background: transparent; color: var(--muted); }
+.game-chip-face { display: flex; flex: none; }
+.game-chip-face svg { width: 24px; height: 24px; }
+.game-chip-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 경기 화면 위: 한마디(왼쪽 위 — 조이스틱은 왼쪽 아래 손가락 자리, 킥은 오른쪽 아래), 구경 중 표시, 멈춤·끊김 띠 */
+.game-say { position: absolute; z-index: 2; top: max(var(--s-sm), env(safe-area-inset-top)); left: max(var(--s-sm), env(safe-area-inset-left)); }
+.game-say-btn { min-height: 0; height: 40px; padding: 0 var(--s-sm); border: 1px solid rgba(255, 255, 255, .5); background: rgba(0, 0, 0, .55); color: var(--fg);
+  font-family: var(--font); font-size: var(--fs-xs); }
+.game-say-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; margin-top: var(--s-xxs); width: 200px; padding: 2px; background: rgba(0, 0, 0, .8); border: 1px solid rgba(255, 255, 255, .35); }
+.game-say-menu button { display: flex; justify-content: flex-start; gap: var(--s-xxs); min-height: 40px; padding: 0 var(--s-xs); border: 0; background: var(--elevated); color: var(--fg); font-family: var(--font); font-size: var(--fs-xs); text-align: left; }
+.game-say-menu button:hover { background: var(--charcoal); }
+.game-watch { position: absolute; z-index: 2; top: max(var(--s-sm), env(safe-area-inset-top)); left: max(var(--s-sm), env(safe-area-inset-left));
+  padding: var(--s-xxs) var(--s-sm); background: rgba(0, 0, 0, .55); color: var(--fg); font-size: var(--fs-xs); pointer-events: none; }
+.game-banner { position: absolute; z-index: 2; left: 0; right: 0; top: 50%; transform: translateY(-50%); padding: var(--s-sm) var(--s-md); background: rgba(0, 0, 0, .72);
+  color: var(--fg); font-size: var(--fs-xs); text-align: center; pointer-events: none; }
