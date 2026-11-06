@@ -6,17 +6,17 @@
 import { App, Button } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { botInput } from '../../lib/game/bot';
-import { fieldFor, type FieldChoice } from '../../lib/game/room';
+import { fieldFor, type FieldChoice } from '../../lib/games/match2d-room';
 import { createMatch, eventsBetween, pitchOf, sideCounts, step, TICK_HZ, type Input, type MatchConfig, type MatchPlayer, type MatchState } from '../../lib/game/sim';
 import { perfOf } from '../../lib/game/stats';
 import type { Player } from '../../lib/types';
 import { attachInput } from './input';
-import { blend, buildField, buildSprites, drawFrame, fieldKey, HUD_H, TEAM, type Field } from './render';
-import { detectSfx } from './sfx-detect';
+import { blend, buildField, buildSprites, drawFrame, fieldKey, HUD_H, TEAM, type Field } from './views/match2d/render';
+import { detectSfx } from './views/match2d/sfx-detect';
 import { play as playSfx } from './sfx';
 import SoundToggle from './SoundToggle';
-import { readInsets } from './stage';
-import { aimCamera, clockText, makeView, pickLineup, rngFrom, stickToSim, type View } from './view';
+import { readInsets } from './views/match2d/stage';
+import { aimCamera, clockText, makeView, pickLineup, rngFrom, stickToSim, type View } from './views/match2d/view';
 
 const STEP_MS = 1000 / TICK_HZ;
 const MAX_CATCHUP = 5;                     // 한 프레임에 따라잡는 최대 틱 — 느린 기기가 계산에 먹혀 더 느려지는 걸 막는다

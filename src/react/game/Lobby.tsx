@@ -7,15 +7,17 @@ import { App, Button, Modal, Segmented } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
-import type { FieldChoice, Member, PerSide, RoomState, Team } from '../../lib/game/room';
-import { MAX_PER_SIDE, NO_PICKS, resolveField, sideSizes } from '../../lib/game/room';
+import type { Member, Team } from '../../lib/game/room';
+import { MAX_PER_SIDE, NO_PICKS } from '../../lib/game/room';
+import type { FieldChoice, PerSide, Room2d } from '../../lib/games/match2d-room';
+import { resolveField, sideSizes } from '../../lib/games/match2d-room';
 import type { Player } from '../../lib/types';
 import type { GuestSession, HostSession, SessionView } from './net/session';
 import { FIELD_OPTIONS, SCORE_LIMITS } from './Entry';
 import { BotPickModal, BotSlot } from './BotSlot';
 import { PlayerPicker } from './PlayerPicker';
-import { TEAM } from './render';
-import { maxPerSide } from './view';
+import { TEAM } from './teams';
+import { maxPerSide } from './views/match2d/view';
 
 const COLS: { team: Team; label: string; color: string | null }[] = [
   { team: 0, label: TEAM[0].short, color: TEAM[0].color },
@@ -29,9 +31,9 @@ export const connText = (c: SessionView['conn']): string | null =>
 const fieldLabel = (f: FieldChoice): string => FIELD_OPTIONS.find((o) => o.value === f)?.label ?? '보통';
 
 /** 경기장 줄 — 자동이면 지금 칸 인원으로 고를 크기도 같이("자동 · 보통"). */
-const fieldText = (r: RoomState): string => (r.settings.field === 'auto' ? `자동 · ${fieldLabel(resolveField(r))}` : fieldLabel(r.settings.field));
+const fieldText = (r: Room2d): string => (r.settings.field === 'auto' ? `자동 · ${fieldLabel(resolveField(r))}` : fieldLabel(r.settings.field));
 
-function settingsText(r: RoomState): string {
+function settingsText(r: Room2d): string {
   const s = r.settings;
   const [a, b] = sideSizes(r);
   const bots = s.perSide ? `한 편 ${s.perSide}명까지 봇으로 채움` : '봇 없음';
@@ -43,7 +45,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
   onLeave: () => void; onShare: () => void;
 }) {
   const { message } = App.useApp();
-  const room = view.room;
+  const room = view.room as Room2d | null;
   const host = session.role === 'host' ? session : null;
   const guest = session.role === 'guest' ? session : null;
   const [picked, setPicked] = useState<string | null>(null);

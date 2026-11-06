@@ -1,8 +1,8 @@
-// src/react/game/view.ts — 경기 화면의 순수 계산(DOM·캔버스 없음, node 단위 테스트가 그대로 가져온다).
+// src/react/game/views/match2d/view.ts — 경기 화면의 순수 계산(DOM·캔버스 없음, node 단위 테스트가 그대로 가져온다).
 // 하는 일 셋: ① 경기장 좌표(논리 단위) ↔ 화면 픽셀 변환과 가로/세로 방향 고르기, ② 사람 선수가 낀 라인업 뽑기,
 // ③ 남은 시간 글자. 그리기·입력·시계는 다른 파일이 맡고, 여기엔 "어디에 놓이나"만 있다.
-import { PITCH, type Pitch } from '../../lib/game/sim.ts';
-import { shuffle } from '../../lib/game/lineup.ts';
+import { PITCH, type Pitch } from '../../../../lib/game/sim.ts';
+import { shuffle } from '../../../../lib/game/lineup.ts';
 
 /** 골 상자와 선 밖 여백까지 포함한 경기장 전체의 논리 크기. 화면에 이게 통째로 들어오거나, 카메라가 이 밖을 비추지 않는다. */
 export function extentOf(p: Pitch): { w: number; h: number } {

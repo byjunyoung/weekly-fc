@@ -4,14 +4,15 @@
 import { href } from '../../lib/url';
 import { Button, Segmented } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import type { BotPicks, FieldChoice } from '../../lib/game/room';
+import type { BotPicks } from '../../lib/game/room';
 import { updatePicks } from '../../lib/game/room';
+import type { FieldChoice } from '../../lib/games/match2d-room';
 import { BotPickModal, BotSlot } from './BotSlot';
 import type { Player } from '../../lib/types';
 import { useMeInfo } from '../useMe';
 import { PlayerSelect } from './select/PlayerSelect';
 import type { Req } from './SoloMatch';
-import { maxPerSide } from './view';
+import { maxPerSide } from './views/match2d/view';
 
 const LAST_KEY = 'wfc:game:last';          // 마지막으로 고른 내 선수(번호)
 const SCORE_LIMITS = [0, 1, 3, 5] as const;

@@ -1,9 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DEFAULT_SETTINGS, MAX_HUMANS, MAX_MEMBERS, MAX_PER_SIDE, autoBalance, fieldFor, resolveField, sideSizes, startBlock, buildMatch, createRoom, isRoomCode, join, leave, makeRoomCode, move, pick, setPhase, setSettings,
+  MAX_HUMANS, MAX_MEMBERS, MAX_PER_SIDE, autoBalance, createRoom as newRoom, isRoomCode, join, leave, makeRoomCode, move, pick, setPhase,
 } from '../../src/lib/game/room.ts';
-import { rngFrom } from '../../src/react/game/view.ts';
+// 2026-11-07 게임 묶음 토대: 2D 경기에만 맞는 방 규칙(설정·시작)은 match2d-room.ts 로 옮겼다(내용 그대로).
+import { DEFAULT_SETTINGS, fieldFor, resolveField, sideSizes, startBlock, buildMatch, setSettings } from '../../src/lib/games/match2d-room.ts';
+import { rngFrom } from '../../src/react/game/views/match2d/view.ts';
+
+/** 방은 게임 종류와 그 게임의 기본 설정으로 만든다 — 이 파일은 2D 경기의 방. */
+const createRoom = (code, host) => newRoom(code, host, 'match2d', DEFAULT_SETTINGS);
 
 const roster = (n, stat = (i) => 60 + i) => Array.from({ length: n }, (_, i) => ({
   num: 100 + i, jersey: i + 1, name: `선수${i}`, pos: '', detail: '', foot: '', vest: null, note: '',

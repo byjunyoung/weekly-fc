@@ -5,20 +5,21 @@
 // 리액트 상태는 세션 view(바뀔 때만 새 객체), 한마디 메뉴 열림, 터치 여부뿐.
 import { App, Button } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import { PHRASES } from '../../lib/game/net';
-import type { Input, MatchState } from '../../lib/game/sim';
+import { PHRASES } from '../../lib/games/net';
+import type { Input, MatchConfig, MatchState } from '../../lib/game/sim';
+import { resultOf } from '../../lib/games/match2d';
 import type { Player } from '../../lib/types';
 import { attachInput } from './input';
-import type { GuestSession, HostSession, SessionView } from './net/session';
+import type { DrawFrame, GuestSession, HostSession, SessionView } from './net/session';
 import { connText } from './Lobby';
 import { pitchOf } from '../../lib/game/sim';
-import { buildSprites, drawBubbles, drawFrame, TEAM } from './render';
+import { buildSprites, drawBubbles, drawFrame, TEAM } from './views/match2d/render';
 import { cameraOf, sidesText, type Live } from './SoloMatch';
-import { detectSfx } from './sfx-detect';
+import { detectSfx } from './views/match2d/sfx-detect';
 import { play as playSfx } from './sfx';
 import SoundToggle from './SoundToggle';
-import { attachStage } from './stage';
-import { aimCamera, clockText, stickToSim } from './view';
+import { attachStage } from './views/match2d/stage';
+import { aimCamera, clockText, stickToSim } from './views/match2d/view';
 
 export function OnlineMatch({ session, view, roster, live, onLeaveRoom }: {
   session: HostSession | GuestSession; view: SessionView; roster: Player[];
@@ -34,7 +35,7 @@ export function OnlineMatch({ session, view, roster, live, onLeaveRoom }: {
   const kickRef = useRef<HTMLButtonElement>(null);
   const [touch, setTouch] = useState(false);
   const [sayOpen, setSayOpen] = useState(false);
-  const config = view.config;
+  const config = view.config as MatchConfig | null;
   const playing = view.myId !== null;
   const isHost = session.role === 'host';
 
@@ -74,7 +75,7 @@ export function OnlineMatch({ session, view, roster, live, onLeaveRoom }: {
     const frame = (now: number): void => {
       raf = requestAnimationFrame(frame);
       session.advance(now);
-      const f = session.frame(now), st = stage.get();
+      const f = session.frame(now) as DrawFrame<MatchState, MatchConfig> | null, st = stage.get();
       if (!f || !st) return;
       // 효과음 — 그리는 상태가 바뀐 것으로 알아낸다(방장·손님·구경 모두 같은 길). 틱이 뒤로 가면(새 경기) 비교하지 않는다.
       if (lastShown && f.state.tick >= lastShown.tick) for (const fx of detectSfx(lastShown, f.state)) playSfx(fx);
@@ -101,7 +102,7 @@ export function OnlineMatch({ session, view, roster, live, onLeaveRoom }: {
   }, [session, config, playing, roster, live]);
 
   if (!config) return null;
-  const result = view.result;
+  const result = view.result ? resultOf(view.result as MatchState) : null;
   const mySide = view.myId !== null ? config.players[view.myId]?.side ?? null : null;
   const outcome = !result ? '' : result.winner === 'draw' ? '무승부'
     : mySide === null ? `${TEAM[result.winner].short} 승` : result.winner === mySide ? '승!' : '패';

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectSfx } from '../../src/react/game/sfx-detect.ts';
+import { detectSfx } from '../../src/react/game/views/match2d/sfx-detect.ts';
 import { createMatch, step, NO_INPUT } from '../../src/lib/game/sim.ts';
 import { BASE_PERF } from '../../src/lib/game/stats.ts';
 

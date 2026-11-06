@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { makeView, aimCamera, extentOf, FOLLOW_MIN_R, toScreen, toLogical, stickToSim, simToStick, clockText, pickLineup, rngFrom, maxPerSide, EXTENT } from '../../src/react/game/view.ts';
+import { makeView, aimCamera, extentOf, FOLLOW_MIN_R, toScreen, toLogical, stickToSim, simToStick, clockText, pickLineup, rngFrom, maxPerSide, EXTENT } from '../../src/react/game/views/match2d/view.ts';
 import { keysToInput, stickVector } from '../../src/react/game/input.ts';
 import { PITCH, pitchOf } from '../../src/lib/game/sim.ts';
 

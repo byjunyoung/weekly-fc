@@ -1,6 +1,9 @@
 // 효과음 — 파일 없이 WebAudio 로 그 자리에서 만든다(2026-11-07 "효과음도 넣어야지"). 받아 올 소리 파일도, 저작권 걱정도 없다.
 // 브라우저는 사람이 한 번 누르기 전엔 소리를 못 내므로 unlock() 을 누름·키 입력에서 부른다(아이폰은 그 안에서 resume 해야 한다).
-import type { Sfx } from './sfx-detect';
+
+// move·confirm 은 경기가 아니라 선수 선택 화면의 작은 소리(2026-11-07 "약간 옛날 오락실게임에서 고르듯이") — 여기서 찾지 않고 화면이 직접 낸다.
+// 소리 종류는 모든 게임이 같이 쓴다(2026-11-07 게임 묶음 — 어느 게임이 어떤 사건에 어떤 소리를 낼지는 그 게임의 화면이 정한다).
+export type Sfx = { kind: 'kick' | 'bounce' | 'goal' | 'whistle' | 'end' | 'move' | 'confirm'; vol: number };
 
 const KEY = 'wfc.game.sound';
 let ctx: AudioContext | null = null;

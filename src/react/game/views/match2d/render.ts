@@ -1,13 +1,13 @@
-// src/react/game/render.ts — 한 프레임을 2D 캔버스에 그린다. (state, config, view) 의 함수일 뿐, 시계·입력·난수는 모른다.
+// src/react/game/views/match2d/render.ts — 한 프레임을 2D 캔버스에 그린다. (state, config, view) 의 함수일 뿐, 시계·입력·난수는 모른다.
 // 구성: ① 경기장 바닥(잔디·선·골 상자)은 크기가 바뀔 때만 한 번 그려 두고 매 프레임 한 번에 찍는다.
 //       ② 선수·공·이름표는 화면 좌표로 직접 그린다(머리는 세로 화면에서도 돌리지 않는다).
 //       ③ 점수판·"골!"·선공 안내도 캔버스에 그린다 — 리액트 상태를 프레임마다 흔들지 않으려고.
-// 색은 포털 톤(어두운 도트)에 맞춘 이 파일 자기 팔레트. 팀 조끼 색만 teams.ts 의 VESTS 에서 가져온다.
-import { avatarPixels, FACE_SIZE, FACE_X, FACE_Y } from '../../components/avatar.ts';
-import { avatarSpecFor } from '../../lib/avatar.ts';
-import { pitchOf, type MatchConfig, type MatchState, type Pitch } from '../../lib/game/sim.ts';
-import { VESTS } from '../../lib/teams.ts';
-import type { Player } from '../../lib/types.ts';
+// 색은 포털 톤(어두운 도트)에 맞춘 이 파일 자기 팔레트. 팀 조끼 색만 ../../teams.ts(TEAM, 포털 VESTS)에서 가져온다.
+import { avatarPixels, FACE_SIZE, FACE_X, FACE_Y } from '../../../../components/avatar.ts';
+import { avatarSpecFor } from '../../../../lib/avatar.ts';
+import { pitchOf, type MatchConfig, type MatchState, type Pitch } from '../../../../lib/game/sim.ts';
+import type { Player } from '../../../../lib/types.ts';
+import { TEAM } from '../../teams.ts';
 import { toScreen, clockText, extentOf, type View } from './view.ts';
 
 // ── 팔레트(캔버스 그림 전용) ──
@@ -25,12 +25,7 @@ const FACE_FILL = 0.74;         // 원 반지름 대비 얼굴 반쪽 크기 —
 const F9 = '"Galmuri9", "Galmuri14", "Pretendard Variable", Pretendard, system-ui, sans-serif';
 const F14 = '"Galmuri14", "Galmuri9", "Pretendard Variable", Pretendard, system-ui, sans-serif';
 
-/** 팀 색 — 0 편 주황조끼, 1 편 노조끼(VESTS 에서). */
-const vest = (key: string): { color: string; short: string } => {
-  const v = VESTS.find((x) => x.key === key);
-  return { color: v?.color ?? '#999', short: key === 'orange' ? '주황' : '흰' };
-};
-export const TEAM = [vest('orange'), vest('none')] as const;
+export { TEAM };
 
 /** 점수판이 차지하는 높이(CSS px) — makeView 의 top 으로 넘겨 경기장이 밑에 깔리지 않게 한다. */
 export const HUD_H = 46;

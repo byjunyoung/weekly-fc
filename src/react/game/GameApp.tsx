@@ -6,6 +6,7 @@
 import { App, Button } from 'antd';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { makeRoomCode } from '../../lib/game/room';
+import { gameOf } from '../../lib/games/registry';
 import type { Input } from '../../lib/game/sim';
 import type { Player } from '../../lib/types';
 import Loading from '../Loading';
@@ -73,6 +74,7 @@ function GameRoot() {
     if (!data || onlineRef.current) return;
     const session = createHostSession({
       transport: createRealtimeTransport(code), roster: data.players, me: { clientId: clientId(), num: p.num, name: p.name }, code, now,
+      games: gameOf, game: 'match2d',
     });
     markHost(code);
     setRoomInUrl(code);   // 주소창이 곧 초대 링크
@@ -84,7 +86,7 @@ function GameRoot() {
   const openGuest = useCallback((p: Player, code: string) => {
     if (!data || onlineRef.current) return;
     const session = createGuestSession({
-      transport: createRealtimeTransport(code), roster: data.players, me: { clientId: clientId(), num: p.num, name: p.name }, code, now,
+      transport: createRealtimeTransport(code), roster: data.players, me: { clientId: clientId(), num: p.num, name: p.name }, code, now, games: gameOf,
     });
     markJoined(code);
     setMsg(null);

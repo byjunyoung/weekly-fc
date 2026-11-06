@@ -4,27 +4,30 @@
 // 손님은 아무것도 정하지 않는다 — 방 상태는 받은 그대로(rev 가 낮으면 버림), 점수·시계·단계는 스냅샷 것을 믿는다.
 // 다만 왕복 150ms 쯤이 걸려 받은 대로만 그리면 내 선수가 굼뜨니, 같은 step() 으로 내 입력을 앞당겨 그린다(net.ts 의 Predictor).
 //
-// 내 선수 id 를 아는 법: 방장은 slots(누가 어느 자리)를 보내지 않는다. 대신 buildMatch 가 방에 있는 사람(대기 포함)의 선수를
-// 봇 후보에서 빼므로, 경기 설정에서 "봇이 아니고 번호가 내 선수와 같은 자리"는 많아야 하나다 — 없으면 구경(대기 칸·경기 중 들어옴).
+// 내 자리를 아는 법: 방장은 slots(누가 어느 자리)를 보내지 않는다. 대신 게임의 buildConfig 가 방에 있는 사람(대기 포함)의 선수를
+// 봇 후보에서 빼므로, 판 설정에서 "사람이 뛰고 번호가 내 선수와 같은 자리"(어댑터 slotNum)는 많아야 하나다 — 없으면 구경(대기 칸·경기 중 들어옴).
+// 2026-11-07 게임 묶음: start 가 실어 온 게임 종류의 어댑터로 예측·검사한다 — 이 파일은 어느 게임인지 모른다.
 //
 // 누구 말을 믿나(2026-11-07 리뷰): 처음 받은 room 의 hostId 를 고정하고, 방장이 보내는 것(room·start·snap·stop·deny·pong·방장 bye)은
 // from 이 그 hostId 일 때만 받는다. 들어가기 전(아직 방을 못 받음)의 deny 만은 누구 것이든 받는다 — 방장 id 를 알 길이 없어서.
 // 선은 여기까지다: 채널은 익명 키라 방 안 사람이 from 을 방장으로 꾸미는 것까지는 서버 인증 없이 못 막는다. 팀끼리 노는 장난감이라 받아들인다.
 import type { Player } from '../../../lib/types.ts';
-import type { Input, MatchConfig, MatchState } from '../../../lib/game/sim.ts';
-import { NO_INPUT } from '../../../lib/game/sim.ts';
-import type { NetMsg, Predictor } from '../../../lib/game/net.ts';
-import { Q_IDLE, advance, applySnapshot, createPredictor, encodeInput, leadTicks, parseMsg, setLead } from '../../../lib/game/net.ts';
+import type { AnyAdapter } from '../../../lib/games/adapter.ts';
+import type { GameLookup } from '../../../lib/games/entry.ts';
+import type { NetMsg } from '../../../lib/games/net.ts';
+import { acceptSnap, parseMsg } from '../../../lib/games/net.ts';
+import type { Predictor } from '../../../lib/games/predict.ts';
+import { advance, applySnapshot, createPredictor, leadTicks, setLead } from '../../../lib/games/predict.ts';
 import type { RoomState, Who } from '../../../lib/game/room.ts';
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView, Stage } from './common.ts';
 import {
   DENY_TEXT, GIVE_UP_MS, HELLO_EVERY_MS, HOST_SILENCE_LOBBY_MS, HOST_SILENCE_MATCH_MS, HOST_SLOW_MS, JOIN_SLOW_MS,
   KEEPALIVE_MS, MAX_CATCHUP, PING_EVERY_MS, SAY_GAP_MS, SLACK_MS, SPECTATOR_PING_MS, STEP_MS, inputGapMs,
-  createStore, liveBubbles, pushBubble, sayIsValid,
+  createStore, humansIn, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
-import type { Offsets } from './smooth.ts';
-import { correct, decay, lerpState, noOffsets, withOffsets } from './smooth.ts';
+import type { Offsets, Smoother } from './smooth.ts';
+import { decay, noOffsets, smootherFor } from './smooth.ts';
 
 export type GuestOptions = {
   transport: Transport;
@@ -32,6 +35,8 @@ export type GuestOptions = {
   me: Who;
   code: string;
   now: () => number;
+  /** 등록된 게임 찾기 — 방의 설정·start 의 게임을 이걸로 알아본다. */
+  games: GameLookup;
 };
 
 export type GuestSession = {
@@ -41,7 +46,7 @@ export type GuestSession = {
   advance(now?: number): void;
   /** 가려진 동안은 in·ping 을 안 보낸다(무료 한도). 돌아오면 방장 침묵을 지금부터 다시 센다 — 얼어 있던 동안의 침묵으로 끝나지 않게. */
   setHidden(hidden: boolean): void;
-  setInputReader(fn: (() => Input) | null): void;
+  setInputReader(fn: (() => unknown) | null): void;
   say(k: number): boolean;
   frame(now?: number): DrawFrame | null;
   leave(): void;
@@ -50,20 +55,20 @@ export type GuestSession = {
   clearNotice(): void;
 
   /** 예측한 상태(그리는 몸). */
-  getState(): MatchState | null;
+  getState(): unknown;
   /** 마지막 스냅샷 상태(점수·시계·단계의 출처). */
-  getBase(): MatchState | null;
-  getConfig(): MatchConfig | null;
+  getBase(): unknown;
+  getConfig(): unknown;
   getRoom(): RoomState | null;
   getNet(): NetInfo;
   /** 테스트용 — 예측기 그대로. */
   getPredictor(): Predictor | null;
 };
 
-/** 경기 설정에서 내 자리 — 봇이 아니고 내 선수 번호인 자리. 없으면 null(구경). 위 머리글의 불변식에 기댄다. */
-export function myIdFor(config: MatchConfig, myNum: number): number | null {
-  const i = config.players.findIndex((p) => !p.bot && p.num === myNum);
-  return i < 0 ? null : i;
+/** 판 설정에서 내 자리 — 사람이 뛰고 내 선수 번호인 자리. 없으면 null(구경). 위 머리글의 불변식에 기댄다. */
+export function myIdFor(game: AnyAdapter, config: unknown, myNum: number): number | null {
+  for (let i = 0, n = game.slots(config); i < n; i++) if (game.slotNum(config, i) === myNum) return i;
+  return null;
 }
 
 type StartMsg = Extract<NetMsg, { t: 'start' }>;
@@ -78,26 +83,27 @@ export function createGuestSession(o: GuestOptions): GuestSession {
   let stage: Stage = 'joining';
   let closed = false, hidden = false;
   let conn: SessionView['conn'] = 'connecting';
-  let reader: (() => Input) | null = null;
+  let reader: (() => unknown) | null = null;
 
   const t0 = o.now();
   let lastAt = t0, joinStartAt = t0, lastHello = -Infinity, lastHostAt = t0, lastPing = -Infinity, lastSay = -Infinity;
   let pausedSince: number | null = null;
   let rtt: number | null = null;
 
-  // 경기
+  // 경기 — pred.game 이 지금 판의 어댑터
   let pred: Predictor | null = null;
+  let smooth: Smoother<unknown> = smootherFor(undefined);
   let seed: number | null = null;
   let pendingStart: StartMsg | null = null;
   let acc = 0;
-  let prevShown: MatchState | null = null;   // 직전 틱의 예측(틱 사이 섞기)
+  let prevShown: unknown = null;   // 직전 틱의 예측(틱 사이 섞기)
   let offsets: Offsets = noOffsets(0);
   let seq = 0, lastSentQ: number | null = null, lastInAt = -Infinity;
   let bubbles: Bubble[] = [];
   let matchKey = 0;
 
   const store = createStore<SessionView>({
-    role: 'guest', code: o.code, clientId: me.clientId, room: null, conn, stage, matchKey, config: null, myId: null,
+    role: 'guest', code: o.code, clientId: me.clientId, room: null, conn, stage, matchKey, game: null, config: null, myId: null,
     paused: false, hostLost: false, hostSlow: false, result: null, notice: null, endedWhy: null, joinSlow: false,
   });
 
@@ -113,27 +119,30 @@ export function createGuestSession(o: GuestOptions): GuestSession {
     stage = 'ended';
     pred = null;
     t.close();
-    store.set({ stage, endedWhy: why, hostLost: why === LOST, hostSlow: false, conn: 'closed', config: null, myId: null });
+    store.set({ stage, endedWhy: why, hostLost: why === LOST, hostSlow: false, conn: 'closed', game: null, config: null, myId: null });
   };
 
   const exitMatch = (): void => {
     pred = null; seed = null; prevShown = null; bubbles = []; acc = 0; pausedSince = null;
     if (stage === 'match') stage = 'lobby';
-    store.set({ stage, config: null, myId: null, result: null, paused: false });
+    store.set({ stage, game: null, config: null, myId: null, result: null, paused: false });
   };
 
   const applyStart = (m: StartMsg, now: number): void => {
     pendingStart = null;
     if (pred && seed === m.seed) return;   // 방장이 다시 보낸 같은 경기 — 예측기를 새로 만들지 않는다
+    const g = o.games(m.game)?.adapter;
+    if (!g) return;   // parseMsg 가 이미 막는다 — 타입을 좁히려고 한 번 더
     const my = mine();
-    const myId = my ? myIdFor(m.config, my.num) : null;
-    pred = setLead(createPredictor(m.config, myId), rtt === null ? 0 : leadTicks(rtt));
+    const myId = my ? myIdFor(g, m.config, my.num) : null;
+    pred = setLead(createPredictor<unknown, unknown, unknown>(g, m.config, myId), rtt === null ? 0 : leadTicks(rtt));
+    smooth = smootherFor(g.bodies);
     seed = m.seed;
-    acc = 0; lastAt = now; prevShown = null; offsets = noOffsets(m.config.players.length);
+    acc = 0; lastAt = now; prevShown = null; offsets = noOffsets(0);
     lastSentQ = null; lastInAt = -Infinity; bubbles = []; pausedSince = null;
     matchKey += 1;
     stage = 'match';
-    store.set({ stage, matchKey, config: m.config, myId, result: null, paused: false });
+    store.set({ stage, matchKey, game: m.game, config: m.config, myId, result: null, paused: false });
   };
 
   const applySnap = (snap: SnapMsg, now: number): void => {
@@ -145,7 +154,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
     } else {
       const before = p.predicted;
       const next = applySnapshot(p, snap);
-      if (next !== p && next.predicted) { offsets = correct(offsets, before, next.predicted); prevShown = next.predicted; }
+      if (next !== p && next.predicted) { offsets = smooth.correct(offsets, before, next.predicted); prevShown = next.predicted; }
       p = next;
     }
     pred = p;
@@ -153,8 +162,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
     const base = p.base;
     store.set({
       paused: p.paused,
-      ...(base && base.phase === 'end' && !store.get().result
-        ? { result: { score: [base.score[0], base.score[1]] as [number, number], winner: (base.winner ?? 'draw') as 0 | 1 | 'draw' } } : {}),
+      ...(base !== null && p.game.ended(base) && !store.get().result ? { result: base } : {}),
     });
   };
 
@@ -166,7 +174,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
 
   t.onMessage((raw) => {
     if (closed) return;
-    const m = parseMsg(raw);
+    const m = parseMsg(raw, o.games);
     if (!m) return;
     if ('from' in m && m.from === me.clientId) return;
     if ('to' in m && m.to !== me.clientId) return;
@@ -216,7 +224,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
         // 다른 경기의 스냅샷(start 를 놓쳤다) — 낡은 예측기를 버리고 hello 로 start 를 다시 받는다.
         if (pred && m.seed !== seed) { exitMatch(); }
         if (!pred) { if (now - lastHello >= HELLO_EVERY_MS - SLACK_MS) hello(now); return; }
-        if (!snapFits(m, pred.config)) return;   // 모양이 어긋난 스냅샷은 버린다 — step·렌더가 프레임마다 예외를 던지지 않게
+        if (!acceptSnap(pred.game, pred.config, m)) return;   // 모양이 어긋난 스냅샷은 버린다 — step·렌더가 프레임마다 예외를 던지지 않게
         applySnap(m, now);
         return;
       }
@@ -236,7 +244,7 @@ export function createGuestSession(o: GuestOptions): GuestSession {
         return;
       }
       case 'say': {
-        if (pred && sayIsValid(room, pred.config, m)) bubbles = pushBubble(bubbles, m.id, m.k, now);
+        if (pred && sayIsValid(room, pred.game, pred.config, m)) bubbles = pushBubble(bubbles, m.id, m.k, now);
         return;
       }
       case 'bye': if (fromHost(m.from)) end('방장이 방을 닫았습니다'); return;
@@ -272,13 +280,14 @@ export function createGuestSession(o: GuestOptions): GuestSession {
       if (room?.phase === 'match' && !pred && now - lastHello >= HELLO_EVERY_MS - SLACK_MS) hello(now);
       const p0 = pred;
       if (!p0 || stage !== 'match') return;
+      const g = p0.game, idleQ = g.encode(g.idle);
       const playing = p0.myId !== null;
-      const inGap = inputGapMs(p0.config.players.filter((x) => !x.bot).length);
+      const inGap = inputGapMs(humansIn(g, p0.config));
       acc += Math.min(Math.max(0, dt), MAX_CATCHUP * STEP_MS);
-      let n = 0, q = Q_IDLE;
+      let n = 0, q = idleQ;
       let p = p0;
       while (acc >= STEP_MS && n < MAX_CATCHUP) {
-        q = playing ? encodeInput(reader ? reader() : NO_INPUT) : Q_IDLE;
+        q = playing ? g.encode(reader ? reader() : g.idle) : idleQ;
         prevShown = p.predicted;
         p = advance(p, q);
         acc -= STEP_MS; n++;
@@ -289,8 +298,8 @@ export function createGuestSession(o: GuestOptions): GuestSession {
       // 바뀌어도 마지막 전송에서 max(50, 손님 수 × 28)ms 는 띄운다(떨리는 스틱·사람 많은 방) — 킥 여부가 바뀐 건 바로(누른 순간이 늦으면 안 된다).
       if (playing && !hidden && n > 0) {
         const since = now - lastInAt;
-        const kickFlip = lastSentQ !== null && (q >= KICK_Q) !== (lastSentQ >= KICK_Q);
-        const changed = q !== lastSentQ && (kickFlip || since >= inGap);
+        const urgent = lastSentQ !== null && !!g.urgent && g.urgent(lastSentQ, q);   // 2D 경기: 킥을 누르거나 뗀 순간
+        const changed = q !== lastSentQ && (urgent || since >= inGap);
         if (changed || since >= KEEPALIVE_MS - SLACK_MS) {
           lastSentQ = q; lastInAt = now;
           send({ t: 'in', from: me.clientId, seq: seq++, i: q });
@@ -317,9 +326,10 @@ export function createGuestSession(o: GuestOptions): GuestSession {
     frame(now = o.now()) {
       const p = pred;
       if (!p || !p.predicted || !p.base) return null;
-      const body = withOffsets(lerpState(prevShown ?? p.predicted, p.predicted, p.paused ? 1 : acc / STEP_MS), offsets);
-      // 몸은 예측, 점수·시계·단계는 스냅샷(report-3: 예측은 골을 먼저 띄우지 않는다).
-      const state: MatchState = { ...p.base, ball: body.ball, players: body.players };
+      const body = smooth.withOffsets(smooth.lerp(prevShown ?? p.predicted, p.predicted, p.paused ? 1 : acc / STEP_MS), offsets);
+      // 몸은 예측, 점수·시계·단계는 스냅샷(report-3: 예측은 골을 먼저 띄우지 않는다). 몸을 모르는 게임은 예측한 상태 그대로.
+      const lens = p.game.bodies;
+      const state = lens ? lens.set(p.base, lens.get(body)) : body;
       return { state, config: p.config, myId: p.myId, bubbles: liveBubbles(bubbles, now) };
     },
 
@@ -343,14 +353,3 @@ export function createGuestSession(o: GuestOptions): GuestSession {
 }
 
 const LOST = '방장과 연결이 끊겼습니다';
-/** 입력 코드에서 킥이 켜진 경계(net.ts 의 부호화: q = (킥 ? 33 : 0) + 움직임). */
-const KICK_Q = 33;
-
-/** 스냅샷이 이 경기 설정과 맞는 모양인가 — 선수 수·자리 id, lastTouch·lastScorer 범위. parseMsg 는 모양만 보고 경기 설정은 모른다. */
-export function snapFits(snap: SnapMsg, config: MatchConfig): boolean {
-  const n = config.players.length, st = snap.state;
-  if (st.players.length !== n) return false;
-  for (let i = 0; i < n; i++) if (st.players[i].id !== i) return false;
-  const inRange = (v: number | null): boolean => v === null || (Number.isInteger(v) && v >= 0 && v < n);
-  return inRange(st.lastTouch) && inRange(st.lastScorer) && inRange(st.lastAssist ?? null) && inRange(st.prevTouch ?? null);
-}

@@ -1,7 +1,7 @@
-// src/react/game/stage.ts — 경기 화면(혼자·온라인)이 함께 쓰는 캔버스 바탕: 안전 영역 읽기, 크기 맞추기.
+// src/react/game/views/match2d/stage.ts — 2D 경기 화면(혼자·온라인)이 함께 쓰는 캔버스 바탕: 안전 영역 읽기, 크기 맞추기.
 // 1단계 GameApp 에 있던 것을 그대로 옮겼다(동작 같음).
 import { buildField, fieldKey, HUD_H, type Field } from './render';
-import type { Pitch } from '../../lib/game/sim';
+import type { Pitch } from '../../../../lib/game/sim';
 import { makeView, type View } from './view';
 
 /** 노치·홈바 안전 영역(px). CSS env() 는 JS 에서 바로 못 읽어서 보이지 않는 요소로 계산시킨다. */

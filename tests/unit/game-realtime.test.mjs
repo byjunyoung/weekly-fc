@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRealtimeTransport, realtimeUrl } from '../../src/react/game/net/realtime.ts';
-import { correct, decay, noOffsets, withOffsets, lerpState } from '../../src/react/game/net/smooth.ts';
+import { decay, noOffsets, smootherFor } from '../../src/react/game/net/smooth.ts';
+import { match2d } from '../../src/lib/games/match2d.ts';
+
+// 2026-11-07 게임 묶음 토대: 부드럽게 하기는 어댑터의 몸 목록(bodies)을 받아 어느 게임에나 쓴다 — 여기선 2D 경기의 것으로 묶는다.
+const { correct, withOffsets, lerp: lerpState } = smootherFor(match2d.bodies);
 
 // 가짜 WebSocket — Phoenix 채널 약속(입장·방송·박동)을 Supabase 대신 받아 본다. 실제 채널은 2026-11-06 node 에서 직접 붙여 확인했다(보고 4).
 class FakeWS {

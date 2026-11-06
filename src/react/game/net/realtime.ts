@@ -6,7 +6,7 @@
 // supabase-js 를 들이지 않고 WebSocket 위에 Phoenix 채널 약속을 직접 말한다 — 쓰는 건 입장·방송·심장 박동 셋뿐이라.
 // Presence 는 쓰지 않는다 — 누가 있는지는 우리 메시지(hello·room·bye)와 침묵 시간으로 판단한다(스펙 §2.1).
 import { SUPABASE_KEY, SUPABASE_URL } from '../../../lib/backend.ts';
-import type { NetMsg } from '../../../lib/game/net.ts';
+import type { NetMsg } from '../../../lib/games/net.ts';
 import type { ConnStatus, Transport } from './transport.ts';
 
 const HEARTBEAT_MS = 25000;

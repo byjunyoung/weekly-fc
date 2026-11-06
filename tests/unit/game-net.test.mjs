@@ -1,11 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  PHRASES, Q_IDLE, advance, applySnapshot, createPredictor, decodeInput, encodeInput, leadTicks, parseMsg, quantize, setLead,
-} from '../../src/lib/game/net.ts';
+import { PHRASES, acceptIn, acceptSnap, parseMsg as parseWith } from '../../src/lib/games/net.ts';
+import { advance, applySnapshot, createPredictor as predictorFor, leadTicks, setLead } from '../../src/lib/games/predict.ts';
+import { Q_IDLE, decodeInput, encodeInput, quantize } from '../../src/lib/game/quant.ts';
 import { createMatch, step, NO_INPUT } from '../../src/lib/game/sim.ts';
 import { BASE_PERF } from '../../src/lib/game/stats.ts';
-import { createRoom } from '../../src/lib/game/room.ts';
+import { createRoom as newRoom } from '../../src/lib/game/room.ts';
+import { match2d } from '../../src/lib/games/match2d.ts';
+import { DEFAULT_SETTINGS } from '../../src/lib/games/match2d-room.ts';
+import { gameOf } from '../../src/lib/games/registry.ts';
+
+// 2026-11-07 게임 묶음 토대 — 메시지 검사·예측기가 어느 게임에나 쓰이게 되면서 바뀐 모양을 여기서 한 번에 이어 준다(검사 내용은 그대로):
+//   - parseMsg 는 등록된 게임 찾기를 받는다(room·start 가 게임 id 를 싣는다).
+//   - 예측기는 어댑터를 받는다 — 이 파일은 2D 경기 어댑터로 돌린다.
+//   - 방은 게임 종류와 그 게임의 기본 설정으로 만든다.
+//   - snap 의 상태·in 의 입력 범위는 "지금 판"을 알아야 해서 세션이 acceptSnap·acceptIn 으로 본다 — 아래 accept 가 세션이 하는 순서 그대로다.
+const parseMsg = (m) => parseWith(m, gameOf);
+const createPredictor = (cfg, myId) => predictorFor(match2d, cfg, myId);
+const createRoom = (code, host) => newRoom(code, host, 'match2d', DEFAULT_SETTINGS);
+/** 세션이 받아들이는가 — parseMsg 다음, snap 은 그 판 설정(cfg)으로, in 은 그 게임의 입력 범위로. */
+const accept = (m, cfg) => {
+  const p = parseMsg(m);
+  if (!p) return null;
+  if (p.t === 'snap' && !acceptSnap(match2d, cfg, p)) return null;
+  if (p.t === 'in' && !acceptIn(match2d, p)) return null;
+  return p;
+};
 
 const cfgOf = (perSide = 2) => ({
   field: 'M', minutes: 2, scoreLimit: 0,
@@ -76,11 +96,11 @@ test('parseMsg — 종류마다 받는다', () => {
   const good = [
     { t: 'hello', from: 'a', num: 3, name: '가' }, { t: 'deny', from: 'h', to: 'a', reason: 'full' },
     { t: 'room', from: 'h', sid: 's1', room, roster: [1, 2, 3] }, { t: 'pick', from: 'a', num: 3, name: '가' },
-    { t: 'start', from: 'h', config: cfg, seed: 123 }, { t: 'in', from: 'a', seq: 4, i: 65 },
+    { t: 'start', from: 'h', game: 'match2d', config: cfg, seed: 123 }, { t: 'in', from: 'a', seq: 4, i: 65 },
     { t: 'snap', from: 'h', seed: 123, tick: 6, state: st, inputs: [0, 1, 2, 65], paused: false }, { t: 'stop', from: 'h', seed: 123 },
     { t: 'say', from: 'a', id: 2, k: 5 }, { t: 'ping', from: 'a', at: 12.5 }, { t: 'pong', from: 'h', to: 'a', at: 12.5 }, { t: 'bye', from: 'a' },
   ];
-  for (const m of good) assert.deepEqual(parseMsg(JSON.parse(JSON.stringify(m))), m, m.t);
+  for (const m of good) assert.deepEqual(accept(JSON.parse(JSON.stringify(m)), cfg), m, m.t);
 });
 
 test('parseMsg — 틀린 모양은 null', () => {
@@ -97,11 +117,11 @@ test('parseMsg — 틀린 모양은 null', () => {
     // 2026-11-07: 경기장·인원 — 모르는 경기장, 한 편 7명, 선수 13명, 선수 0명
     { t: 'room', from: 'h', sid: 's', room: { ...room, settings: { ...room.settings, field: 'XXL' } }, roster: [] },
     { t: 'room', from: 'h', sid: 's', room: { ...room, settings: { perSide: 3, minutes: 3, scoreLimit: 0 } }, roster: [] },
-    { t: 'start', from: 'h', config: { ...cfg, field: 'Q' }, seed: 1 }, { t: 'start', from: 'h', config: { ...cfg, field: 'auto' }, seed: 1 },
-    { t: 'start', from: 'h', config: cfgSides(7, 1), seed: 1 }, { t: 'start', from: 'h', config: { ...cfgSides(6, 6), players: [...cfgSides(6, 6).players, { ...cfgSides(6, 6).players[0], id: 12 }] }, seed: 1 },
-    { t: 'start', from: 'h', config: cfgSides(0, 0), seed: 1 },
-    { t: 'start', from: 'h', config: { ...cfg, players: cfg.players.slice(1) }, seed: 1 }, { t: 'start', from: 'h', config: cfg },
-    { t: 'start', from: 'h', config: { ...cfg, players: cfg.players.map((p) => ({ ...p, perf: { maxSpeed: 'a' } })) }, seed: 1 },
+    { t: 'start', from: 'h', game: 'match2d', config: { ...cfg, field: 'Q' }, seed: 1 }, { t: 'start', from: 'h', game: 'match2d', config: { ...cfg, field: 'auto' }, seed: 1 },
+    { t: 'start', from: 'h', game: 'match2d', config: cfgSides(7, 1), seed: 1 }, { t: 'start', from: 'h', game: 'match2d', config: { ...cfgSides(6, 6), players: [...cfgSides(6, 6).players, { ...cfgSides(6, 6).players[0], id: 12 }] }, seed: 1 },
+    { t: 'start', from: 'h', game: 'match2d', config: cfgSides(0, 0), seed: 1 },
+    { t: 'start', from: 'h', game: 'match2d', config: { ...cfg, players: cfg.players.slice(1) }, seed: 1 }, { t: 'start', from: 'h', game: 'match2d', config: cfg },
+    { t: 'start', from: 'h', game: 'match2d', config: { ...cfg, players: cfg.players.map((p) => ({ ...p, perf: { maxSpeed: 'a' } })) }, seed: 1 },
     { t: 'in', from: 'a', seq: 1, i: 66 }, { t: 'in', from: 'a', seq: 1, i: 1.5 }, { t: 'in', from: 'a', i: 1 }, { t: 'in', from: 'a', seq: 1, i: '3' },
     { t: 'snap', from: 'h', seed: 1, tick: 1, state: st, inputs: Array(50).fill(0), paused: false }, { t: 'snap', from: 'h', seed: 1, tick: 1, state: st, inputs: [70], paused: false },
     { t: 'snap', from: 'h', seed: 1, tick: 1, state: st, inputs: [], paused: 'no' }, { t: 'snap', from: 'h', seed: 1, tick: 1, state: { ...st, phase: 'zz' }, inputs: [], paused: false },
@@ -110,12 +130,17 @@ test('parseMsg — 틀린 모양은 null', () => {
     { t: 'snap', from: 'h', seed: 1, tick: -1, state: st, inputs: [], paused: false }, { t: 'snap', from: 'h', seed: 1, state: st, inputs: [], paused: false },
     // 2026-11-07: 방장이 보내는 것엔 from, room 엔 sid, snap·stop 엔 seed 가 있어야 한다
     { t: 'deny', to: 'a', reason: 'full' }, { t: 'room', sid: 's', room, roster: [] }, { t: 'room', from: 'h', room, roster: [] },
-    { t: 'start', config: cfg, seed: 1 }, { t: 'snap', from: 'h', tick: 1, state: st, inputs: [], paused: false },
+    { t: 'start', game: 'match2d', config: cfg, seed: 1 }, { t: 'snap', from: 'h', tick: 1, state: st, inputs: [], paused: false },
     { t: 'snap', seed: 1, tick: 1, state: st, inputs: [], paused: false }, { t: 'stop' }, { t: 'stop', from: 'h' }, { t: 'stop', seed: 1 },
     { t: 'pong', to: 'a', at: 1 },
+    // 2026-11-07 게임 묶음: start 는 게임 종류를 싣는다(예전 탭의 game 없는 start 는 못 읽는다), 모르는 게임은 방이든 start 든 받지 않는다
+    { t: 'start', from: 'h', config: cfg, seed: 1 }, { t: 'start', from: 'h', game: 'nope', config: cfg, seed: 1 }, { t: 'start', from: 'h', game: 7, config: cfg, seed: 1 },
+    { t: 'room', from: 'h', sid: 's', room: { ...room, game: 'nope' }, roster: [] }, { t: 'room', from: 'h', sid: 's', room: { ...room, game: undefined }, roster: [] },
+    { t: 'room', from: 'h', sid: 's', room: { ...room, saved: { nope: {} } }, roster: [] }, { t: 'room', from: 'h', sid: 's', room: { ...room, saved: undefined }, roster: [] },
+    { t: 'room', from: 'h', sid: 's', room: { ...room, saved: { match2d: { ...room.settings } } }, roster: [] },
     { t: 'say', from: 'a', id: 2, k: 6 }, { t: 'say', from: 'a', id: 99, k: 1 }, { t: 'ping', from: 'a', at: 'x' }, { t: 'pong', from: 'h', at: 1 }, { t: 'bye' },
   ];
-  for (const m of bad) assert.equal(parseMsg(m), null, JSON.stringify(m)?.slice(0, 80));
+  for (const m of bad) assert.equal(accept(m, cfg), null, JSON.stringify(m)?.slice(0, 80));
 });
 
 // ───────────────────────── 예측 ─────────────────────────
@@ -264,11 +289,11 @@ test('예측 — 새 스냅샷이 예측과 맞으면 화면 상태가 튀지 �
 });
 
 test('parseMsg — 경기장 넷·두 편 인원이 달라도·6대6(선수 12)·한 편 0명은 통과', () => {
-  for (const f of ['S', 'M', 'L', 'XL']) assert.ok(parseMsg({ t: 'start', from: 'h', config: cfgSides(2, 3, f), seed: 1 }), f);
-  assert.ok(parseMsg({ t: 'start', from: 'h', config: cfgSides(6, 6, 'XL'), seed: 1 }));
-  assert.ok(parseMsg({ t: 'start', from: 'h', config: cfgSides(1, 0, 'S'), seed: 1 }));
+  for (const f of ['S', 'M', 'L', 'XL']) assert.ok(parseMsg({ t: 'start', from: 'h', game: 'match2d', config: cfgSides(2, 3, f), seed: 1 }), f);
+  assert.ok(parseMsg({ t: 'start', from: 'h', game: 'match2d', config: cfgSides(6, 6, 'XL'), seed: 1 }));
+  assert.ok(parseMsg({ t: 'start', from: 'h', game: 'match2d', config: cfgSides(1, 0, 'S'), seed: 1 }));
   const c = cfgSides(6, 6, 'XL'), st = createMatch(c, 3);
-  assert.ok(parseMsg({ t: 'snap', from: 'h', seed: 3, tick: 0, state: st, inputs: c.players.map(() => 0), paused: false }), '선수 12 스냅샷');
+  assert.ok(accept({ t: 'snap', from: 'h', seed: 3, tick: 0, state: st, inputs: c.players.map(() => 0), paused: false }, c), '선수 12 스냅샷');
   assert.ok(parseMsg({ t: 'say', from: 'a', id: 11, k: 0 }));
   const room = createRoom('ABCD', { clientId: 'h', num: 1, name: '방장' });
   for (const field of ['auto', 'S', 'M', 'L', 'XL'])
