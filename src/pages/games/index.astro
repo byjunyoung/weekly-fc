@@ -1,0 +1,15 @@
+---
+// 게임 > 2D 모드(2026-11-07 "그냥 모드를 2d 모드, 3d 모드로 정의하고", "여러 게임 형태를 제공하면 될듯").
+// 위에서 내려다보는 게임들. 만든 게임을 이 목록에 하나씩 더한다.
+import Shell from '../../layouts/Shell.astro';
+import SubTabs from '../../components/SubTabs.astro';
+import GameCards from '../../components/GameCards.astro';
+const games = [
+  { to: '/game/', name: '경기', desc: '위에서 보는 물리 축구. 방을 만들어 팀원과 붙거나 혼자서 봇과 연습합니다.', tags: ['온라인', '봇', '1대1~6대6'] },
+];
+---
+<Shell title="게임" description="WEEKLY FC 게임 — 우리 멤버로 하는 축구 게임. 2D 모드와 3D 모드.">
+  <div class="page-head"><h1>게임 <span class="muted">2D 모드</span></h1></div>
+  <SubTabs path="/games/" />
+  <GameCards games={games} />
+</Shell>

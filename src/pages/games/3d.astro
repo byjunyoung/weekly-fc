@@ -1,0 +1,14 @@
+---
+// 게임 > 3D 모드(2026-11-07). 입체로 보는 게임들. 지금은 시제품 하나 — 만든 게임을 이 목록에 하나씩 더한다.
+import Shell from '../../layouts/Shell.astro';
+import SubTabs from '../../components/SubTabs.astro';
+import GameCards from '../../components/GameCards.astro';
+const games = [
+  { to: '/game3d/', name: '경기', desc: '입체로 보는 5대5. 내 선수 하나로 드리블·패스·슛. 혼자서 봇과 합니다.', tags: ['시제품', '봇', '5대5'] },
+];
+---
+<Shell title="게임" description="WEEKLY FC 게임 — 3D 모드. 도트 아바타가 입체로 뛰는 축구.">
+  <div class="page-head"><h1>게임 <span class="muted">3D 모드</span></h1></div>
+  <SubTabs path="/games/3d/" />
+  <GameCards games={games} />
+</Shell>

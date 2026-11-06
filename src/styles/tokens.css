@@ -1088,6 +1088,14 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .game-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .game-x { position: absolute; top: max(var(--s-sm), env(safe-area-inset-top)); right: max(var(--s-sm), env(safe-area-inset-right)); z-index: 2;
   width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: var(--r-full); background: rgba(0, 0, 0, .55); font-family: var(--font); font-size: 18px; }
+/* 게임 목록(/games/) — 모드별 게임 카드. 카드 전체가 링크다. */
+.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s-sm); }
+.games-card { display: flex; flex-direction: column; gap: var(--s-xs); border: 2px solid var(--line); border-radius: 0; color: var(--fg); min-height: 150px; }
+.games-card:hover { border-color: var(--fg); }
+.games-name { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
+.games-desc { color: var(--body); line-height: 1.6; }
+.games-tags { display: flex; flex-wrap: wrap; gap: var(--s-xxs); margin-top: auto; }
+.games-tag { padding: 2px var(--s-xs); border: 1px solid var(--hairline-strong); color: var(--muted); font-size: var(--fs-xs); }
 /* 소리 켬/끔 — ✕ 바로 왼쪽. 꺼져 있으면 흐리게 + 가로줄(2026-11-07 "효과음도 넣어야지"). */
 .game-snd { position: absolute; top: max(var(--s-sm), env(safe-area-inset-top)); right: calc(max(var(--s-sm), env(safe-area-inset-right)) + 48px); z-index: 2;
   width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: var(--r-full); background: rgba(0, 0, 0, .55); font-family: var(--font); font-size: 18px; }

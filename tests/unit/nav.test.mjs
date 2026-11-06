@@ -14,6 +14,9 @@ test('activeNav: 경로마다 정확히 하나', () => {
   assert.deepEqual(at('/guide/'), ['안내', '가이드']);
   assert.deepEqual(at('/rules/'), ['안내', '가이드']);
   assert.deepEqual(at('/kit/'), ['안내', '자료']);
-  assert.deepEqual(at('/game/'), ['게임', null]);
+  assert.deepEqual(at('/games/'), ['게임', '2D 모드']);
+  assert.deepEqual(at('/games/3d/'), ['게임', '3D 모드'], "'/games/' 로도 시작하지만 더 길게 맞는 3D 탭");
+  assert.deepEqual(at('/game/'), ['게임', '2D 모드']);
+  assert.deepEqual(at('/game3d/'), ['게임', '3D 모드']);
   assert.deepEqual(at('/stats/'), [null, null]);
 });

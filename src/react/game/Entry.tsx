@@ -1,6 +1,7 @@
 // src/react/game/Entry.tsx — 입장 화면(/game/): 내 선수 고르기 + [방 만들기] / [혼자 연습]. ?room=CODE 로 오면 [들어가기].
 // 설계: docs/superpowers/specs/2026-11-06-game-online-design.md §3. 혼자 연습은 1단계 흐름 그대로다 — 인원·시간·점수 설정을 그 뒤로 옮겼을 뿐.
 // 사용자: "2단계 온라인으로 넘어가자", "PC 모바일 둘다 최적화".
+import { href } from '../../lib/url';
 import { Button, Segmented } from 'antd';
 import { useEffect, useState } from 'react';
 import type { BotPicks, FieldChoice } from '../../lib/game/room';
@@ -93,7 +94,8 @@ export function Entry({ players, roomCode, reopen = false, message, onSolo, onCr
 
   return (
     <>
-      <div className="page-head"><h1>게임 <span className="muted">{roomCode ? `방 ${roomCode}` : '같이 한 판, 또는 혼자서 봇과'}</span></h1></div>
+      <div className="page-head"><h1>경기 <span className="muted">{roomCode ? `방 ${roomCode}` : '2D · 같이 한 판, 또는 혼자서 봇과'}</span></h1>
+        <div className="actions"><a className="chip" href={href('/games/')}>게임 목록</a></div></div>
       <div className="stack">
         {message && <p className="game-conn" role="status">{message}</p>}
         <div className="card">

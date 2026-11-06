@@ -25,6 +25,8 @@ export const PAGES = [
   'about/index.html',
   'game/index.html',
   'game3d/index.html',
+  'games/index.html',
+  'games/3d/index.html',
 ];
 export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
@@ -278,7 +280,7 @@ test('안내 > 가이드(2026-11-06) — 시작하기와 규칙을 한 페이지
 
 
 // 게임(2026-11-06) — 1단계는 주소로만 들어왔고, 2단계(온라인)와 함께 상단 메뉴 여섯째로 올렸다(탭 줄은 없다).
-test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단 메뉴에 게임(/game/)이 있다', () => {
+test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단 메뉴의 게임은 목록(/games/)으로 간다', () => {
   const html = read('game/index.html');
   assert.match(html, /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/GameApp\.[^"]+\.js"[^>]*client="load"/, 'GameApp 섬');
   assert.ok(html.includes('<title>게임 · WEEKLY FC</title>'), '제목');
@@ -289,9 +291,9 @@ test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단
     const nav = read(p).match(/<nav[\s\S]*?<\/nav>/g) ?? [];
     assert.ok(nav.length > 0, `${p}: 메뉴를 못 찾았다`);
     assert.ok(nav.join('').includes('게임'), `${p}: 상단 메뉴에 게임이 없다`);
-    assert.ok(nav.join('').includes('/weekly-fc/game/'), `${p}: 상단 메뉴에 /game/ 링크가 없다`);
+    assert.ok(nav.join('').includes('/weekly-fc/games/'), `${p}: 상단 메뉴에 /games/ 링크가 없다`);
   }
-  assert.match(html, /<a href="\/weekly-fc\/game\/"[^>]*class="active"|<a[^>]*class="active"[^>]*href="\/weekly-fc\/game\/"/, '/game/ 에선 게임 메뉴가 켜진다');
+  assert.match(html, /<a href="\/weekly-fc\/games\/"[^>]*class="active"|<a[^>]*class="active"[^>]*href="\/weekly-fc\/games\/"/, '/game/ 에선 게임 메뉴가 켜진다');
 });
 
 // 3D 축구 시제품(2026-11-07) — 주소로만 들어온다(상단 메뉴에 없다). three.js 는 이 페이지 섬이 따로 받는 경기 화면 묶음에만 있다.
@@ -313,4 +315,14 @@ test('3D 시제품 페이지는 Game3DApp 섬을 담고, 상단 메뉴에는 없
   const users = files.filter((f) => f !== match3d[0] && readFileSync(`dist/_astro/${f}`, 'utf8').includes(match3d[0]));
   assert.deepEqual(users.map((f) => f.split('.')[0]), ['Game3DApp']);
   for (const p of SHELL_PAGES.filter((x) => x !== 'game3d/index.html')) assert.ok(!read(p).includes(match3d[0]), `${p} 가 three.js 묶음을 부른다`);
+});
+
+test('게임 목록(2026-11-07) — 2D 모드·3D 모드 두 탭, 모드마다 게임 카드, 가장 왼쪽(2D)이 기본', () => {
+  const d2 = read('games/index.html'), d3 = read('games/3d/index.html');
+  assert.match(d2, /class="subnav"[^>]*>\s*<a[^>]*class="active"[^>]*>2D 모드<\/a>\s*<a[^>]*>3D 모드<\/a>/);
+  assert.match(d3, /class="subnav"[^>]*>\s*<a[^>]*>2D 모드<\/a>\s*<a[^>]*class="active"[^>]*>3D 모드<\/a>/);
+  assert.match(d2, /<a class="card games-card" href="\/weekly-fc\/game\/"/, '2D 목록에 경기');
+  assert.match(d3, /<a class="card games-card" href="\/weekly-fc\/game3d\/"/, '3D 목록에 경기');
+  for (const html of [d2, d3]) assert.ok(html.indexOf('class="subnav"') > html.indexOf('class="page-head"'), '탭 줄은 제목 아래');
+  assert.ok(!d2.includes('Match3D') && !d3.includes('Match3D'), '목록 화면은 three.js 를 부르지 않는다');
 });
