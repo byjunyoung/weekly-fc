@@ -1366,3 +1366,5 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .d3-pop { position: absolute; z-index: 2; left: 50%; top: 58%; transform: translateX(-50%); display: none; color: var(--warn); font-family: var(--font-pixel); font-size: var(--fs-pixel-md);
   font-synthesis: none; letter-spacing: 0; text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
 .d3-pop.is-on { display: block; }
+/* 승부차기·프리킥 세기 막대는 아래 안내 줄 위로(폰에서 안내 글을 가리지 않게 — 헤드리스 390px 로 확인) */
+.g3-gauge.p3-gauge:not(.is-touch) { bottom: calc(max(var(--s-xl), env(safe-area-inset-bottom)) + 52px); }

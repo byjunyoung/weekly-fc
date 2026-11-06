@@ -25,6 +25,8 @@ import { FK3_BEST_KEY } from './Solo';
 
 const { HW } = PITCH3D;
 const MAX_DPR = 2;
+/** 키커를 그릴 때 옆으로 비키는 거리(m). */
+const KICKER_SIDE = 0.8;
 const OFF: SceneBody = { x: -40, y: 0, vx: 0, vy: 0, fx: 1, fy: 0, kickTicks: 0, shootHeld: false, charge: 0 };
 
 export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State, FkConfig, Pen3Input> | string {
@@ -68,7 +70,7 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
   banner.setAttribute('role', 'status');
   const bannerB = el('b', '', banner), bannerS = el('span', '', banner);
   const hint = add(el('div', 'p3-hint', layer));
-  const gauge = add(el('div', 'g3-gauge', layer));
+  const gauge = add(el('div', 'g3-gauge p3-gauge', layer));
   gauge.setAttribute('aria-hidden', 'true');
   const fill = el('i', '', gauge);
   const lost = add(el('div', 'game-banner', layer));
@@ -110,14 +112,15 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
       const players: SceneBody[] = [];
       const poses: ScenePose[] = [];
       for (let i = 0; i < n; i++) {
-        if (i === st.kicker) { players.push({ x: st.st.x, y: st.st.y, vx: 0, vy: 0, fx: toGoal.x / gl, fy: toGoal.y / gl, kickTicks: st.st.kickFlash, shootHeld: st.st.held, charge: st.st.charge }); poses.push({}); }
+        // 키커는 공 뒤에서 조금 옆에 그린다(그림만 — 3D 승부차기와 같은 까닭: 공 뒤 카메라에서 몸이 벽·골문을 가리지 않게)
+        if (i === st.kicker) { players.push({ x: st.st.x + (toGoal.y / gl) * KICKER_SIDE, y: st.st.y - (toGoal.x / gl) * KICKER_SIDE, vx: 0, vy: 0, fx: toGoal.x / gl, fy: toGoal.y / gl, kickTicks: st.st.kickFlash, shootHeld: st.st.held, charge: st.st.charge }); poses.push({}); }
         else { players.push(OFF); poses.push({ hide: true }); }
       }
       for (const p of wall) { players.push({ x: p.x, y: p.y, vx: 0, vy: 0, fx: -toGoal.x / gl, fy: -toGoal.y / gl, kickTicks: 0, shootHeld: false, charge: 0 }); poses.push({ lift: st.wallZ }); }
       players.push({ x: gk.x, y: lying ? gk.y - gk.dive * 0.3 : gk.y, vx: 0, vy: lying ? 0 : gk.vy, fx: -1, fy: 0, kickTicks: 0, shootHeld: gk.diveT > 0, charge: gk.diveT > 0 ? 1 : 0 });
       poses.push(lying ? { roll: (0 - gk.dive) * 1.42, lift: Math.max(0, DIVE_H[gk.diveH] - 0.25) } : { lift: gk.z });
       const frame = { players, ball: st.ball, phase: st.phase };
-      sc.update(frame, frame, 1, f.dt, { mode: 'broadcast', portrait, heading: 0, snap, cam: behindBallCam(spot.x, spot.y, w / h), poses, noMarker: kicker });
+      sc.update(frame, frame, 1, f.dt, { mode: 'broadcast', portrait, heading: 0, snap, cam: behindBallCam(spot.x, spot.y, w / h, 7.5, 4.2), poses, noMarker: kicker });
       snap = false;
 
       // 내 조준·흔들림·감는 길 — 키커 화면에만(조준 중)

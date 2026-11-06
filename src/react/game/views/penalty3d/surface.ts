@@ -62,7 +62,7 @@ export function createPenaltySurface(o: SurfaceIn<PenConfig>): Surface<Pen3State
   banner.setAttribute('role', 'status');
   const bannerB = el('b', '', banner), bannerS = el('span', '', banner);
   const hint = add(el('div', 'p3-hint', layer));
-  const gauge = add(el('div', 'g3-gauge', layer));
+  const gauge = add(el('div', 'g3-gauge p3-gauge', layer));
   gauge.setAttribute('aria-hidden', 'true');
   const fill = el('i', '', gauge);
   const lost = add(el('div', 'game-banner', layer));

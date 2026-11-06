@@ -110,7 +110,7 @@ export function createDribbleSurface(o: SurfaceIn<Dr3Config>): Surface<Dr3State,
       const poses: ScenePose[] = st.lanes.map((_, i) => (i === lane ? {} : { ghost: true }));
       const frame = { players: st.lanes.map((l) => l.p), ball: me.b, balls: [me.b], phase: st.phase };
       sc.update(frame, frame, 1, f.dt, {
-        mode, portrait, heading, snap, poses,
+        mode, portrait, heading, snap, poses, noMarker: mode === 'chase',
         cam: mode === 'chase' ? followCam(me.p.x, me.p.y, camFx / cl, camFy / cl, w / h) : undefined,
       });
       snap = false;
@@ -157,7 +157,7 @@ export function createDribbleSurface(o: SurfaceIn<Dr3Config>): Surface<Dr3State,
       if (key !== lastKey) { lastKey = key; banner.className = `p3-banner ${tone}${b ? ' is-on' : ''}`; bannerB.textContent = b; bannerS.textContent = s; }
       pop.classList.toggle('is-on', st.tick - popAt < 45);
       touch?.setShown(st.phase !== 'end' && me.fin < 0);
-      tags.update(sc, w, h, (i) => i !== lane || mode !== 'first', f.bubbles);
+      tags.update(sc, w, h, (i) => i !== lane || mode === 'broadcast', f.bubbles, true, () => true);   // 내 이름표는 중계에서만(뒤·1인칭이면 머리 위로 떠 엉뚱한 데 걸린다), 말풍선은 다
     },
 
     readInput: input ? (): Input => {
