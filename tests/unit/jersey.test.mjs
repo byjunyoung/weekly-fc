@@ -71,3 +71,14 @@ test('lockedReason — 서버 거절 문구와 같은 말투', () => {
   assert.equal(lockedReason(c, 'B'), 'P1 님(S)의 번호 — 내 티어(B)가 더 높아야 가져올 수 있습니다');
   assert.match(lockedReason({ ...c, holderTier: null }, null), /배치 전에는 빈 번호만/);
 });
+
+// 서버의 tier_idx() 는 동점을 고유 번호(num)로 가른다 — 화면이 등번호(jersey)로 가르면 두 판정이 어긋나
+// "가져올 수 있다고 떴는데 서버가 거절"이 난다. 등번호 순서를 번호와 거꾸로 줘서 지킨다.
+test('티어 동점은 등번호가 아니라 고유 번호로 가른다 — 서버와 같은 순서', async () => {
+  const { tierRows } = await import('../../src/lib/tier.ts');
+  // 10명 전원 같은 능력치 → 순위는 오로지 동점 처리로 정해진다. 등번호는 번호와 반대 순서.
+  const same = Array.from({ length: 10 }, (_, i) => P(i + 1, 99 - i, 70));
+  const rows = tierRows(same, 'ovr');
+  assert.deepEqual(rows.find((r) => r.tier === 'S').players.map((p) => p.num), [1]);
+  assert.deepEqual(rows.find((r) => r.tier === 'D').players.map((p) => p.num), [10]);
+});

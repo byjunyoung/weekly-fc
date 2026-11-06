@@ -4,7 +4,8 @@ import PlayerDetail from '../../react/player/PlayerDetail.tsx';
 export function getStaticPaths() { return Array.from({ length: 99 }, (_, i) => ({ params: { num: String(i + 1) } })); }
 const { num } = Astro.params;
 ---
-<Shell title={`선수 #${num}`}>
+<!-- 제목에 번호를 넣지 않는다 — 주소의 숫자는 고유 번호(num)라 등번호와 다를 수 있고, 이 제목은 카톡 링크 미리보기에 그대로 찍힌다(2026-11-06). -->
+<Shell title="선수">
   <div id="app">
     <PlayerDetail num={Number(num)} client:load />
   </div>

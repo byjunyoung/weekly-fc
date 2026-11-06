@@ -215,7 +215,7 @@ export async function submitPlacement(num: number, stats: Record<StatKey, number
 export async function pickJersey(jersey: number, num?: number): Promise<{ jersey: number; swapped: string | null }> {
   const r = await rpc('pick_jersey', { p_jersey: jersey, p_num: num ?? null });
   if (inflight) await inflight.catch(() => {});
-  await refresh();
+  await refresh().catch(() => {});   // 번호는 이미 바뀌었다 — 다시 읽기가 실패해도 성공으로 알린다(실패로 알리면 한 번 더 누르게 된다)
   return { jersey: Number(r.jersey) || jersey, swapped: typeof r.swapped === 'string' && r.swapped ? r.swapped : null };
 }
 export async function fetchFull(): Promise<Data> { return normalizeData(await rpc('get_all_full')); }

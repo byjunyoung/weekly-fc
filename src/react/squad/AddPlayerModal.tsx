@@ -2,7 +2,7 @@
 // 저장 뒤 배치 대결(/squad/place/)에서 기존 선수들과 비교해 정한다(스펙 2026-09-28-admin-roster-design.md §3).
 import { App, Button, Form, Input, Modal, Segmented, Select } from 'antd';
 import { useState } from 'react';
-import { serializePlayer, write } from '../../lib/api';
+import { serializePlayer, write, refresh } from '../../lib/api';
 import { FOOT_OPTIONS } from '../../lib/card';
 import type { Player } from '../../lib/types';
 import { href } from '../../lib/url';
@@ -19,10 +19,13 @@ export default function AddPlayerModal({ open, onClose, players }: { open: boole
   const save = async (then: 'place' | 'only') => {
     let v: Values;
     try { v = await form.validateFields(); } catch { return; }
-    if (players.some((p) => p.jersey === v.jersey)) { message.error(`${v.jersey}번은 이미 쓰는 등번호입니다`); return; }
     setSaving(then);
     try {
-      const np = newPlayer(players, v);
+      // 고유 번호는 화면이 정한다 — 낡은 명단으로 정하면 이미 있는 선수와 겹쳐 그 선수를 덮어쓴다(서버는 같은 num 이면 고친다).
+      // 그래서 저장 직전에 명단을 새로 읽고, 못 읽으면 저장하지 않는다.
+      const fresh = (await refresh()).players;
+      if (fresh.some((p) => p.jersey === v.jersey)) { message.error(`${v.jersey}번은 이미 쓰는 등번호입니다`); setSaving(null); return; }
+      const np = newPlayer(fresh, v);
       await write('writePlayer', serializePlayer(np));
       location.href = href(then === 'place' ? `/squad/place/?num=${np.num}` : `/squad/${np.num}/`);
     } catch (e) {

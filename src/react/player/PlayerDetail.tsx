@@ -151,10 +151,10 @@ function Detail({ num }: { num: number }) {
   }, [player]);
 
   // 제목·편집 버튼 — Astro 쪽엔 자리가 없다(id 가 둘로 갈리지 않게 이 섬 하나가 다 그린다).
-  // 데이터가 아직 없으면(SSR·빌드) admin·player 모두 falsy 라 제목만 "선수 #{num}", 버튼은 비어 있다 — 옛 화면의 초기 상태와 같다.
+  // 데이터가 아직 없으면(SSR·빌드) admin·player 모두 falsy 라 제목만 "선수"(고유 번호는 등번호와 다를 수 있어 찍지 않는다), 버튼은 비어 있다 — 옛 화면의 초기 상태와 같다.
   const pageHead = (
     <div className="page-head">
-      <h1 id="title">{player ? player.name : `선수 #${num}`}</h1>
+      <h1 id="title">{player ? player.name : '선수'}</h1>
       {/* 꾸미기는 본인(로그인해 차지한 번호)과 관리자만 — 홈 라커룸에서 "꾸미기"로 들어오는 자리라
           카드 속 작은 아바타를 눌러야만 열리던 것을 겉으로 꺼내 둔다. */}
       <span className="actions" id="actions">
