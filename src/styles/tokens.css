@@ -1354,7 +1354,7 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .p3-banner span { color: var(--fg); font-size: var(--fs-xs); }
 .p3-hint { position: absolute; z-index: 2; left: var(--s-md); right: var(--s-md); bottom: max(var(--s-sm), env(safe-area-inset-bottom)); color: rgba(255, 255, 255, .85); font-size: var(--fs-xs);
   text-align: center; text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
-@media (max-width: 520px) { .p3-hint { left: var(--s-sm); right: 128px; text-align: left; bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 4px); } }
+@media (max-width: 520px) { .p3-hint { left: var(--s-sm); right: 128px; text-align: left; bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 4px); white-space: pre-line; } }   /* 폰은 ' · ' 마다 줄 바꿈(2D 안내와 같게) */
 /* 훈련장 — 위 줄은 폰에선 ✕·♪ 줄 아래로, 시점 버튼은 [공 모으기] 아래로 */
 @media (max-width: 520px) { .f3-hud { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 48px); max-width: calc(100vw - 216px); text-align: center; } }   /* 폭은 오른쪽 [공 모으기](88px + 여백) 양쪽만큼 빼서 — 골이 세 자리가 돼도 닿지 않게(리뷰 #9) */
 .g3-view.is-below-acts { top: calc(max(var(--s-sm), env(safe-area-inset-top)) + 96px); }

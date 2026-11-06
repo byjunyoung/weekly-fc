@@ -8,7 +8,7 @@ import type { SoloProps } from '../types';
 import { rngFrom } from '../match3d/view3d';
 
 type First = 'random' | 'me' | 'them';
-export const CONTROLS_PEN3 = '내 차례: 방향키로 옆·높이를 겨누고, D·스페이스(폰은 슛 버튼)를 누르고 있다가 떼면 슛 · 상대 차례: ←→ 옆걸음, 슛 키 = 몸 던지기(↑ 높이 · ↓ 낮게)';
+export const CONTROLS_PEN3 = '내 차례: 옆·높이 겨누기(방향키·왼쪽 끌기), D·스페이스(폰은 슛 버튼)를 누르고 있다가 떼면 슛 · 상대 차례: 옆걸음(방향키·왼쪽 끌기), 슛 키(폰은 던지기 버튼) = 몸 던지기(위로 높이, 아래로 낮게)';
 
 export function Solo({ open, cardRef, players, num, onStart }: SoloProps<PenConfig>) {
   const [kicks, setKicks] = useState<3 | 5>(5);

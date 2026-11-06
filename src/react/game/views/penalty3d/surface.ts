@@ -172,8 +172,10 @@ export function createPenaltySurface(o: SurfaceIn<PenConfig>): Surface<Pen3State
         bannerB.textContent = b; bannerS.textContent = s;
         if (st.phase === 'end' && st.winner !== null && st.winner !== 'draw') bannerB.style.color = TEAM[st.winner].color; else bannerB.style.color = '';
         // 아래 안내 — 내 역할의 조작
-        hint.textContent = st.phase === 'end' ? '' : st.kicker === myId ? '겨누기(방향키·왼쪽 끌기) · 슛을 누르고 있다가 떼면 슛 — 오래 누를수록 세고 덜 정확'
-          : st.keeper === myId ? '←→ 옆걸음 · 슛 = 몸 던지기(↑ 높이 · ↓ 낮게 · 가운데면 팔 벌리고 뛰기)' : '';
+        // PC 와 폰 두 조작을 같이 말한다(2D 문구와 같은 모양 — 리뷰 #10). 폰에선 ' · ' 마다 줄을 바꾼다.
+        const tip = st.phase === 'end' ? '' : st.kicker === myId ? '겨누기(방향키·왼쪽 끌기) · 슛을 누르고 있다가 떼면 슛 · 오래 누를수록 세고 덜 정확'
+          : st.keeper === myId ? '옆걸음(방향키·왼쪽 끌기) · 던지기(슛) = 몸 던지기(위로 높이, 아래로 낮게, 가운데면 팔 벌리고 뛰기)' : '';
+        hint.textContent = w < 520 ? tip.split(' · ').join('\n') : tip;
         touch?.setLabel('shoot', role === 'keep' ? '던지기' : '슛');
       }
       // 판정·끝·남의 차례엔 터치 버튼을 숨긴다(누를 뜻이 없다)

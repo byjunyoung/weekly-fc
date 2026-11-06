@@ -8,7 +8,7 @@ import type { SoloProps } from '../types';
 import { readBest } from '../best';
 
 export const FK3_BEST_KEY = 'wfc:game:freekick3d-best';
-export const CONTROLS_FK3 = '방향키로 옆·높이 겨누기 · D·스페이스(폰은 슛 버튼)를 누르고 있다가 떼면 슛 · 누르는 동안 ←→ = 감아차기';
+export const CONTROLS_FK3 = '옆·높이 겨누기(방향키·왼쪽 끌기) · D·스페이스(폰은 슛 버튼)를 누르고 있다가 떼면 슛 · 누르는 동안 좌우 = 감아차기';
 
 export function Solo({ open, cardRef, players, num, onStart }: SoloProps<FkConfig>) {
   const me = num === null ? null : players.find((p) => p.num === num) ?? null;

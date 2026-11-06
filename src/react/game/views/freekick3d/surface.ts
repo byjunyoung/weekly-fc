@@ -176,8 +176,10 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
         bannerB.textContent = b; bannerS.textContent = s;
       }
       if (st.phase === 'ready' && st.phaseTicks >= 60) banner.classList.remove('is-on');
-      hint.textContent = st.phase !== 'end' && kicker
-        ? (st.st.held ? '누르는 동안 ←→ = 감아차기 · 떼면 슛' : '방향키로 옆·높이 겨누기 · 슛을 누르고 있다가 떼면 슛 · 누르는 동안 ←→ = 감아차기') : '';
+      // PC 와 폰 두 조작을 같이 말한다(2D 프리킥 문구와 같은 모양 — 리뷰 #10). 폰에선 ' · ' 마다 줄을 바꾼다.
+      const tip = st.phase !== 'end' && kicker
+        ? (st.st.held ? '누르는 동안 좌우(방향키·왼쪽 끌기) = 감아차기 · 떼면 슛' : '옆·높이 겨누기(방향키·왼쪽 끌기) · 슛을 누르고 있다가 떼면 슛 · 누르는 동안 좌우 = 감아차기') : '';
+      hint.textContent = w < 520 ? tip.split(' · ').join('\n') : tip;
       touch?.setShown(kicker && st.phase !== 'end' && st.phase !== 'result');
       const left = st.phase === 'aim' ? Math.max(0, 1 - st.phaseTicks / AIM_TICKS) : 0;
       clock.classList.toggle('is-on', st.phase === 'aim');
