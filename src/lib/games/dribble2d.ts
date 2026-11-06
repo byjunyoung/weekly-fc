@@ -307,7 +307,7 @@ export const DRIBBLE2D: GameEntry<DrConfig, DrState, DrInput, DrSettings> = {
   describe: '콘 사이 문을 차례대로 지나 결승선까지 공을 몰고 가는 기록 경기. 코스 넷, 같이 하면 나란한 레인에서 동시에 달립니다.',
   tags: ['온라인', '기록', '코스 넷'],
   defaultSettings: DR_DEFAULTS,
-  okSettings: (v): v is DrSettings => isObj(v) && isInt(v.course, 0, COURSES.length - 1),
+  okSettings: (v): v is DrSettings => isObj(v) && Object.keys(v).length === 1 && isInt(v.course, 0, COURSES.length - 1),   // 칸은 정확히 하나(리뷰 #11)
   applySettings(cur, patch) {
     const c = isObj(patch) && isInt(patch.course, 0, COURSES.length - 1) ? patch.course : cur.course;
     return c === cur.course ? cur : { course: c };

@@ -430,7 +430,7 @@ export const FREEKICK2D: GameEntry<FkConfig, FkState, FkInput, FkSettings> = {
   describe: '정해진 다섯 자리에서 수비벽과 키퍼를 넘어 한 번씩. 먼 자리일수록 점수가 큽니다. 공을 휘게 차는 감아차기 하나.',
   tags: ['온라인', '차례대로', '감아차기'],
   defaultSettings: FK_DEFAULTS,
-  okSettings: (v): v is FkSettings => isObj(v),
+  okSettings: (v): v is FkSettings => isObj(v) && Object.keys(v).length === 0,   // 설정이 없다 — 빈 객체만(리뷰 #11)
   applySettings: (cur) => cur,
   lobby: 'all',
   absent: 'idle',   // 나간 사람 차례는 봇이 대신 차지 않고 넘긴다(리뷰 #2)

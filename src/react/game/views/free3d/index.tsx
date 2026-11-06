@@ -4,6 +4,7 @@
 import type { Free3Config, Free3Input, Free3Settings, Free3State } from '../../../../lib/games/free3d';
 import type { GameView, Surface, SurfaceIn } from '../types';
 import { CONTROLS_3D } from '../match3d/Solo';
+import { free2dView } from '../free2d';
 import { detectFree3Sfx } from './sfx-detect';
 import { Settings } from './Settings';
 import { Solo } from './Solo';
@@ -35,5 +36,6 @@ export const free3dView: GameView<Free3Config, Free3State, Free3Input, Free3Sett
   hostHint: '공은 사람 수 + 2개(8개까지) · 골이 들어가면 그 공만 가운데로 돌아옵니다 · 멈추려면 경기 화면의 ✕',
   controls: `${CONTROLS_3D} · 숫자 1~6 한마디 · 방장은 [공 모으기]`,
   Solo,
+  quit: free2dView.quit,   // 2D 와 같은 말(리뷰 #7)
   actions: [{ id: 'gather', label: '공 모으기', who: 'host' }],
 };

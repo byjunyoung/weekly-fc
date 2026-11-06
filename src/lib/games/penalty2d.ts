@@ -468,7 +468,7 @@ export type PenSettings = { kicks: 3 | 5; first: PenFirst };
 export const PEN_DEFAULTS: PenSettings = { kicks: 5, first: 'random' };
 
 export function okPenSettings(v: unknown): v is PenSettings {
-  return isObj(v) && (v.kicks === 3 || v.kicks === 5) && (v.first === 'random' || v.first === 0 || v.first === 1);
+  return isObj(v) && Object.keys(v).length === 2 && (v.kicks === 3 || v.kicks === 5) && (v.first === 'random' || v.first === 0 || v.first === 1);   // 칸은 정확히 둘(리뷰 #11)
 }
 export function applyPenSettings(cur: PenSettings, given: unknown): PenSettings {
   const p = isObj(given) ? given : {};
