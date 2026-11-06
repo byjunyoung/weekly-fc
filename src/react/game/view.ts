@@ -2,6 +2,7 @@
 // 하는 일 셋: ① 경기장 좌표(논리 단위) ↔ 화면 픽셀 변환과 가로/세로 방향 고르기, ② 사람 선수가 낀 라인업 뽑기,
 // ③ 남은 시간 글자. 그리기·입력·시계는 다른 파일이 맡고, 여기엔 "어디에 놓이나"만 있다.
 import { PITCH } from '../../lib/game/sim.ts';
+import { shuffle } from '../../lib/game/lineup.ts';
 
 /** 골 상자까지 포함한 경기장 전체의 논리 크기. 화면에 이게 통째로 들어와야 한다. */
 export const EXTENT = { w: PITCH.w + PITCH.goalDepth * 2, h: PITCH.h };
@@ -87,11 +88,7 @@ export function pickLineup(roster: number[], humanNum: number, perSide: number, 
   const others = roster.filter((n, i) => n !== humanNum && roster.indexOf(n) === i);
   if (!roster.includes(humanNum)) throw new RangeError('내 선수가 명단에 없다');
   if (others.length < perSide * 2 - 1) throw new RangeError('명단이 모자란다');
-  const pool = others.slice();
-  for (let i = pool.length - 1; i > 0; i--) {   // Fisher–Yates
-    const j = Math.floor(rnd() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
+  const pool = shuffle(others, rnd);   // 2단계 방(room.ts)과 같은 섞기를 쓴다
   const humanSlot = Math.min(1, perSide - 1);
   const out: LineupSlot[] = [];
   let k = 0;
