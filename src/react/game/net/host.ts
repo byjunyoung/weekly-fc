@@ -37,6 +37,9 @@ export type HostOptions = {
   games: GameLookup;
   /** 방을 처음 열 때의 게임 종류. 등록돼 있어야 한다. */
   game: string;
+  /** 방을 처음 열 때 그 게임의 설정(2026-11-07 2단계 — 방장이 새로고침해 방을 다시 열 때 고른 설정을 잇는다).
+   *  그 게임의 okSettings 를 못 지나면(없거나 낡은 값) 기본 설정. */
+  settings?: unknown;
 };
 
 export type HostSession = {
@@ -102,7 +105,7 @@ export function createHostSession(o: HostOptions): HostSession {
   const me = o.me, games = o.games;
   const first = games(o.game);
   if (!first) throw new RangeError(`등록되지 않은 게임: ${o.game}`);
-  let room: RoomState = createRoom(o.code, me, o.game, first.defaultSettings);
+  let room: RoomState = createRoom(o.code, me, o.game, o.settings !== undefined && first.okSettings(o.settings) ? o.settings : first.defaultSettings);
   let match: Match | null = null;
   let hidden = false, closed = false;
   let reader: (() => unknown) | null = null;

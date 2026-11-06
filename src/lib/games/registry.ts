@@ -8,9 +8,11 @@
 import type { GameEntry, GameLookup, GameMode } from './entry.ts';
 import { MATCH2D } from './match2d.ts';
 import { MATCH3D } from './match3d.ts';
+import { PENALTY2D } from './penalty2d.ts';
+import { FREE2D } from './free2d.ts';
 
 /** 목록에 보이는 차례대로. */
-export const GAMES: readonly GameEntry[] = [MATCH2D, MATCH3D];
+export const GAMES: readonly GameEntry[] = [MATCH2D, PENALTY2D, FREE2D, MATCH3D];
 
 /** 방을 만들 때·주소에 ?g= 가 없거나 모를 때의 게임. */
 export const DEFAULT_GAME = 'match2d';

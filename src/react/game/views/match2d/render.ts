@@ -22,8 +22,9 @@ const GOLD = '#ffce21';
 const KICK_RING = '#ffffff';   // 킥을 누르는 동안의 고리 색
 const FACE_FILL = 0.74;         // 원 반지름 대비 얼굴 반쪽 크기 — 1 이면 원에 꽉 찬다
 // 도트 글꼴은 격자에 맞는 크기에서만 또렷하다: 갈무리9 = 10px 의 배수, 갈무리14 = 14px 의 배수(tokens.css 와 같은 계약).
-const F9 = '"Galmuri9", "Galmuri14", "Pretendard Variable", Pretendard, system-ui, sans-serif';
-const F14 = '"Galmuri14", "Galmuri9", "Pretendard Variable", Pretendard, system-ui, sans-serif';
+export const F9 = '"Galmuri9", "Galmuri14", "Pretendard Variable", Pretendard, system-ui, sans-serif';
+export const F14 = '"Galmuri14", "Galmuri9", "Pretendard Variable", Pretendard, system-ui, sans-serif';
+export { GOLD };
 
 export { TEAM };
 
@@ -40,7 +41,7 @@ const FACE_CELL = 4;   // 16칸 × 4 = 64px. 화면에선 이보다 작게 줄�
 
 /** 경기 시작 때 한 번. 화면 avatarFaceSvg 와 같은 영역(FACE_X/Y/SIZE)을 avatarPixels 의 도트에서 바로 칠한다 —
  *  SVG → Image 는 비동기라 첫 프레임에 못 맞출 수 있고, 같은 그림 데이터를 쓰니 모양은 같다(teams-image.ts 와 같은 방식). */
-export function buildSprites(config: MatchConfig, roster: Player[]): Sprites {
+export function buildSprites(config: { players: readonly { num: number }[] }, roster: Player[]): Sprites {
   const faces: (HTMLCanvasElement | null)[] = [];
   const jerseys: number[] = [];
   for (const mp of config.players) {
@@ -186,49 +187,59 @@ export function drawFrame(ctx: CanvasRenderingContext2D, st: MatchState, config:
   const showName = R >= 8;
   for (const { i, s } of order) {
     const mp = config.players[i];
-    const human = mp.id === o.humanId;
-    const team = TEAM[mp.side];
-    const face = sprites.faces[i];
-    ctx.save();
-    ctx.beginPath(); ctx.arc(s.x, s.y, R, 0, Math.PI * 2); ctx.clip();
-    // 얼굴은 원보다 작게 — 고리에 바짝 붙으면 답답하다(2026-11-06 "아바타 영역에 패딩이 좀 있어야"). 남는 둘레는 어두운 바탕.
-    const fr = R * FACE_FILL;
-    if (face) { ctx.fillStyle = '#20242b'; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2); ctx.drawImage(face, s.x - fr, s.y - fr, fr * 2, fr * 2); }
-    else {
-      ctx.fillStyle = '#2a2d33'; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2);
-      ctx.fillStyle = '#ddd'; ctx.font = `10px ${F9}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(String(sprites.jerseys[i] ?? ''), s.x, s.y);
-    }
-    ctx.restore();
     // 킥을 누르고 있는 동안 고리가 하얗게 밝아진다 — 눌렸다는 걸 눈으로 알 수 있게(2026-11-06 "키 누를 때 피드백이 없네").
     const kicking = !!st.players[i].kicking || st.players[i].kickFlash > 0;   // 장전 중이거나 방금 찼다(봇도 똑같이 보인다)
-    const ring = Math.max(2.5, R * 0.24);
-    ctx.lineWidth = ring; ctx.strokeStyle = kicking ? KICK_RING : team.color;
-    ctx.beginPath(); ctx.arc(s.x, s.y, R - ring / 2, 0, Math.PI * 2); ctx.stroke();
-    if (human) {   // 내 선수 — 밝은 바깥 고리 + 머리 위 화살표
-      ctx.lineWidth = 2; ctx.strokeStyle = '#fff';
-      ctx.beginPath(); ctx.arc(s.x, s.y, R + 2, 0, Math.PI * 2); ctx.stroke();
-      const ay = s.y - R - 5, aw = Math.max(5, R * 0.45);
-      ctx.fillStyle = GOLD; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(s.x, ay); ctx.lineTo(s.x - aw, ay - aw * 1.3); ctx.lineTo(s.x + aw, ay - aw * 1.3); ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
+    drawToken(ctx, s, R, sprites.faces[i], sprites.jerseys[i], TEAM[mp.side].color, kicking, mp.id === o.humanId);
   }
   // 이름표(머리 아래). 작아서 안 읽히면 그리지 않는다 — 겹쳐 지저분한 것보다 낫다.
-  if (showName) {
-    ctx.font = R >= 12 ? `14px ${F14}` : `10px ${F9}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0, 0, 0, .85)';
-    for (const { i, s } of order) {
-      const name = Array.from(config.players[i].name).slice(0, 4).join('');
-      ctx.strokeText(name, s.x, s.y + R + 3); ctx.fillStyle = config.players[i].id === o.humanId ? GOLD : '#f4f4f4'; ctx.fillText(name, s.x, s.y + R + 3);
-    }
-  }
+  if (showName) for (const { i, s } of order) drawName(ctx, s, R, config.players[i].name, config.players[i].id === o.humanId);
 
   // 공 — 흰색 + 어두운 테두리
-  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(1.5, ballR * 0.25);
-  ctx.beginPath(); ctx.arc(bs.x, bs.y, ballR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  drawBall(ctx, bs, ballR);
 
   if (view.follow) drawBallArrow(ctx, view, bs);
   drawHud(ctx, st, config, view, o);
+}
+
+/** 선수 하나 — 얼굴 원 + 고리(킥 중이면 하양) + 내 선수 표시. 경기·승부차기·훈련장이 같이 쓴다(2026-11-07 — drawFrame 의 반복에서 그대로 떼어 냄).
+ *  얼굴이 없으면 등번호(jersey). */
+export function drawToken(ctx: CanvasRenderingContext2D, s: { x: number; y: number }, R: number, face: HTMLCanvasElement | null | undefined, jersey: number | undefined,
+  ringColor: string, kicking: boolean, me: boolean): void {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(s.x, s.y, R, 0, Math.PI * 2); ctx.clip();
+  // 얼굴은 원보다 작게 — 고리에 바짝 붙으면 답답하다(2026-11-06 "아바타 영역에 패딩이 좀 있어야"). 남는 둘레는 어두운 바탕.
+  const fr = R * FACE_FILL;
+  if (face) { ctx.fillStyle = '#20242b'; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2); ctx.drawImage(face, s.x - fr, s.y - fr, fr * 2, fr * 2); }
+  else {
+    ctx.fillStyle = '#2a2d33'; ctx.fillRect(s.x - R, s.y - R, R * 2, R * 2);
+    ctx.fillStyle = '#ddd'; ctx.font = `10px ${F9}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(jersey ?? ''), s.x, s.y);
+  }
+  ctx.restore();
+  const ring = Math.max(2.5, R * 0.24);
+  ctx.lineWidth = ring; ctx.strokeStyle = kicking ? KICK_RING : ringColor;
+  ctx.beginPath(); ctx.arc(s.x, s.y, R - ring / 2, 0, Math.PI * 2); ctx.stroke();
+  if (me) {   // 내 선수 — 밝은 바깥 고리 + 머리 위 화살표
+    ctx.lineWidth = 2; ctx.strokeStyle = '#fff';
+    ctx.beginPath(); ctx.arc(s.x, s.y, R + 2, 0, Math.PI * 2); ctx.stroke();
+    const ay = s.y - R - 5, aw = Math.max(5, R * 0.45);
+    ctx.fillStyle = GOLD; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(s.x, ay); ctx.lineTo(s.x - aw, ay - aw * 1.3); ctx.lineTo(s.x + aw, ay - aw * 1.3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+}
+
+/** 이름표(머리 아래, 앞 네 글자). 내 선수는 금색. */
+export function drawName(ctx: CanvasRenderingContext2D, s: { x: number; y: number }, R: number, name: string, me: boolean): void {
+  ctx.font = R >= 12 ? `14px ${F14}` : `10px ${F9}`; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0, 0, 0, .85)';
+  const n = Array.from(name).slice(0, 4).join('');
+  ctx.strokeText(n, s.x, s.y + R + 3); ctx.fillStyle = me ? GOLD : '#f4f4f4'; ctx.fillText(n, s.x, s.y + R + 3);
+}
+
+/** 공 하나 — 흰색 + 어두운 테두리. */
+export function drawBall(ctx: CanvasRenderingContext2D, bs: { x: number; y: number }, ballR: number): void {
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(1.5, ballR * 0.25);
+  ctx.beginPath(); ctx.arc(bs.x, bs.y, ballR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, st: MatchState, config: MatchConfig, view: View, o: FrameOpts): void {
@@ -261,7 +272,8 @@ function drawHud(ctx: CanvasRenderingContext2D, st: MatchState, config: MatchCon
   }
 }
 
-function banner(ctx: CanvasRenderingContext2D, view: View, y: number, big: string, small: string, size: number, color = GOLD): void {
+/** 가운데 띠 — 큰 글자(+ 작은 줄). 승부차기·훈련장도 같이 쓴다. view 는 vw(폭)만 본다. */
+export function banner(ctx: CanvasRenderingContext2D, view: Pick<View, 'vw' | 'vh'>, y: number, big: string, small: string, size: number, color = GOLD): void {
   const fs = Math.max(30, Math.floor(Math.min(size, view.vw / 8) / 10) * 10);
   const h = fs * (small ? 2.1 : 1.5);
   ctx.fillStyle = 'rgba(0, 0, 0, .55)'; ctx.fillRect(0, y - h / 2, view.vw, h);
@@ -272,6 +284,7 @@ function banner(ctx: CanvasRenderingContext2D, view: View, y: number, big: strin
   ctx.textBaseline = 'top';
 }
 
+export { drawBallArrow };
 /** 공이 화면(그릴 칸) 밖이면 칸 가장자리에 공 쪽을 가리키는 작은 화살표(스펙 2026-11-07 §2). */
 function drawBallArrow(ctx: CanvasRenderingContext2D, view: View, bs: { x: number; y: number }): void {
   const pad = 14;
@@ -294,7 +307,7 @@ function drawBallArrow(ctx: CanvasRenderingContext2D, view: View, bs: { x: numbe
 
 // ── 한마디 말풍선(2단계 온라인) ──
 /** 그 선수 머리 위에 말풍선. drawFrame 뒤에 부른다(같은 dpr 변환 그대로). 몸이 화면 위 끝이면 아래로 붙여 잘리지 않게. */
-export function drawBubbles(ctx: CanvasRenderingContext2D, st: MatchState, config: MatchConfig, view: View, bubbles: { id: number; text: string }[]): void {
+export function drawBubbles(ctx: CanvasRenderingContext2D, st: { players: readonly { x: number; y: number }[] }, config: { field: unknown }, view: View, bubbles: { id: number; text: string }[]): void {
   if (!bubbles.length) return;
   const R = pitchOf(config.field).playerR * view.scale;
   ctx.font = `14px ${F14}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

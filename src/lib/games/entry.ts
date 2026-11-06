@@ -35,6 +35,10 @@ export type GameEntry<C = any, S = any, I = any, T = any> = {
   botSeats?(room: RoomState<T>): [number, number];
   /** 봇 자리 i(편 안 차례, 0 부터)의 작은 표시 — 예: 3D 경기의 첫 봇 자리는 '키퍼'(2026-11-07 4단계). 없거나 null 이면 그냥 '봇'. */
   botSeatTag?(room: RoomState<T>, side: 0 | 1, i: number): string | null;
+  /** 방 화면의 사람 칸(2026-11-07 2단계 — 자유 훈련장). 'teams'(없을 때와 같다) = 주황 | 대기 | 흰 세 칸, 방장이 옮기고 자동 나누기.
+   *  'all' = 편이 없는 게임 — "참가" 한 칸에 방 사람 모두, 옮기기·자동 나누기·봇 칸이 없다. buildConfig 는 칸(team)을 보지 말고
+   *  방 사람을 들어온 차례로 앞에서부터 MAX_HUMANS(8)명 뛰게 하고 나머지는 구경시킨다(방장이 맨 앞이라 늘 뛴다). */
+  lobby?: 'teams' | 'all';
 };
 
 /** id → 등록된 게임(없으면 undefined). 세션·메시지 검사는 이 함수만 받는다. */

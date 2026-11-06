@@ -100,7 +100,7 @@ export function usePlaySurface(o: {
 /** 결과 상자 아래 버튼·안내(혼자: 다시 하기/설정으로, 방장: 바로 방으로, 손님: 잠시 뒤 안내). */
 export type ResultBox = ResultView & { actions: ReactNode };
 
-export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickShown, result, wait, fail }: {
+export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickShown, result, wait, fail, actions }: {
   refs: Refs;
   xLabel: string; onX: () => void;
   /** 한마디(온라인에서 뛰는 사람만). 없으면 버튼이 없다. */
@@ -115,6 +115,8 @@ export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickSho
   wait?: boolean;
   /** 화면을 못 열었다(WebGL 없음 등) — 이유 글. ✕ 로 나간다. */
   fail?: string | null;
+  /** 게임 버튼(GameView.actions 중 이 사람에게 보일 것). 없으면 안 그린다. */
+  actions?: { id: string; label: string; onClick: () => void }[];
 }) {
   const [sayOpen, setSayOpen] = useState(false);
   const pick = (k: number): void => { say?.(k); setSayOpen(false); };
@@ -141,6 +143,12 @@ export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickSho
       {!result && banner && <div className="game-banner" role="status">{banner}</div>}
       {!result && !banner && wait && <div className="game-banner" role="status">화면을 불러오는 중…</div>}
       {!result && fail && <div className="game-banner" role="alert">{fail} 2D 게임은 그대로 할 수 있습니다.</div>}
+      {!result && actions && actions.length > 0 && (
+        <div className="game-acts">
+          {/* 마우스로 눌러도 포커스를 가져가지 않는다 — 스페이스(킥)가 이 버튼을 다시 누르지 않게. */}
+          {actions.map((a) => <button type="button" key={a.id} className="game-act" onMouseDown={(e) => e.preventDefault()} onClick={a.onClick}>{a.label}</button>)}
+        </div>
+      )}
       <div className="game-stick" ref={refs.base} aria-hidden="true"><div className="game-stick-knob" ref={refs.knob} /></div>
       <button type="button" ref={refs.kick} className={`game-kick${kickShown ? ' is-shown' : ''}`} aria-label="킥">킥</button>
       {result && (
@@ -148,6 +156,7 @@ export function MatchOverlay({ refs, xLabel, onX, say, watching, banner, kickSho
           <div className="game-result-box">
             <b className={`game-outcome is-${result.tone}`}>{result.outcome}</b>
             <div className="game-final">{result.score}</div>
+            {result.detail}
             <p className="muted">{result.sub}</p>
             {result.actions}
           </div>

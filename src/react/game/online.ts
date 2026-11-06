@@ -5,6 +5,7 @@ import { isRoomCode } from '../../lib/game/room';
 const CID_KEY = 'wfc:game:cid';        // 기기(탭)마다 무작위 — 새로고침해도 같은 자리로(스펙 §2.2)
 const HOST_KEY = 'wfc:game:host';      // 이 탭이 방장인 방 코드 — 새로고침하면 손님이 아니라 방장으로 다시 연다
 const JOINED_KEY = 'wfc:game:joined';  // 이 탭이 손님으로 들어가 있던 방 코드 — 새로고침하면 같은 clientId 로 다시 hello
+const HOST_GAME_KEY = 'wfc:game:host-game';   // 방장 탭의 방 게임 종류와 설정 { code, game, settings } — 새로고침해도 방의 게임이 그대로(2026-11-07 2단계)
 
 const ss = {
   get(k: string): string | null { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -27,8 +28,20 @@ export function clientId(): string {
 export const hostedCode = (): string | null => ss.get(HOST_KEY);
 export const joinedCode = (): string | null => ss.get(JOINED_KEY);
 export function markHost(code: string): void { ss.set(HOST_KEY, code); ss.del(JOINED_KEY); }
-export function markJoined(code: string): void { ss.set(JOINED_KEY, code); ss.del(HOST_KEY); }
-export function clearMarks(): void { ss.del(HOST_KEY); ss.del(JOINED_KEY); }
+export function markJoined(code: string): void { ss.set(JOINED_KEY, code); ss.del(HOST_KEY); ss.del(HOST_GAME_KEY); }
+export function clearMarks(): void { ss.del(HOST_KEY); ss.del(JOINED_KEY); ss.del(HOST_GAME_KEY); }
+
+/** 방장 탭이 지금 방의 게임 종류와 설정을 적어 둔다(방 표시 옆). 바뀔 때마다 부른다. */
+export function saveHostGame(code: string, game: string, settings: unknown): void {
+  try { ss.set(HOST_GAME_KEY, JSON.stringify({ code, game, settings })); } catch { /* 못 적어도 방은 돈다 — 새로고침하면 주소의 게임으로 */ }
+}
+/** 이 방(code)에 적어 둔 게임 종류와 설정. 없거나 다른 방 것이면 null. 설정 모양은 부르는 쪽(세션)이 그 게임의 okSettings 로 본다. */
+export function hostedGame(code: string): { game: string; settings: unknown } | null {
+  try {
+    const v = JSON.parse(ss.get(HOST_GAME_KEY) ?? 'null') as { code?: unknown; game?: unknown; settings?: unknown } | null;
+    return v && v.code === code && typeof v.game === 'string' ? { game: v.game, settings: v.settings } : null;
+  } catch { return null; }
+}
 
 /** 주소의 ?room= — 형식이 틀리면 없는 것으로. */
 export function roomFromUrl(): string | null {
