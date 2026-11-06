@@ -123,7 +123,7 @@ export function drawFreekick(ctx: CanvasRenderingContext2D, st: FkState, config:
 
   // 아래 안내 — 내 차례의 조작
   const hint = st.phase !== 'end' && st.kicker === o.me
-    ? (st.st.held ? '누르는 동안 ←→ = 감아차기 · 떼면 슛' : '←→ 겨누기 · 킥을 누르고 있다가 떼면 슛 · 누르는 동안 ←→ = 감아차기')
+    ? (st.st.held ? '누르는 동안 좌우(방향키·왼쪽 끌기) = 감아차기 · 떼면 슛' : '겨누기(방향키·왼쪽 끌기) · 킥을 누르고 있다가 떼면 슛 · 누르는 동안 좌우 = 감아차기')
     : '';
   if (hint) {
     ctx.font = `14px ${F14}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
