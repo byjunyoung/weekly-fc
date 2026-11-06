@@ -1,6 +1,7 @@
 // src/react/game/views/dribble2d/index.tsx — 드리블 훈련장의 화면(2026-11-07 게임 묶음 3단계). GameView 약속.
 // 내 레인을 그리고(폰 세로면 세워서 따라간다), 다른 사람은 유령과 순위 줄로. 스틱 돌리기·카메라는 경기 화면(view.ts) 것 그대로.
 import type { DrConfig, DrSettings, DrState } from '../../../../lib/games/dribble2d';
+import type { Course } from '../../../../lib/games/dribble2d';
 import { courseOf, drRanking, laneTime, medalOf } from '../../../../lib/games/dribble2d';
 import type { Input } from '../../../../lib/game/sim';
 import type { Camera, GameView, ResultView, Scene } from '../types';
@@ -15,6 +16,47 @@ import { Settings } from './Settings';
 import { Solo } from './Solo';
 
 const once = new WeakMap<object, ResultView>();
+
+/** 결과 상자(2026-11-07 6단계에 꺼냄 — 3D 드리블도 같은 상자, 코스(메달 시간)와 기기 기록 칸만 받는다). 내용은 예전 그대로. */
+export function drResult(final: DrState, config: DrConfig, { myId, solo }: { myId: number | null; solo: boolean }, c: Course, bestKey: string): ResultView {
+  const hit = once.get(final);
+  if (hit) return hit;
+  const order = drRanking(final);
+  const detail = (
+    <ul className="dr-rows">
+      {order.map((i, r) => {
+        const p = config.players[i], l = final.lanes[i], t = laneTime(l), m = medalOf(c, t);
+        return (
+          <li key={i} className={i === myId ? 'is-me' : undefined}>
+            <span className="dr-rank">{r + 1}</span>
+            <span className="dr-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}</span>
+            <span className="dr-medal" style={m !== null ? { color: MEDAL[m].color } : undefined}>{m !== null ? MEDAL[m].name : ''}</span>
+            <span className="dr-time">{t !== null ? `${secText(t)}${l.pen ? ` (콘 ${l.pen})` : ''}` : `문 ${l.gate}/${c.gates.length}`}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+  let out: ResultView;
+  const medalLine = `금 ${c.medals[0]}초 · 은 ${c.medals[1]}초 · 동 ${c.medals[2]}초`;
+  if (solo || config.players.length === 1) {
+    const l = final.lanes[0], t = laneTime(l), m = medalOf(c, t);
+    const b = t !== null && solo ? offerBest(bestKey, t, (a, z) => a < z) : { prev: readBest(bestKey), isNew: false };
+    const bestText = b.isNew ? (b.prev !== null ? ' · 새 최고 기록' : ' · 첫 기록') : b.prev !== null ? ` · 최고 ${secText(b.prev)}` : '';
+    out = {
+      outcome: t === null ? '시간 끝' : m !== null ? `${MEDAL[m].name}메달` : '완주', tone: m === 0 || m === 1 ? 'win' : t === null ? 'lose' : 'draw',
+      score: t === null ? <>문 {l.gate}/{c.gates.length}</> : <>{secText(t)}</>, sub: `${c.name}${l.pen ? ` · 콘 ${l.pen}개(+${l.pen}초)` : ''}${bestText} · ${medalLine}`,
+    };
+  } else {
+    const rank = myId === null ? -1 : order.indexOf(myId), top = config.players[order[0]], tt = laneTime(final.lanes[order[0]]);
+    out = {
+      outcome: myId === null ? `${top.name} 1등` : rank === 0 ? '1등!' : `${rank + 1}등`, tone: rank === 0 || myId === null ? 'win' : 'draw',
+      score: <>{top.name} {tt !== null ? secText(tt) : '—'}</>, sub: `${c.name} · ${config.players.length}명 · ${medalLine}`, detail,
+    };
+  }
+  once.set(final, out);
+  return out;
+}
 
 export const dribble2dView: GameView<DrConfig, DrState, Input, DrSettings> = {
   id: 'dribble2d',
@@ -66,45 +108,7 @@ export const dribble2dView: GameView<DrConfig, DrState, Input, DrSettings> = {
 
   sfx: detectDrSfx,
 
-  result(final, config, { myId, solo }) {
-    const hit = once.get(final);
-    if (hit) return hit;
-    const c = courseOf(config.course), order = drRanking(final);
-    const detail = (
-      <ul className="dr-rows">
-        {order.map((i, r) => {
-          const p = config.players[i], l = final.lanes[i], t = laneTime(l), m = medalOf(c, t);
-          return (
-            <li key={i} className={i === myId ? 'is-me' : undefined}>
-              <span className="dr-rank">{r + 1}</span>
-              <span className="dr-name">{p.jersey ? `${p.jersey} ` : ''}{p.name}</span>
-              <span className="dr-medal" style={m !== null ? { color: MEDAL[m].color } : undefined}>{m !== null ? MEDAL[m].name : ''}</span>
-              <span className="dr-time">{t !== null ? `${secText(t)}${l.pen ? ` (콘 ${l.pen})` : ''}` : `문 ${l.gate}/${c.gates.length}`}</span>
-            </li>
-          );
-        })}
-      </ul>
-    );
-    let out: ResultView;
-    const medalLine = `금 ${c.medals[0]}초 · 은 ${c.medals[1]}초 · 동 ${c.medals[2]}초`;
-    if (solo || config.players.length === 1) {
-      const l = final.lanes[0], t = laneTime(l), m = medalOf(c, t);
-      const b = t !== null && solo ? offerBest(dribbleBestKey(c.id), t, (a, z) => a < z) : { prev: readBest(dribbleBestKey(c.id)), isNew: false };
-      const bestText = b.isNew ? (b.prev !== null ? ' · 새 최고 기록' : ' · 첫 기록') : b.prev !== null ? ` · 최고 ${secText(b.prev)}` : '';
-      out = {
-        outcome: t === null ? '시간 끝' : m !== null ? `${MEDAL[m].name}메달` : '완주', tone: m === 0 || m === 1 ? 'win' : t === null ? 'lose' : 'draw',
-        score: t === null ? <>문 {l.gate}/{c.gates.length}</> : <>{secText(t)}</>, sub: `${c.name}${l.pen ? ` · 콘 ${l.pen}개(+${l.pen}초)` : ''}${bestText} · ${medalLine}`,
-      };
-    } else {
-      const rank = myId === null ? -1 : order.indexOf(myId), top = config.players[order[0]], tt = laneTime(final.lanes[order[0]]);
-      out = {
-        outcome: myId === null ? `${top.name} 1등` : rank === 0 ? '1등!' : `${rank + 1}등`, tone: rank === 0 || myId === null ? 'win' : 'draw',
-        score: <>{top.name} {tt !== null ? secText(tt) : '—'}</>, sub: `${c.name} · ${config.players.length}명 · ${medalLine}`, detail,
-      };
-    }
-    once.set(final, out);
-    return out;
-  },
+  result: (final, config, o) => drResult(final, config, o, courseOf(config.course), dribbleBestKey(courseOf(config.course).id)),
 
   entry: { sub: '2D · 콘 사이로 기록 재기', header: '2D 드리블 훈련장 · 방을 만들면 초대 링크가 생기고, 들어온 사람이 나란한 레인에서 같이 달립니다' },
   minRoster: 1,

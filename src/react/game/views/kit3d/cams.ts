@@ -19,3 +19,15 @@ export function kickerCam(ballX: number, aspect: number, back = 6.2, up = 3.0): 
 export function keeperCam(spotX: number, aspect: number, back = 3.4, up = 2.7): CamGoal {
   return { px: PITCH3D.HW + PITCH3D.goalDepth + back, py: 0, pz: up, lx: spotX, ly: 0, lz: 0.5, fov: vFov(58, aspect) };
 }
+
+/** 공 뒤에서 골대를 보는 카메라 — 골대 가운데에서 공을 지나는 줄 위로 back m 물러나, 높이 up m(3D 프리킥 — 자리가 옆으로 비껴 있어도 공 뒤에서). */
+export function behindBallCam(bx: number, by: number, aspect: number, back = 6, up = 3.2): CamGoal {
+  const dx = bx - PITCH3D.HW, dy = by, l = Math.sqrt(dx * dx + dy * dy) || 1;
+  return { px: bx + (dx / l) * back, py: by + (dy / l) * back, pz: up, lx: PITCH3D.HW, ly: 0, lz: 0.8, fov: vFov(48, aspect) };
+}
+
+/** 선수 뒤를 따라가는 카메라(3D 드리블 — "뒤에서 따라가는 화면"). 보는 쪽(fx·fy, 화면 쪽에서 부드럽게 돌린 단위 벡터) 뒤 back m·위 up m 에서
+ *  앞 ahead m 을 본다. 경기의 '뒤에서'(늘 +x 쪽을 본다)와 달리 코스가 돌아 나와도 진행 방향을 본다. */
+export function followCam(px: number, py: number, fx: number, fy: number, aspect: number, back = 4.6, up = 2.9, ahead = 5): CamGoal {
+  return { px: px - fx * back, py: py - fy * back, pz: up, lx: px + fx * ahead, ly: py + fy * ahead, lz: 0.2, fov: vFov(70, aspect, 45, 90) };
+}
