@@ -13,6 +13,7 @@
 //     돌아 들어가는 길이 화면에 그대로 보여서 남겼다.
 //   - 수비벽 봇 셋은 몸 부피(캡슐 — 승부차기 키퍼 몸통과 같은 굵기)이고 공이 나가고 WALL_REACT 틱 뒤 다 같이 한 번 뛴다(결정적, 약 0.3m).
 //   - 키퍼 봇은 3D 승부차기 키퍼 몸(keeper3Step·keeperCapsules) — 반응 뒤 공을 읽으면 지날 곳(옆·높이)으로, 아니면 열린 쪽/벽 쪽을 짐작해 던진다.
+import { GAME_COPY } from './copy.ts';
 import type { Ball } from '../game3d/sim.ts';
 import { PITCH3D, TUNE3D, rand } from '../game3d/sim.ts';
 import { BASE_PERF } from '../game/stats.ts';
@@ -374,7 +375,7 @@ export const FREEKICK3D: GameEntry<FkConfig, Fk3State, Fk3Input, FkSettings> = {
   ...FREEKICK2D,
   adapter: freekick3d,
   mode: '3d',
-  describe: '정해진 다섯 자리에서 수비벽과 키퍼를 상대로 한 번씩. 벽을 넘길 높이와 세기를 고르고, 감아차기로 벽을 돌아 넣습니다.',
-  tags: ['온라인', '차례대로', '벽 넘기기'],
+  describe: GAME_COPY.freekick,
+  tags: ['온라인', '차례대로', '감아차기'],
   absent: 'idle',   // 나간 사람 차례는 봇이 대신 차지 않고 넘긴다(2D 와 같다 — 리뷰 #2)
 };

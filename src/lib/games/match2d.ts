@@ -3,6 +3,7 @@
 //
 // 새로 계산하는 것은 없다 — 1·2단계의 경기 계산(sim.ts), 입력 양자화(quant.ts), 봇(bot.ts), 방 규칙(match2d-room.ts)을
 // 어댑터 약속(adapter.ts)에 맞춰 이어 붙일 뿐이다. 모양 검사(okConfig·okState)는 예전 net.ts 의 것과 손님 쪽 snapFits 를 합쳤다.
+import { GAME_COPY } from './copy.ts';
 import type { Input, MatchConfig, MatchState } from '../game/sim.ts';
 import { FIELD_IDS, NO_INPUT, createMatch, step } from '../game/sim.ts';
 import { botInput } from '../game/bot.ts';
@@ -99,7 +100,7 @@ export const MATCH2D: GameEntry<MatchConfig, MatchState, Input, RoomSettings> = 
   adapter: match2d,
   mode: '2d',
   name: '경기',
-  describe: '위에서 보는 물리 축구. 방을 만들어 팀원과 붙거나 혼자서 봇과 연습합니다.',
+  describe: GAME_COPY.match,
   tags: ['온라인', '봇', '1대1~6대6'],
   defaultSettings: DEFAULT_SETTINGS,
   okSettings,

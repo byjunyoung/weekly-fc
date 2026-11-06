@@ -8,6 +8,7 @@
 //   - 몸·공·조작은 3D 경기 그대로(드리블·패스·스루·로빙·슛 모으기·질주, 1인칭 보는 방향) — 공 여러 개는 game3d/multiball3d.ts 가 맡는다.
 //   - 경기장은 3D 경기장 하나뿐이다(3D 계산의 경기장 크기가 상수라서). 그래서 방 설정의 "경기장"은 없고 연습 봇 수만 고른다.
 //   - 입력은 3D 경기 양자화(68,640) + [공 모으기] 한 가지(입력 정수 68,640 이 "가만히 + 공 모으기"). 비트로 곱하면 MAX_CODES 를 넘어서다.
+import { GAME_COPY } from './copy.ts';
 import type { Input } from '../game3d/sim.ts';
 import { PITCH3D, rand } from '../game3d/sim.ts';
 import type { MBBall, MBPlayer, MBWorld } from '../game3d/multiball3d.ts';
@@ -248,7 +249,7 @@ export const FREE3D: GameEntry<Free3Config, Free3State, Free3Input, Free3Setting
   adapter: free3d,
   mode: '3d',
   name: '자유 훈련장',
-  describe: '시간도 점수도 없이 입체 경기장에서 공 여러 개를 차 보는 곳. 1인칭으로 드리블·슛을 익히기 좋습니다. 들어온 사람 모두가 편 없이 같이 놉니다.',
+  describe: GAME_COPY.free,
   tags: ['온라인', '연습 봇', '공 여러 개'],
   defaultSettings: FREE3_DEFAULTS,
   okSettings: okFree3Settings,

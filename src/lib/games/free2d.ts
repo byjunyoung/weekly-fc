@@ -8,6 +8,7 @@
 //   - 공은 사람 수 + 2(최소 3, 최대 MAX_BALLS). 공이 골문을 완전히 넘으면 그 공만 가운데 자리(CENTER_SPOTS 중 씨앗으로 하나)로 돌아오고 "골!" 표시가 잠깐 뜬다.
 //   - 편이 없다 — 방 사람 모두(앞에서부터 8명)가 들어온다. 연습 봇 0~4명은 가까운 공을 쫓아 골대로 찬다.
 //   - [공 모으기] — 모든 공을 가운데 자리로. 입력의 gather 비트로 오고, 방장 자리(혼자면 내 자리)의 것만 듣는다.
+import { GAME_COPY } from './copy.ts';
 import type { Body, FieldId, Input, KickBody } from '../game/sim.ts';
 import { FIELD_IDS, NO_INPUT, PHYS, geoOf, nextRand } from '../game/sim.ts';
 import { stepBodies } from '../game/multiball.ts';
@@ -240,7 +241,7 @@ export const FREE2D: GameEntry<FreeConfig, FreeState, FreeInput, FreeSettings> =
   adapter: free2d,
   mode: '2d',
   name: '자유 훈련장',
-  describe: '시간도 점수도 없이 공 여러 개를 차 보는 곳. 들어온 사람 모두가 편 없이 같이 놉니다.',
+  describe: GAME_COPY.free,
   tags: ['온라인', '연습 봇', '공 여러 개'],
   defaultSettings: FREE_DEFAULTS,
   okSettings: okFreeSettings,

@@ -4,6 +4,7 @@
 //
 // 새로 계산하는 것은 없다 — 3D 시제품의 경기 계산(game3d/sim.ts)·봇(game3d/bot.ts)에 입력 양자화(game3d/quant.ts)·방 규칙(match3d-room.ts)·
 // 모양 검사·스냅샷 줄이기(pack/unpack)를 이어 붙여 2D 경기와 같은 약속(adapter.ts)으로 만든다. 그러면 방·세션·예측·메시지 아끼기가 그대로 된다.
+import { GAME_COPY } from './copy.ts';
 import type { Input, MatchConfig, MatchState, PlayerState } from '../game3d/sim.ts';
 import { createMatch, step } from '../game3d/sim.ts';
 import { botInput } from '../game3d/bot.ts';
@@ -172,7 +173,7 @@ export const MATCH3D: GameEntry<MatchConfig, MatchState, Input, Room3dSettings> 
   adapter: match3d,
   mode: '3d',
   name: '경기',
-  describe: '입체로 보는 축구. 골키퍼까지 한 편 다섯. 방을 만들어 팀원과 붙거나 혼자서 봇과 합니다.',
+  describe: GAME_COPY.match,
   tags: ['온라인', '봇', '3대3~5대5'],
   defaultSettings: DEFAULT_3D,
   okSettings: okSettings3d,

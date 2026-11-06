@@ -12,6 +12,7 @@
 //     3D 에선 발밑 공이 떨어지는 건 경기와 같다: 질주하며 급히 꺾으면 공이 풀린다(경기의 LOOSE 규칙), 태클 상대는 없다.
 //   - 레인은 2D 와 같은 크기의 직사각형(몸·공을 가둔다). 사람마다 따로 계산하고 부딪치지 않는다(다른 사람은 화면에 흐린 몸으로).
 //   - 메달은 3D 대본 주자(dribble3Bot)로 잰 시간에서(MEDALS3 — 2D 와 같은 법: 금 = 벌점 없이, 은 = 벌점 넣은 기록 이상, 동 = 은 × 1.4).
+import { GAME_COPY } from './copy.ts';
 import type { Input } from '../game3d/sim.ts';
 import { PITCH3D, unit } from '../game3d/sim.ts';
 import type { MBBall, MBPlayer } from '../game3d/multiball3d.ts';
@@ -270,7 +271,7 @@ export const DRIBBLE3D: GameEntry<Dr3Config, Dr3State, Dr3Input, DrSettings> = {
   ...(DRIBBLE2D as unknown as GameEntry<Dr3Config, Dr3State, Dr3Input, DrSettings>),
   adapter: dribble3d,
   mode: '3d',
-  describe: '콘 사이 문을 차례대로 지나 결승선까지 공을 몰고 가는 기록 경기. 선수 뒤에서 따라가며 봅니다. 코스 넷, 같이 하면 나란한 레인에서 동시에.',
+  describe: GAME_COPY.dribble,
   tags: ['온라인', '기록', '코스 넷'],
   absent: 'idle',   // 나간 레인을 대본 주자가 대신 달리지 않는다(2D 와 같다 — 리뷰 #2)
   buildConfig(room, roster) {

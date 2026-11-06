@@ -11,6 +11,7 @@
 //     휘는 건 속도를 그 크기 그대로 옆으로 돌리는 것(sqrt 로 크기를 되맞춘다 — 삼각함수 없음).
 //   - 5초 안에 안 차면 약한 가운데 슛. 판정: 골 · 막음(키퍼) · 벽 · 빗나감 · 골대. 골이면 그 자리 점수.
 //   - 키퍼 봇은 공이 나간 뒤 반응 시간이 지나야 움직이고, 일부만 공의 "곧은" 길을 읽는다(감은 공은 읽은 자리에서 벗어난다), 나머지는 짐작.
+import { GAME_COPY } from './copy.ts';
 import { placesBy } from './places.ts';
 import type { Body } from '../game/sim.ts';
 import { PHYS, collidePoint, collideSegment, nextRand } from '../game/sim.ts';
@@ -433,7 +434,7 @@ export const FREEKICK2D: GameEntry<FkConfig, FkState, FkInput, FkSettings> = {
   adapter: freekick2d,
   mode: '2d',
   name: '프리킥',
-  describe: '정해진 다섯 자리에서 수비벽과 키퍼를 넘어 한 번씩. 먼 자리일수록 점수가 큽니다. 공을 휘게 차는 감아차기 하나.',
+  describe: GAME_COPY.freekick,
   tags: ['온라인', '차례대로', '감아차기'],
   defaultSettings: FK_DEFAULTS,
   okSettings: (v): v is FkSettings => isObj(v) && Object.keys(v).length === 0,   // 설정이 없다 — 빈 객체만(리뷰 #11)

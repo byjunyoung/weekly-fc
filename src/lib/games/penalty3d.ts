@@ -11,6 +11,7 @@
 //   - 흔들림은 옆으로 2D 와 같은 비율, 높이로는 그 0.6 배. 세기는 공 속도와 흔들림을 같이 키운다(2D 와 같은 곡선을 m 로 옮김).
 //   - 키퍼는 골라인 위에서 옆걸음, 몸 던지기는 옆(스틱 좌우)과 높이(스틱 위 = 높이, 아래 = 낮게). 스틱이 가운데면 제자리에서 팔을 벌리고 뛴다
 //     (가운데 높은 공용). 막는 판정은 키퍼 몸 부피(몸통 캡슐 + 팔 캡슐)에 공이 닿았나.
+import { GAME_COPY } from './copy.ts';
 import type { Ball, Side } from '../game3d/sim.ts';
 import { PITCH3D, TUNE3D, containBall, rand } from '../game3d/sim.ts';
 import type { PenConfig, PenSettings } from './penalty2d.ts';
@@ -464,6 +465,6 @@ export const PENALTY3D: GameEntry<PenConfig, Pen3State, Pen3Input, PenSettings> 
   adapter: penalty3d,
   mode: '3d',
   name: '승부차기',
-  describe: '두 편이 번갈아 다섯 번씩 차고 막습니다. 키커 뒤에서 옆과 높이를 겨누고, 크로스바 위는 노골. 키퍼 차례엔 골대 뒤에서 봅니다.',
+  describe: GAME_COPY.penalty,
   tags: ['온라인', '봇', '번갈아 차기'],
 };

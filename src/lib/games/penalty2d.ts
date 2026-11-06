@@ -17,6 +17,7 @@
 //     그만큼 반대쪽이 빈다. 공이 키퍼에 닿으면 그 순간 "막았다".
 //   - 판정: 공 중심이 골라인을 완전히 넘었고 골문 안이면 골, 골문 밖으로 넘으면 빗나감, 기둥을 맞고 나오면 골대(빗나감으로 센다).
 //   - 봇: 키커는 차기마다 씨앗(kickSeed)에서 기다림·세기·조준을 정한다. 키퍼는 공이 나간 뒤 반응 시간이 지나야 움직이고, 반쯤은 공을 읽고 반쯤은 짐작한다.
+import { GAME_COPY } from './copy.ts';
 import type { Body, Input } from '../game/sim.ts';
 import { PHYS, collidePoint, collideSegment, nextRand, steer } from '../game/sim.ts';
 import type { Perf } from '../game/stats.ts';
@@ -536,7 +537,7 @@ export const PENALTY2D: GameEntry<PenConfig, PenState, PenInput, PenSettings> = 
   adapter: penalty2d,
   mode: '2d',
   name: '승부차기',
-  describe: '두 편이 번갈아 다섯 번씩 차고 막습니다. 겨누고, 힘을 모았다가 떼면 슛. 키퍼는 줄 위에서 몸을 던집니다.',
+  describe: GAME_COPY.penalty,
   tags: ['온라인', '봇', '번갈아 차기'],
   defaultSettings: PEN_DEFAULTS,
   okSettings: okPenSettings,

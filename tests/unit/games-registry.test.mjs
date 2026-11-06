@@ -32,6 +32,12 @@ test('등록부 — id 는 겹치지 않고, 모드별로 나뉜다, 지금 2D �
   }
   assert.deepEqual(gamesOf('2d').map((g) => g.adapter.id), ['match2d', 'penalty2d', 'free2d', 'freekick2d', 'dribble2d']);
   assert.deepEqual(gamesOf('3d').map((g) => g.adapter.id), ['match3d', 'penalty3d', 'free3d', 'freekick3d', 'dribble3d']);   // 4~6단계: 3D 다섯
+  // 같은 게임이면 모드가 달라도 카드 설명이 같다(2026-11-07 "설명은 달라질 필요 없을듯") — 이름으로 짝을 짓는다
+  for (const a of gamesOf('2d')) {
+    const b = gamesOf('3d').find((g) => g.name === a.name);
+    assert.ok(b, `${a.name} 의 3D 짝`);
+    assert.equal(b.describe, a.describe, `${a.name} 설명`);
+  }
 });
 
 test('방 — 게임 종류와 그 게임의 기본 설정으로 만들고, 기본값을 나눠 쓰지 않는다', () => {

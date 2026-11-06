@@ -11,6 +11,7 @@
 //   - 몸·공·킥·감쇠는 경기와 같은 조각(multiball.stepBodies — 레인 하나에 몸 하나·공 하나).
 //   - 끝: 모두 도착했거나, 첫 도착 뒤 AFTER_FIRST(30초), 또는 RUN_CAP(150초). 순위 = 도착한 사람은 기록 순, 못 한 사람은 지난 문 수 순.
 //   - 코스 넷(우리 것 — 어느 게임의 코스도 가져오지 않았다): ① 지그재그 ② 8자 ③ 좁은 문 ④ 왕복. 메달 기준 = 대본 주자(dribbleBot)로 잰 시간에서.
+import { GAME_COPY } from './copy.ts';
 import { placesBy } from './places.ts';
 import type { Body, Geo, Input, KickBody } from '../game/sim.ts';
 import { NO_INPUT, pitchOf } from '../game/sim.ts';
@@ -311,7 +312,7 @@ export const DRIBBLE2D: GameEntry<DrConfig, DrState, DrInput, DrSettings> = {
   adapter: dribble2d,
   mode: '2d',
   name: '드리블 훈련장',
-  describe: '콘 사이 문을 차례대로 지나 결승선까지 공을 몰고 가는 기록 경기. 코스 넷, 같이 하면 나란한 레인에서 동시에 달립니다.',
+  describe: GAME_COPY.dribble,
   tags: ['온라인', '기록', '코스 넷'],
   defaultSettings: DR_DEFAULTS,
   okSettings: (v): v is DrSettings => isObj(v) && Object.keys(v).length === 1 && isInt(v.course, 0, COURSES.length - 1),   // 칸은 정확히 하나(리뷰 #11)

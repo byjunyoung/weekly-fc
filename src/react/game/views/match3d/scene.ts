@@ -16,7 +16,7 @@ import { avatarSpecFor, isUnsetAvatar, randomAvatar } from '../../../../lib/avat
 import { PITCH3D, RULES3D } from '../../../../lib/game3d/sim.ts';
 import { VESTS } from '../../../../lib/teams.ts';
 import type { Player } from '../../../../lib/types.ts';
-import { cameraGoal, chaseGoal, firstPersonGoal, type CamGoal, type ViewMode } from './view3d.ts';
+import { cameraGoal, chaseGoal, firstPersonEye, firstPersonGoal, type CamGoal, type ViewMode } from './view3d.ts';
 import { buildFigure, type Part } from './voxel.ts';
 
 const { HW, HH, goalHalfW: GW, goalH: GH, goalDepth: GD, boardH: BH, ballR: BR, centerR } = PITCH3D;
@@ -391,10 +391,12 @@ export function createScene(canvas: HTMLCanvasElement, config: SceneCast, roster
       const fp = mode === 'first';
       if (humanId >= 0) figs[humanId].root.visible = !fp;
       // 1인칭에서 코앞(NEAR_HIDE 안)에 붙은 남의 몸도 숨긴다 — 머리 하나가 화면을 다 덮는다(헤드리스 화면으로 확인). 고리는 남는다
-      if (fp && me) for (let i = 0; i < n; i++) {
+      // 눈이 몸 뒤로 물러나 있으므로(firstPersonEye) 눈 가까이에 선 몸도 같이 숨긴다
+      const eye = fp && me ? firstPersonEye(me, heading) : null;
+      if (fp && me && eye) for (let i = 0; i < n; i++) {
         if (i === humanId) continue;
-        const dx = pos[i].x - me.x, dy = pos[i].y - me.y;
-        figs[i].root.visible = dx * dx + dy * dy > NEAR_HIDE * NEAR_HIDE;
+        const dx = pos[i].x - me.x, dy = pos[i].y - me.y, ex = pos[i].x - eye.x, ey = pos[i].y - eye.y;
+        figs[i].root.visible = dx * dx + dy * dy > NEAR_HIDE * NEAR_HIDE && ex * ex + ey * ey > NEAR_HIDE * NEAR_HIDE;
       } else for (let i = 0; i < n; i++) if (i !== humanId) figs[i].root.visible = true;
       // 숨긴 몸(5단계 — 승부차기에서 지금 차고 막는 둘 말고는 경기장에 없다)은 고리·그림자도 치운다
       if (view.poses) for (let i = 0; i < n; i++) if (view.poses[i]?.hide) {

@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cameraGoal, clockText, edgeArrow, firstPersonGoal, fpFov, nextView, rngFrom, stickToWorld, tankStep } from '../../src/react/game/views/match3d/view3d.ts';
+import { PITCH3D, carrySpot } from '../../src/lib/game3d/sim.ts';
 import { buildFigure, FIGURE_H, legGap } from '../../src/react/game/views/match3d/voxel.ts';
 import { avatarPixels } from '../../src/components/avatar.ts';
 import { avatarSpecFor } from '../../src/lib/avatar.ts';
@@ -81,6 +82,18 @@ test('1인칭 탱크 조작 — 오른쪽을 누르면 시선이 오른쪽(+y �
 test('1인칭 카메라 — 눈높이에서 보는 쪽을 보고, 세로 화면에서도 시야각이 지나치지 않다', () => {
   const g = firstPersonGoal({ x: 2, y: 3 }, 0, 16 / 9);
   assert.ok(g.pz > 1.4 && g.pz < 1.8 && g.lx > g.px && near(g.ly, g.py), JSON.stringify(g));
+  // 모는 공이 화면에 보인다(2026-11-07 "1인칭에 공 드리블할 때 공이 앞에 보여야지") — 서 있을 때·달릴 때·질주할 때의 발 앞 공(carrySpot)이
+  // 가로 화면(16:9·16:10)에서도 세로 시야의 85% 안, 지평선(먼 골대)도 화면 안에 남는다.
+  for (const aspect of [16 / 9, 16 / 10, 9 / 19]) {
+    const c = firstPersonGoal({ x: 0, y: 0 }, 0, aspect), half = (fpFov(aspect) / 2) * (Math.PI / 180);
+    const pitch = Math.atan2(c.pz - c.lz, c.lx - c.px);   // 시선이 아래로 기운 각
+    for (const [vx, sprint] of [[0, false], [5, false], [7, true]]) {
+      const b = carrySpot({ x: 0, y: 0, vx, vy: 0, fx: 1, fy: 0, sprint });
+      const down = Math.atan2(c.pz - PITCH3D.ballR, b.x - c.px) - pitch;   // 화면 가운데에서 공까지 아래로
+      assert.ok(down > 0 && down < half * 0.85, `aspect ${aspect.toFixed(2)} v ${vx}: ${(down / half).toFixed(2)}`);
+    }
+    assert.ok(pitch < half * 0.9, '지평선이 화면 안');
+  }
   assert.ok(fpFov(16 / 9) >= 50 && fpFov(9 / 19) <= 100 && fpFov(9 / 19) > fpFov(16 / 9));
   assert.deepEqual(['broadcast', 'first', 'chase'].map(nextView), ['first', 'chase', 'broadcast']);
 });

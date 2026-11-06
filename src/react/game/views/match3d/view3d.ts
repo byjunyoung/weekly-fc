@@ -86,8 +86,9 @@ export function saveView(v: ViewMode): void {
 // 1인칭·뒤에서 조절 값(화면 쪽)
 const TURN_SPEED = 2.4;      // 스틱·키를 끝까지 눌렀을 때 도는 빠르기(라디안/초) — 1초에 약 140도
 const TURN_SMOOTH = 0.18;    // 도는 속도가 목표로 따라가는 비율(틱당) — 작을수록 부드럽게 돌기 시작하고 멈춘다
-const EYE_H = 1.62;          // 눈높이(m) — 아바타 키 1.75 의 머리 가운데쯤
-const FP_LOOK_DOWN = 0.2;    // 1인칭 시선이 아래로 기우는 정도(앞 1m 당) — 발 앞 공이 화면 아래에 걸리게
+const EYE_H = 1.7;           // 눈높이(m) — 아바타 키 1.75 의 머리 위쪽
+const FP_BACK = 1.1;         // 눈이 몸 가운데에서 뒤로 물러난 거리(m) — 발 앞(0.7~1.2m)에서 모는 공이 화면 안에 들어오게(2026-11-07 "드리블할 때 공이 앞에 보여야지")
+const FP_LOOK_DOWN = 0.36;   // 1인칭 시선이 아래로 기우는 정도(앞 1m 당, 약 20도) — 모는 공이 화면 아래쪽에, 지평선·골대는 위쪽에 남는다
 const FP_HFOV = 84;          // 1인칭 가로 시야각 — 세로 화면에서도 옆이 보이게 가로 기준으로 맞춘다
 const CHASE_BACK = 6.5, CHASE_UP = 3.6, CHASE_AHEAD = 7;   // 뒤에서: 뒤로·위로 물러난 거리, 바라보는 점(선수 앞)
 
@@ -106,10 +107,15 @@ export function tankStep(sx: number, sy: number, heading: number, turnVel: numbe
   return { heading: h, turnVel: tv, move: { x: fx * fwd, y: fy * fwd }, face: { x: fx, y: fy } };
 }
 
+/** 1인칭 눈의 자리(경기 좌표) — 몸 가운데에서 보는 반대쪽으로 FP_BACK. 내 몸은 숨기므로 화면엔 발 앞과 모는 공이 보인다. */
+export function firstPersonEye(me: { x: number; y: number }, heading: number): { x: number; y: number } {
+  return { x: me.x - Math.cos(heading) * FP_BACK, y: me.y - Math.sin(heading) * FP_BACK };
+}
+
 /** 1인칭 카메라: 눈(경기 좌표 x·y·높이)과 바라보는 점. */
 export function firstPersonGoal(me: { x: number; y: number }, heading: number, aspect: number): CamGoal {
-  const fx = Math.cos(heading), fy = Math.sin(heading);
-  return { px: me.x, py: me.y, pz: EYE_H, lx: me.x + fx * 6, ly: me.y + fy * 6, lz: EYE_H - FP_LOOK_DOWN * 6, fov: fpFov(aspect) };
+  const fx = Math.cos(heading), fy = Math.sin(heading), e = firstPersonEye(me, heading);
+  return { px: e.x, py: e.y, pz: EYE_H, lx: e.x + fx * 6, ly: e.y + fy * 6, lz: EYE_H - FP_LOOK_DOWN * 6, fov: fpFov(aspect) };
 }
 
 /** 가로 시야각을 FP_HFOV 로 맞춘 세로 시야각(three 카메라는 세로 기준). 너무 넓거나 좁지 않게 자른다. */
