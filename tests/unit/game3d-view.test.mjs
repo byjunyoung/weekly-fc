@@ -1,7 +1,7 @@
 // 3D 축구 시제품(2026-11-07) — 화면 쪽 순수 계산(view3d.ts: 스틱 방향·카메라·라인업·시계, voxel.ts: 아바타 → 블록 입체).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cameraGoal, clockText, pickLineup5, rngFrom, stickToWorld } from '../../src/react/game3d/view3d.ts';
+import { cameraGoal, clockText, edgeArrow, firstPersonGoal, fpFov, nextView, pickLineup5, rngFrom, stickToWorld, tankStep } from '../../src/react/game3d/view3d.ts';
 import { buildFigure, FIGURE_H, legGap } from '../../src/react/game3d/voxel.ts';
 import { avatarPixels } from '../../src/components/avatar.ts';
 import { avatarSpecFor } from '../../src/lib/avatar.ts';
@@ -79,4 +79,36 @@ test('도트 아바타 → 블록 입체: 키는 FIGURE_H, 다리는 좌우로 �
   assert.ok(tris < filled * 4 * 12 * 0.5, `삼각형 ${tris} — 안쪽 면을 뺐다`);
   assert.equal(f.body.positions.length, f.body.colors.length);
   assert.equal(f.body.positions.length, f.body.normals.length);
+});
+
+test('1인칭 탱크 조작 — 오른쪽을 누르면 시선이 오른쪽(+y 쪽)으로 부드럽게 돌고, 위를 누르면 보는 쪽으로 간다', () => {
+  let h = 0, tv = 0;
+  const first = tankStep(1, 0, h, tv, 1 / 60);
+  assert.ok(first.turnVel > 0 && first.turnVel < 1, '처음엔 천천히 돌기 시작');
+  for (let t = 0; t < 60; t++) { const r = tankStep(1, 0, h, tv, 1 / 60); h = r.heading; tv = r.turnVel; }
+  assert.ok(h > 1.5 && h < 2.6, `1초에 ${h} 라디안`);
+  assert.ok(Math.sin(h) > 0, '+y 쪽(화면 오른쪽)으로 돌았다');
+  const go = tankStep(0, -1, 0.5, 0, 1 / 60);
+  assert.ok(near(go.move.x, Math.cos(0.5), 1e-3) && near(go.move.y, Math.sin(0.5), 1e-3), '앞으로');
+  assert.ok(near(Math.hypot(go.face.x, go.face.y), 1), '보는 방향은 단위 벡터');
+  const back = tankStep(0, 1, 0, 0, 1 / 60);
+  assert.ok(back.move.x < 0 && near(back.face.x, 1), '뒤로 가도 보는 쪽은 그대로');
+  let stop = { heading: 0, turnVel: 2 };
+  for (let t = 0; t < 30; t++) stop = tankStep(0, 0, stop.heading, stop.turnVel, 1 / 60);
+  assert.ok(Math.abs(stop.turnVel) < 0.01, '손을 떼면 돌기가 멈춘다');
+});
+
+test('1인칭 카메라 — 눈높이에서 보는 쪽을 보고, 세로 화면에서도 시야각이 지나치지 않다', () => {
+  const g = firstPersonGoal({ x: 2, y: 3 }, 0, 16 / 9);
+  assert.ok(g.pz > 1.4 && g.pz < 1.8 && g.lx > g.px && near(g.ly, g.py), JSON.stringify(g));
+  assert.ok(fpFov(16 / 9) >= 50 && fpFov(9 / 19) <= 100 && fpFov(9 / 19) > fpFov(16 / 9));
+  assert.deepEqual(['broadcast', 'first', 'chase'].map(nextView), ['first', 'chase', 'broadcast']);
+});
+
+test('공 화살표 — 화면 안이면 없음, 오른쪽 밖이면 오른쪽 가장자리, 뒤면 아래쪽·옆으로', () => {
+  assert.equal(edgeArrow(0, 0, -5, 60, 1.5, 900, 600, 40).show, false);
+  const r = edgeArrow(20, 0, -5, 60, 1.5, 900, 600, 40);
+  assert.ok(r.show && near(r.x, 900 - 40, 1e-6) && near(r.y, 300, 1e-6) && near(r.angle, 0, 1e-9));
+  const b = edgeArrow(-1, -2, 5, 60, 1.5, 900, 600, 40);
+  assert.ok(b.show && b.y > 300 && b.x < 450, JSON.stringify(b));
 });

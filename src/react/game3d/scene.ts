@@ -16,7 +16,7 @@ import { avatarSpecFor, isUnsetAvatar, randomAvatar } from '../../lib/avatar.ts'
 import { PITCH3D, RULES3D, type MatchConfig, type MatchState } from '../../lib/game3d/sim.ts';
 import { VESTS } from '../../lib/teams.ts';
 import type { Player } from '../../lib/types.ts';
-import { cameraGoal } from './view3d.ts';
+import { cameraGoal, chaseGoal, firstPersonGoal, type ViewMode } from './view3d.ts';
 import { buildFigure, type Part } from './voxel.ts';
 
 const { HW, HH, goalHalfW: GW, goalH: GH, goalDepth: GD, boardH: BH, ballR: BR, centerR } = PITCH3D;
@@ -36,7 +36,13 @@ const RUN_FREQ = 4.2;        // 속도(m/s)당 걸음 위상 — 클수록 다�
 const BOB = 0.06;            // 통통 튀는 높이(m)
 const LEG_SWING = 0.75;      // 다리 흔드는 각(라디안)
 const KICK_LEAN = 0.38;      // 찰 때 앞으로 기우는 각
-const CAM_EASE = 3.2;        // 카메라가 따라가는 빠르기(1/초)
+const CAM_EASE = 3.2;        // 카메라가 따라가는 빠르기(1/초) — 중계
+const FP_EASE = 20;         // 1인칭: 거의 바로 붙는다(머리에 달린 카메라). 흔들림만 거른다
+const CHASE_EASE = 6;       // 뒤에서
+const SWITCH_EASE = 3;      // 시점을 바꾸거나 내 선수가 순간 이동(킥오프)했을 때 — 천천히 날아가 붙는다(튀지 않게)
+const SWITCH_TIME = 0.9;    // 그 느린 따라가기를 쓰는 시간(초)
+const NEAR_HIDE = 1.3;      // 1인칭: 이보다 가까운 선수 몸은 숨긴다(m)
+const NEAR: Record<ViewMode, number> = { broadcast: 0.5, first: 0.08, chase: 0.2 };   // 1인칭은 코앞도 보이게
 
 /** 직접 쌓는 버퍼 — 상자·바닥 사각형을 꼭짓점 색과 함께. 마지막에 BufferGeometry 하나로. */
 class Builder {
@@ -188,13 +194,16 @@ function pixelsFor(p: Player | undefined, num: number): NonNullable<ReturnType<t
   return avatarPixels(isUnsetAvatar(spec) ? randomAvatar(num) : spec) ?? (avatarPixels(randomAvatar(num + 1)) as NonNullable<ReturnType<typeof avatarPixels>>);
 }
 
+/** 화면 쪽이 매 프레임 넘기는 시점 정보. heading = 1인칭 시선 각(라디안, 화면 쪽에서 부드럽게 돌린 값). snap = 첫 프레임(날아오지 말고 바로). */
+export type SceneView = { mode: ViewMode; portrait: boolean; heading: number; snap: boolean };
+
 type FigureObj = { root: Group; inner: Group; legL: Mesh | null; legR: Mesh | null; phase: number };
 
 export type SceneHandle = {
   renderer: WebGLRenderer;
   camera: PerspectiveCamera;
   /** prev → next 사이 alpha 만큼 섞은 자리로 몸·공을 옮긴다. dt = 지난 그리기에서 흐른 초(걸음·카메라용). */
-  update(prev: MatchState, next: MatchState, alpha: number, dt: number, portrait: boolean, snapCamera: boolean): void;
+  update(prev: MatchState, next: MatchState, alpha: number, dt: number, view: SceneView): void;
   render(): void;
   resize(w: number, h: number): void;
   setPixelRatio(r: number): void;
@@ -203,6 +212,8 @@ export type SceneHandle = {
   /** 선수 i 의 머리 위 점(이름표 자리, three 좌표)과 발 점. */
   headPoint(i: number, out: Vector3): Vector3;
   footPoint(i: number, out: Vector3): Vector3;
+  /** 공 자리(three 좌표) — 화면 밖 공 화살표용. */
+  ballPoint(out: Vector3): Vector3;
   /** 지난 render() 의 그리기 호출·삼각형 수. */
   info(): { drawCalls: number; triangles: number };
   dispose(): void;
@@ -262,7 +273,10 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
   const ringGeo = new RingGeometry(0.5, 0.64, 28).rotateX(-Math.PI / 2);
   const ringMat = new MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9, depthWrite: false });
   const rings = new InstancedMesh(ringGeo, ringMat, n);
-  config.players.forEach((mp, i) => rings.setColorAt(i, new Color(i === humanId ? GOLD : TEAM_COLOR[mp.side])));
+  const ringBase = config.players.map((mp, i) => new Color(i === humanId ? GOLD : TEAM_COLOR[mp.side]));
+  ringBase.forEach((c, i) => rings.setColorAt(i, c));
+  const ringHot = config.players.map(() => false), HOT = new Color('#ffffff');
+  let colorDirty = false;
   rings.renderOrder = 2;
   scene.add(rings);
   const shadowGeo = new CircleGeometry(1, 20).rotateX(-Math.PI / 2);
@@ -281,6 +295,7 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
   scene.add(marker);
 
   const look = new Vector3(0, 0, 0), goalPos = new Vector3(), goalLook = new Vector3();
+  let curMode: ViewMode = 'broadcast', switchLeft = 0, lastMe: { x: number; y: number } | null = null;
   const tmpM = new Matrix4(), tmpQ = new Quaternion(), tmpV = new Vector3(), tmpS = new Vector3(), axis = new Vector3(), spin = new Quaternion();
   let lastInfo = { drawCalls: 0, triangles: 0 };
   let time = 0;
@@ -291,7 +306,9 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
 
   return {
     renderer, camera,
-    update(prev, next, alpha, dt, portrait, snapCamera) {
+    update(prev, next, alpha, dt, view) {
+      const { mode, portrait, heading } = view;
+      if (mode !== curMode) { curMode = mode; switchLeft = SWITCH_TIME; camera.near = NEAR[mode]; camera.updateProjectionMatrix(); }
       time += dt;
       const t = Math.min(1, Math.max(0, alpha));
       for (let i = 0; i < n; i++) {
@@ -312,6 +329,9 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
         if (f.legR) f.legR.rotation.x = 0 - Math.sin(f.phase) * LEG_SWING * run;
         tmpM.compose(tmpV.set(x, 0.006, y), tmpQ.identity(), tmpS.set(1, 1, 1));
         rings.setMatrixAt(i, tmpM);
+        // 고리가 하얘진다 — 슛을 모으는 동안과 찬(패스·슛·태클) 직후 잠깐(2D 와 같은 표시, 봇도 똑같이)
+        const hot = (b.shootHeld && b.charge > 0 && !b.shootVoid) || b.kickTicks > 0;
+        if (hot !== ringHot[i]) { ringHot[i] = hot; rings.setColorAt(i, hot ? HOT : ringBase[i]); colorDirty = true; }
         tmpM.compose(tmpV.set(x, 0.004, y), tmpQ.identity(), tmpS.set(0.55, 1, 0.55));
         shadows.setMatrixAt(i, tmpM);
       }
@@ -329,14 +349,33 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
       tmpM.compose(tmpV.set(bx, 0.005, by), tmpQ.identity(), tmpS.set(hs, 1, hs));
       shadows.setMatrixAt(n, tmpM);
       rings.instanceMatrix.needsUpdate = true;
+      if (colorDirty && rings.instanceColor) { rings.instanceColor.needsUpdate = true; colorDirty = false; }
       shadows.instanceMatrix.needsUpdate = true;
       // 내 선수 표시
       const me = humanId >= 0 ? pos[humanId] : null;
-      if (me) { marker.visible = true; marker.position.set(me.x, 2.0 + Math.sin(time * 4) * 0.05, me.y); } else marker.visible = false;
-      // 카메라 — 가려는 자리로 천천히(가로/세로가 바뀌어도 튀지 않게)
-      const g = cameraGoal(portrait, camera.aspect, { x: bx, y: by }, me);
+      // 1인칭이면 내 몸·표시를 숨긴다(화면을 가리지 않게) — 발밑 고리·그림자는 남겨 발 아래가 어딘지 보이게
+      const fp = mode === 'first';
+      if (humanId >= 0) figs[humanId].root.visible = !fp;
+      // 1인칭에서 코앞(NEAR_HIDE 안)에 붙은 남의 몸도 숨긴다 — 머리 하나가 화면을 다 덮는다(헤드리스 화면으로 확인). 고리는 남는다
+      if (fp && me) for (let i = 0; i < n; i++) {
+        if (i === humanId) continue;
+        const dx = pos[i].x - me.x, dy = pos[i].y - me.y;
+        figs[i].root.visible = dx * dx + dy * dy > NEAR_HIDE * NEAR_HIDE;
+      } else for (let i = 0; i < n; i++) if (i !== humanId) figs[i].root.visible = true;
+      if (me && !fp) { marker.visible = true; marker.position.set(me.x, 2.0 + Math.sin(time * 4) * 0.05, me.y); } else marker.visible = false;
+      // 내 선수가 순간 이동했으면(킥오프 자리로) 카메라도 천천히 날아가게
+      if (me && lastMe && Math.abs(me.x - lastMe.x) + Math.abs(me.y - lastMe.y) > 3) switchLeft = SWITCH_TIME;
+      lastMe = me ? { x: me.x, y: me.y } : null;
+      // 카메라 — 시점마다 가려는 자리, 거기로 따라간다
+      const ballP = { x: bx, y: by };
+      const g = !me || mode === 'broadcast' ? cameraGoal(portrait, camera.aspect, ballP, me)
+        : mode === 'first' ? firstPersonGoal(me, heading, camera.aspect) : chaseGoal(me, ballP, camera.aspect);
       goalPos.set(g.px, g.pz, g.py); goalLook.set(g.lx, g.lz, g.ly);
-      const k = snapCamera ? 1 : 1 - Math.exp(0 - CAM_EASE * Math.min(0.1, dt));
+      // 골 세리머니·끝난 뒤의 1인칭은 공 쪽을 본다(골문 안 공이 보이게)
+      if (fp && (next.phase === 'goal' || next.phase === 'end')) goalLook.set(bx, Math.max(0.3, bz), by);
+      if (switchLeft > 0) switchLeft -= dt;
+      const rate = switchLeft > 0 ? SWITCH_EASE : mode === 'first' ? FP_EASE : mode === 'chase' ? CHASE_EASE : CAM_EASE;
+      const k = view.snap ? 1 : 1 - Math.exp(0 - rate * Math.min(0.1, dt));
       camera.position.lerp(goalPos, k);
       look.lerp(goalLook, k);
       if (Math.abs(camera.fov - g.fov) > 0.01) { camera.fov += (g.fov - camera.fov) * k; camera.updateProjectionMatrix(); }
@@ -357,6 +396,7 @@ export function createScene(canvas: HTMLCanvasElement, config: MatchConfig, rost
       return { x: tmpV.x, y: tmpV.z };
     },
     headPoint(i, out) { const p = pos[i]; return out.set(p?.x ?? 0, 2.3, p?.y ?? 0); },   // 내 선수 표시(2.0) 위
+    ballPoint(out) { return out.copy(ball.position); },
     footPoint(i, out) { const p = pos[i]; return out.set(p?.x ?? 0, 0, p?.y ?? 0); },
     info: () => lastInfo,
     dispose() {

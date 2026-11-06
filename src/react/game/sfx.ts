@@ -9,7 +9,7 @@ let muted = false;
 try { muted = localStorage.getItem(KEY) === 'off'; } catch { /* 저장소를 못 읽어도 소리는 난다 */ }
 const lastAt: Record<string, number> = {};
 /** 같은 소리가 이 간격(ms) 안에 다시 오면 건너뛴다 — 예측을 다시 돌리며 같은 킥이 두 번 잡히거나 벽에 비벼 연달아 튕길 때. */
-const GAP: Record<Sfx['kind'], number> = { kick: 70, bounce: 60, goal: 1500, whistle: 700, end: 2000, move: 45, confirm: 250 };
+const GAP: Record<Sfx['kind'], number> = { kick: 70, bounce: 60, goal: 1500, whistle: 700, end: 2000, move: 45, confirm: 250, shot: 120, catch: 250, tackle: 150 };
 
 export const isMuted = (): boolean => muted;
 export function setMuted(m: boolean): void {
@@ -80,5 +80,9 @@ export function play(s: Sfx): void {
     // 선수 선택 화면 — 아주 작게. 커서가 움직일 때 짧은 "틱", 고를 때 두 음 "띠링". 소리 끔·첫 누름 전엔 위의 검사에서 이미 걸러진다.
     case 'move': tone('square', 880, 880, 0.035, 0.05 * v); break;
     case 'confirm': tone('square', 660, 660, 0.06, 0.07 * v); tone('square', 990, 990, 0.09, 0.07 * v, 0.06); break;
+    // 3D 에서 더한 셋(2026-11-07 "3d도 당연히 효과음 있어야지 두 모드 다 일관성 갖추게해") — 같은 재료(짧은 음·잡음)로
+    case 'shot': tone('sine', 150, 45, 0.16, 1.0 * v); noise(0.06, 0.55 * v, 1400, 0.7); break;        // 킥보다 낮고 긴 "펑"
+    case 'catch': tone('triangle', 120, 80, 0.09, 0.7 * v); noise(0.05, 0.3 * v, 500, 0.9); break;     // 장갑에 받는 "팍"
+    case 'tackle': noise(0.09, 0.45 * v, 650, 1.2); tone('sine', 110, 70, 0.07, 0.5 * v); break;       // 몸 부딪치는 "턱"
   }
 }
