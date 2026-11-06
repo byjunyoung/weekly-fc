@@ -4,21 +4,22 @@
 // 방장 기기가 계산한다(1단계 인터뷰 결정). 손님은 hello·pick·in·say·ping·bye 만 보내고, 방 상태(room)와 경기(snap)는 여기서만 바뀐다.
 // 입력은 셋 다 양자화한 값으로 계산한다 — 내 조작, 봇(botInput), 손님(받은 숫자 그대로). 손님 쪽 예측이 같은 숫자로 step() 을
 // 돌려야 화면이 덜 어긋나기 때문이다(스펙 §2.4). 그래서 자리마다 "이번 틱에 쓴 q" 를 모아 스냅샷에 그대로 싣는다.
+// 2026-11-07 게임 묶음: 계산은 방의 게임 종류(room.game)의 어댑터가 한다 — 이 파일은 어느 게임인지 모르고, games(등록부 찾기)로 받는다.
 import type { Player } from '../../../lib/types.ts';
-import type { Input, MatchConfig, MatchState } from '../../../lib/game/sim.ts';
-import { NO_INPUT, createMatch, step } from '../../../lib/game/sim.ts';
-import { botInput } from '../../../lib/game/bot.ts';
-import type { NetMsg } from '../../../lib/game/net.ts';
-import { Q_IDLE, decodeInput, encodeInput, parseMsg } from '../../../lib/game/net.ts';
-import type { RoomSettings, RoomState, Team, Who } from '../../../lib/game/room.ts';
-import { autoBalance, buildMatch, createRoom, join, leave as leaveRoom, move, pick, setBotPick, setPhase, setSettings, startBlock } from '../../../lib/game/room.ts';
+import type { AnyAdapter } from '../../../lib/games/adapter.ts';
+import type { GameEntry, GameLookup } from '../../../lib/games/entry.ts';
+import type { NetMsg } from '../../../lib/games/net.ts';
+import { acceptIn, parseMsg } from '../../../lib/games/net.ts';
+import type { RoomState, Team, Who } from '../../../lib/game/room.ts';
+import { autoBalance, createRoom, join, leave as leaveRoom, move, pick, setBotPick, setGame, setPhase, withSettings } from '../../../lib/game/room.ts';
 import type { Transport } from './transport.ts';
 import type { Bubble, DrawFrame, NetInfo, SessionView } from './common.ts';
 import {
   CROWD_MEMBERS, CROWD_ROOM_EVERY_MS, GIVE_UP_MS, HELLO_DEDUPE_MS, HIDDEN_ROOM_EVERY_MS, LOBBY_SILENCE_MS, MAX_CATCHUP, PAUSED_SNAP_MS, RESULT_MS, ROOM_EVERY_MS, SAY_GAP_MS, SILENCE_MS, SLACK_MS, SNAP_EVERY, STEP_MS,
   createStore, liveBubbles, pushBubble, sayIsValid,
 } from './common.ts';
-import { lerpState } from './smooth.ts';
+import type { Smoother } from './smooth.ts';
+import { smootherFor } from './smooth.ts';
 
 export type HostOptions = {
   transport: Transport;
@@ -32,6 +33,10 @@ export type HostOptions = {
   rnd?: () => number;
   /** 방장 세션 고유값(room 메시지의 sid). 기본은 rnd 로 만든다 — 새로고침하면 바뀌어 손님이 rev 를 새로 센다. */
   sid?: string;
+  /** 등록된 게임 찾기(id → 게임). 브라우저는 등록부(registry.gameOf), 테스트는 가짜 게임도 넣는다. */
+  games: GameLookup;
+  /** 방을 처음 열 때의 게임 종류. 등록돼 있어야 한다. */
+  game: string;
 };
 
 export type HostSession = {
@@ -42,8 +47,8 @@ export type HostSession = {
   advance(now?: number): void;
   /** 탭이 가려졌나(visibilitychange). 가려지면 경기를 멈추고 "멈춤" 스냅샷을 1초마다 보낸다. */
   setHidden(hidden: boolean): void;
-  /** 내 조작을 읽는 함수(시뮬레이션 방향). 틱마다 한 번 부른다. null = 손 뗌. */
-  setInputReader(fn: (() => Input) | null): void;
+  /** 내 조작을 읽는 함수(그 게임의 입력, 시뮬레이션 방향). 틱마다 한 번 부른다. null = 손 뗌. */
+  setInputReader(fn: (() => unknown) | null): void;
   /** 한마디(PHRASES 번호). 1.5초에 한 번. 보냈으면 true. */
   say(k: number): boolean;
   /** 지금 그릴 것(직전·현재 틱을 섞은 상태 + 말풍선). 경기가 없으면 null. */
@@ -51,7 +56,10 @@ export type HostSession = {
   /** 방을 닫는다 — bye 를 보내고 길을 닫는다. 그 뒤로는 아무것도 안 한다. */
   leave(): void;
 
-  setSettings(patch: Partial<RoomSettings>): void;
+  /** 지금 게임의 설정 고치기(로비에서만) — 그 게임의 applySettings 가 범위를 자른다. */
+  setSettings(patch: Record<string, unknown>): void;
+  /** 게임 종류 바꾸기(로비에서만). 지금 게임의 설정은 방에 남고(saved), 그 게임의 지난 설정을 꺼낸다. 모르는 id 는 무시. */
+  setGame(id: string): void;
   move(clientId: string, team: Team): void;
   autoBalance(): void;
   /** 봇 자리 고르기(로비에서만) — side 편 slot 번째 봇을 num 선수로, null 이면 무작위로. 사용자: "그리고 봇도 선수를 고를 수 있게 해줘". */
@@ -66,8 +74,8 @@ export type HostSession = {
   /** 띄운 안내를 지운다. */
   clearNotice(): void;
 
-  getState(): MatchState | null;
-  getConfig(): MatchConfig | null;
+  getState(): unknown;
+  getConfig(): unknown;
   getRoom(): RoomState | null;
   getNet(): NetInfo;
   /** 경기 자리마다 누가 조종하나(디버그·테스트). bot = 봇이거나 그 손님이 4초 넘게 조용해 봇이 맡는 중. */
@@ -75,30 +83,27 @@ export type HostSession = {
 };
 
 type Match = {
-  config: MatchConfig; seed: number; slots: (string | null)[];
-  state: MatchState; prev: MatchState; qs: number[];
+  game: string; adapter: AnyAdapter; smooth: Smoother<unknown>;
+  config: unknown; seed: number; slots: (string | null)[];
+  state: unknown; prev: unknown; qs: number[];
   acc: number; endedAt: number | null; lastPausedSnap: number;
 };
 
-/** 시작을 막는 이유를 화면 문구로 — buildMatch 가 RangeError 를 내기 전에 [시작] 을 막고 이유를 보여 준다(room.ts startBlock). */
-export const START_BLOCK_TEXT = {
-  empty: '두 편 모두 비어 있습니다 — 사람을 팀 칸에 옮기거나 봇으로 채울 수를 늘려 주세요',
-  humans: '지금 연결 방식으로는 한 경기에 8명까지 뛸 수 있습니다 — 나머지는 대기 칸에서 구경합니다',
-  roster: '명단이 모자라 봇을 다 채울 수 없습니다 — 봇으로 채울 수를 줄여 주세요',
-} as const;
-
-export function startBlockOf(room: RoomState, roster: Player[]): string | null {
-  const why = startBlock(room, roster);
-  return why ? START_BLOCK_TEXT[why] : null;
+/** 시작을 막는 이유(화면 문구) — buildConfig 가 RangeError 를 내기 전에 [시작] 을 막고 이유를 보여 준다. 막는 규칙은 게임마다(등록부 startBlock). */
+export function startBlockOf(entry: GameEntry | undefined, room: RoomState, roster: Player[]): string | null {
+  if (!entry) return '알 수 없는 게임입니다';
+  return entry.startBlock ? entry.startBlock(room, roster) : null;
 }
 
 export function createHostSession(o: HostOptions): HostSession {
   const t = o.transport, rnd = o.rnd ?? Math.random;
-  const me = o.me;
-  let room: RoomState = createRoom(o.code, me);
+  const me = o.me, games = o.games;
+  const first = games(o.game);
+  if (!first) throw new RangeError(`등록되지 않은 게임: ${o.game}`);
+  let room: RoomState = createRoom(o.code, me, o.game, first.defaultSettings);
   let match: Match | null = null;
   let hidden = false, closed = false;
-  let reader: (() => Input) | null = null;
+  let reader: (() => unknown) | null = null;
   let lastAt = o.now();
   let lastRoomSent = -Infinity, lastSilence = -Infinity, lastSay = -Infinity;
   /** 가려지기 시작한 때. 3분이 넘으면 경기를 접고 주기 방송을 멈춘다(dormant) — 돌아오면 다시. */
@@ -116,7 +121,7 @@ export function createHostSession(o: HostOptions): HostSession {
   let matchKey = 0;
 
   const store = createStore<SessionView>({
-    role: 'host', code: o.code, clientId: me.clientId, room, conn, stage: 'lobby', matchKey, config: null, myId: null,
+    role: 'host', code: o.code, clientId: me.clientId, room, conn, stage: 'lobby', matchKey, game: null, config: null, myId: null,
     paused: false, hostLost: false, hostSlow: false, result: null, notice: null, endedWhy: null, joinSlow: false,
   });
 
@@ -132,9 +137,10 @@ export function createHostSession(o: HostOptions): HostSession {
   const mySlot = (): number | null => { if (!match) return null; const i = match.slots.indexOf(me.clientId); return i < 0 ? null : i; };
   const alive = (cid: string, now: number): boolean => { const s = lastSeen.get(cid); return s !== undefined && now - s <= SILENCE_MS; };
   const sendSnap = (m: Match, paused: boolean): void => {
-    send({ t: 'snap', from: me.clientId, seed: m.seed, tick: m.state.tick, state: m.state, inputs: m.qs, paused });
+    send({ t: 'snap', from: me.clientId, seed: m.seed, tick: m.adapter.tick(m.state), state: m.state, inputs: m.qs, paused });
   };
-  const sendStart = (m: Match): void => send({ t: 'start', from: me.clientId, config: m.config, seed: m.seed });
+  const sendStart = (m: Match): void => send({ t: 'start', from: me.clientId, game: m.game, config: m.config, seed: m.seed });
+  const entryOf = (): GameEntry | undefined => games(room.game);
   /** 손님이 방에서 빠질 때 — 손님별 기록도 같이 지운다(오래 열린 방에서 맵이 자라지 않게). */
   const leave = (r: RoomState, cid: string): RoomState => {
     lastSeen.delete(cid); lastQ.delete(cid); lastSeq.delete(cid); lastHelloAt.delete(cid);
@@ -151,7 +157,7 @@ export function createHostSession(o: HostOptions): HostSession {
 
   t.onMessage((raw) => {
     if (closed) return;
-    const m = parseMsg(raw);
+    const m = parseMsg(raw, games);
     if (!m) return;
     const now = o.now();
     // 방장에게 오는 것만. 내가 보낸 것(self:false 라 안 오지만 한 번 더)과 남에게 가는 것은 무시.
@@ -183,6 +189,8 @@ export function createHostSession(o: HostOptions): HostSession {
       }
       case 'in': {
         if (!room.members.some((x) => x.clientId === m.from)) return;
+        const g = match?.adapter ?? entryOf()?.adapter;
+        if (!g || !acceptIn(g, m)) return;   // 이 게임의 입력이 아니다(범위 밖)
         lastSeen.set(m.from, now);
         if (m.seq <= (lastSeq.get(m.from) ?? -1)) return;   // 늦게 온 옛 입력
         lastSeq.set(m.from, m.seq);
@@ -198,7 +206,7 @@ export function createHostSession(o: HostOptions): HostSession {
       case 'say': {
         if (!room.members.some((x) => x.clientId === m.from)) return;
         lastSeen.set(m.from, now);
-        if (match && sayIsValid(room, match.config, m)) bubbles = pushBubble(bubbles, m.id, m.k, now);
+        if (match && sayIsValid(room, match.adapter, match.config, m)) bubbles = pushBubble(bubbles, m.id, m.k, now);
         return;
       }
       case 'bye': {
@@ -213,20 +221,20 @@ export function createHostSession(o: HostOptions): HostSession {
 
   /** 한 틱. 자리마다 q 를 정하고(내 것·봇·손님), 그 q 를 풀어 step 에 넣는다 — 스냅샷에 싣는 것도 같은 q. */
   const tick = (m: Match, now: number): void => {
-    const s = m.state, me_ = mySlot();
-    const qs = m.config.players.map((_, i) => {
-      if (i === me_) return encodeInput(reader ? reader() : NO_INPUT);
+    const g = m.adapter, s = m.state, me_ = mySlot(), idleQ = g.encode(g.idle);
+    const qs = Array.from({ length: g.slots(m.config) }, (_, i) => {
+      if (i === me_) return g.encode(reader ? reader() : g.idle);
       const cid = m.slots[i];
-      if (cid === null || !alive(cid, now)) return encodeInput(botInput(s, m.config, i));   // 봇, 또는 조용해진 손님 자리
-      return lastQ.get(cid) ?? Q_IDLE;
+      if (cid === null || !alive(cid, now)) return g.encode(g.botInput ? g.botInput(s, m.config, i) : g.idle);   // 봇, 또는 조용해진 손님 자리
+      return lastQ.get(cid) ?? idleQ;
     });
-    const next = step(s, m.config, qs.map(decodeInput));
+    const next = g.step(s, m.config, qs.map((q) => g.decode(q)));
     m.prev = s; m.state = next; m.qs = qs;
-    if (next.phase !== s.phase) sendSnap(m, false);          // 골·끝은 바로
-    else if (next.tick % SNAP_EVERY === 0) sendSnap(m, false);
-    if (next.phase === 'end' && m.endedAt === null) {
+    if (g.phase(next) !== g.phase(s)) sendSnap(m, false);          // 골·끝 같은 단계 전환은 바로
+    else if (g.tick(next) % SNAP_EVERY === 0) sendSnap(m, false);
+    if (g.ended(next) && m.endedAt === null) {
       m.endedAt = now;
-      store.set({ result: { score: [next.score[0], next.score[1]], winner: (next.winner ?? 'draw') as 0 | 1 | 'draw' } });
+      store.set({ result: next });
     }
   };
 
@@ -247,7 +255,7 @@ export function createHostSession(o: HostOptions): HostSession {
     for (const x of r.members) if (x.clientId !== me.clientId && quietFor(x.clientId, now) > LOBBY_SILENCE_MS) r = leave(r, x.clientId);
     setRoom(r, now);
     send({ t: 'stop', from: me.clientId, seed });
-    store.set({ stage: 'lobby', config: null, myId: null, result: null });
+    store.set({ stage: 'lobby', game: null, config: null, myId: null, result: null });
   };
 
   const api: HostSession = {
@@ -308,7 +316,7 @@ export function createHostSession(o: HostOptions): HostSession {
       if (!match) return null;
       const m = match;
       const a = m.endedAt !== null || hidden ? 1 : m.acc / STEP_MS;
-      return { state: lerpState(m.prev, m.state, a), config: m.config, myId: mySlot(), bubbles: liveBubbles(bubbles, now) };
+      return { state: m.smooth.lerp(m.prev, m.state, a), config: m.config, myId: mySlot(), bubbles: liveBubbles(bubbles, now) };
     },
 
     leave() {
@@ -320,27 +328,37 @@ export function createHostSession(o: HostOptions): HostSession {
       store.set({ stage: 'ended', endedWhy: null, conn: 'closed' });
     },
 
-    setSettings(patch) { if (!match && room.phase === 'lobby') setRoom(setSettings(room, patch), o.now()); },
+    setSettings(patch) {
+      const e = entryOf();
+      if (!match && room.phase === 'lobby' && e) setRoom(withSettings(room, e.applySettings(room.settings, patch)), o.now());
+    },
+    setGame(id) {
+      const e = games(id);
+      if (!match && room.phase === 'lobby' && e) setRoom(setGame(room, id, e.defaultSettings), o.now());
+    },
     move(cid, team) { if (!match && room.phase === 'lobby') setRoom(move(room, cid, team), o.now()); },
     autoBalance() { if (!match && room.phase === 'lobby') setRoom(autoBalance(room, o.roster), o.now()); },
     setBotPick(side, slot, num) { if (!match && room.phase === 'lobby') setRoom(setBotPick(room, side, slot, num, allNums), o.now()); },
-    startBlock() { return startBlockOf(room, o.roster); },
+    startBlock() { return startBlockOf(entryOf(), room, o.roster); },
 
     start() {
       if (closed || match || room.phase !== 'lobby') return false;
-      const why = startBlockOf(room, o.roster);
-      if (why) { store.set({ notice: why }); return false; }
-      let built: { config: MatchConfig; slots: (string | null)[] };
-      try { built = buildMatch(room, o.roster, rnd); }
+      const entry = entryOf();
+      const why = startBlockOf(entry, room, o.roster);
+      if (why || !entry) { store.set({ notice: why }); return false; }
+      let built: { config: unknown; slots: (string | null)[] };
+      try { built = entry.buildConfig(room, o.roster, rnd); }
       catch (e) {
         if (e instanceof RangeError) { store.set({ notice: '명단이 모자라 봇을 채울 수 없습니다' }); return false; }
         throw e;
       }
       const now = o.now();
       const seed = Math.floor(rnd() * 0x100000000) >>> 0;
-      const state = createMatch(built.config, seed);
+      const g = entry.adapter;
+      const state = g.create(built.config, seed);
       match = {
-        config: built.config, seed, slots: built.slots, state, prev: state, qs: built.config.players.map(() => Q_IDLE),
+        game: room.game, adapter: g, smooth: smootherFor(g.bodies),
+        config: built.config, seed, slots: built.slots, state, prev: state, qs: Array.from({ length: g.slots(built.config) }, () => g.encode(g.idle)),
         acc: 0, endedAt: null, lastPausedSnap: -Infinity,
       };
       lastQ.clear();
@@ -350,7 +368,7 @@ export function createHostSession(o: HostOptions): HostSession {
       setRoom(setPhase(room, 'match'), now);
       sendStart(match);
       sendSnap(match, hidden);
-      store.set({ stage: 'match', matchKey, config: built.config, myId: mySlot(), result: null, notice: null });
+      store.set({ stage: 'match', matchKey, game: match.game, config: built.config, myId: mySlot(), result: null, notice: null });
       return true;
     },
     stop() { backToLobby(o.now()); },

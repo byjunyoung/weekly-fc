@@ -1,5 +1,5 @@
 ---
-// 게임 목록의 카드 줄 — 2D 모드·3D 모드 페이지가 함께 쓴다. 만든 게임이 생기면 각 페이지의 목록에 한 줄씩 더한다
+// 게임 목록의 카드 줄 — 2D 모드·3D 모드 페이지가 함께 쓴다. 카드는 게임 등록부(src/lib/games/registry.ts)에서 온다
 // (2026-11-07 "게임 메뉴는 아래 게임 여러개 고를 수 있게 만들고 만든 게임은 거기에 하나씩 추가하자").
 import { href } from '../lib/url';
 interface Props { games: { to: string; name: string; desc: string; tags: string[] }[] }

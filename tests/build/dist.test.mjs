@@ -321,8 +321,23 @@ test('게임 목록(2026-11-07) — 2D 모드·3D 모드 두 탭, 모드마다 �
   const d2 = read('games/index.html'), d3 = read('games/3d/index.html');
   assert.match(d2, /class="subnav"[^>]*>\s*<a[^>]*class="active"[^>]*>2D 모드<\/a>\s*<a[^>]*>3D 모드<\/a>/);
   assert.match(d3, /class="subnav"[^>]*>\s*<a[^>]*>2D 모드<\/a>\s*<a[^>]*class="active"[^>]*>3D 모드<\/a>/);
-  assert.match(d2, /<a class="card games-card" href="\/weekly-fc\/game\/"/, '2D 목록에 경기');
+  // 2026-11-07 게임 묶음: 2D 카드는 등록부에서 오고 ?g= 로 그 게임을 고른다(아래 테스트가 등록부와 맞춘다)
+  assert.match(d2, /<a class="card games-card" href="\/weekly-fc\/game\/\?g=match2d"/, '2D 목록에 경기');
   assert.match(d3, /<a class="card games-card" href="\/weekly-fc\/game3d\/"/, '3D 목록에 경기');
   for (const html of [d2, d3]) assert.ok(html.indexOf('class="subnav"') > html.indexOf('class="page-head"'), '탭 줄은 제목 아래');
   assert.ok(!d2.includes('Match3D') && !d3.includes('Match3D'), '목록 화면은 three.js 를 부르지 않는다');
+});
+
+// 2026-11-07 게임 묶음 토대 — "만든 게임은 거기에 하나씩 추가하자": 목록 카드는 게임 등록부에서 온다. 등록부의 게임마다 카드 하나(이름·설명·?g= 주소),
+// 3D 는 등록부 것 + 아직 등록부에 없는 시제품(/game3d/) 한 장. 카드가 가리키는 /game/ 은 GameApp 섬 하나로 모든 게임을 연다(?g= 는 화면에서 읽는다).
+test('게임 목록 카드는 등록부에서 — 모드마다 등록된 게임 수만큼, 주소는 /game/?g=<id>', async () => {
+  const { gamesOf } = await import('../../src/lib/games/registry.ts');
+  const cards = (html) => [...html.matchAll(/<a class="card games-card" href="([^"]+)"[^>]*>\s*<b class="games-name">([^<]+)<\/b>\s*<span class="games-desc">([^<]+)<\/span>/g)]
+    .map((m) => ({ href: m[1], name: m[2], desc: m[3] }));
+  const d2 = cards(read('games/index.html')), d3 = cards(read('games/3d/index.html'));
+  assert.deepEqual(d2, gamesOf('2d').map((g) => ({ href: `/weekly-fc/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe })));
+  assert.ok(d2.length >= 1);
+  assert.deepEqual(d3.slice(0, -1), gamesOf('3d').map((g) => ({ href: `/weekly-fc/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe })));
+  assert.equal(d3.at(-1).href, '/weekly-fc/game3d/', '3D 시제품은 손으로 쓴 카드');
+  assert.match(read('game/index.html'), /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/GameApp\.[^"]+\.js"[^>]*client="load"/, '/game/ 은 GameApp 섬');
 });

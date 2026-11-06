@@ -2,9 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHostSession, createGuestSession, STEP_MS, DENY_TEXT, inputGapMs } from '../../src/react/game/net/session.ts';
 import { createLoopbackHub } from '../../src/react/game/net/transport.ts';
-import { encodeInput, PHRASES } from '../../src/lib/game/net.ts';
+import { PHRASES } from '../../src/lib/games/net.ts';
+import { encodeInput } from '../../src/lib/game/quant.ts';
 import { createMatch } from '../../src/lib/game/sim.ts';
-import { rngFrom } from '../../src/react/game/view.ts';
+import { rngFrom } from '../../src/react/game/views/match2d/view.ts';
+import { gameOf } from '../../src/lib/games/registry.ts';
+
+// 2026-11-07 게임 묶음 토대: 세션은 등록된 게임 찾기(games)와 처음 게임(game)을 받는다 — 이 파일은 등록부를 거친 2D 경기로 돌린다.
+const G = { games: gameOf, game: 'match2d' };
 
 // 방장 하나 + 손님 둘을 메모리 길(루프백)과 가짜 시계로 돌린다. 한쪽 지연 30ms(실측 75ms 보다 짧게 — 테스트 시간을 아끼려고).
 const roster = (n = 12) => Array.from({ length: n }, (_, i) => ({
@@ -19,11 +24,11 @@ function world({ delayMs = 30, n = 20, guests = 2 } = {}) {
   const hub = createLoopbackHub({ delayMs, now });
   const R = roster(n);
   const hostEp = hub.endpoint();
-  const host = createHostSession({ transport: hostEp, roster: R, me: who(0), code: 'ABCD', now, rnd: rngFrom(7) });
+  const host = createHostSession({ transport: hostEp, roster: R, me: who(0), code: 'ABCD', now, rnd: rngFrom(7), ...G });
   const gEps = [], gs = [];
   const addGuest = (w) => {
     const ep = hub.endpoint();
-    const g = createGuestSession({ transport: ep, roster: R, me: w, code: 'ABCD', now });
+    const g = createGuestSession({ transport: ep, roster: R, me: w, code: 'ABCD', now, ...G });
     gEps.push(ep); gs.push(g);
     return g;
   };
@@ -543,7 +548,7 @@ test('방장 새로고침(sid 바뀜, rev 0) 뒤 bye 를 놓친 손님도 새 �
   assert.ok(w.gs[0].getRoom().rev >= 3);
   w.hostEp.close();   // 탭이 bye 없이 사라짐
   const ep = w.hub.endpoint();
-  w.state.host = createHostSession({ transport: ep, roster: w.R, me: who(0), code: 'ABCD', now: w.now, rnd: rngFrom(99) });
+  w.state.host = createHostSession({ transport: ep, roster: w.R, me: who(0), code: 'ABCD', now: w.now, rnd: rngFrom(99), ...G });
   w.run(3000);
   assert.equal(w.gs[0].getView().stage, 'lobby');
   assert.ok(inRoom(w.state.host.getRoom(), 'c1'), '새 방에 다시 들어갔다');

@@ -1,12 +1,13 @@
 // src/react/game/GameApp.tsx — 축구 게임: 입장(내 선수 + 방 만들기 / 혼자 연습) → 방(로비) → 경기.
 // 설계: docs/superpowers/specs/2026-11-06-game-design.md(1단계), 2026-11-06-game-online-design.md(2단계 온라인).
 // 사용자: "2단계 온라인으로 넘어가자", "팀원 없으면 봇 추가해서 가능해야지", "PC 모바일 둘다 최적화".
-// 이 파일은 화면 전환과 세션의 수명(만들기·타이머·탭 이벤트·닫기)만 맡는다. 계산은 src/lib/game/*, 오가는 말은 net/*.
+// 이 파일은 화면 전환과 세션의 수명(만들기·타이머·탭 이벤트·닫기)만 맡는다. 계산은 src/lib/game*/*, 오가는 말은 net/*.
+// 2026-11-07 게임 묶음: 주소의 ?g=<게임 id> 가 혼자 하기·방 만들기의 게임을 고른다(없거나 모르면 경기). 방의 게임은 방장이 정한 것.
 // 프레임마다 리액트 상태를 건드리지 않는다 — 세션 view 는 바뀔 때만 새 객체다.
 import { App, Button } from 'antd';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { makeRoomCode } from '../../lib/game/room';
-import type { Input } from '../../lib/game/sim';
+import { DEFAULT_GAME, gameFromParam, gameOf } from '../../lib/games/registry';
 import type { Player } from '../../lib/types';
 import Loading from '../Loading';
 import ThemeRoot from '../ThemeRoot';
@@ -19,7 +20,10 @@ import { OnlineMatch } from './OnlineMatch';
 import {
   clearMarks, clientId, hostedCode, inviteUrl, joinedCode, markHost, markJoined, roomFromUrl, setRoomInUrl, shareInvite,
 } from './online';
-import { buildSoloMatch, SoloMatch, type Live, type MatchSetup, type Req } from './SoloMatch';
+import type { Live } from './MatchFrame';
+import { SoloMatch, type SoloRun } from './SoloMatch';
+import { viewOf } from './views';
+import type { SoloSetup } from './views/types';
 
 type Online = { session: HostSession | GuestSession; code: string };
 
@@ -36,7 +40,8 @@ function GameRoot() {
   const { data } = useData();
   const { message, modal } = App.useApp();
   const live = useRef<Live>({ state: null, config: null, override: null, camera: null });
-  const [match, setMatch] = useState<MatchSetup | null>(null);
+  const [match, setMatch] = useState<SoloRun | null>(null);
+  const [game, setGame] = useState(DEFAULT_GAME);
   const [online, setOnline] = useState<Online | null>(null);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -45,7 +50,10 @@ function GameRoot() {
   onlineRef.current = online;
   const triedRestore = useRef(false);
 
-  useEffect(() => { setRoomCode(roomFromUrl()); }, []);
+  useEffect(() => {
+    setRoomCode(roomFromUrl());
+    try { setGame(gameFromParam(new URLSearchParams(location.search).get('g'))); } catch { /* 주소를 못 읽으면 기본 게임 */ }
+  }, []);
 
   // 검증용 훅 — ?debug=1 일 때만. 헤드리스 브라우저 둘(방장·손님)이 이걸로 상태를 읽고 입력을 덮어쓴다.
   // 손님의 getState 는 예측한 상태(화면에 그리는 몸), getBase 는 마지막 스냅샷. 방장은 둘 다 진짜 경기 상태.
@@ -56,7 +64,7 @@ function GameRoot() {
     (window as unknown as { __wfcGame?: unknown }).__wfcGame = {
       getState: () => o()?.session.getState() ?? (o() ? null : l.state),
       getConfig: () => o()?.session.getConfig() ?? (o() ? null : l.config),
-      setInput: (i: Input | null) => { l.override = i; },
+      setInput: (i: unknown) => { l.override = i ?? null; },
       getRole: (): 'solo' | 'host' | 'guest' | null => o()?.session.role ?? (l.config ? 'solo' : null),
       getRoom: () => o()?.session.getRoom() ?? null,
       getNet: () => o()?.session.getNet() ?? null,
@@ -67,24 +75,29 @@ function GameRoot() {
     return () => { delete (window as unknown as { __wfcGame?: unknown }).__wfcGame; };
   }, []);
 
-  const startSolo = useCallback((req: Req, roster: Player[]) => { keyN.current += 1; setMatch(buildSoloMatch(req, roster, keyN.current)); }, []);
+  // 혼자 하기 — make 는 그 게임의 화면이 만든 "한 판 만들기"(다시 하기는 같은 make 로 새 씨앗).
+  const startSolo = useCallback((make: () => SoloSetup<unknown>, roster: Player[], id: string) => {
+    keyN.current += 1;
+    setMatch({ ...make(), key: keyN.current, game: id, make, roster });
+  }, []);
 
   const openHost = useCallback((p: Player, code: string) => {
     if (!data || onlineRef.current) return;
     const session = createHostSession({
       transport: createRealtimeTransport(code), roster: data.players, me: { clientId: clientId(), num: p.num, name: p.name }, code, now,
+      games: gameOf, game,
     });
     markHost(code);
     setRoomInUrl(code);   // 주소창이 곧 초대 링크
     setRoomCode(code);
     setMsg(null);
     setOnline({ session, code });
-  }, [data]);
+  }, [data, game]);
 
   const openGuest = useCallback((p: Player, code: string) => {
     if (!data || onlineRef.current) return;
     const session = createGuestSession({
-      transport: createRealtimeTransport(code), roster: data.players, me: { clientId: clientId(), num: p.num, name: p.name }, code, now,
+      transport: createRealtimeTransport(code), roster: data.players, me: { clientId: clientId(), num: p.num, name: p.name }, code, now, games: gameOf,
     });
     markJoined(code);
     setMsg(null);
@@ -181,8 +194,9 @@ function GameRoot() {
     return (
       <>
         <Lobby session={online.session} view={view} players={data.players} onLeave={leaveRoom} onShare={share} />
-        {view.stage === 'match' && view.config && (
-          <OnlineMatch key={view.matchKey} session={online.session} view={view} roster={data.players} live={live} onLeaveRoom={leaveRoom} />
+        {view.stage === 'match' && view.config != null && view.game && gameOf(view.game) && viewOf(view.game) && (
+          <OnlineMatch key={view.matchKey} session={online.session} view={view} adapter={gameOf(view.game)!.adapter} gameView={viewOf(view.game)!}
+            roster={data.players} live={live} onLeaveRoom={leaveRoom} />
         )}
       </>
     );
@@ -190,10 +204,11 @@ function GameRoot() {
 
   return (
     <>
-      <Entry players={data.players} roomCode={roomCode} reopen={!!roomCode && hostedCode() === roomCode} message={msg} onSolo={startSolo} onCreate={onCreate} onJoin={onJoin} />
-      {match && (
-        <SoloMatch key={match.key} setup={match} live={live}
-          onRestart={() => startSolo(match.req, match.roster)} onExit={() => setMatch(null)} />
+      <Entry game={game} players={data.players} roomCode={roomCode} reopen={!!roomCode && hostedCode() === roomCode} message={msg}
+        onSolo={(make) => startSolo(make, data.players, game)} onCreate={onCreate} onJoin={onJoin} />
+      {match && gameOf(match.game) && viewOf(match.game) && (
+        <SoloMatch key={match.key} run={match} adapter={gameOf(match.game)!.adapter} view={viewOf(match.game)!} live={live}
+          onRestart={() => startSolo(match.make, match.roster, match.game)} onExit={() => setMatch(null)} />
       )}
     </>
   );

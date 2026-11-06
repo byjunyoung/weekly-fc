@@ -3,7 +3,7 @@
 //
 // 세션(session.ts)은 이 약속만 안다 — 지금은 Supabase 실시간 채널(realtime.ts)이 구현하지만, 나중에 직접 연결로
 // 바꿀 때 세션을 안 고치려고 길을 인터페이스 뒤에 둔다(스펙 §1). 브라우저 API 를 안 쓰는 파일이라 node 테스트가 그대로 가져온다.
-import type { NetMsg } from '../../../lib/game/net.ts';
+import type { NetMsg } from '../../../lib/games/net.ts';
 
 export type ConnStatus = 'connecting' | 'open' | 'closed';
 

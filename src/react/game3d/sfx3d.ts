@@ -2,7 +2,7 @@
 // 2D 의 sfx-detect.ts 와 같은 방식이다 — 이어진 두 상태를 비교하는 순수 함수, 경기 계산은 소리를 모른다.
 // 소리 자체는 2D 와 같은 모듈(src/react/game/sfx.ts)이 낸다: 골·휘슬·킥·튕김은 두 모드가 똑같이 들린다.
 // 3D 에만 있는 것(슛 세기·땅 튕김·골키퍼·태클)은 같은 모듈에 종류를 몇 개 더했다.
-import type { Sfx } from '../game/sfx-detect.ts';
+import type { Sfx } from '../game/sfx.ts';
 import { RULES3D, PITCH3D, type MatchConfig, type MatchState } from '../../lib/game3d/sim.ts';
 
 /** 땅에 떨어질 때 세로 속도(m/s)가 이보다 커야 튕김 소리 — 낮게 통통 구르는 건 조용히. */

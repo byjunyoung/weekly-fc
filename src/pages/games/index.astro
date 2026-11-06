@@ -1,12 +1,12 @@
 ---
 // 게임 > 2D 모드(2026-11-07 "그냥 모드를 2d 모드, 3d 모드로 정의하고", "여러 게임 형태를 제공하면 될듯").
-// 위에서 내려다보는 게임들. 만든 게임을 이 목록에 하나씩 더한다.
+// 위에서 내려다보는 게임들. 카드는 게임 등록부(src/lib/games/registry.ts)에서 온다 — 게임을 만들어 등록하면 여기 저절로 한 장 더 생긴다
+// ("게임 메뉴는 아래 게임 여러개 고를 수 있게 만들고 만든 게임은 거기에 하나씩 추가하자"). 주소의 ?g= 가 그 게임을 고른다.
 import Shell from '../../layouts/Shell.astro';
 import SubTabs from '../../components/SubTabs.astro';
 import GameCards from '../../components/GameCards.astro';
-const games = [
-  { to: '/game/', name: '경기', desc: '위에서 보는 물리 축구. 방을 만들어 팀원과 붙거나 혼자서 봇과 연습합니다.', tags: ['온라인', '봇', '1대1~6대6'] },
-];
+import { gamesOf } from '../../lib/games/registry';
+const games = gamesOf('2d').map((g) => ({ to: `/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe, tags: [...g.tags] }));
 ---
 <Shell title="게임" description="WEEKLY FC 게임 — 우리 멤버로 하는 축구 게임. 2D 모드와 3D 모드.">
   <div class="page-head"><h1>게임 <span class="muted">2D 모드</span></h1></div>

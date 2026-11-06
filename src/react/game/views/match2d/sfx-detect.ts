@@ -1,10 +1,7 @@
 // 소리 낼 사건 찾기 — 이어진 두 상태를 비교한다(순수). 혼자·방장·손님 어디서나 "그리는 상태"만 있으면 된다.
 // 2026-11-07 "효과음도 넣어야지". 경기 계산(sim)에는 소리를 모르게 두고, 화면 쪽에서 상태 변화로 알아낸다.
-import type { MatchState } from '../../lib/game/sim.ts';
-
-// move·confirm 은 경기가 아니라 선수 선택 화면의 작은 소리(2026-11-07 "약간 옛날 오락실게임에서 고르듯이") — 여기서 찾지 않고 화면이 직접 낸다.
-/** shot·catch·tackle 은 3D 가 쓴다(src/react/game3d/sfx3d.ts) — 2D 는 안 낸다. 같은 모듈이라 골·휘슬·킥·튕김은 두 모드가 같은 소리다. */
-export type Sfx = { kind: 'kick' | 'bounce' | 'goal' | 'whistle' | 'end' | 'move' | 'confirm' | 'shot' | 'catch' | 'tackle'; vol: number };
+import type { MatchState } from '../../../../lib/game/sim.ts';
+import type { Sfx } from '../../sfx.ts';
 
 /** 공 속도(단위/초)가 이 이상일 때만 튕김 소리 — 굴러가다 살짝 닿는 건 조용히. */
 const BOUNCE_MIN_SPEED = 140;
