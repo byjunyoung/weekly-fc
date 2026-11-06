@@ -16,8 +16,9 @@ import { attackDir, formationSpot, NO_INPUT, passTarget, PITCH3D, RULES3D, slotO
 const HOME_FOLLOW_X = 0.42;   // 자리가 공의 x 를 따라가는 비율
 const HOME_FOLLOW_Y = 0.25;   // 자리가 공의 y 를 따라가는 비율
 const ATTACK_PUSH = 3.5;      // 우리 편이 공을 가지면 자리를 이만큼 앞으로
-const SHOOT_RANGE = 17;       // 골대까지 이 안이면 슛을 생각한다
-const SHOOT_COS = 0.7;        // 보는 방향이 골대 쪽과 이만큼 맞아야 슛
+const SHOOT_RANGE = 19;       // 골대까지 이 안이면 슛을 생각한다
+const SHOOT_COS = 0.62;       // 보는 방향이 골대 쪽과 이만큼 맞아야 슛
+const SHOOT_TURN = 12;        // 골대까지 이 안이면 패스 대신 골대 쪽으로 돌아 슛
 const PRESS_R = 2.4;          // 앞쪽 이 거리 안에 상대가 있으면 "압박받는다"
 const OPEN_R = 2.6;           // 동료 둘레 이 안에 상대가 없으면 "비었다"
 const AHEAD_GAIN = 3;         // 동료가 나보다 이만큼 더 앞이면 앞으로 주는 패스를 생각한다
@@ -27,10 +28,10 @@ const DECIDE_HOLD = 36;       // 패스할까 말까 제비가 바뀌는 간격(
 const HESITATE_HOLD = 45;     // 머뭇거림 제비 간격
 const HESITATE_P = 0.1;       // 머뭇거릴 확률
 const HESITATE_SPEED = 0.4;   // 머뭇거릴 때 속도 배수
-const AIM_ERR = 0.75;         // 슛 조준이 골문 가운데에서 빗나가는 폭(골문 반폭 비율)
+const AIM_ERR = 0.85;         // 슛 조준이 골문 가운데에서 빗나가는 폭(골문 반폭 비율)
 const CHARGE_ERR = 0.15;      // 슛 세기 오차
 const KEEPER_ARC = 1.3;       // 골키퍼가 서는 호(골대 가운데에서의 거리)
-const KEEPER_REACT = 9;       // 슛을 보고 움직이기까지 틱(0.15초) — 이게 작을수록 골키퍼가 세다
+const KEEPER_REACT = 12;      // 슛을 보고 움직이기까지 틱(0.15초) — 이게 작을수록 골키퍼가 세다
 const KEEPER_RUSH = 4.5;      // 골대에서 이 안의 느린 공은 골키퍼가 나와 줍는다
 const KEEPER_PASS_WAIT = 90;  // 공을 들고 이만큼 지나도 줄 사람이 없으면 앞으로 멀리 찬다
 // ═══════════════════════════════
@@ -150,6 +151,8 @@ function carrierInput(state: MatchState, config: MatchConfig, id: number): Input
     return inp({ x: ux * 0.5, y: uy * 0.5 }, { shoot: c < want });
   }
   if (dGoal < SHOOT_RANGE && facingGoal > SHOOT_COS) return inp({ x: ux, y: uy }, { shoot: true });
+  // 골대 가까이(SHOOT_TURN 안)면 패스를 생각하지 않고 골대 쪽으로 몸을 돌린다 — 2026-11-07 "골이 너무 안 난다"(봇이 앞에서 공을 돌리기만 했다)
+  if (dGoal < SHOOT_TURN) return inp({ x: ux, y: uy });
 
   // 패스 — 눌러 둔 상태면 뗀다
   if (me.passHeld) return inp({ x: me.fx * 0.3, y: me.fy * 0.3 });

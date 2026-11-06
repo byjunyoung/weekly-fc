@@ -192,7 +192,7 @@ test('슛 — 오래 누를수록 빠르고 높이 뜬다', () => {
   const a = shotWith(8), b = shotWith(30), c = shotWith(RULES3D.chargeTicks + 20);
   assert.ok(a.v0 < b.v0 && b.v0 < c.v0, `속도 ${a.v0} ${b.v0} ${c.v0}`);
   assert.ok(a.peak < b.peak && b.peak < c.peak, `높이 ${a.peak} ${b.peak} ${c.peak}`);
-  assert.ok(c.peak > goalH, '꽉 채우면 크로스바보다 높이 뜰 수 있다');
+  assert.ok(c.peak > goalH * 0.75 && c.peak < goalH + 0.3, `꽉 채운 슛은 크로스바 근처까지 뜬다(먼 거리에선 넘을 수 있다) ${c.peak}`);
 });
 
 test('빼앗기 — 공 가진 선수에게 상대가 몸으로 붙으면 빼앗거나 흘러나오고, 잠깐은 다시 못 뺏는다', () => {

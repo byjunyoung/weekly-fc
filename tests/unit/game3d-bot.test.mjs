@@ -44,14 +44,15 @@ for (const seed of SEEDS) {
     }
     assert.equal(s.phase, 'end');
     assert.ok(s.count.passes[0] > 5 && s.count.passes[1] > 5, `패스 ${s.count.passes}`);
-    assert.ok(s.count.shots[0] + s.count.shots[1] > 0, '슛');
+    assert.ok(s.count.shots[0] > 0 && s.count.shots[1] > 0, `두 편 다 슛 ${s.count.shots}`);
     results.push(s.score[0] + s.score[1]);
   });
 }
-test('봇끼리 경기에서 한 판에 평균 한 골 이상', () => {
+// 2026-11-07 "골이 너무 안 난다" — 목표는 3분에 3~5골. 씨앗 1~16 실측 평균 3.4(판마다 1~7). 다섯 판 평균이라 범위를 넉넉히 둔다.
+test('봇끼리 3분 경기 — 평균 2~6골(목표 3~5)', () => {
   assert.equal(results.length, SEEDS.length);
   const avg = results.reduce((a, b) => a + b, 0) / results.length;
-  assert.ok(avg >= 1, `평균 ${avg} (${results})`);
+  assert.ok(avg >= 2 && avg <= 6, `평균 ${avg} (${results})`);
 });
 
 test('같은 편 봇이 사람(가만히 서 있어도)에게 패스한다', () => {
@@ -66,7 +67,7 @@ test('같은 편 봇이 사람(가만히 서 있어도)에게 패스한다', () 
       const dx = s.ball.x - me.x, dy = s.ball.y - me.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
       inputs[3] = d > 6 ? { x: (dx / d) * 0.5, y: (dy / d) * 0.5, shoot: false, pass: false } : { ...NO_INPUT };
       const n = step(s, cfg, inputs);
-      if (n.lastKick && n.lastKick !== s.lastKick && n.lastKick.kind === 'pass' && n.passTo === 3) toHuman++;
+      if (n.lastKick && n.lastKick.tick !== s.lastKick?.tick && n.lastKick.kind === 'pass' && n.passTo === 3) toHuman++;
       s = n;
     }
   }
@@ -97,4 +98,36 @@ test('골키퍼 봇 — 정면 약한 슛은 막고, 구석으로 세게 찬 슛
   assert.deepEqual(weak.score, [0, 0], '정면 약한 슛');
   const strong = fire(0.2, 44);
   assert.deepEqual(strong.score, [1, 0], '구석 강슛');
+});
+
+// 슛 결과(2026-11-07 "골이 너무 안 난다"): 골키퍼 봇 앞 8~12m, 세 자리에서. 잘 노린(구석 ±1.5~2m) 모은 슛은 절반쯤,
+// 골키퍼 정면은 세게 차도 거의 막히고, 약한 정면 슛은 다 막힌다. 실측(조정 뒤): 구석 53%, 정면 강슛 0%, 정면 약슛 0%.
+const duel = { minutes: 2, players: [
+  { id: 0, num: 1, name: 'S', side: 0, bot: false, gk: false, perf: { ...BASE_PERF } },
+  { id: 1, num: 2, name: 'K', side: 1, bot: true, gk: true, perf: { ...BASE_PERF } },
+] };
+function shotFrom(x0, y0, ty, hold, seed) {
+  let s = JSON.parse(JSON.stringify(createMatch(duel, seed)));
+  s.phase = 'play';
+  Object.assign(s.players[0], { x: x0, y: y0, fx: 1, fy: 0, vx: 0, vy: 0 });
+  s.ball = { x: x0 + 0.7, y: y0, z: ballR, vx: 0, vy: 0, vz: 0 };
+  for (let t = 0; t < 90; t++) s = step(s, duel, [{ ...NO_INPUT }, botInput(s, duel, 1)]);
+  const dx = HW - x0, dy = ty - y0, d = Math.sqrt(dx * dx + dy * dy);
+  Object.assign(s.players[0], { fx: dx / d, fy: dy / d });
+  for (let t = 0; t < hold; t++) s = step(s, duel, [{ x: 0, y: 0, shoot: true, pass: false }, botInput(s, duel, 1)]);
+  for (let t = 0; t < 150 && s.phase === 'play'; t++) s = step(s, duel, [{ ...NO_INPUT }, botInput(s, duel, 1)]);
+  return s.score[0] > 0;
+}
+test('슛 결과 — 구석으로 모은 슛은 35~70% 들어가고, 골키퍼 정면은 세게 차도 대부분, 약하게 차면 전부 막힌다', () => {
+  let goals = 0, n = 0, straight = 0, sn = 0, weak = 0;
+  let seed = 1;
+  for (const x0 of [6, 8, 10]) for (const y0 of [-4, 0, 4]) {
+    for (const ty of [-2, -1.5, 1.5, 2]) for (const hold of [36, 48]) { goals += shotFrom(x0, y0, ty, hold, seed++) ? 1 : 0; n++; }
+    for (const hold of [36, 48]) { straight += shotFrom(x0, y0, 0, hold, seed++) ? 1 : 0; sn++; }
+    weak += shotFrom(x0, y0, 0, 8, seed++) ? 1 : 0;
+  }
+  const rate = goals / n;
+  assert.ok(rate >= 0.35 && rate <= 0.7, `구석 ${goals}/${n}`);
+  assert.ok(straight / sn <= 0.25, `정면 강슛 ${straight}/${sn}`);
+  assert.equal(weak, 0, '약한 정면 슛');
 });

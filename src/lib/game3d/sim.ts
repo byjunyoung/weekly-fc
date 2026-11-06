@@ -81,9 +81,9 @@ const KICK_ANIM = 12;         // 찬 뒤 몸이 기울어 있는 틱(화면이 �
 
 // ── 빼앗기(몸으로 부딪치기) ──
 const STEAL_REACH = 0.12;     // 상대 몸·공에 이만큼 안으로 붙으면 시도
-const STEAL_WIN = 0.5;        // 시도 한 번에 빼앗을 확률(평균끼리). 못 빼앗으면 공이 흘러나온다
+const STEAL_WIN = 0.45;       // 시도 한 번에 빼앗을 확률(평균끼리). 못 빼앗으면 공이 흘러나온다
 const STEAL_FREE_SPEED = 3.5; // 흘러나온 공의 속도
-const STEAL_IMMUNE = 40;      // 빼앗기 뒤 누구도 다시 못 빼앗는 틱(공이 핑퐁하지 않게)
+const STEAL_IMMUNE = 48;      // 빼앗기 뒤 누구도 다시 못 빼앗는 틱(공이 핑퐁하지 않게)
 const STEAL_LOSER_LOCK = 24;  // 빼앗긴 사람이 다시 못 잡는 틱
 const STEAL_FREE_LIFT = 1.2;  // 흘러나온 공이 살짝 뜨는 속도(세로)
 const STEAL_FREE_CARRY = 0.4; // 흘러나온 공에 빼앗긴 사람 속도가 섞이는 비율
@@ -106,18 +106,20 @@ const CHARGE_TICKS = 54;      // 끝까지 모이는 틱(0.9초)
 const SHOT_MIN = 13;          // 톡 친 슛 속도
 const SHOT_MAX = 30;          // 꽉 채운 슛 속도
 const LOFT_MIN = 0.6;         // 톡 친 슛의 뜨는 속도(세로)
-const LOFT_MAX = 8.5;         // 꽉 채운 슛의 뜨는 속도 — 세기의 제곱으로 오른다(반쯤 찬 슛은 낮게 깔린다)
+const LOFT_MAX = 7.5;         // 꽉 채운 슛의 뜨는 속도 — 세기의 제곱으로 오른다(반쯤 찬 슛은 낮게 깔린다)
 const AIM_COS = 0.7;          // 보는 방향이 골문 쪽 ±45도 안이면
 const AIM_ASSIST = 0.55;      // 이 비율만큼 골문 안쪽으로 당긴다
 const AIM_INSET = 0.45;       // 골대에서 이만큼 안쪽을 노린다
+const AIM_OPEN = 0.35;        // 모은 만큼(세기 × 이 값) 골키퍼 반대쪽 구석으로 더 당긴다 — 꽉 채운 슛이 보상받게(2026-11-07 "골이 너무 안 난다")
 
 // ── 골키퍼 ──
 const KEEPER_SPEED = 1.08;    // 골키퍼 최고 속도 배수
 const KEEPER_DAMP = 0.88;     // 골키퍼는 더 바로 서고 바로 나간다
 const KEEPER_REACH = 0.95;    // 손이 닿는 거리(몸 중심 → 공 중심, 바닥에서)
 const KEEPER_REACH_Z = 2.3;   // 손이 닿는 높이
-const KEEPER_CATCH = 18;      // 이보다 느린 공은 잡는다
-const KEEPER_PARRY = 26;      // 이보다 느린 공은 쳐낸다. 더 빠르면 손이 못 따라간다(몸에 맞으면 튕긴다)
+const KEEPER_CATCH = 16;      // 이보다 느린 공은 잡는다
+const KEEPER_PARRY = 36;      // 손에 닿은 공을 막을 확률이 0 이 되는 속도. CATCH~이 속도 사이에선 빠를수록 덜 막는다
+const KEEPER_SAVE_MAX = 0.95; // 몸 쪽으로 온 공(또는 잡기 직전 속도의 공)을 쳐낼 확률. 내리면 골키퍼가 전체로 약해진다
 const KEEPER_HOLD = 60;       // 잡은 공을 들고 있는 틱(1초) — 그 뒤 봇이 패스
 const KEEPER_LOCK = 20;       // 쳐낸 뒤 다시 못 잡는 틱
 const PARRY_KEEP = 0.35;      // 쳐낸 공에 남는 속도 비율
@@ -434,7 +436,14 @@ function shoot(s: MatchState, config: MatchConfig, i: number, c: number): void {
   if (ux * tg.x + uy * tg.y > AIM_COS && ux * dir > 0.05) {
     // 보는 방향이 골라인을 지나는 곳 — 골문 안쪽으로 자른 점을 노린다
     const yCross = b.y + (uy * (gx - b.x)) / ux;
-    const ty = clamp(yCross, -GOAL_HALF_W + AIM_INSET, GOAL_HALF_W - AIM_INSET);
+    let ty = clamp(yCross, -GOAL_HALF_W + AIM_INSET, GOAL_HALF_W - AIM_INSET);
+    // 지키는 골키퍼의 반대쪽 구석 — 세게 모을수록 그쪽으로 더 간다
+    const gk = config.players.find((q) => q.gk && q.side !== mp.side);
+    if (gk) {
+      const ky = s.players[gk.id].y;
+      const open = (ty >= ky ? 1 : -1) * (GOAL_HALF_W - AIM_INSET);
+      ty += (open - ty) * AIM_OPEN * clamp(c, 0, 1);
+    }
     const want = unit(gx - b.x, ty - b.y, ux, uy);
     const u = unit(ux + (want.x - ux) * AIM_ASSIST, uy + (want.y - uy) * AIM_ASSIST, ux, uy);
     ux = u.x; uy = u.y;
@@ -525,15 +534,25 @@ function touchFreeBall(s: MatchState, config: MatchConfig, controlled: boolean):
     if (mp.gk && controlled && d2 < KEEPER_REACH * KEEPER_REACH && b.z < KEEPER_REACH_Z) {
       const sp2 = b.vx * b.vx + b.vy * b.vy + b.vz * b.vz;
       if (sp2 < KEEPER_CATCH * KEEPER_CATCH) { if (d2 < pickD2) { pick = i; pickD2 = d2; } continue; }
-      if (sp2 < KEEPER_PARRY * KEEPER_PARRY) {
+      // 잡기엔 빠른 공 — 손에 닿아도 빠를수록 못 막는다(한 번만 뽑는다: 막든 못 막든 KEEPER_LOCK 동안 다시 안 닿는다).
+      // 2026-11-07 "골이 너무 안 난다" — 예전엔 KEEPER_PARRY 보다 느리면 언제나 쳐냈다. 그러면 모은 슛이 손에 닿는 순간 다 막혔다.
+      // 몸 쪽으로 오는 공은 빨라도 막고, 손끝(KEEPER_REACH)을 스치는 공일수록 속도가 승부를 가른다.
+      const sp = Math.sqrt(sp2);
+      const fast = 1 - clamp((KEEPER_PARRY - sp) / (KEEPER_PARRY - KEEPER_CATCH), 0, 1);   // 0 = 잡을 만큼 느림, 1 = 손이 못 따라감
+      const hv = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+      const off = hv > 1e-6 ? Math.abs((dx * b.vy - dy * b.vx) / hv) : 0;   // 공이 지나가는 길과 몸 중심 사이(옆으로)
+      const chance = KEEPER_SAVE_MAX * (1 - fast * clamp(off / KEEPER_REACH, 0, 1));
+      p.noTouch = KEEPER_LOCK;
+      if (rand(s) < chance) {
         // 쳐내기 — 경기장 쪽으로, 옆으로 비껴 힘을 잃고 나간다
         const dir = attackDir(mp.side);
         const side = b.y >= p.y ? 1 : -1;
-        const sp = Math.sqrt(sp2) * PARRY_KEEP;
-        b.vx = dir * sp * PARRY_OUT; b.vy = side * sp * PARRY_SIDE; b.vz = PARRY_LIFT;
-        p.noTouch = KEEPER_LOCK; s.lastTouch = i; s.passTo = null;
+        const out = sp * PARRY_KEEP;
+        b.vx = dir * out * PARRY_OUT; b.vy = side * out * PARRY_SIDE; b.vz = PARRY_LIFT;
+        s.lastTouch = i; s.passTo = null;
         continue;
       }
+      // 못 막았다 — 손을 스치고 지나간다(몸 한가운데로 온 공만 아래에서 몸에 맞는다)
     }
     if (controlled && d2 < ctl * ctl && b.z < PICKUP_MAX_Z && rel2 < PICKUP_MAX_REL * PICKUP_MAX_REL) {
       if (d2 < pickD2) { pick = i; pickD2 = d2; }
@@ -657,6 +676,11 @@ export function step(state: MatchState, config: MatchConfig, inputs: Input[]): M
   if (s.owner !== null) {
     const p = s.players[s.owner], b = s.ball;
     const c = carrySpot(p);
+    if (p.hold > 0) {
+      // 골키퍼가 든 공은 늘 경기장 쪽 — 골라인 쪽을 보고 잡았을 때 공이 골문 안에 놓여 골이 되는 일이 없게
+      const dir = attackDir(config.players[s.owner].side);
+      c.x = p.x + dir * (PLAYER_R + BALL_R + CARRY_GAP); c.y = p.y;
+    }
     b.x += (c.x - b.x) * CARRY_PULL; b.y += (c.y - b.y) * CARRY_PULL;
     b.vx = p.vx; b.vy = p.vy; b.vz = 0;
     b.z = p.hold > 0 ? KEEPER_HAND_Z : BALL_R;   // 골키퍼는 손에 든다
