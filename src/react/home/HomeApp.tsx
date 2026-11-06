@@ -23,7 +23,6 @@ import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 import { computeHomeSummary } from './model';
 import type { DutyTile } from './model';
-import SquadBanner from './SquadBanner';
 
 // 링크 타일 — antd Card 로 그리되, 앵커를 display:contents 로 감싸 그리드 자리·클릭을
 // Card 가 그대로 물려받게 한다(astro-island 와 같은 기법). 배경(--elevated)·정렬은 인라인
@@ -189,7 +188,7 @@ function App() {
           </p>
         )}</div>
       </div>
-      {data.players.length > 0 && <SquadBanner players={data.players} />}
+      {/* 맨 위 단체 사진 띠는 뺐다(2026-11-06 "단체사진 좀 촌스럽다 빼던지"). 그림 내려받기는 안내 > 자료(/kit/)에 그대로. */}
       <div className="rail">
         {s.meTile.kind === 'picked' && mePlayer
           ? (

@@ -1,14 +1,14 @@
 // 상단 메뉴 구성(2026-11-06 여덟 → 여섯 → 다섯, "명단이랑 티어도 하나로 합치자"). 경로는 전부 base 없는 '/…/' 꼴 — 링크로 쓸 때 href() 를 씌운다.
 // 화면을 모르는 순수 모듈이라 node 단위 테스트가 그대로 가져온다.
 export type SubItem = { to: string; label: string; also?: string[] };   // also = 이 탭이 켜지는 다른 경로 접두
-export type NavItem = { to: string; label: string; sub?: SubItem[] };
+export type NavItem = { to: string; label: string; sub?: SubItem[]; also?: string[] };
 
 export const NAV: NavItem[] = [
   { to: '/', label: '라커룸' },
-  { to: '/squad/', label: '명단', sub: [
-    { to: '/squad/', label: '선수' },                  // 선수 상세(/squad/N/)·배치 대결(/squad/place/)도 여기
-    { to: '/tier/', label: '티어' },
-  ] },
+  // 티어는 명단 화면 안의 보기 전환(표·아바타·티어)으로 들어갔다 — 하위 탭 줄을 따로 만들지 않는다
+  // (2026-11-06 "명단 누르면 티어 메뉴가 생겨버리네? 하단 탭으로 넣어야지"). /tier/ 주소는 그 보기로 바로 여는 문.
+  // 메뉴 이름은 안의 보기(표·아바타·티어)를 아우르는 「선수」(같은 날 "메뉴가 탭을 포괄하는 명칭이어야지", 전엔 「명단」).
+  { to: '/squad/', label: '선수', also: ['/tier/'] },
   { to: '/matches/', label: '매치', sub: [
     { to: '/matches/', label: '지난 경기' },          // /matches/new/ 등 하위 주소도 접두 일치로 여기
     { to: '/lineup/', label: '라인업 짜기' },
@@ -30,7 +30,7 @@ export function activeNav(path: string): { top: NavItem | null; sub: SubItem | n
     if (top.sub) {
       const sub = top.sub.find((s) => hitSub(path, s));
       if (sub) return { top, sub };
-    } else if (hit(path, top.to)) return { top, sub: null };
+    } else if (hit(path, top.to) || (top.also ?? []).some((p) => hit(path, p))) return { top, sub: null };
   }
   return { top: null, sub: null };
 }

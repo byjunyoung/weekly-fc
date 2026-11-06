@@ -2,7 +2,7 @@
 // "누가 더 ○○?" 두 선수 중 하나를 고르고, 고르는 즉시 서버가 두 숫자를 옮긴다(설계 §2·§3).
 // 선수 페이지의 "티어 게임에서 바꾸기"는 ?num=N 으로 들어와 그 선수가 낀 대결부터(항목마다 한 판) 낸다.
 import { App, Button, Segmented } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { avatarFaceSvg, avatarSvg } from '../../components/avatar';
 import { vote } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
@@ -169,7 +169,7 @@ function Duel({ players, used, today, focus, onExit }: { players: Player[]; used
   );
 }
 
-function Tier() {
+function Tier({ head }: { head: ReactNode }) {
   const { data } = useData();
   const me = useMeInfo();
   const [tierKey, setTierKey] = useState<TierKey>('ovr');
@@ -189,8 +189,9 @@ function Tier() {
 
   return (
     <>
-      <div className="page-head">
-        <h1>티어</h1>
+      {/* 제목 줄은 명단 화면이 그린다 — 여기는 보기 전환(head) 옆에 티어의 두 버튼만. */}
+      <div className="tier-embed-head">
+        {head}
         <span className="actions">
           {!playing && <Button onClick={() => setShareOpen(true)}>이미지로 공유</Button>}
           {!playing && <Button type="primary" onClick={() => { setFocus(null); setPlaying(true); }}>대결 시작</Button>}
@@ -225,6 +226,7 @@ function Tier() {
   );
 }
 
-export default function TierApp() {
-  return <ThemeRoot><Tier /></ThemeRoot>;
+/** 명단 화면(SquadApp)의 「티어」 보기. head = 보기 전환 줄. ThemeRoot 는 바깥이 감싼다. */
+export function TierPanel({ head }: { head: ReactNode }) {
+  return <Tier head={head} />;
 }

@@ -25,26 +25,40 @@ const VIEW_LABEL: Record<View, string> = { list: '목록', card: '아바타', ta
 /** 포지션 칩·이름 검색·보기 전환. **본문과 떼어 낸 건** 라인업 화면이 이 줄을 위 조작줄
  *  (인원·포메이션·자동 배치)과 같은 높이에 놓기 때문이다 — 그래야 피치 윗변과 명단 첫 줄이
  *  같은 선에서 시작한다(사용자 지적 2026-09-22). /squad/ 는 예전처럼 본문 바로 위에 둔다. */
-export function RosterFilters({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange }: {
+/** 화면이 보기 전환에 덧붙이는 칸(명단 화면의 「티어」). 명단을 다르게 그리는 보기가 아니라 다른 내용이라 View 와 따로 둔다. */
+export type ExtraView = { label: string; value: string };
+
+export function RosterFilters({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, extraViews = [], activeExtra = null, onExtraView, viewOnly = false, viewFirst = false }: {
   view: View; onViewChange: (v: View) => void; views?: View[];
   pos: string; onPosChange: (p: string) => void;
   q: string; onQChange: (q: string) => void;
+  extraViews?: ExtraView[]; activeExtra?: string | null; onExtraView?: (value: string) => void;
+  /** 포지션 필터·검색을 숨기고 보기 전환만 — 덧붙인 보기는 명단을 거르지 않는다. */
+  viewOnly?: boolean;
+  /** 보기 전환을 맨 앞줄에 따로 — 명단 화면에서 「티어」가 묻히지 않게(2026-11-06 "옮겨진 거 모르는 거 유의"). */
+  viewFirst?: boolean;
 }) {
+  const options = [...views.map((v) => ({ label: VIEW_LABEL[v], value: v as string })), ...extraViews];
+  const pick = (v: string) => (extraViews.some((e) => e.value === v) ? onExtraView?.(v) : onViewChange(v as View));
+  const switcher = options.length > 1 && (
+    <Segmented className="chips view-switch" value={activeExtra ?? view} onChange={(v) => pick(String(v))} options={options} />
+  );
   return (
     <div className="bd-list-head">
-      <Segmented className="chips" value={pos} onChange={(v) => onPosChange(String(v))}
-        options={[{ label: '전체', value: 'ALL' }, { label: 'GK', value: 'GK' }, { label: 'DF', value: 'DF' }, { label: 'MF', value: 'MF' }, { label: 'FW', value: 'FW' }]} />
-      <Input className="w-search" placeholder="이름" allowClear value={q} onChange={(e) => onQChange(e.target.value)} />
-      {views.length > 1 && (
-        <Segmented className="chips" value={view} onChange={(v) => onViewChange(v as View)}
-          options={views.map((v) => ({ label: VIEW_LABEL[v], value: v }))} />
+      {viewFirst && switcher}
+      {viewFirst && !viewOnly && <span className="bd-break" aria-hidden="true" />}
+      {!viewOnly && (
+        <Segmented className="chips" value={pos} onChange={(v) => onPosChange(String(v))}
+          options={[{ label: '전체', value: 'ALL' }, { label: 'GK', value: 'GK' }, { label: 'DF', value: 'DF' }, { label: 'MF', value: 'MF' }, { label: 'FW', value: 'FW' }]} />
       )}
+      {!viewOnly && <Input className="w-search" placeholder="이름" allowClear value={q} onChange={(e) => onQChange(e.target.value)} />}
+      {!viewFirst && switcher}
     </div>
   );
 }
 
-export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick, bodyOnly = false, tiers, allPlayers }: {
-  view: View; onViewChange: (v: View) => void;
+export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos, onPosChange, q, onQChange, rows, st, onPick, bodyOnly = false, tiers, allPlayers, extraViews, onExtraView, viewFirst }: {
+  view: View; onViewChange: (v: View) => void; extraViews?: ExtraView[]; onExtraView?: (value: string) => void; viewFirst?: boolean;
   /** 이 화면이 고를 수 있는 보기. 하나뿐이면 전환 칩을 아예 그리지 않는다(라인업은 목록 고정). */
   views?: View[];
   pos: string; onPosChange: (p: string) => void;
@@ -93,7 +107,7 @@ export default function RosterList({ view, onViewChange, views = ALL_VIEWS, pos,
 
   return (
     <>
-      {!bodyOnly && <RosterFilters view={view} onViewChange={onViewChange} views={views} pos={pos} onPosChange={onPosChange} q={q} onQChange={onQChange} />}
+      {!bodyOnly && <RosterFilters view={view} onViewChange={onViewChange} views={views} pos={pos} onPosChange={onPosChange} q={q} onQChange={onQChange} extraViews={extraViews} onExtraView={onExtraView} viewFirst={viewFirst} />}
       <div id="list-body" className={view === 'table' ? 'tbl-wrap' : view === 'card' ? 'fcard-wall' : ''}
         onClick={view === 'list' ? onBodyClick : undefined} onKeyDown={view === 'list' ? onBodyKeyDown : undefined}>
         {view === 'table' ? (
