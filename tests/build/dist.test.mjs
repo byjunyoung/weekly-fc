@@ -26,7 +26,7 @@ export const PAGES = [
 ];
 export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
-const REDIRECTS = ['matches/potm/index.html', 'teams/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'about/index.html'];   // tactics 는 2026-09-26 부터 진짜 페이지
+const REDIRECTS = ['matches/potm/index.html', 'teams/index.html', 'rules/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'about/index.html'];   // tactics 는 2026-09-26 부터 진짜 페이지
 export const SHELL_PAGES = PAGES.filter((p) => !REDIRECTS.includes(p));
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
 
@@ -52,8 +52,8 @@ test('상단 탭은 라커룸·선수·매치·전술·안내 다섯 갈래(2026
   for (const l of ['스쿼드', '명단', '기록', '소개', '팀짜기', '라인업', '티어', '규칙', '자료']) assert.ok(!html.includes(`<span>${l}</span>`), `남은 탭: ${l}`);
 });
 test('묶인 메뉴는 하위 탭 줄을 보인다(2026-11-06) — 규칙에선 안내 > 규칙, 라인업에선 매치 > 라인업 짜기', () => {
-  const rules = read('rules/index.html');
-  assert.match(rules, /class="subnav"[\s\S]*시작하기[\s\S]*규칙[\s\S]*자료/);
+  const guide = read('guide/index.html');
+  assert.match(guide, /class="subnav"[^>]*>\s*<a[^>]*class="active"[^>]*>가이드<\/a>\s*<a[^>]*>자료<\/a>/);
   assert.ok(!read('index.html').includes('class="subnav"'), '하위 탭 없는 메뉴엔 줄이 없다');
   assert.match(read('lineup/index.html'), /class="subnav"[\s\S]*지난 경기[\s\S]*라인업 짜기/);
   // 선수 = 티어·표·아바타, 가장 왼쪽(티어)이 기본("티어가 기본뷰", "기본값이 가장 왼쪽 탭")
@@ -62,7 +62,7 @@ test('묶인 메뉴는 하위 탭 줄을 보인다(2026-11-06) — 규칙에선 
   assert.match(tier, /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/SquadApp\.[^"]+\.js"/, '/tier/ 는 선수 화면');
   assert.match(read('index.html'), /<a href="\/weekly-fc\/tier\/"[^>]*><span>선수<\/span>/, '선수 메뉴는 기본 탭(티어)으로 간다');
   // 탭 줄은 어느 메뉴든 제목 바로 아래("탭 스타일이 왜 메뉴마다 다 다르냐 통일해")
-  for (const p of ['tier/index.html', 'squad/index.html', 'matches/index.html', 'matches/new/index.html', 'lineup/index.html', 'guide/index.html', 'rules/index.html', 'kit/index.html']) {
+  for (const p of ['tier/index.html', 'squad/index.html', 'matches/index.html', 'matches/new/index.html', 'lineup/index.html', 'guide/index.html', 'kit/index.html']) {
     const html = read(p);
     assert.equal((html.match(/class="subnav"/g) ?? []).length, 1, `${p}: 탭 줄은 하나`);
     assert.ok(html.indexOf('class="subnav"') > html.indexOf('class="page-head"'), `${p}: 탭 줄이 제목 위에 있다`);
@@ -87,10 +87,11 @@ test('검색 허용 페이지가 없으니 sitemap 도 없다', () => {
 });
 test('옛 주소는 새 주소로 넘긴다', () => {
   const cases = {
-    'about/index.html': '/weekly-fc/rules/',
-    'record/index.html': '/weekly-fc/rules/#fees',
-    'record/fines/index.html': '/weekly-fc/rules/#fees',
-    'record/duty/index.html': '/weekly-fc/rules/#duty',
+    'about/index.html': '/weekly-fc/guide/',
+    'rules/index.html': '/weekly-fc/guide/',
+    'record/index.html': '/weekly-fc/guide/#fees',
+    'record/fines/index.html': '/weekly-fc/guide/#fees',
+    'record/duty/index.html': '/weekly-fc/guide/#duty',
   };
   for (const [p, to] of Object.entries(cases)) assert.ok(read(p).includes(`url=${to}"`), `${p} → ${to}`);
 });
@@ -126,7 +127,7 @@ test('상단바 로그인 버튼은 React 섬으로 그려지고, 관리자 버�
   }
 });
 test('운영 탭 벌금 — 기준표만 빌드 때 그린 antd 표, 미납·내역 표는 없다(2026-09-30 "규칙 페이지 간소화")', () => {
-  const html = read('rules/index.html');
+  const html = read('guide/index.html');
   const fees = html.slice(html.indexOf('<section id="fees"'), html.indexOf('<section id="duty"'));
   assert.ok(fees.includes('ant-table'), '벌금 기준표가 antd 표가 아니다');
   for (const s of ['지각', '시작 후 도착', '30,000원', '노쇼', '종료까지 미참', '50,000원']) assert.ok(fees.includes(s), `기준표 내용: ${s}`);
@@ -142,7 +143,7 @@ test('팀 자료 — /kit/ 은 KitApp 섬, 로고 PNG 여섯 개가 dist/brand �
   }
 });
 test('운영 탭 봉사 — 봉사표는 DutyLive 섬, 이 페이지엔 옛 페이지 스크립트·Web Awesome 대화상자가 없다', () => {
-  const html = read('rules/index.html');
+  const html = read('guide/index.html');
   const duty = html.slice(html.indexOf('<section id="duty"'), html.indexOf('<section id="manner"'));
   const island = duty.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/DutyLive\.[^"]+\.js"[^>]*>/);
   assert.ok(island, 'DutyLive 섬 없음');
@@ -254,28 +255,22 @@ test('POTM 은 뺐다(2026-11-06) — 옛 투표 주소는 매치 목록으로 �
 
 test('벌금은 규칙 표만 남는다 — 기록 코드는 없다', () => {
   assert.deepEqual(grepSrc('writeFine|deleteFine|normalizeFine|unpaidRows|fineSummary'), []);
-  assert.ok(read('rules/index.html').includes('노쇼'), '규칙의 벌금표는 그대로');
+  assert.ok(read('guide/index.html').includes('노쇼'), '벌금표는 그대로(가이드로 옮김)');
 });
 
-test('안내 > 시작하기(2026-11-06) — 소제목 없이 한 화면 분량("안내 페이지 확! 줄여줘"), 벌금·음료 봉사는 면으로 띄운다, 가입은 필수가 아니다', () => {
+test('안내 > 가이드(2026-11-06) — 시작하기와 규칙을 한 페이지로("하나로 퉁치자"), 소제목 다섯, 가입은 필수가 아니다', () => {
   const html = read('guide/index.html');
   const main = html.slice(html.indexOf('<main'), html.indexOf('</main>'));
-  assert.match(main, /<h1[^>]*>시작하기<\/h1>/);
-  for (const s of ['필수는 아니고', 'youtube.com/@WEEKLYFC2020', 'instagram.com/weeklyfootballclub', '/weekly-fc/rules/', '토요일 오전 10–12시']) assert.ok(main.includes(s), s);
-  assert.equal((main.match(/<h2/g) ?? []).length, 0, '소제목은 없다');
-  // 벌금·음료 봉사 — "벌금이랑 음료 봉사 처음 왔다면에 강조해야지"
-  const promise = main.slice(main.indexOf('<section id="promise"'), main.indexOf('<section id="video"'));
-  assert.match(promise, /^<section id="promise" class="card[^"]*"/);
-  for (const s of ['30,000원', '50,000원', '미리 공지하면 면제', '음료 봉사', '매월 2명']) assert.ok(promise.includes(s), s);
+  assert.match(main, /<h1[^>]*>가이드<\/h1>/);
+  assert.deepEqual([...main.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1]), ['when', 'fees', 'duty', 'manner', 'more']);
+  assert.ok(!main.includes('class="tabs"'), '목차 줄은 없다');
+  for (const s of ['토요일 오전 10–12시', '필수는 아니고', 'youtube.com/@WEEKLYFC2020', 'instagram.com/weeklyfootballclub']) assert.ok(main.includes(s), s);
+  // 벌금·음료 봉사는 새 멤버가 먼저 보게 위쪽에("벌금이랑 음료 봉사 강조해야지")
+  const fees = main.slice(main.indexOf('<section id="fees"'), main.indexOf('<section id="duty"'));
+  for (const s of ['30,000원', '50,000원', '미리 공지하면 면제', '카카오뱅크']) assert.ok(fees.includes(s), s);
+  const duty = main.slice(main.indexOf('<section id="duty"'), main.indexOf('<section id="manner"'));
+  assert.ok(duty.includes('매월 2명'), '봉사 인원');
   assert.ok(html.includes('/weekly-fc/og.png'));
   assert.ok(!html.includes('자기소개 양식'), '양식은 봇이 보낸다');
 });
 
-test('규칙은 한 단(2026-11-06 "규칙도 뎁스가 너무 깊어") — 제목 아래 목차 줄 없이 소제목 넷, 통장은 비용 칸 안에', () => {
-  const html = read('rules/index.html');
-  assert.ok(!html.includes('class="tabs"'), '목차 줄이 남았다');
-  assert.deepEqual([...html.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1]), ['when', 'fees', 'duty', 'manner']);
-  const fees = html.slice(html.indexOf('<section id="fees"'), html.indexOf('<section id="duty"'));
-  assert.ok(fees.includes('카카오뱅크'), '통장 줄은 비용 칸에');
-  assert.ok(!html.includes('자기소개 양식'), '양식은 봇이 보낸다');
-});

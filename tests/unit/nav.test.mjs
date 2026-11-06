@@ -11,8 +11,8 @@ test('activeNav: 경로마다 정확히 하나', () => {
   assert.deepEqual(at('/matches/new/'), ['매치', '지난 경기']);
   assert.deepEqual(at('/lineup/'), ['매치', '라인업 짜기']);
   assert.deepEqual(at('/tier/'), ['선수', null]);
-  assert.deepEqual(at('/guide/'), ['안내', '시작하기']);
-  assert.deepEqual(at('/rules/'), ['안내', '규칙']);
+  assert.deepEqual(at('/guide/'), ['안내', '가이드']);
+  assert.deepEqual(at('/rules/'), ['안내', '가이드']);
   assert.deepEqual(at('/kit/'), ['안내', '자료']);
   assert.deepEqual(at('/stats/'), [null, null]);
 });

@@ -14,8 +14,8 @@ export const NAV: NavItem[] = [
   ] },
   { to: '/tactics/', label: '전술' },
   { to: '/guide/', label: '안내', sub: [
-    { to: '/guide/', label: '시작하기' },   // 처음엔 「처음 왔다면」 — 2026-11-06 "문구 촌스러움" 으로 바꿈
-    { to: '/rules/', label: '규칙' },
+    // 시작하기와 규칙은 「가이드」 한 페이지로 합쳤다(2026-11-06 "하나로 퉁치자 별로 내용 차이도 없구먼"). /rules/ 는 넘김 페이지.
+    { to: '/guide/', label: '가이드', also: ['/rules/'] },
     { to: '/kit/', label: '자료' },
   ] },
 ];

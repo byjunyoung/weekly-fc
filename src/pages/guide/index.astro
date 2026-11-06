@@ -2,35 +2,49 @@
 import Shell from '../../layouts/Shell.astro';
 import SubTabs from '../../components/SubTabs.astro';
 import GuideStart from '../../react/guide/GuideStart.tsx';
-import { MATCH_TIME, MATCH_MIN, PLACES, LINKS, FINE_TYPES, FINE_AMOUNT, FINE_EXEMPT, DUTY_PER_MONTH } from '../../lib/rules.ts';
-import { href } from '../../lib/url.ts';
+import FineRulesTable from '../../react/rules/FineRulesTable.tsx';
+import DutyLive from '../../react/rules/DutyLive.tsx';
+import { FINE_EXEMPT, MATCH_TIME, MATCH_MIN, PLACES, BANK, LINKS, DUTY_PER_MONTH } from '../../lib/rules.ts';
 ---
-<Shell title="시작하기" description="WEEKLY FC 새 멤버 안내 — 시간·장소, 벌금·음료 봉사, 경기 영상, 포털.">
-  <div class="page-head"><h1>시작하기</h1></div>
+<Shell title="가이드" description="WEEKLY FC 가이드 — 매주 토요일 풋살. 시간·장소, 벌금, 음료 봉사, 경기 영상.">
+  <div class="page-head"><h1>가이드</h1><div class="actions"><a class="chip" href={LINKS.kakao} target="_blank" rel="noopener">오픈카톡 →</a></div></div>
   <SubTabs path="/guide/" />
-  {/* 한 화면 분량(2026-11-06 "안내 페이지 확! 줄여줘") — 소제목 없이 네 덩이. 자세한 건 규칙 페이지가 맡는다. */}
+  {/* 시작하기와 규칙을 한 페이지로(2026-11-06 "가이드에 규칙이랑 시작하기 하나로 퉁치자 별로 내용 차이도 없구먼").
+      새 멤버가 먼저 볼 것(언제 어디서 → 벌금 → 음료 봉사)을 위에, 나머지는 아래에. #fees·#duty 는 넘김 페이지와 라커룸 봉사 칸이 쓴다. */}
   <article class="prose stack">
-    <p><strong>{MATCH_TIME}</strong> · {PLACES.join(' / ')}<br/>주중 단톡방 투표로 {MATCH_MIN}명 이상 모이면 진행하고, 대관비·음료비는 당일 정산합니다.</p>
-    {/* 벌금·음료 봉사는 새 멤버가 가장 놓치기 쉬운 약속이라 면(card)으로 띄운다(2026-11-06 "처음 왔다면에 강조해야지"). 값은 rules.ts 상수. */}
-    <section id="promise" class="card">
-      <ul><li>{FINE_TYPES.map((t, i) => <>{i > 0 && ' · '}{t} <strong>{FINE_AMOUNT[t].toLocaleString('ko-KR')}원</strong></>)} — {FINE_EXEMPT}</li><li><strong>음료 봉사</strong>는 매월 {DUTY_PER_MONTH}명씩 돌아가며 맡습니다</li></ul>
-      <a href={href('/rules/')}>규칙 전체 보기 →</a>
+    <section id="when"><h2>언제 어디서</h2>
+      <ul><li><strong>{MATCH_TIME}</strong> · {PLACES.join(' / ')}</li><li>주중 단톡방 투표, {MATCH_MIN}명 이상 모이면 진행</li><li>대관 실패나 비가 오면 논의해서 일정·장소를 조정</li></ul>
     </section>
-    <section id="video">
+    <section id="fees"><h2>벌금 · 비용</h2>
+      <FineRulesTable />
+      <p class="muted">{FINE_EXEMPT}</p>
+      <ul><li>대관비·음료비는 그날 참석자(용병 포함)끼리 당일 정산</li><li>벌금은 당일 구장비·음료비 정산에 먼저 쓰고, 남으면 모임 통장 공금으로</li><li>모임 통장: {BANK.name} {BANK.number} ({BANK.holder}) · 초대 문의: {BANK.contact}</li></ul>
+    </section>
+    <section id="duty"><h2>음료 봉사</h2>
+      <ul><li>매월 {DUTY_PER_MONTH}명씩 돌아가며 맡습니다</li><li>대관비·음료비 선납, 음료 구매, 조끼 대여·반납, 경기 뒤 정산 진행</li></ul>
+      <DutyLive client:load />
+    </section>
+    <section id="manner"><h2>에티켓</h2>
+      <ul><li>투표에 꼭 참여하기</li><li>불참 등 특이사항은 미리 공유</li><li>서로 존중하는 채팅</li></ul>
+    </section>
+    <section id="more"><h2>영상 · 포털</h2>
       <p>경기 영상은 유튜브 채널에 올라갑니다.</p>
       <div class="chips"><a class="chip" href={LINKS.youtube} target="_blank" rel="noopener">유튜브 채널 →</a><a class="chip" href={LINKS.instagram} target="_blank" rel="noopener">인스타그램 →</a></div>
-    </section>
-    <section id="portal">
-      <p>이 사이트는 필수는 아니고 재미로 씁니다. 이름을 고르면 선수 카드 꾸미기와 티어 대결을 할 수 있습니다.</p>
+      <p class="guide-portal">이 사이트는 필수는 아니고 재미로 씁니다. 이름을 고르면 선수 카드 꾸미기, 티어 대결, 등번호 바꾸기를 할 수 있습니다.</p>
       <GuideStart client:load />
     </section>
   </article>
 </Shell>
 <style>
-  /* rules.astro 의 본문 갈무리와 같다 — 한 줄 길이·행간 */
-  .prose > p, .prose section { max-width: var(--prose-max); }
+  /* 한글 본문 — 한 줄 길이는 WCAG 1.4.8 의 CJK 40자 상한(--prose-max 600px ÷ 15px),
+     행간은 klreq 7.4.1 의 비례 줄간격 예시 160%. w3.org/TR/WCAG22 · w3.org/TR/klreq */
+  .prose section { max-width: var(--prose-max); }
   .prose p, .prose li { line-height: 1.6; }
-  .prose ul { padding-left: 1.2em; margin: 0 0 var(--m-sm); }
+  /* 소제목만 갈무리 — 본문(p·li)은 긴 한글이라 그대로 둔다. letter-spacing 은 반드시 0: 비트맵 폰트는 자간이 붙으면 흐려진다. */
+  .prose h2 { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; margin: 0 0 var(--m-md); }
+  .prose h2::after { content: ""; display: block; width: var(--w-accent); height: 4px; background: var(--accent); margin-top: var(--m-sm); }
+  .prose ul, .prose ol { padding-left: 1.2em; margin: 0; }
   .prose li { margin-bottom: var(--m-xs); }
   .prose p { margin: 0 0 var(--m-md); }
+  .guide-portal { margin-top: var(--m-md); }
 </style>
