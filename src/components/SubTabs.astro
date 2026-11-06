@@ -1,0 +1,12 @@
+---
+// 제목 아래 탭 줄(정적 페이지용) — React 쪽 src/react/SubTabs.tsx 와 같은 마크업. 규칙·시작하기가 쓴다.
+import { activeNav } from '../lib/nav';
+import { href } from '../lib/url';
+interface Props { path: string }
+const { top, sub } = activeNav(Astro.props.path);
+---
+{top?.sub && (
+  <nav class="subnav" aria-label={`${top.label} 탭`}>
+    {top.sub.map((s) => <a href={href(s.to)} class:list={[{ active: s === sub }]} aria-current={s === sub ? 'page' : undefined}>{s.label}</a>)}
+  </nav>
+)}

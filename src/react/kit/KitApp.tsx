@@ -8,6 +8,7 @@ import { drawSquadImage, SQUAD_FORMATS, type SquadFormat } from '../../component
 import { href } from '../../lib/url';
 import ImageShareModal from '../ImageShareModal';
 import Loading from '../Loading';
+import SubTabs from '../SubTabs';
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 
@@ -38,11 +39,12 @@ function Kit() {
   }, [data, fmt, year]);
 
   const head = <div className="page-head"><h1>팀 자료</h1><div className="actions"><span className="muted">누구나 받아 가서 써도 됩니다</span></div></div>;
-  if (!data) return <Loading title="팀 자료" />;
+  if (!data) return <Loading title="팀 자료" tabs={<SubTabs path="/kit/" />} />;
   const S = SQUAD_FORMATS[fmt];
   return (
     <>
       {head}
+      <SubTabs path="/kit/" />
       <div className="stack">
         <section className="card">
           <div className="card-head"><h2>단체 사진</h2><span className="muted">{year} SQUAD · {data.players.length}명 · 지금 명단과 아바타로 그립니다</span></div>

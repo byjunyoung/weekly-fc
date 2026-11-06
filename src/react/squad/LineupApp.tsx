@@ -6,6 +6,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import * as L from '../../lib/lineup';
 import { MAX_COUNT, MIN_COUNT, SHAPES, type PitchKind } from '../../lib/formation';
 import Loading from '../Loading';
+import SubTabs from '../SubTabs';
 import ThemeRoot from '../ThemeRoot';
 import { useData } from '../useData';
 import type { View } from './model';
@@ -46,7 +47,7 @@ function Lineup() {
     return () => document.removeEventListener('keydown', onEsc);
   }, [selected]);
 
-  if (!data) return <Loading title="라인업" />;
+  if (!data) return <Loading title="라인업" tabs={<SubTabs path="/lineup/" />} />;
 
   const rows = data.players.filter((p) => (pos === 'ALL' || p.pos === pos) && (!q || p.name.includes(q)));
   const filled = st.slots.filter((x) => x != null).length;
@@ -74,6 +75,7 @@ function Lineup() {
       <div className="page-head">
         <h1>라인업 <span className="muted">선발 {filled}/{st.count}</span></h1>
       </div>
+      <SubTabs path="/lineup/" />
       {/* 위 줄은 아래 .bd 와 같은 격자다 — 왼쪽은 라인업 설정, 오른쪽은 명단 필터. 필터를 여기
           올려야 피치 윗변과 명단 첫 줄이 같은 선에서 시작한다(사용자 지적 2026-09-22). */}
       <div className="bd-toprow">

@@ -12,7 +12,7 @@ const ogUrl = SITE + href(Astro.url.pathname.startsWith('/weekly-fc') ? Astro.ur
 const ogImg = SITE + href(ogImage);
 // base 를 뗀 경로로 켜질 메뉴를 고른다(ogUrl 과 같은 방식).
 const barePath = Astro.url.pathname.startsWith('/weekly-fc') ? Astro.url.pathname.slice('/weekly-fc'.length) || '/' : Astro.url.pathname;
-const { top, sub } = activeNav(barePath);
+const { top } = activeNav(barePath);   // 탭 줄은 각 화면이 제목 아래에 그린다(SubTabs)
 ---
 <!doctype html>
 <html lang="ko">
@@ -82,11 +82,6 @@ const { top, sub } = activeNav(barePath);
   </header>
   <main class="main">
     <p class="warn load-err" id="load-err" hidden>데이터를 불러오지 못했습니다 · <button id="load-err-retry">다시 시도</button><button id="load-err-open" hidden>기본 브라우저로 열기</button></p>
-    {top?.sub && (
-      <nav class="subnav" aria-label={`${top.label} 하위 메뉴`}>
-        {top.sub.map((s) => <a href={href(s.to)} class:list={[{ active: s === sub }]}>{s.label}</a>)}
-      </nav>
-    )}
     <slot />
   </main>
   <!-- 푸터(2026-09-30 "최하단에 인스타·오픈채팅·유튜브 채널 다 적어두자") — 모든 페이지 공통. 주소는 lib/rules.ts LINKS 한 곳. -->

@@ -1,11 +1,13 @@
 ---
 import Shell from '../../layouts/Shell.astro';
+import SubTabs from '../../components/SubTabs.astro';
 import GuideStart from '../../react/guide/GuideStart.tsx';
 import { MATCH_TIME, MATCH_MIN, PLACES, LINKS, FINE_TYPES, FINE_AMOUNT, FINE_EXEMPT, DUTY_PER_MONTH } from '../../lib/rules.ts';
 import { href } from '../../lib/url.ts';
 ---
 <Shell title="시작하기" description="WEEKLY FC 새 멤버 안내 — 시간·장소, 벌금·음료 봉사, 경기 영상, 포털.">
   <div class="page-head"><h1>시작하기</h1></div>
+  <SubTabs path="/guide/" />
   {/* 한 화면 분량(2026-11-06 "안내 페이지 확! 줄여줘") — 소제목 없이 네 덩이. 자세한 건 규칙 페이지가 맡는다. */}
   <article class="prose stack">
     <p><strong>{MATCH_TIME}</strong> · {PLACES.join(' / ')}<br/>주중 단톡방 투표로 {MATCH_MIN}명 이상 모이면 진행하고, 대관비·음료비는 당일 정산합니다.</p>

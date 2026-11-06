@@ -13,6 +13,7 @@ import { fromMatch, matchLabel, snapshot, snapshotSquad } from '../../lib/matche
 import * as T from '../../lib/teams';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
+import SubTabs from '../SubTabs';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
@@ -61,7 +62,7 @@ function Teams() {
   // 갱신은 항상 **직전 상태**에서 계산한다(렌더 시점의 st 를 클로저로 잡으면 연타가 날아간다).
   const commit = (fn: (prev: T.TeamsState) => T.TeamsState): void => { setSt(fn); };
 
-  if (!data) return <Loading title="팀짜기" />;
+  if (!data) return <Loading title="팀짜기" tabs={<SubTabs path="/matches/new/" />} />;
 
   const players = data.players;
   const snap = external ? snapshotSquad(st, players) : snapshot(st, players);   // 저장 가능 여부(자체전: 안 정한 사람 없음·팀 둘 이상)
@@ -120,6 +121,7 @@ function Teams() {
           <Button onClick={() => { location.href = href('/matches/'); }}>매치 목록</Button>
         </div>
       </div>
+      <SubTabs path="/matches/new/" />
 
       <div className="bd-controls" role="group" aria-label="매치 종류">
         <Segmented value={kind} onChange={(v) => { setPicked(null); setKind(v as 'internal' | 'external'); }}

@@ -5,10 +5,9 @@ export type NavItem = { to: string; label: string; sub?: SubItem[]; also?: strin
 
 export const NAV: NavItem[] = [
   { to: '/', label: '라커룸' },
-  // 티어는 명단 화면 안의 보기 전환(표·아바타·티어)으로 들어갔다 — 하위 탭 줄을 따로 만들지 않는다
-  // (2026-11-06 "명단 누르면 티어 메뉴가 생겨버리네? 하단 탭으로 넣어야지"). /tier/ 주소는 그 보기로 바로 여는 문.
-  // 메뉴 이름은 안의 보기(표·아바타·티어)를 아우르는 「선수」(같은 날 "메뉴가 탭을 포괄하는 명칭이어야지", 전엔 「명단」).
-  { to: '/squad/', label: '선수', also: ['/tier/'] },
+  // 선수 = 티어·표·아바타 세 탭(제목 아래, SquadApp 이 그린다). 가장 왼쪽 탭인 티어가 기본 화면이라 메뉴는 /tier/ 로 간다
+  // (2026-11-06 "티어가 기본뷰", "기본값이 가장 왼쪽 탭", "메뉴가 탭을 포괄하는 명칭"). 표·아바타·선수 상세는 /squad/ 아래.
+  { to: '/tier/', label: '선수', also: ['/squad/'] },
   { to: '/matches/', label: '매치', sub: [
     { to: '/matches/', label: '지난 경기' },          // /matches/new/ 등 하위 주소도 접두 일치로 여기
     { to: '/lineup/', label: '라인업 짜기' },

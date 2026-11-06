@@ -56,9 +56,17 @@ test('묶인 메뉴는 하위 탭 줄을 보인다(2026-11-06) — 규칙에선 
   assert.match(rules, /class="subnav"[\s\S]*시작하기[\s\S]*규칙[\s\S]*자료/);
   assert.ok(!read('index.html').includes('class="subnav"'), '하위 탭 없는 메뉴엔 줄이 없다');
   assert.match(read('lineup/index.html'), /class="subnav"[\s\S]*지난 경기[\s\S]*라인업 짜기/);
-  // 명단은 하위 탭 줄이 없다 — 티어는 명단 화면 안의 보기 전환("명단 누르면 티어 메뉴가 생겨버리네? 하단 탭으로 넣어야지")
-  for (const p of ['squad/index.html', 'tier/index.html']) assert.ok(!read(p).includes('class="subnav"'), p);
-  assert.match(read('tier/index.html'), /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/SquadApp\.[^"]+\.js"[^>]*props="[^"]*initial[^"]*tier/, '/tier/ 는 명단 화면을 티어 보기로 연다');
+  // 선수 = 티어·표·아바타, 가장 왼쪽(티어)이 기본("티어가 기본뷰", "기본값이 가장 왼쪽 탭")
+  const tier = read('tier/index.html');
+  assert.match(tier, /class="subnav"[^>]*>\s*<a[^>]*class="active"[^>]*>티어<\/a>\s*<a[^>]*>표<\/a>\s*<a[^>]*>아바타<\/a>/);
+  assert.match(tier, /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/SquadApp\.[^"]+\.js"/, '/tier/ 는 선수 화면');
+  assert.match(read('index.html'), /<a href="\/weekly-fc\/tier\/"[^>]*><span>선수<\/span>/, '선수 메뉴는 기본 탭(티어)으로 간다');
+  // 탭 줄은 어느 메뉴든 제목 바로 아래("탭 스타일이 왜 메뉴마다 다 다르냐 통일해")
+  for (const p of ['tier/index.html', 'squad/index.html', 'matches/index.html', 'matches/new/index.html', 'lineup/index.html', 'guide/index.html', 'rules/index.html', 'kit/index.html']) {
+    const html = read(p);
+    assert.equal((html.match(/class="subnav"/g) ?? []).length, 1, `${p}: 탭 줄은 하나`);
+    assert.ok(html.indexOf('class="subnav"') > html.indexOf('class="page-head"'), `${p}: 탭 줄이 제목 위에 있다`);
+  }
 });
 test('푸터 — 셸 페이지마다 인스타·오픈카톡·유튜브 링크(2026-09-30)', () => {
   for (const p of SHELL_PAGES) {

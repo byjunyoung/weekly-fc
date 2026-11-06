@@ -13,6 +13,7 @@ import * as M from '../../lib/matches';
 import type { Match, Player } from '../../lib/types';
 import TeamsShareModal from '../teams/TeamsShareModal';
 import Loading from '../Loading';
+import SubTabs from '../SubTabs';
 import ThemeRoot from '../ThemeRoot';
 import { useAdmin } from '../useAdmin';
 import { useData } from '../useData';
@@ -110,7 +111,7 @@ function Matches() {
   const { data } = useData();
   const admin = useAdmin();
   const [teamsShare, setTeamsShare] = useState<Match | null>(null);   // 팀 나누기 이미지(2026-09-25 "매치 목록 뷰에 나와야지")
-  if (!data) return <Loading title="매치" />;
+  if (!data) return <Loading title="매치" tabs={<SubTabs path="/matches/" />} />;
   const matches = data.matches ?? [];
   const today = seoulToday();
   const rec = M.record(matches);
@@ -123,6 +124,7 @@ function Matches() {
           <Button type="primary" onClick={() => { location.href = href('/matches/new/'); }}>새 매치</Button>
         </div>
       </div>
+      <SubTabs path="/matches/" />
       {matches.length === 0 && (
         <div className="card"><h2>아직 저장된 매치가 없습니다</h2><p className="muted">[새 매치]에서 자체전(조끼 팀 나누기)이나 상대팀전을 고르고, 관리자 모드로 날짜를 골라 저장하면 여기에 쌓입니다.</p></div>
       )}
