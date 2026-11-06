@@ -97,3 +97,13 @@ test('봇 넷 + 공 셋 1분 — 실제로 차고 넣는다, 상태는 내내 �
   }
   assert.ok(s.kicks > 10 && s.goals > 3, `킥 ${s.kicks} 골 ${s.goals}`);
 });
+
+test('"골!" 표시는 3초에 한 번까지 — 2D·3D 훈련장이 같은 규칙(골 수는 그대로)', async () => {
+  const { popShown, POP_GAP } = await import('../../src/lib/games/free2d.ts');
+  const memo = { last: -Infinity };
+  assert.equal(popShown(100, memo), true);
+  assert.equal(popShown(100, memo), true, '같은 표시는 이어서');
+  assert.equal(popShown(150, memo), false, '3초 안의 다음 골');
+  assert.equal(popShown(100 + POP_GAP, memo), true);
+  assert.equal(POP_GAP, 180);
+});

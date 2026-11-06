@@ -53,7 +53,9 @@ export const AUTO_POWER = 0.15;       // 시간이 다 되면 나가는 약한 �
 export const READY_TICKS = 72;        // 누가 차고 누가 막나 보여 주는 시간
 export const RESULT_TICKS = 100;      // "골!"·"막았다!"·"빗나감" 보여 주는 시간
 const FLIGHT_MAX = 150;               // 공이 이만큼 날아도 판정이 안 나면 빗나감(멈춘 공 등)
-export const SD_MAX = 20;             // 서든데스 안전장치(쌍)
+// 2026-11-07 5단계 뒤 20 → 10: 두 사람이 다 가만히 있으면 5초 자동 슛(약한 가운데 땅볼)을 가운데 선 키퍼가 늘 막아 서든데스가 20쌍 이어졌다.
+// 자동 슛을 바꾸면 2D·3D 판이 같이 바뀌므로 상한만 줄였다 — 10쌍이면 무승부(가만히 있는 판 전체가 7분 남짓 → 4분 남짓). 3D 승부차기도 이 값을 쓴다.
+export const SD_MAX = 10;             // 서든데스 안전장치(쌍)
 export const AIM_STEP = 5, AIM_STEPS = 38;     // 조준은 5단위로, ±190 까지(골문 밖도 겨눌 수 있다 — 일부러 빗나가게)
 export const AIM_MAX = AIM_STEP * AIM_STEPS;
 /** 조준 표시가 스틱 끝까지 밀었을 때 움직이는 속도(단위/초) — 화면(키커 쪽)에서만 쓴다. */

@@ -145,3 +145,16 @@ test('키커 화면 조준(aim3) — 모으는 동안엔 입력에 조준이 없
   assert.deepEqual(keep, { x: -1, y: 1, kick: true, aim: null }, '골대 뒤 화면: 화면 오른쪽 = 경기 −y, 화면 위 = 높이');
   assert.deepEqual(pen3Input(AIM3_START, { x: 1, y: 0, kick: true }, null, 'aim').input, PEN3_IDLE, '구경은 입력 없음');
 });
+
+test('서든데스 상한 10쌍 — 둘 다 가만히 있어도(자동 슛을 가운데 키퍼가 막는다) 2D·3D 모두 4분 반 안에 무승부로 끝난다(전엔 7분 넘게)', async () => {
+  const { SD_MAX, penalty2d: p2 } = await import('../../src/lib/games/penalty2d.ts');
+  assert.equal(SD_MAX, 10);
+  for (const adapter of [penalty3d, p2]) {
+    const c = penCfg(1, 1, 5, 0, 2);
+    let s = adapter.create(c, 11), t = 0;
+    while (!adapter.ended(s) && t < 60 * 60 * 5) { s = adapter.step(s, c, c.players.map(() => adapter.idle)); t++; }
+    assert.ok(adapter.ended(s), `${adapter.id} 5분 안에 안 끝났다`);
+    assert.ok(t < 60 * 270, `${adapter.id} ${Math.round(t / 60)}초`);
+    assert.equal(s.taken[0], 5 + SD_MAX);
+  }
+});

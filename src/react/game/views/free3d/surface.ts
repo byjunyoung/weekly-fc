@@ -4,7 +4,7 @@
 // 처음 2.5초 "마음대로 차 보세요", 골마다 "골!" 1초, 카메라·화면 밖 화살표는 내 공(없으면 가장 가까운 공)을 본다, [공 모으기] 는 공용 틀의 게임 버튼(act).
 import { Vector3 } from 'three';
 import type { FreeConfig } from '../../../../lib/games/free2d';
-import { POP_TICKS } from '../../../../lib/games/free2d';
+import { POP_TICKS, popShown } from '../../../../lib/games/free2d';
 import type { Free3Config, Free3Input, Free3State } from '../../../../lib/games/free3d';
 import { ballOf } from '../../../../lib/game3d/multiball3d';
 import { RULES3D, TICK_HZ } from '../../../../lib/game3d/sim';
@@ -67,6 +67,7 @@ export function createFreeSurface(o: SurfaceIn<Free3Config>): Surface<Free3State
   const faceOf = (s: Free3State): number => { const p = myId === null ? undefined : s.players[myId]; return p ? Math.atan2(p.fy, p.fx) : 0; };
   let last: Free3State | null = null, lastSum = '', lastPop = '-', avgMs = 16, slowFor = 0, gaugeOn = false, arrowOn = false;
   const vCam = new Vector3();
+  const popMemo = { last: -Infinity };
   const onLost = (e: Event): void => { e.preventDefault(); dead = true; lost.textContent = '3D 화면이 끊겼습니다 — ✕ 로 나가 다시 열어 주세요.'; lost.style.display = ''; };
   canvas.addEventListener('webglcontextlost', onLost);
 
@@ -104,7 +105,9 @@ export function createFreeSurface(o: SurfaceIn<Free3Config>): Surface<Free3State
       const t = `자유 훈련장 · 공 ${config.balls}개 · 들어간 골 ${s.goals}`;
       if (t !== lastSum) { sum.textContent = t; lastSum = t; }
       // 처음 2.5초 안내, 골마다 "골!" 1초
-      const pop = s.pops.length ? s.pops[s.pops.length - 1] : null;
+      // "골!" 은 3초에 한 번까지(popShown — 2D 훈련장과 같은 규칙, 연습 봇 넷이면 골이 잦다). 골 수·소리는 그대로.
+      const shownPops = s.pops.filter((p) => popShown(p.tick, popMemo));
+      const pop = shownPops.length ? shownPops[shownPops.length - 1] : null;
       const popOn = !!pop && s.tick - pop.tick < POP_TICKS;
       const startOn = s.tick < START_HINT_TICKS;
       const key = popOn ? `p${pop!.tick}` : startOn ? 'start' : '';
