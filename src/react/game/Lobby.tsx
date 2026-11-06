@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { avatarFaceSvg } from '../../components/avatar';
 import { avatarSpecFor } from '../../lib/avatar';
 import type { Member, Team } from '../../lib/game/room';
-import { NO_PICKS } from '../../lib/game/room';
+import { MAX_HUMANS, NO_PICKS } from '../../lib/game/room';
 import { gameOf, gamesOf } from '../../lib/games/registry';
 import type { Player } from '../../lib/types';
 import type { GuestSession, HostSession, SessionView } from './net/session';
@@ -58,6 +58,8 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
   const me = room.members.find((m) => m.clientId === view.clientId);
   const seats = entry.botSeats ? entry.botSeats(room) : null;
   const kinds = gamesOf(entry.mode);
+  // 편이 없는 게임(자유 훈련장 — GameEntry.lobby 'all')은 "참가" 한 칸: 옮기기·자동 나누기·봇 칸이 없다(2026-11-07 2단계).
+  const together = entry.lobby === 'all';
   const editable = !!host && room.phase === 'lobby';
   const block = host ? host.startBlock() : null;
   const conn = connText(view.conn);
@@ -90,6 +92,19 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
     ) : <div key={m.clientId} className={cls} aria-label={isMe ? `${m.name}(나)` : m.name}>{inner}</div>;
   };
 
+  /** 누를 수 없는 칩(참가 칸 — 옮길 칸이 없다). */
+  const chipStatic = (m: Member) => {
+    const p = byNum.get(m.num);
+    const isMe = m.clientId === view.clientId;
+    return (
+      <div key={m.clientId} className={`game-chip${isMe ? ' is-me' : ''}`} aria-label={isMe ? `${m.name}(나)` : m.name}>
+        <span className="game-chip-face" aria-hidden="true"
+          dangerouslySetInnerHTML={{ __html: avatarFaceSvg(avatarSpecFor(m.num, p?.avatar ?? ''), 24, p?.jersey ?? '', true) }} />
+        <span className="game-chip-name">{m.name}</span>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="page-head">
@@ -104,10 +119,22 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
         {!conn && view.hostSlow && <p className="game-conn" role="status">방장 응답을 기다리는 중…</p>}
         {room.phase === 'match' && <p className="game-conn" role="status">경기가 진행 중입니다 — 곧 구경 화면이 열립니다</p>}
         <p className="muted game-hint" aria-live="polite">
-          {editable ? (picked ? '옮길 칸을 누르세요 · 다시 누르면 취소' : '이름을 누르고 칸을 누르면 옮겨집니다 · 빈자리는 봇이 채웁니다')
+          {together ? `편 없이 방 사람 모두가 같이 뜁니다(${MAX_HUMANS}명까지, 나머지는 구경)`
+            : editable ? (picked ? '옮길 칸을 누르세요 · 다시 누르면 취소' : '이름을 누르고 칸을 누르면 옮겨집니다 · 빈자리는 봇이 채웁니다')
             : '방장이 팀을 나누는 중입니다'}
           {` · 방장 ${hostName}`}
         </p>
+        {together ? (
+          <div className="game-board is-together">
+            <section className="game-col">
+              <div className="game-col-head"><span>참가</span><span className="muted">{Math.min(MAX_HUMANS, room.members.length)}명</span></div>
+              <div className="game-col-list">
+                {room.members.slice(0, MAX_HUMANS).map((m) => chipStatic(m))}
+                {room.members.length > MAX_HUMANS && <p className="muted game-hint">구경: {room.members.slice(MAX_HUMANS).map((m) => m.name).join(', ')}</p>}
+              </div>
+            </section>
+          </div>
+        ) : (
         <div className="game-board">
           {COLS.map((c) => {
             const list = room.members.filter((m) => m.team === c.team);
@@ -136,6 +163,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
             );
           })}
         </div>
+        )}
 
         <div className="card">
           <gv.Settings room={room} players={players} editable={editable}
@@ -150,7 +178,7 @@ export function Lobby({ session, view, players, onLeave, onShare }: {
             )} />
           <div className="game-actions">
             {host && <Button type="primary" size="large" disabled={!editable || !!block} onClick={() => host.start()}>시작</Button>}
-            {host && <Button size="large" disabled={!editable} onClick={() => { setPicked(null); host.autoBalance(); }}>자동 나누기</Button>}
+            {host && !together && <Button size="large" disabled={!editable} onClick={() => { setPicked(null); host.autoBalance(); }}>자동 나누기</Button>}
             {guest && <Button size="large" disabled={room.phase !== 'lobby'} onClick={() => setRepick(true)}>선수 바꾸기</Button>}
           </div>
           {host && gv.hostHint && <p className="muted game-hint">{gv.hostHint}</p>}

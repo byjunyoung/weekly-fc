@@ -11,7 +11,7 @@ import { MatchOverlay, usePlaySurface, type Live, type ResultBox } from './Match
 import { MAX_CATCHUP, STEP_MS } from './net/common';
 import { smootherFor } from './net/smooth';
 import { play as playSfx } from './sfx';
-import type { AnyView, SoloSetup } from './views/types';
+import type { AnyView, Scene, SoloSetup } from './views/types';
 
 /** 화면에 걸린 한 판 — make 를 다시 부르면 새 씨앗으로 같은 설정의 판(다시 하기). */
 export type SoloRun = SoloSetup<unknown> & { key: number; game: string; make: () => SoloSetup<unknown>; roster: Player[] };
@@ -22,12 +22,14 @@ export function SoloMatch({ run, adapter, view, live, onRestart, onExit }: {
 }) {
   const { modal } = App.useApp();
   const paused = useRef(false);
+  const sceneRef = useRef<Scene<unknown, unknown, unknown> | null>(null);   // 게임 버튼(공 모으기 등)이 장면에 닿는 길
   const [final, setFinal] = useState<unknown>(null);
   const { config, seed, myId, roster } = run;
 
   const { refs, touch } = usePlaySurface({
     view, config, roster, playing: true, live,
     run: ({ scene, readHuman }) => {
+      sceneRef.current = scene;
       const g = adapter, smooth = smootherFor(g.bodies);
       let state = g.create(config, seed);
       let prev = state;
@@ -72,6 +74,7 @@ export function SoloMatch({ run, adapter, view, live, onRestart, onExit }: {
         if (endTimer) clearTimeout(endTimer);
         document.removeEventListener('visibilitychange', onVis);
         live.current.state = null; live.current.config = null; live.current.override = null; live.current.camera = null;
+        sceneRef.current = null;
       };
     },
   });
@@ -94,5 +97,7 @@ export function SoloMatch({ run, adapter, view, live, onRestart, onExit }: {
     ),
   };
 
-  return <MatchOverlay refs={refs} xLabel="경기 나가기" onX={confirmExit} kickShown={touch && !result} result={result} />;
+  // 혼자 하기는 내가 방장이자 유일한 사람 — 게임 버튼을 모두 보인다.
+  const actions = view.actions?.map((a) => ({ id: a.id, label: a.label, onClick: () => sceneRef.current?.act?.(a.id) }));
+  return <MatchOverlay refs={refs} xLabel="경기 나가기" onX={confirmExit} kickShown={touch && !result} result={result} actions={actions} />;
 }

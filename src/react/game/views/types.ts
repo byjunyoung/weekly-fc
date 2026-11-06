@@ -25,11 +25,18 @@ export type Scene<S, C, I> = {
   toInput(h: ScreenInput): I;
   /** 지금 카메라(디버그 훅). 없으면 null. */
   camera(): Camera | null;
+  /** 화면 버튼(GameView.actions)을 눌렀다(2026-11-07 2단계). 장면이 다음 toInput 에 그 뜻을 한 번 실어 보낸다 — 버튼도 결국 "내 입력"이라
+   *  방장·손님·혼자 모두 같은 길(입력 정수)로 계산에 닿고, 세션은 따로 알 것이 없다. 버튼이 없는 게임은 두지 않는다. */
+  act?(id: string): void;
   dispose(): void;
 };
 
 /** 결과 상자 — outcome 큰 글자, tone 색, score 점수 줄, sub 작은 설명. 버튼은 공용 틀이 붙인다(혼자·방장·손님마다). */
-export type ResultView = { outcome: string; tone: 'win' | 'lose' | 'draw'; score: ReactNode; sub: string };
+export type ResultView = {
+  outcome: string; tone: 'win' | 'lose' | 'draw'; score: ReactNode; sub: string;
+  /** 점수 아래 자세한 줄(2026-11-07 2단계 — 승부차기의 선수별 성공 수 같은 것). 없으면 안 그린다. */
+  detail?: ReactNode;
+};
 
 /** 혼자 하기의 한 판 — 다시 하기는 make 를 한 번 더 부른다(새 씨앗). */
 export type SoloSetup<C> = { config: C; seed: number; myId: number };
@@ -77,6 +84,9 @@ export type GameView<C, S, I, T> = {
   controls: string;
   /** 입장 화면의 혼자 연습 칸. */
   Solo: ComponentType<SoloProps<C>>;
+  /** 경기 화면의 게임 버튼(2026-11-07 2단계 — 자유 훈련장의 [공 모으기]). 누르면 장면의 act(id) 가 불리고, 장면이 그 뜻을 내 입력에 싣는다.
+   *  그래서 이 판에서 내 자리가 있는 사람에게만 보인다 — host 면 혼자 하기와 방장, all 이면 뛰는 사람 모두. 없으면 버튼이 없다. */
+  actions?: { id: string; label: string; who: 'host' | 'all' }[];
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

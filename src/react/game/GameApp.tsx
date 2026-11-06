@@ -18,7 +18,7 @@ import { createRealtimeTransport } from './net/realtime';
 import { createGuestSession, createHostSession, type GuestSession, type HostSession, type SessionView } from './net/session';
 import { OnlineMatch } from './OnlineMatch';
 import {
-  clearMarks, clientId, hostedCode, inviteUrl, joinedCode, markHost, markJoined, roomFromUrl, setRoomInUrl, shareInvite,
+  clearMarks, clientId, hostedCode, hostedGame, inviteUrl, joinedCode, markHost, markJoined, roomFromUrl, saveHostGame, setRoomInUrl, shareInvite,
 } from './online';
 import type { Live } from './MatchFrame';
 import { SoloMatch, type SoloRun } from './SoloMatch';
@@ -83,9 +83,12 @@ function GameRoot() {
 
   const openHost = useCallback((p: Player, code: string) => {
     if (!data || onlineRef.current) return;
+    // 이 탭이 열었던 방을 다시 여는 것(새로고침)이면 그때의 게임 종류와 설정으로 — 주소의 ?g= 가 아니라(2026-11-07 2단계).
+    const back = hostedCode() === code ? hostedGame(code) : null;
+    const g = back && gameOf(back.game) ? back.game : game;
     const session = createHostSession({
       transport: createRealtimeTransport(code), roster: data.players, me: { clientId: clientId(), num: p.num, name: p.name }, code, now,
-      games: gameOf, game,
+      games: gameOf, game: g, settings: back && back.game === g ? back.settings : undefined,
     });
     markHost(code);
     setRoomInUrl(code);   // 주소창이 곧 초대 링크
@@ -146,6 +149,10 @@ function GameRoot() {
 
   const view = useSyncExternalStore(online?.session.subscribe ?? noSub, online?.session.getView ?? noView, noView);
 
+  // 방장은 방의 게임 종류와 설정을 탭에 적어 둔다 — 새로고침해 방을 다시 열어도 그 게임으로(openHost 가 읽는다).
+  const hostRoom = online?.session.role === 'host' ? view?.room ?? null : null;
+  useEffect(() => { if (hostRoom && online) saveHostGame(online.code, hostRoom.game, hostRoom.settings); }, [hostRoom?.game, hostRoom?.settings, online]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   // 세션이 끝났다(방장 끊김·거절·방 닫힘) — 입장 화면으로, 이유를 띄운다. 주소의 ?room= 은 남겨 다시 들어갈 수 있게.
   useEffect(() => {
     if (!online || !view || view.stage !== 'ended') return;
@@ -202,9 +209,12 @@ function GameRoot() {
     );
   }
 
+  // 내가 연 방을 다시 여는 입장 화면이면 그 방의 게임 이름을 보인다(주소의 ?g= 가 아니라).
+  const back = roomCode && hostedCode() === roomCode ? hostedGame(roomCode) : null;
+  const entryGame = back && gameOf(back.game) ? back.game : game;
   return (
     <>
-      <Entry game={game} players={data.players} roomCode={roomCode} reopen={!!roomCode && hostedCode() === roomCode} message={msg}
+      <Entry game={entryGame} players={data.players} roomCode={roomCode} reopen={!!roomCode && hostedCode() === roomCode} message={msg}
         onSolo={(make) => startSolo(make, data.players, game)} onCreate={onCreate} onJoin={onJoin} />
       {match && gameOf(match.game) && viewOf(match.game) && (
         <SoloMatch key={match.key} run={match} adapter={gameOf(match.game)!.adapter} view={viewOf(match.game)!} live={live}

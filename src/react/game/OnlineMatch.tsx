@@ -3,6 +3,7 @@
 // 사용자: "PC 모바일 둘다 최적화". 한마디는 PC 숫자 1~6. 프레임마다 리액트 상태를 건드리지 않는다:
 // rAF 가 세션의 advance/frame 을 부르고 장면에 그린다. 리액트 상태는 세션 view(바뀔 때만 새 객체), 한마디 메뉴 열림, 터치 여부뿐.
 import { App, Button } from 'antd';
+import { useRef } from 'react';
 import { PHRASES } from '../../lib/games/net';
 import type { AnyAdapter } from '../../lib/games/adapter';
 import type { Player } from '../../lib/types';
@@ -10,7 +11,7 @@ import type { GuestSession, HostSession, SessionView } from './net/session';
 import { connText } from './Lobby';
 import { MatchOverlay, usePlaySurface, type Live, type ResultBox } from './MatchFrame';
 import { play as playSfx } from './sfx';
-import type { AnyView } from './views/types';
+import type { AnyView, Scene } from './views/types';
 
 export function OnlineMatch({ session, view, adapter, gameView, roster, live, onLeaveRoom }: {
   session: HostSession | GuestSession; view: SessionView; adapter: AnyAdapter; gameView: AnyView; roster: Player[];
@@ -22,10 +23,12 @@ export function OnlineMatch({ session, view, adapter, gameView, roster, live, on
   const config = view.config;
   const playing = view.myId !== null;
   const isHost = session.role === 'host';
+  const sceneRef = useRef<Scene<unknown, unknown, unknown> | null>(null);   // 게임 버튼(공 모으기 등)이 장면에 닿는 길
 
   const { refs, touch } = usePlaySurface({
     view: gameView, config, roster, playing, live,
     run: ({ scene, readHuman }) => {
+      sceneRef.current = scene;
       session.setInputReader(playing ? readHuman : null);
       // PC 한마디: 숫자 1~6. 글자 입력 칸에서는 안 먹는다(경기 화면엔 없지만 확인창이 뜰 수 있다).
       const onKey = (e: KeyboardEvent): void => {
@@ -55,6 +58,7 @@ export function OnlineMatch({ session, view, adapter, gameView, roster, live, on
         cancelAnimationFrame(raf);
         window.removeEventListener('keydown', onKey);
         session.setInputReader(null);
+        sceneRef.current = null;
       };
     },
   });
@@ -79,10 +83,13 @@ export function OnlineMatch({ session, view, adapter, gameView, roster, live, on
       : <p className="muted">잠시 뒤 방으로 돌아갑니다</p>,
   };
 
+  // 게임 버튼은 내 입력에 실려 가므로 이 판에 내 자리가 있어야 한다. host 버튼은 방장만.
+  const actions = playing ? gameView.actions?.filter((a) => a.who === 'all' || isHost).map((a) => ({ id: a.id, label: a.label, onClick: () => sceneRef.current?.act?.(a.id) })) : undefined;
+
   return (
     <MatchOverlay refs={refs} xLabel={isHost ? '경기 멈추기' : '방에서 나가기'} onX={confirmExit}
       say={playing ? (k) => { session.say(k); } : undefined} watching={!playing}
       banner={conn || view.paused || view.hostSlow ? conn ?? (view.paused ? '방장이 잠깐 자리를 비웠습니다' : '방장 응답을 기다리는 중…') : null}
-      kickShown={touch && playing && !result} result={result} />
+      kickShown={touch && playing && !result} result={result} actions={actions} />
   );
 }
