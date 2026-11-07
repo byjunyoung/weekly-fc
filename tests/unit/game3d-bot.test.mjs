@@ -102,9 +102,9 @@ test('골키퍼 봇 — 정면 약한 슛은 막고, 구석으로 세게 찬 슛
     for (let t = 0; t < 120 && s.phase === 'play'; t++) s = step(s, cfg, [{ ...NO_INPUT }, botInput(s, cfg, 1)]);
     return s;
   };
-  const weak = fire(0, 8);
+  const weak = fire(0, 2);   // 톡 친 슛(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자")
   assert.deepEqual(weak.score, [0, 0], '정면 약한 슛');
-  const strong = fire(0.2, 44);
+  const strong = fire(0.2, 35);   // 게이지 65% — 잘 들어가는 띠
   assert.deepEqual(strong.score, [1, 0], '구석 강슛');
 });
 
@@ -126,18 +126,20 @@ function shotFrom(x0, y0, ty, hold, seed) {
   for (let t = 0; t < 150 && s.phase === 'play'; t++) s = step(s, duel, [{ ...NO_INPUT }, botInput(s, duel, 1)]);
   return s.score[0] > 0;
 }
-test('슛 결과 — 구석으로 모은 슛은 35~80% 들어가고, 골키퍼 정면은 세게 차도 대부분, 약하게 차면 전부 막힌다', () => {
+test('슛 결과 — 구석으로 잘 모은 슛은 35~90% 들어가고, 골키퍼 정면은 세게 차도 절반 넘게, 톡 차면 전부 막힌다', () => {
   let goals = 0, n = 0, straight = 0, sn = 0, weak = 0;
   let seed = 1;
   for (const x0 of [HW - 12, HW - 10, HW - 8]) for (const y0 of [-4, 0, 4]) {   // 골대에서 8~12m(경기장 길이와 상관없이 — 2026-11-07 넓힘)
-    for (const ty of [-2, -1.5, 1.5, 2]) for (const hold of [36, 48]) { goals += shotFrom(x0, y0, ty, hold, seed++) ? 1 : 0; n++; }
-    for (const hold of [36, 48]) { straight += shotFrom(x0, y0, 0, hold, seed++) ? 1 : 0; sn++; }
-    weak += shotFrom(x0, y0, 0, 8, seed++) ? 1 : 0;
+    for (const ty of [-2, -1.5, 1.5, 2]) for (const hold of [33, 40]) { goals += shotFrom(x0, y0, ty, hold, seed++) ? 1 : 0; n++; }
+    for (const hold of [33, 40]) { straight += shotFrom(x0, y0, 0, hold, seed++) ? 1 : 0; sn++; }
+    weak += shotFrom(x0, y0, 0, 2, seed++) ? 1 : 0;
   }
   const rate = goals / n;
   // 위 끝 70% → 80%(2026-11-07 "3d는 슈팅 보정을 해줘야지 골대로 가게" — 골문 쪽을 보고 찬 공이 모두 골문 안으로 가니 구석 슛이 더 들어간다)
-  assert.ok(rate >= 0.35 && rate <= 0.8, `구석 ${goals}/${n}`);
-  assert.ok(straight / sn <= 0.25, `정면 강슛 ${straight}/${sn}`);
+  // 게이지(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자") — 잘 들어가는 띠(60~75%)로 구석에 찬 슛이라 위 끝 80% → 90%. 꽉 채운 슛은 크로스바를 넘는다(sim 시험).
+  assert.ok(rate >= 0.35 && rate <= 0.9, `구석 ${goals}/${n}`);
+  // 정면 강슛 위 끝 25% → 45%(같은 날 게이지 — 잘 들어가는 띠에서 슛이 이미 가장 빠르다(24m/s). 몸 쪽 공은 여전히 다 막고, 반대 구석으로 조금 당긴 공이 손끝을 지나간다)
+  assert.ok(straight / sn <= 0.45, `정면 강슛 ${straight}/${sn}`);
   assert.equal(weak, 0, '약한 정면 슛');
 });
 

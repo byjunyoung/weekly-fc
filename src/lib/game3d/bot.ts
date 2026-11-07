@@ -10,7 +10,7 @@
 // 골키퍼: 골대 앞 짧은 호 위에서 공을 따라 서고, 슛이 오면 반응 틱 뒤에 막으러 움직인다. 잡은 공은 잠깐 들고 있다 동료에게.
 // 일부러 틀리게 하는 값(조준·머뭇거림·결정)은 틱과 id 를 섞은 정수 해시에서 나온다 — 난수 함수·삼각함수는 안 쓴다.
 // 슛·패스는 "누름 → 뗌"이 필요한데 봇은 기억이 없다 — 상태의 charge·passHeld 를 보고 이어서 누르거나 뗀다.
-import { attackDir, NO_INPUT, passTarget, PITCH3D, RULES3D, spotOf, type Input, type MatchConfig, type MatchState, type Side } from './sim.ts';
+import { attackDir, gaugeFor, NO_INPUT, passTarget, PITCH3D, RULES3D, spotOf, type Input, type MatchConfig, type MatchState, type PassKind, type Side } from './sim.ts';
 
 // ═══════════ 봇 조절 값 ═══════════
 const HOME_FOLLOW_X = 0.42;   // 자리가 공의 x 를 따라가는 비율
@@ -22,14 +22,18 @@ const SHOOT_TURN = 12;        // 골대까지 이 안이면 패스 대신 골대
 const PRESS_R = 2.4;          // 앞쪽 이 거리 안에 상대가 있으면 "압박받는다"
 const OPEN_R = 2.6;           // 동료 둘레 이 안에 상대가 없으면 "비었다"
 const AHEAD_GAIN = 3;         // 동료가 나보다 이만큼 더 앞이면 앞으로 주는 패스를 생각한다
-const PASS_AIM_COS = 0.88;    // 패스를 누르기 전에 동료 쪽을 이만큼 보고 있어야 한다
+const PASS_AIM_COS = 0.88;    // 패스를 떼기 전에 동료 쪽을 이만큼 보고 있어야 한다
+const PASS_PRESS_COS = 0.5;   // 동료 쪽을 이만큼 보면 모으기 시작한다(게이지가 차는 동안 마저 돈다 — 2026-11-07 "게이지 시스템 피파랑 비슷하게 가자")
 const HUMAN_PASS_BONUS = 0.35;// 사람 동료에게 주는 쪽으로 기우는 정도(결정 제비에 더한다)
 const DECIDE_HOLD = 36;       // 패스할까 말까 제비가 바뀌는 간격(틱)
 const HESITATE_HOLD = 45;     // 머뭇거림 제비 간격
 const HESITATE_P = 0.1;       // 머뭇거릴 확률
 const HESITATE_SPEED = 0.4;   // 머뭇거릴 때 속도 배수
 const AIM_ERR = 0.85;         // 슛 조준이 골문 가운데에서 빗나가는 폭(골문 반폭 비율)
-const CHARGE_ERR = 0.15;      // 슛 세기 오차
+const CHARGE_ERR = 0.25;       // 슛 세기 오차
+// 게이지(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자") — 봇 슛은 가운데쯤(잘 들어가는 띠)에 오차를 얹어, 패스는 받을 동료 거리만큼 모았다 뗀다
+const SHOT_SWEET = 0.7;      // 봇이 노리는 슛 게이지(가운데쯤 — 꽉 채우면 크로스바를 넘기 쉽다)
+const SHOT_PER_M = 0.008;     // 골대가 멀수록 조금 더 세게(m 마다)
 // 키 배치 이후(2026-11-07 "3d 게임은 키를 FC온라인이랑 동일하게 해주면 좋을듯") — 봇도 스루·로빙·질주·태클을 가끔 쓴다
 const SPRINT_CHASE = 4;       // 공까지 이보다 멀면 질주해서 쫓는다(체력 SPRINT_MIN 넘을 때)
 const SPRINT_MIN = 0.45;      // 체력이 이보다 적으면 봇은 질주를 아낀다
@@ -167,8 +171,8 @@ function carrierInput(state: MatchState, config: MatchConfig, id: number): Input
   const ux = tgx / dGoal, uy = tgy / dGoal;
   const facingGoal = me.fx * ux + me.fy * uy;
 
-  // 슛 — 한번 모으기 시작했으면 정한 세기까지 이어서 누르고, 닿으면 뗀다(떼는 순간 나간다)
-  const want = clamp(0.35 + dGoal / 22 + noise(id, state.tick >> 5) * CHARGE_ERR, 0.25, 0.97);
+  // 슛 — 한번 모으기 시작했으면 정한 세기까지 이어서 누르고, 닿으면 뗀다(떼는 순간 나간다). 세기는 잘 들어가는 띠(SHOT_SWEET) 둘레
+  const want = clamp(SHOT_SWEET + (dGoal - 13) * SHOT_PER_M + noise(id, state.tick >> 5) * CHARGE_ERR, 0.3, 0.95);
   if (me.shootHeld) {
     const c = me.charge / RULES3D.chargeTicks;
     return inp({ x: ux * 0.5, y: uy * 0.5 }, { shoot: c < want });
@@ -177,16 +181,19 @@ function carrierInput(state: MatchState, config: MatchConfig, id: number): Input
   // 골대 가까이(SHOOT_TURN 안)면 패스를 생각하지 않고 골대 쪽으로 몸을 돌린다 — 2026-11-07 "골이 너무 안 난다"(봇이 앞에서 공을 돌리기만 했다)
   if (dGoal < SHOOT_TURN) return inp({ x: ux, y: uy });
 
-  // 패스 — 눌러 둔 상태면 뗀다
-  if (me.passHeld || me.throughHeld || me.lobHeld) return inp({ x: me.fx * 0.3, y: me.fy * 0.3 });
+  // 패스 — 눌러 둔 상태면 받을 동료 거리만큼 모일 때까지 더 누르고, 닿으면 뗀다
+  if (me.passHeld || me.throughHeld || me.lobHeld) {
+    const kind: PassKind = me.throughHeld ? 'through' : me.lobHeld ? 'lob' : 'pass';
+    const sp = kind === 'pass' ? null : specialPass(state, config, id);
+    return holdPass(state, config, id, kind, kind === 'pass' ? bestMate(state, config, id) : sp && sp.kind === kind ? sp.mate : -1);
+  }
   // 스루 — 앞으로 뛰는 동료 앞이 비었으면. 로빙 — 땅볼 길은 막혔는데 먼 동료 둘레가 비었으면. 보는 쪽이 맞으면 누른다(다음 틱에 뗀다).
   const special = specialPass(state, config, id);
   if (special) {
     const m = state.players[special.mate];
     const dx = m.x - me.x, dy = m.y - me.y, d = Math.sqrt(dx * dx + dy * dy);
     const cos = (dx * me.fx + dy * me.fy) / d;
-    const want = special.kind === 'through' ? passTarget(state, config, id) : passTarget(state, config, id, 0.45, RULES3D.lobMin);
-    if (cos > PASS_AIM_COS && want === special.mate) return inp({ x: dx / d * 0.4, y: dy / d * 0.4 }, special.kind === 'through' ? { through: true } : { lob: true });
+    if (cos > PASS_PRESS_COS) return inp({ x: dx / d * 0.4, y: dy / d * 0.4 }, special.kind === 'through' ? { through: true } : { lob: true });
     return inp({ x: dx / d * 0.5, y: dy / d * 0.5 });
   }
   const pressured = nearestOpp(state, config, mp.side, me.x + me.fx * 1.2, me.y + me.fy * 1.2) < PRESS_R;
@@ -202,7 +209,8 @@ function carrierInput(state: MatchState, config: MatchConfig, id: number): Input
       const dx = m.x - me.x, dy = m.y - me.y, d = Math.sqrt(dx * dx + dy * dy);
       const cos = (dx * me.fx + dy * me.fy) / d;
       // 동료를 본다 — 충분히 보고 있고, 그 방향에서 sim 이 고를 사람이 이 동료면 누른다
-      if (cos > PASS_AIM_COS && passTarget(state, config, id) === mate) return inp({ x: dx / d * 0.4, y: dy / d * 0.4 }, { pass: true });
+      // 돌면서 모으기 시작한다(게이지가 차는 동안 마저 돈다 — 떼는 건 holdPass 가 동료를 보고 있을 때)
+      if (cos > PASS_PRESS_COS) return inp({ x: dx / d * 0.4, y: dy / d * 0.4 }, { pass: true });
       return inp({ x: dx / d * 0.5, y: dy / d * 0.5 });
     }
   }
@@ -230,6 +238,22 @@ function carrierInput(state: MatchState, config: MatchConfig, id: number): Input
   const sprint = blockD === Infinity && dGoal > 8 && me.stamina > SPRINT_MIN
     && nearestOpp(state, config, mp.side, me.x + ux * SPRINT_FREE * 0.6, me.y + uy * SPRINT_FREE * 0.6) > SPRINT_FREE * 0.6;
   return inp({ x: mx / l, y: my / l }, { sprint });
+}
+
+/** 누르고 있는 패스 계열 키 — 동료(mate) 거리에 맞는 게이지(gaugeFor)까지 더 누르고, 닿으면(또는 꽉 차면·동료가 없으면) 뗀다.
+ *  봇은 기억이 없어 틱마다 다시 본다 — 모인 틱은 상태(lobTicks)에 있다. move = 누르는 동안 몸을 미는 세기. */
+function holdPass(state: MatchState, config: MatchConfig, id: number, kind: PassKind, mate: number, move = 0.4): Input {
+  const me = state.players[id];
+  const g = me.lobTicks / RULES3D.passCharge;
+  if (mate < 0 || g >= 1) return inp({ x: me.fx * move, y: me.fy * move });
+  const m = state.players[mate];
+  const dx = m.x - me.x, dy = m.y - me.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
+  const v = { x: (dx / d) * move, y: (dy / d) * move };   // 모으는 동안 동료 쪽으로 몸을 돌린다(떼는 순간 보는 쪽으로 나간다)
+  const key = kind === 'pass' ? { pass: true } : kind === 'through' ? { through: true } : { lob: true };
+  if (g + 1e-9 < gaugeFor(kind, d)) return inp(v, key);
+  // 다 모였다 — 동료를 보고 있고 그 게이지로 sim 이 이 동료를 고르면 뗀다. 아직 덜 돌았으면 조금 더(꽉 차면 그냥 뗀다)
+  const ready = (dx * me.fx + dy * me.fy) / d > PASS_AIM_COS && passTarget(state, config, id, g, kind) === mate;
+  return ready ? inp(v) : inp(v, key);
 }
 
 /** 스루·로빙이 확실히 나은 때만 — 결정 제비(DECIDE_HOLD 마다)로 가끔. 없으면 null. */
@@ -278,7 +302,7 @@ function keeperInput(state: MatchState, config: MatchConfig, id: number): Input 
 
   // 공을 들고 있다 — 들고 있는 동안은 경기장 쪽을 보고 서 있다가, 동료를 보고 패스(없으면 멀리 찬다)
   if (state.owner === id) {
-    if (me.passHeld) return inp({ x: 0, y: 0 });
+    if (me.passHeld) return holdPass(state, config, id, 'pass', bestMate(state, config, id), 0);
     if (me.shootHeld) return inp({ x: dir * 0.3, y: 0 }, { shoot: me.charge / RULES3D.chargeTicks < 0.75 });
     if (me.hold > 0) return inp({ x: dir * 0.2, y: 0 });
     const mate = bestMate(state, config, id);
@@ -286,7 +310,7 @@ function keeperInput(state: MatchState, config: MatchConfig, id: number): Input 
       const m = state.players[mate];
       const dx = m.x - me.x, dy = m.y - me.y, d = Math.sqrt(dx * dx + dy * dy);
       const cos = (dx * me.fx + dy * me.fy) / d;
-      if (cos > PASS_AIM_COS && passTarget(state, config, id) === mate) return inp({ x: 0, y: 0 }, { pass: true });
+      if (cos > PASS_AIM_COS && passTarget(state, config, id, gaugeFor('pass', d), 'pass') === mate) return inp({ x: 0, y: 0 }, { pass: true });
       return inp({ x: dx / d * 0.3, y: dy / d * 0.3 });
     }
     if (state.tick % KEEPER_PASS_WAIT === 0 || me.fx * dir > 0.9) return inp({ x: dir * 0.3, y: 0 }, { shoot: true });

@@ -199,7 +199,10 @@ test('방장 계산과 손님 예측은 같은 양자화 입력이면 스냅샷 
   const myInput = (t) => {
     heading += 0.03 * Math.sin(t / 40);
     const fwd = t % 200 < 150 ? 1 : 0.4;
-    return { x: Math.cos(heading) * fwd, y: Math.sin(heading) * fwd, shoot: t % 90 > 60, pass: t % 170 === 100, sprint: t % 300 < 120, fx: Math.cos(heading), fy: Math.sin(heading) };
+    // 패스·스루·로빙도 누르고 있다 뗀다(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자" — 모은 틱은 상태에, 입력엔 눌림만)
+    const pt = t % 170, tt = t % 230, lt = t % 310;
+    return { x: Math.cos(heading) * fwd, y: Math.sin(heading) * fwd, shoot: t % 90 > 60, pass: pt >= 20 && pt < 38, through: tt >= 200 && tt < 212, lob: lt >= 280 && lt < 300,
+      sprint: t % 300 < 120, fx: Math.cos(heading), fy: Math.sin(heading) };
   };
   let host = g.create(config, 2024);
   // 손님을 공 뒤 1.5m 에 — 처음부터 공을 몰고 차게(2026-11-07 경기장 44m 에서 편성 자리가 넓어져 공을 비켜 갔다). 손님은 첫 스냅샷부터 이 상태를 받는다.
@@ -227,6 +230,7 @@ test('방장 계산과 손님 예측은 같은 양자화 입력이면 스냅샷 
   }
   assert.ok(checked > 150, `맞춰 본 스냅샷 ${checked}`);
   assert.ok(host.count.shots[0] + host.count.passes[0] > 0, '손님이 실제로 찼다');
+  assert.ok(host.count.passes[0] > 0, '손님 패스(모아서)도 나갔다');
   void r;
 });
 

@@ -12,7 +12,7 @@
 //   - 공끼리는 부딪쳐 튄다(반발 0.7, 2D 훈련장과 같은 값).
 //   - 골대는 둘 다 — 보는 방향이 어느 골대 쪽이든 그쪽으로 조준 보정.
 import type { Ball, Input } from './sim.ts';
-import { NO_INPUT, PITCH3D, TUNE3D, carrySpot, collidePlayers, containBall, containPlayer, rand, steer, turnToward, unit } from './sim.ts';
+import { NO_INPUT, PITCH3D, TUNE3D, carrySpot, collidePlayers, containBall, containPlayer, gaugeDist, passScore, rand, shotLoft, shotSpeed, steer, turnToward, unit } from './sim.ts';
 import type { Perf } from './stats.ts';
 
 const T = TUNE3D;
@@ -69,8 +69,8 @@ function release(w: MBWorld, i: number, j: number): void {
   w.kicks += 1;
 }
 
-/** 보는 쪽 원뿔 안의 가장 좋은 사람(방향 먼저, 거리 다음 — 경기의 passTarget 과 같은 점수). 없으면 -1. */
-function target(w: MBWorld, i: number, cone: number, minD: number): number {
+/** 보는 쪽 원뿔 안의 가장 좋은 사람(방향 먼저, 게이지 거리 want 와 가까운 사람 — 경기의 passTarget 과 같은 점수). 없으면 -1. */
+function target(w: MBWorld, i: number, cone: number, minD: number, want: number): number {
   const p = w.players[i];
   let best = -1, bs = -Infinity;
   for (const q of w.players) {
@@ -79,7 +79,7 @@ function target(w: MBWorld, i: number, cone: number, minD: number): number {
     if (d < minD || d > T.PASS_MAX) continue;
     const cos = (dx * p.fx + dy * p.fy) / d;
     if (cos < cone) continue;
-    const sc = cos * T.PASS_W_DIR - d * T.PASS_W_DIST;
+    const sc = passScore(cos, d, want);
     if (sc > bs) { bs = sc; best = q.id; }
   }
   return best;
@@ -99,17 +99,19 @@ function shoot(w: MBWorld, perf: Perf, i: number, j: number, c: number): void {
     ux = u.x; uy = u.y;
   }
   const cc = clamp(c, 0, 1);
-  const sp = (T.SHOT_MIN + (T.SHOT_MAX - T.SHOT_MIN) * cc) * perf.shot;
-  b.vx = ux * sp; b.vy = uy * sp; b.vz = T.LOFT_MIN + (T.LOFT_MAX - T.LOFT_MIN) * cc * cc;
+  const sp = shotSpeed(cc) * perf.shot;
+  b.vx = ux * sp; b.vy = uy * sp; b.vz = shotLoft(cc);
   release(w, i, j);
 }
 
 /** 땅볼 패스(through 면 더 멀리·빠르게) — 받을 사람 쪽으로, 닿을 때 남는 속도를 맞춘다(경기와 같은 계산). */
-function pass(w: MBWorld, perf: Perf, i: number, j: number, through: boolean): void {
+function pass(w: MBWorld, perf: Perf, i: number, j: number, through: boolean, g: number): void {
   const p = w.players[i], b = w.balls[j];
-  const t = target(w, i, T.PASS_COS, T.PASS_MIN);
-  const arrive = through ? T.THROUGH_ARRIVE : T.PASS_ARRIVE;
-  let ux = p.fx, uy = p.fy, dist: number = through ? T.THROUGH_FREE_DIST : T.PASS_FREE_DIST;
+  const kind = through ? 'through' : 'pass';
+  const t = target(w, i, T.PASS_COS, T.PASS_MIN, gaugeDist(kind, g));
+  let arrive: number = through ? T.THROUGH_ARRIVE : T.PASS_ARRIVE;
+  let ux = p.fx, uy = p.fy, dist: number = gaugeDist(kind, g);   // 게이지 = 거리(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자")
+  if (t < 0) arrive = T.BALL_REST;
   if (t >= 0) {
     const m = w.players[t];
     const ahead = through ? T.THROUGH_AHEAD : 0;
@@ -128,10 +130,10 @@ function pass(w: MBWorld, perf: Perf, i: number, j: number, through: boolean): v
 /** 로빙 — 먼 사람(LOB_MIN 넘게)에게 띄워서, 없으면 모은 만큼 보는 쪽으로. */
 function lob(w: MBWorld, perf: Perf, i: number, j: number, c: number): void {
   const p = w.players[i], b = w.balls[j];
-  const t = target(w, i, T.LOB_COS, T.LOB_MIN);
+  const t = target(w, i, T.LOB_COS, T.LOB_MIN, gaugeDist('lob', c));
   let tx: number, ty: number;
   if (t >= 0) { tx = w.players[t].x; ty = w.players[t].y; }
-  else { const d0 = T.LOB_FREE_MIN + (T.LOB_FREE_MAX - T.LOB_FREE_MIN) * clamp(c, 0, 1); tx = b.x + p.fx * d0; ty = b.y + p.fy * d0; }
+  else { const d0 = gaugeDist('lob', c); tx = b.x + p.fx * d0; ty = b.y + p.fy * d0; }
   tx = clamp(tx, -HW + 0.5, HW - 0.5); ty = clamp(ty, -HH + 0.5, HH - 0.5);
   const dx = tx - b.x, dy = ty - b.y, d = Math.sqrt(dx * dx + dy * dy);
   const u = unit(dx, dy, p.fx, p.fy);
@@ -225,7 +227,8 @@ export function stepWorld(w: MBWorld, perfs: Perf[], inputs: Input[]): void {
     const ix = fin(inp.x), iy = fin(inp.y), il = Math.sqrt(ix * ix + iy * iy);
     p.sprint = !!inp.sprint && p.stamina > 0 && (p.sprint || p.stamina >= T.SPRINT_RESUME) && il > 0.15;
     p.stamina = p.sprint ? Math.max(0, p.stamina - T.STAMINA_DRAIN) : Math.min(1, p.stamina + T.STAMINA_GAIN);
-    const mult = (own >= 0 ? T.CARRY_SPEED : 1) * (inp.shoot ? T.CHARGE_SPEED : 1) * (p.sprint ? T.SPRINT_SPEED : 1);
+    const charging = !!inp.shoot || (own >= 0 && (!!inp.pass || !!inp.through || !!inp.lob));   // 패스 계열을 모으는 동안도 느리게(공을 가졌을 때, 경기와 같다)
+    const mult = (own >= 0 ? T.CARRY_SPEED : 1) * (charging ? T.CHARGE_SPEED : 1) * (p.sprint ? T.SPRINT_SPEED : 1);
     steer(p, { gk: false, perf }, ix, iy, mult);
     const ffx = fin(inp.fx), ffy = fin(inp.fy), fl = Math.sqrt(ffx * ffx + ffy * ffy);
     const faced = inp.fx !== undefined && inp.fy !== undefined && fl > 0.5;
@@ -243,12 +246,14 @@ export function stepWorld(w: MBWorld, perfs: Perf[], inputs: Input[]): void {
     }
     const shootNow = !!inp.shoot, passNow = !!inp.pass, throughNow = !!inp.through, lobNow = !!inp.lob;
     if (shootNow) p.charge = Math.min(T.CHARGE_TICKS, p.charge + 1);
-    if (lobNow) p.lobTicks = Math.min(T.LOB_CHARGE, p.lobTicks + 1);
+    // 차는 키 넷 다 모인다 — 슛 charge, 패스 계열 lobTicks(경기와 같다, 2026-11-07 "게이지 시스템 피파랑 비슷하게 가자")
+    const passFamily = passNow || throughNow || lobNow, pg = p.lobTicks / T.PASS_CHARGE;
+    if (passFamily) p.lobTicks = Math.min(T.PASS_CHARGE, p.lobTicks + 1);
     if (p.shootHeld && !shootNow) { const j = kickable(w, i); if (j >= 0) shoot(w, perf, i, j, p.charge / T.CHARGE_TICKS); p.charge = 0; }
-    else if (p.passHeld && !passNow) { const j = kickable(w, i); if (j >= 0) pass(w, perf, i, j, false); }
-    else if (p.throughHeld && !throughNow) { const j = kickable(w, i); if (j >= 0) pass(w, perf, i, j, true); }
-    else if (p.lobHeld && !lobNow) { const j = kickable(w, i); if (j >= 0) lob(w, perf, i, j, p.lobTicks / T.LOB_CHARGE); }
-    if (!lobNow) p.lobTicks = 0;
+    else if (p.passHeld && !passNow) { const j = kickable(w, i); if (j >= 0) pass(w, perf, i, j, false, pg); p.lobTicks = 0; }
+    else if (p.throughHeld && !throughNow) { const j = kickable(w, i); if (j >= 0) pass(w, perf, i, j, true, pg); p.lobTicks = 0; }
+    else if (p.lobHeld && !lobNow) { const j = kickable(w, i); if (j >= 0) lob(w, perf, i, j, pg); p.lobTicks = 0; }
+    if (!passFamily) p.lobTicks = 0;
     p.shootHeld = shootNow; p.passHeld = passNow; p.throughHeld = throughNow; p.lobHeld = lobNow;
   }
   // 2) 움직임과 충돌 — 한 틱을 쪼개서

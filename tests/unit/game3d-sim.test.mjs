@@ -189,10 +189,12 @@ test('슛 — 오래 누를수록 빠르고 높이 뜬다', () => {
     run(s, cfg, 90, undefined, (_, n) => { peak = Math.max(peak, n.ball.z); });
     return { v0, peak };
   };
+  // 2026-11-07 "게이지 시스템 피파랑 비슷하게 가자" — 속도는 가운데쯤(게이지 45%)에 끝까지 오르고, 그 위로는 높이만 는다. 꽉 채우면 크로스바보다 높이 뜬다.
   const a = shotWith(8), b = shotWith(30), c = shotWith(RULES3D.chargeTicks + 20);
-  assert.ok(a.v0 < b.v0 && b.v0 < c.v0, `속도 ${a.v0} ${b.v0} ${c.v0}`);
+  assert.ok(a.v0 < b.v0 && b.v0 <= c.v0 + 1e-9, `속도 ${a.v0} ${b.v0} ${c.v0}`);
   assert.ok(a.peak < b.peak && b.peak < c.peak, `높이 ${a.peak} ${b.peak} ${c.peak}`);
-  assert.ok(c.peak > goalH * 0.75 && c.peak < goalH + 0.3, `꽉 채운 슛은 크로스바 근처까지 뜬다(먼 거리에선 넘을 수 있다) ${c.peak}`);
+  assert.ok(b.peak < goalH, `가운데쯤 모은 슛은 크로스바 아래 ${b.peak}`);
+  assert.ok(c.peak > goalH + 0.3, `꽉 채운 슛은 크로스바보다 높이 뜬다 ${c.peak}`);
 });
 
 test('슛 보정 — 골문 쪽 ±60도 안을 보고 차면 골문 안으로 간다(2026-11-07 "3d는 슈팅 보정을 해줘야지 골대로 가게")', () => {
@@ -239,9 +241,9 @@ test('골키퍼 — 정면 약한 슛은 잡고, 구석으로 세게 찬 슛은 
     for (let t = 0; t < hold; t++) s = step(s, cfg, [{ x: 0, y: 0, shoot: true, pass: false }, NO_INPUT]);
     return run(s, cfg, 90);
   };
-  const weak = fire(0, 6);
+  const weak = fire(0, 2);   // 톡 친 슛(게이지 4%) — 2026-11-07 "게이지 시스템 피파랑 비슷하게 가자": 속도가 가운데쯤에 끝까지 오르므로 "약한 슛"은 톡 친 것
   assert.deepEqual(weak.score, [0, 0]); assert.equal(weak.owner, 1, '골키퍼가 잡았다');
-  const strong = fire(0.17, 44);
+  const strong = fire(0.17, 35);   // 게이지 65% — 잘 들어가는 띠(꽉 채우면 크로스바를 넘는다)
   assert.deepEqual(strong.score, [1, 0], '구석 강슛은 들어간다');
 });
 
@@ -427,4 +429,79 @@ test('태클(공 없을 때 슛 키) — 닿으면 공을 가져오고, 멀면 �
   for (let t = 0; t < RULES3D.tackleRecover + 2; t++) { far = step(far, cfg, idle(cfg)); far.players[0].x = far.ball.x + 0.75; far.players[0].y = far.ball.y; far.players[0].vx = 0; far.players[0].fx = -1; far.players[0].fy = 0; }
   far = step(far, cfg, [I({ shoot: true }), NO_INPUT]);
   assert.equal(far.owner, 0, '회복 뒤 다시 태클');
+});
+
+// ═══════════════════ 게이지(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자") ═══════════════════
+/** 공을 가진 0번이 key 를 hold 틱 누르고 뗀 뒤의 상태(뗀 틱 직후). */
+function kickWith(cfg, s, key, hold) {
+  s = step(s, cfg, idle(cfg));
+  for (let t = 0; t < hold; t++) s = step(s, cfg, [{ x: 0, y: 0, shoot: false, pass: false, [key]: true }, ...idle(cfg).slice(1)]);
+  return step(s, cfg, idle(cfg));
+}
+test('게이지 — 패스는 톡 치면 가까운 동료, 오래 누르면 먼 동료(같은 방향 원뿔 안)', () => {
+  const cfg = few([0, 0, 0, 1]);
+  const at = () => put(createMatch(cfg, 9), {
+    ball: { x: -14.3, y: 0 },
+    players: { 0: { x: -15, y: 0, fx: 1, fy: 0 }, 1: { x: -9, y: 1, fx: -1, fy: 0 }, 2: { x: 4, y: -1.5, fx: -1, fy: 0 }, 3: FAR(3) },
+  });
+  const tap = kickWith(cfg, at(), 'pass', 1);
+  assert.equal(tap.passTo, 1, '톡 = 6m 동료');
+  const held = kickWith(cfg, at(), 'pass', RULES3D.passCharge);
+  assert.equal(held.passTo, 2, '꽉 = 19m 동료');
+  assert.ok(sp(held.ball) > sp(tap.ball), '먼 패스가 더 세다');
+  // 받는 세기는 그대로 — 먼 동료에게도 받기 좋은 세기로 닿는다
+  let arrive = null;
+  run(held, cfg, 300, undefined, (p, n) => { if (p.owner === null && n.owner !== null && arrive === null) arrive = { who: n.owner, speed: sp(p.ball) }; });
+  assert.equal(arrive?.who, 2);
+  assert.ok(arrive.speed > 2 && arrive.speed < 8, `닿을 때 ${arrive?.speed}`);
+});
+
+test('게이지 — 동료가 없으면 보는 쪽으로 게이지 거리만큼(패스·스루·로빙 모두 오래 누를수록 멀리)', () => {
+  const cfg = few([0, 1]);
+  const at = () => put(createMatch(cfg, 4), { ball: { x: -14.3, y: 0 }, players: { 0: { x: -15, y: 0, fx: 1, fy: 0 }, 1: FAR(1) } });
+  const landed = (key, hold) => {
+    let s = kickWith(cfg, at(), key, hold);
+    const x0 = s.ball.x;
+    let first = null;
+    s = run(s, cfg, 400, undefined, (p, n) => { if (key === 'lob' && first === null && p.ball.vz < 0 && n.ball.vz >= 0) first = n.ball.x; });
+    return key === 'lob' ? first - x0 : s.ball.x - x0;
+  };
+  for (const key of ['pass', 'through', 'lob']) {
+    const short = landed(key, 4), long = landed(key, RULES3D.passCharge);
+    assert.ok(long > short + 8, `${key}: 짧게 ${short.toFixed(1)}m · 길게 ${long.toFixed(1)}m`);
+  }
+  // 땅볼 패스 꽉 = 26m 쯤에서 선다(게이지 = 거리)
+  const full = landed('pass', RULES3D.passCharge);
+  assert.ok(full > 22 && full < 30, `꽉 찬 땅볼 ${full}`);
+});
+
+test('게이지 — 가까이서 꽉 채운 슛은 가운데쯤 모은 슛보다 크로스바를 자주 넘는다', () => {
+  const cfg = few([0, 1]);
+  const over = (hold) => {
+    let n = 0;
+    for (const dist of [10, 12, 14]) for (const fy of [-0.15, 0, 0.15]) {
+      let s = put(createMatch(cfg, 3), { ball: { x: HW - dist + 0.7, y: 0 }, players: { 0: { x: HW - dist, y: 0, fx: 1, fy }, 1: FAR(1) } });
+      s = kickWith(cfg, s, 'shoot', hold);
+      let hi = false;
+      // 골라인 1m 앞에서 이미 크로스바보다 높으면 넘긴 것(그 뒤는 끝 벽에 튕긴다)
+      run(s, cfg, 120, undefined, (_, x) => { if (Math.abs(x.ball.x) >= HW - 1 && x.ball.z > goalH) hi = true; });
+      if (hi) n++;
+    }
+    return n;
+  };
+  const mid = over(Math.round(RULES3D.chargeTicks * 0.65)), full = over(RULES3D.chargeTicks);
+  assert.equal(mid, 0, '가운데쯤 모은 슛은 크로스바 아래');
+  assert.ok(full >= 7, `꽉 채운 슛 아홉 중 ${full}번 크로스바 위`);
+});
+
+test('게이지 — 패스 계열을 모으는 동안은 슛을 모을 때처럼 느려진다(공을 가졌을 때)', () => {
+  const cfg = few([0, 1]);
+  const speedWith = (key) => {
+    let s = put(createMatch(cfg, 2), { ball: { x: -14.3, y: 0 }, players: { 0: { x: -15, y: 0, fx: 1, fy: 0 }, 1: FAR(1) } });
+    s = step(s, cfg, idle(cfg));
+    for (let t = 0; t < 30; t++) s = step(s, cfg, [{ x: 1, y: 0, shoot: false, pass: false, ...(key ? { [key]: true } : {}) }, NO_INPUT]);
+    return s.players[0].vx;
+  };
+  const free = speedWith(null);
+  for (const key of ['pass', 'through', 'lob']) assert.ok(speedWith(key) < free * 0.85, `${key} ${speedWith(key)} vs ${free}`);
 });
