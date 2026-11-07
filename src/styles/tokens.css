@@ -1212,11 +1212,20 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
   padding: var(--s-sm) var(--s-lg); background: rgba(0, 0, 0, .7); pointer-events: none; text-align: center; }
 .g3-goal b { font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; color: var(--gold); line-height: 1; }
 .g3-goal span { color: var(--fg); font-size: var(--fs-xs); }
-.g3-gauge { position: absolute; z-index: 2; left: 50%; bottom: max(var(--s-xl), env(safe-area-inset-bottom)); width: 220px; height: 14px; margin-left: -110px; display: none;
-  border: 2px solid rgba(255, 255, 255, .8); background: rgba(0, 0, 0, .55); pointer-events: none; }
-.g3-gauge.is-on { display: block; }
-.g3-gauge.is-touch { left: auto; margin-left: 0; width: 110px; right: max(var(--s-lg), env(safe-area-inset-right)); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 172px); }
-.g3-gauge i { display: block; width: 100%; height: 100%; background: var(--gold); transform: scaleX(0); transform-origin: left center; }
+/* 세기 막대 하나(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자") — 3D 경기·훈련장은 내 선수 발밑(화면 좌표), 1인칭·승부차기·프리킥은 아래 가운데.
+   슛 = 금색, 패스 계열 = 링크 파랑. 슛엔 잘 들어가는 띠(밝은 칸). 뗀 뒤 0.3초 남을 때 조금 흐리게(is-done). */
+.k3-gauge { position: absolute; z-index: 2; left: 0; top: 0; width: 76px; height: 9px; display: none; pointer-events: none;
+  border: 2px solid rgba(255, 255, 255, .85); background: rgba(0, 0, 0, .6); box-sizing: content-box; }
+.k3-gauge.is-on { display: block; }
+.k3-gauge.is-done { opacity: .6; }
+.k3-gauge-fill { position: absolute; inset: 0; display: block; background: var(--gold); transform: scaleX(0); transform-origin: left center; }
+.k3-gauge.is-pass .k3-gauge-fill { background: var(--link); }
+.k3-gauge-sweet { position: absolute; top: -4px; bottom: -4px; z-index: 1; border-left: 2px solid var(--fg); border-right: 2px solid var(--fg); background: rgba(255, 255, 255, .14); }
+.k3-gauge.is-bottom { left: 50%; top: auto; bottom: max(var(--s-xl), env(safe-area-inset-bottom)); width: 220px; height: 12px; margin-left: -112px; }
+.k3-gauge.is-p3.is-bottom.is-touch { left: auto; margin-left: 0; width: 110px; right: max(var(--s-lg), env(safe-area-inset-right)); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 172px); }
+/* 1인칭 + 터치 — 아래 가운데는 버튼(패스·질주)에 가리므로 버튼 묶음 위로 */
+.k3-gauge.is-bottom.is-touch:not(.is-p3) { width: min(220px, 56vw); margin-left: calc(min(220px, 56vw) / -2 - 2px); bottom: calc(max(var(--s-lg), env(safe-area-inset-bottom)) + 200px); }
+.k3-gauge.is-p3.is-bottom:not(.is-touch) { bottom: calc(max(var(--s-xl), env(safe-area-inset-bottom)) + 52px); }
 .g3-stick { position: absolute; left: 0; top: 0; width: 96px; height: 96px; margin: -48px 0 0 -48px; display: none; align-items: center; justify-content: center;
   border: 2px solid rgba(255, 255, 255, .35); border-radius: 50%; background: rgba(255, 255, 255, .08); pointer-events: none; z-index: 2; }
 .g3-stick.is-on { display: flex; }
@@ -1364,7 +1373,6 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
   font-synthesis: none; letter-spacing: 0; text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
 .d3-pop.is-on { display: block; }
 /* 승부차기·프리킥 세기 막대는 아래 안내 줄 위로(폰에서 안내 글을 가리지 않게 — 헤드리스 390px 로 확인) */
-.g3-gauge.p3-gauge:not(.is-touch) { bottom: calc(max(var(--s-xl), env(safe-area-inset-bottom)) + 52px); }
 
 /* ══ 게임 구역(2026-11-07 "게임 메뉴 진입하면 완전 게임 UI처럼 보이게 개선할까") ══════════════════════════════
    설계: docs/superpowers/specs/2026-11-07-game-arcade-ui-design.md. /games/·/games/3d/·/game/ 는 Shell 이 body 에 is-game 을 단다.

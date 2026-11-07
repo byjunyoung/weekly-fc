@@ -2,6 +2,7 @@
 // 스펙 §3.3 "3D: 같은 내용 + 1인칭 시점 연습에 좋다." — 그래서 3D 경기와 같은 장면·시점 셋(중계·1인칭·뒤에서, ✕ 아래 버튼)·조작(버튼 다섯, FC 식 키)을 쓴다.
 // 다른 것: 공이 여럿(장면 옵션 balls), 고리 색은 각자 아바타 유니폼 색(2D 훈련장과 같은 ringColors, 봇은 회색), 위 줄 "자유 훈련장 · 공 n개 · 들어간 골 n",
 // 처음 2.5초 "마음대로 차 보세요", 골마다 "골!" 1초, 카메라·화면 밖 화살표는 내 공(없으면 가장 가까운 공)을 본다, [공 모으기] 는 공용 틀의 게임 버튼(act).
+import { createGauge, footAt } from '../kit3d/gauge3d';
 import { Vector3 } from 'three';
 import type { FreeConfig } from '../../../../lib/games/free2d';
 import { POP_TICKS, popShown } from '../../../../lib/games/free2d';
@@ -38,9 +39,8 @@ export function createFreeSurface(o: SurfaceIn<Free3Config>): Surface<Free3State
   goalEl.style.display = 'none';
   const goalB = el('b', '', goalEl);
   const goalS = el('span', '', goalEl);
-  const gauge = add(el('div', 'g3-gauge', layer));
-  gauge.setAttribute('aria-hidden', 'true');
-  const fill = el('i', '', gauge);
+  const gauge = createGauge(layer);   // 3D 경기와 같은 세기 막대(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자")
+  const gA = new Vector3(), gB = new Vector3();
   const arrow = add(el('div', 'g3-arrow', layer));
   arrow.setAttribute('aria-hidden', 'true');
   const lost = add(el('div', 'game-banner', layer));
@@ -65,7 +65,7 @@ export function createFreeSurface(o: SurfaceIn<Free3Config>): Surface<Free3State
   // 1인칭 시선(3D 경기와 같다 — 화면 쪽 각도, 계산엔 단위 벡터. 온라인이면 어댑터가 64방향 표로 양자화한다)
   let heading = 0, turnVel = 0, lastMode: ViewMode | null = null;
   const faceOf = (s: Free3State): number => { const p = myId === null ? undefined : s.players[myId]; return p ? Math.atan2(p.fy, p.fx) : 0; };
-  let last: Free3State | null = null, lastSum = '', lastPop = '-', avgMs = 16, slowFor = 0, gaugeOn = false, arrowOn = false;
+  let last: Free3State | null = null, lastSum = '', lastPop = '-', avgMs = 16, slowFor = 0, arrowOn = false;
   const vCam = new Vector3();
   const popMemo = { last: -Infinity };
   const onLost = (e: Event): void => { e.preventDefault(); dead = true; lost.textContent = '3D 화면이 끊겼습니다 — ✕ 로 나가 다시 열어 주세요.'; lost.style.display = ''; };
@@ -119,12 +119,12 @@ export function createFreeSurface(o: SurfaceIn<Free3Config>): Surface<Free3State
         goalB.className = popOn ? '' : 'f3-start';
         goalS.textContent = popOn ? `들어간 골 ${s.goals}` : startOn ? '공을 쫓아 드리블·패스·슛 — 골이 들어간 공만 가운데로 돌아옵니다' : '';
       }
-      // 슛 게이지 — 내가 모으는 동안
+      // 세기 막대 — 내가 차는 키를 누르는 동안(슛 금색·잘 들어가는 띠, 패스 계열 파랑), 발밑에. 1인칭이면 아래 가운데
       const me = myId === null ? undefined : s.players[myId];
-      const charge = me && me.shootHeld ? me.charge / RULES3D.chargeTicks : 0;
-      if ((charge > 0) !== gaugeOn) { gaugeOn = charge > 0; gauge.classList.toggle('is-on', gaugeOn); }
-      if (gaugeOn) fill.style.transform = `scaleX(${charge.toFixed(3)})`;
-      gauge.classList.toggle('is-touch', !!touch?.touch);
+      const shotG = me && me.shootHeld ? me.charge / RULES3D.chargeTicks : 0;
+      const passG = me && (me.passHeld || me.throughHeld || me.lobHeld) ? me.lobTicks / RULES3D.passCharge : 0;
+      const at = myId !== null && mode !== 'first' ? footAt(sc, myId, w, h, gA, gB) : null;
+      gauge.update(shotG > 0 ? shotG : passG > 0 ? passG : null, shotG > 0 ? 'shot' : 'pass', at, RULES3D.shotSweet, !!touch?.touch);
       // 이름표·말풍선 — 1인칭이면 내 이름표는 숨긴다
       tags.update(sc, w, h, (i) => !(mode === 'first' && i === myId), f.bubbles);
       // 화면 밖 공 — 1인칭·뒤에서
@@ -168,6 +168,7 @@ export function createFreeSurface(o: SurfaceIn<Free3Config>): Surface<Free3State
       touch?.dispose();
       tags.dispose();
       for (const n of nodes) n.remove();
+      gauge.dispose();
       sc.dispose();
     },
   };

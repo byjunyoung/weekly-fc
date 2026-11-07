@@ -6,6 +6,7 @@
 // 조작은 화면 기준 그대로 쓰게 계산에 넘길 때 뒤집는다(aim3.ts) — 오른쪽을 누르면 화면 오른쪽으로 간다.
 // 2D 와 같은 것: 위 띠(● 골 · ✕ 못 넣음 · ○ 남음, 점수, n번째 · 편 차례, 키커 → 키퍼), 5초 막대, 판정 띠 "골!·막았다!·빗나감·골대!",
 // "내가 찰 차례 / 내가 막을 차례", 끝 띠, 아래 내 역할 안내, 키커 고리는 모으는 중·찬 직후 하양, 소리는 2D 와 같은 detectPenSfx.
+import { createGauge } from '../kit3d/gauge3d';
 import { DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, Vector3 } from 'three';
 import { avatarFaceSvg } from '../../../../components/avatar';
 import { avatarSpecFor } from '../../../../lib/avatar';
@@ -62,9 +63,7 @@ export function createPenaltySurface(o: SurfaceIn<PenConfig>): Surface<Pen3State
   banner.setAttribute('role', 'status');
   const bannerB = el('b', '', banner), bannerS = el('span', '', banner);
   const hint = add(el('div', 'p3-hint', layer));
-  const gauge = add(el('div', 'g3-gauge p3-gauge', layer));
-  gauge.setAttribute('aria-hidden', 'true');
-  const fill = el('i', '', gauge);
+  const gauge = createGauge(layer, 'is-p3');   // 3D 경기와 같은 세기 막대(모양) — 자리는 아래 가운데(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자")
   const lost = add(el('div', 'game-banner', layer));
   lost.style.display = 'none';
 
@@ -190,9 +189,7 @@ export function createPenaltySurface(o: SurfaceIn<PenConfig>): Surface<Pen3State
       // 세기 막대(모두에게 — 조준은 아니다): 모으는 동안, 찬 직후 잠깐
       const p = st.phase === 'aim' ? st.st.charge / CHARGE_TICKS : st.phase === 'flight' && st.phaseTicks < 30 ? st.power : 0;
       const on = p > 0;
-      gauge.classList.toggle('is-on', on);
-      gauge.classList.toggle('is-touch', !!touch?.touch);
-      if (on) fill.style.transform = `scaleX(${p.toFixed(3)})`;
+      gauge.update(on ? p : null, 'shot', null, null, !!touch?.touch);
 
       // 이름표·말풍선 — 지금 차고 막는 둘만(다른 사람은 경기장에 없다)
       // 카메라 바로 앞의 몸(키커 화면의 키커, 키퍼 화면의 키퍼)은 등만 보이니 이름표를 뺀다.
@@ -221,6 +218,7 @@ export function createPenaltySurface(o: SurfaceIn<PenConfig>): Surface<Pen3State
       touch?.dispose();
       tags.dispose();
       for (const n of nodes) n.remove();
+      gauge.dispose();
       sc.dispose();
     },
   };

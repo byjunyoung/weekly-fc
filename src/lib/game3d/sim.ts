@@ -211,6 +211,8 @@ export const RULES3D = {
   chargeTicks: CHARGE_TICKS, controlDist: PLAYER_R + BALL_R + CONTROL_REACH, keeperHold: KEEPER_HOLD,
   passCos: PASS_COS, passMax: PASS_MAX, rollDrag: ROLL_DRAG, goalTicks: GOAL_TICKS, keeperReach: KEEPER_REACH, kickAnim: KICK_ANIM,
   tackleReach: TACKLE_REACH, tackleRecover: TACKLE_RECOVER, passCharge: PASS_CHARGE, lobMin: LOB_MIN, lobCos: LOB_COS,
+  /** 슛 게이지에서 잘 들어가는 띠(화면이 표시한다) — 대본 슈터 10~16m 실측 60~75%(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자"). */
+  shotSweet: [0.6, 0.75] as const,
 } as const;
 
 export type Side = 0 | 1;

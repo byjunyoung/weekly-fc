@@ -10,7 +10,8 @@ import { buildSolo3d, soloBlocked, type Req3d } from './solo-setup';
 import { readView, saveView, VIEW_LABEL, VIEW_MODES, type ViewMode } from './view3d';
 
 /** 조작 안내 — 키 자리는 2026-11-07 "3d 게임은 키를 FC온라인이랑 동일하게 해주면 좋을듯"(이름·동작은 우리 것). 방 화면 controls 와 같은 말. */
-export const CONTROLS_3D = 'PC: 방향키로 이동, S 패스 · D 슛(누르고 떼기, 공 없을 땐 태클) · W 스루 · A 로빙 · E 질주 · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼으로 패스·슛';
+// 2026-11-07 "게이지 시스템 피파랑 비슷하게 가자" — 차는 키 넷 다 누르는 만큼 모인다(패스 계열 = 거리, 슛 = 세기·높이)
+export const CONTROLS_3D = 'PC: 방향키로 이동, S 패스 · D 슛(공 없을 땐 태클) · W 스루 · A 로빙 · E 질주 — 차는 키는 누르는 만큼 모였다 떼면 나간다(패스는 길게 누를수록 먼 동료, 슛은 가운데쯤이 좋고 꽉 채우면 뜬다) · 폰: 왼쪽을 끌어 이동, 오른쪽 버튼을 누르고 있다 떼기';
 
 export function Solo({ open, cardRef, players, num, onStart }: SoloProps<MatchConfig>) {
   const [outfield, setOutfield] = useState<Outfield>(4);

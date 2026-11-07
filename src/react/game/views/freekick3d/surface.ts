@@ -4,6 +4,7 @@
 // 방에 없는 선수의 얼굴), 내 조준 표시(골문 면 위 고리 + 흔들림 폭)와 감는 길 미리 보기(흔들림 없이 — fk3Path, 키커 화면에만).
 // 2D 와 같은 글: 위 "n번 자리 · 이름 · 점수", 혼자면 "n점 / 11 · 최고" + 자리 표시(●✕○), 여럿이면 "누구 차례 · k/전체" + 순위 줄,
 // 5초 막대, 판정 띠 "골!·막았다!·벽!·빗나감·골대!"(+점수), 준비 띠 "내 차례 / 누구 차례", 끝 띠, 아래 내 차례 안내.
+import { createGauge } from '../kit3d/gauge3d';
 import { BufferGeometry, DoubleSide, Float32BufferAttribute, Line, LineBasicMaterial, Mesh, MeshBasicMaterial, PlaneGeometry, RingGeometry, Vector3 } from 'three';
 import { PITCH3D } from '../../../../lib/game3d/sim';
 import type { FkConfig } from '../../../../lib/games/freekick2d';
@@ -71,9 +72,7 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
   banner.setAttribute('role', 'status');
   const bannerB = el('b', '', banner), bannerS = el('span', '', banner);
   const hint = add(el('div', 'p3-hint', layer));
-  const gauge = add(el('div', 'g3-gauge p3-gauge', layer));
-  gauge.setAttribute('aria-hidden', 'true');
-  const fill = el('i', '', gauge);
+  const gauge = createGauge(layer, 'is-p3');   // 3D 경기와 같은 세기 막대(모양) — 자리는 아래 가운데(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자")
   const lost = add(el('div', 'game-banner', layer));
   lost.style.display = 'none';
   const names = [...config.players.map((p) => p.name), '수비벽', '수비벽', '수비벽', '키퍼'];
@@ -186,9 +185,7 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
       clockFill.style.transform = `scaleX(${left.toFixed(3)})`;
       clock.classList.toggle('is-low', left < 0.3);
       const pw = st.phase === 'aim' ? st.st.charge / CHARGE_TICKS : st.phase === 'flight' && st.phaseTicks < 30 ? st.power : 0;
-      gauge.classList.toggle('is-on', pw > 0);
-      gauge.classList.toggle('is-touch', !!touch?.touch);
-      if (pw > 0) fill.style.transform = `scaleX(${pw.toFixed(3)})`;
+      gauge.update(pw > 0 ? pw : null, 'shot', null, null, !!touch?.touch);
       // 이름표 — 키커(카메라 바로 앞이면 뺀다)와 키퍼, 말풍선은 키커들 누구든(구경하는 키커의 한마디도 — 몸이 없으면 안 뜬다)
       tags.update(sc, w, h, (i) => i === KEEPER || (i === st.kicker && !kicker), f.bubbles, false, (i) => i === st.kicker);
     },
@@ -209,6 +206,7 @@ export function createFreekickSurface(o: SurfaceIn<FkConfig>): Surface<Fk3State,
       canvas.removeEventListener('webglcontextlost', onLost);
       input?.dispose(); touch?.dispose(); tags.dispose();
       for (const nd of nodes) nd.remove();
+      gauge.dispose();
       pathGeo.dispose();
       sc.dispose();
     },

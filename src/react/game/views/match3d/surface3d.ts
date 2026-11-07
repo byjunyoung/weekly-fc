@@ -7,10 +7,11 @@
 // (views/types.ts 의 Surface 약속). 그래서 같은 그림판이 혼자·방장·손님에서 그대로 돈다. 한마디 말풍선을 머리 위에 띄우는 것이 새로 생겼다.
 import { Vector3 } from 'three';
 import type { Input, MatchConfig, MatchState } from '../../../../lib/game3d/sim';
-import { RULES3D, TICK_HZ, attackDir } from '../../../../lib/game3d/sim';
+import { PITCH3D, RULES3D, TICK_HZ, attackDir } from '../../../../lib/game3d/sim';
 import { TEAM } from '../../teams';
 import type { Surface, SurfaceIn } from '../types';
 import { attachInput } from './input3d';
+import { createGauge } from '../kit3d/gauge3d';
 import { createScene, type SceneHandle } from './scene';
 import { clockText, edgeArrow, nextView, readView, saveView, stickToWorld, tankStep, VIEW_LABEL, type ViewMode } from './view3d';
 
@@ -52,9 +53,7 @@ export function createSurface3d(o: SurfaceIn<MatchConfig>): Surface<MatchState, 
   goalEl.style.display = 'none';
   const goalB = el('b', '', goalEl); goalB.textContent = '골!';
   const goalWho = el('span', '', goalEl);
-  const gauge = add(el('div', 'g3-gauge', layer));
-  gauge.setAttribute('aria-hidden', 'true');
-  const fill = el('i', '', gauge);
+  const gauge = createGauge(layer);   // 세기 막대 하나 — 발밑(1인칭은 아래 가운데), 2026-11-07 "게이지 시스템 피파랑 비슷하게 가자"
   const arrow = add(el('div', 'g3-arrow', layer));
   arrow.setAttribute('aria-hidden', 'true');
   const lost = add(el('div', 'game-banner', layer));
@@ -117,7 +116,7 @@ export function createSurface3d(o: SurfaceIn<MatchConfig>): Surface<MatchState, 
   const kickoffHeading = myId === null ? 0 : (attackDir(config.players[myId].side) === 1 ? 0 : Math.PI);
   let last: MatchState | null = null;
 
-  let avgMs = 1000 / TICK_HZ, slowFor = 0, lastClock = '', lastScore = '', gaugeOn = false, arrowOn = false, goalOn = false, dead = false;
+  let avgMs = 1000 / TICK_HZ, slowFor = 0, lastClock = '', lastScore = '', arrowOn = false, goalOn = false, dead = false;
   const onLost = (e: Event): void => {
     e.preventDefault();
     dead = true;
@@ -177,12 +176,6 @@ export function createSurface3d(o: SurfaceIn<MatchConfig>): Surface<MatchState, 
           goalWho.textContent = scorer ? (assist ? `${scorer} · 도움 ${assist}` : scorer) : TEAM[side].short;
         }
       }
-      // 슛 게이지 — 내 선수가 모으는 동안
-      const me = myId === null ? undefined : s.players[myId];
-      const charge = me && me.shootHeld && !me.shootVoid ? me.charge / RULES3D.chargeTicks : 0;
-      if ((charge > 0) !== gaugeOn) { gaugeOn = charge > 0; gauge.classList.toggle('is-on', gaugeOn); }
-      if (gaugeOn) fill.style.transform = `scaleX(${charge.toFixed(3)})`;
-      gauge.classList.toggle('is-touch', touch);
       // 터치 버튼 — 터치면, 끝나기 전까지
       const on = touch && s.phase !== 'end';
       if (on !== btnsOn) { btnsOn = on; for (const b of btns) b.classList.toggle('is-shown', on); }
@@ -218,6 +211,17 @@ export function createSurface3d(o: SurfaceIn<MatchConfig>): Surface<MatchState, 
         if (show) B.el.style.transform = `translate(${H.x.toFixed(1)}px, ${(H.y - BUBBLE_UP_PX).toFixed(1)}px) translate(-50%, -100%)`;
       }
       for (const [id, B] of bubbles) if (!live.has(id) && B.shown) { B.el.classList.remove('is-on'); B.shown = false; }
+      // 세기 막대 — 내 선수가 차는 키를 누르는 동안(슛 = 금색·잘 들어가는 띠, 패스·스루·로빙 = 파랑), 발밑에. 1인칭이면 아래 가운데
+      const me = myId === null ? undefined : s.players[myId];
+      const shotG = me && me.shootHeld && !me.shootVoid ? me.charge / RULES3D.chargeTicks : 0;
+      const passG = me && (me.passHeld || me.throughHeld || me.lobHeld) ? me.lobTicks / RULES3D.passCharge : 0;
+      let at: { x: number; y: number } | null = null;
+      if (myId !== null && !fp) {
+        const ahead = sc.footPoint(myId, vCam).applyMatrix4(sc.camera.matrixWorldInverse).z < -0.3;
+        sc.footPoint(myId, vFoot).project(sc.camera);
+        if (ahead) at = { x: (vFoot.x + 1) * 0.5 * w, y: (1 - vFoot.y) * 0.5 * h + 8 };
+      }
+      gauge.update(shotG > 0 ? shotG : passG > 0 ? passG : null, shotG > 0 ? 'shot' : 'pass', at, RULES3D.shotSweet, touch);
 
       // 화면 밖·뒤의 공 — 가장자리 화살표(1인칭·뒤에서). 중계는 공을 따라가니 필요 없다
       let arrowNow = false;
@@ -258,10 +262,11 @@ export function createSurface3d(o: SurfaceIn<MatchConfig>): Surface<MatchState, 
         const side = config.players[myId].side, dir = attackDir(side);
         const gk = config.players.findIndex((p) => p.gk && p.side !== side);
         n.phase = 'play'; n.phaseTicks = 0;
-        Object.assign(n.players[myId], { x: dir * 14, y: 0, vx: 0, vy: 0, fx: dir, fy: 0, noTouch: 0 });
+        // 골대 4m 앞(경기장 길이와 상관없이 — 2026-11-07 경기장 44m 로 넓힌 뒤 예전 x 14 가 8m 앞이 됐다)
+        Object.assign(n.players[myId], { x: dir * (PITCH3D.HW - 4), y: 0, vx: 0, vy: 0, fx: dir, fy: 0, noTouch: 0 });
         if (gk >= 0) Object.assign(n.players[gk], { x: dir * 6, y: -9, vx: 0, vy: 0 });
         for (const p of config.players) if (p.side !== side && !p.gk) Object.assign(n.players[p.id], { x: dir * -5, y: -8 + p.id % 5, vx: 0, vy: 0 });
-        n.owner = myId; n.ball = { x: dir * 14.7, y: 0, z: 0.18, vx: 0, vy: 0, vz: 0 };
+        n.owner = myId; n.ball = { x: dir * (PITCH3D.HW - 3.3), y: 0, z: 0.18, vx: 0, vy: 0, vz: 0 };
         const mate = config.players.findIndex((p) => p.side === side && p.id !== myId && !p.gk);
         if (mate >= 0) { n.prevTouch = mate; n.prevTouchTick = n.tick; n.lastTouch = myId; n.lastTouchTick = n.tick; }
         return n;
@@ -272,6 +277,7 @@ export function createSurface3d(o: SurfaceIn<MatchConfig>): Surface<MatchState, 
       canvas.removeEventListener('webglcontextlost', onLost);
       input?.dispose();
       for (const n of nodes) n.remove();
+      gauge.dispose();
       sc.dispose();
     },
   };
