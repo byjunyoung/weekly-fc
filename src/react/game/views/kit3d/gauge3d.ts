@@ -13,6 +13,7 @@ export function createGauge(layer: HTMLElement, extraCls = '') {
   const root = el('div', `k3-gauge${extraCls ? ` ${extraCls}` : ''}`, layer);
   root.setAttribute('aria-hidden', 'true');
   const sweet = el('span', 'k3-gauge-sweet', root);
+  sweet.style.display = 'none';   // 띠는 슛에서만(아래 update)
   const fill = el('i', 'k3-gauge-fill', root);
   let on = false, last = 0, until = 0, kindNow: GaugeKind | null = null, sweetKey = '', posKey = '';
   const show = (v: boolean): void => { if (v !== on) { on = v; root.classList.toggle('is-on', v); } };
