@@ -39,7 +39,9 @@ const THROUGH_RUN = 2.5;      // 동료가 상대 골대 쪽으로 이보다 빨
 const THROUGH_SPACE = 3;      // 그 동료 앞 THROUGH 자리 둘레에 상대가 이보다 멀어야
 const LOB_OPEN = 3;           // 로빙: 먼 동료 둘레에 상대가 이보다 멀어야(가는 길은 막혀 있어도 된다)
 const KEEPER_ARC = 1.3;       // 골키퍼가 서는 호(골대 가운데에서의 거리)
-const KEEPER_REACT = 12;      // 슛을 보고 움직이기까지 틱(0.15초) — 이게 작을수록 골키퍼가 세다
+const KEEPER_REACT = 15;      // 슛을 보고 움직이기까지 틱(0.25초) — 이게 작을수록 골키퍼가 세다. 12 → 15(2026-11-07 "뭔가 너무 어렵다")
+/** 공 주인이 바뀐 뒤 필드 봇이 하던 대로 몇 틱 더 간다(반응 늦음, 0.25초) — 같은 날 "너무 어렵다". 상태의 lastTouchTick 으로 정해져 결정적이다. */
+const REACT_TICKS = 15;
 const KEEPER_RUSH = 4.5;      // 골대에서 이 안의 느린 공은 골키퍼가 나와 줍는다
 const KEEPER_PASS_WAIT = 90;  // 공을 들고 이만큼 지나도 줄 사람이 없으면 앞으로 멀리 찬다
 // ═══════════════════════════════
@@ -105,6 +107,11 @@ export function botInput(state: MatchState, config: MatchConfig, id: number): In
   const mp = config.players[id], me = state.players[id];
   if (!mp || !me || (state.phase !== 'kickoff' && state.phase !== 'play')) return { ...NO_INPUT };
   if (mp.gk) return keeperInput(state, config, id);
+  // 공 주인이 막 바뀌었다(가로챔·패스 받음) — 다른 필드 봇은 REACT_TICKS 동안 가던 쪽으로 계속 간다(머리가 따라오는 시간)
+  if (state.phase === 'play' && state.owner !== null && state.owner !== id && state.lastTouch === state.owner && state.tick - state.lastTouchTick < REACT_TICKS) {
+    const v = Math.sqrt(me.vx * me.vx + me.vy * me.vy), top = mp.perf.maxSpeed;
+    if (v > 0.3) return inp({ x: me.vx / Math.max(v, top), y: me.vy / Math.max(v, top) });
+  }
   const hes = noise(id, Math.floor(state.tick / HESITATE_HOLD) + 1000) < -1 + 2 * HESITATE_P ? HESITATE_SPEED : 1;
   const scale = (v: { x: number; y: number }): { x: number; y: number } => ({ x: v.x * hes, y: v.y * hes });
   const ball = state.ball;

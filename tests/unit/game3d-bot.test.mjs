@@ -90,8 +90,9 @@ test('골키퍼 봇 — 정면 약한 슛은 막고, 구석으로 세게 찬 슛
     let s = createMatch(cfg, 8);
     s = JSON.parse(JSON.stringify(s));
     s.phase = 'play';
-    Object.assign(s.players[0], { x: 7, y: 0, fx: 1, fy, vx: 0, vy: 0 });
-    s.ball = { x: 7.7, y: 0, z: ballR, vx: 0, vy: 0, vz: 0 };
+    // 골대에서 11m — 경기장 길이와 상관없이(2026-11-07 경기장 44m 로 넓힘, 전엔 x 7 = 반길이 18 에서 11m)
+    Object.assign(s.players[0], { x: HW - 11, y: 0, fx: 1, fy, vx: 0, vy: 0 });
+    s.ball = { x: HW - 10.3, y: 0, z: ballR, vx: 0, vy: 0, vz: 0 };
     // 골키퍼는 봇으로 먼저 자리를 잡는다
     for (let t = 0; t < 90; t++) { const i = [{ ...NO_INPUT }, botInput(s, cfg, 1)]; s = step(s, cfg, i); }
     assert.equal(s.owner, 0);
@@ -128,7 +129,7 @@ function shotFrom(x0, y0, ty, hold, seed) {
 test('슛 결과 — 구석으로 모은 슛은 35~80% 들어가고, 골키퍼 정면은 세게 차도 대부분, 약하게 차면 전부 막힌다', () => {
   let goals = 0, n = 0, straight = 0, sn = 0, weak = 0;
   let seed = 1;
-  for (const x0 of [6, 8, 10]) for (const y0 of [-4, 0, 4]) {
+  for (const x0 of [HW - 12, HW - 10, HW - 8]) for (const y0 of [-4, 0, 4]) {   // 골대에서 8~12m(경기장 길이와 상관없이 — 2026-11-07 넓힘)
     for (const ty of [-2, -1.5, 1.5, 2]) for (const hold of [36, 48]) { goals += shotFrom(x0, y0, ty, hold, seed++) ? 1 : 0; n++; }
     for (const hold of [36, 48]) { straight += shotFrom(x0, y0, 0, hold, seed++) ? 1 : 0; sn++; }
     weak += shotFrom(x0, y0, 0, 8, seed++) ? 1 : 0;
@@ -138,4 +139,23 @@ test('슛 결과 — 구석으로 모은 슛은 35~80% 들어가고, 골키퍼 �
   assert.ok(rate >= 0.35 && rate <= 0.8, `구석 ${goals}/${n}`);
   assert.ok(straight / sn <= 0.25, `정면 강슛 ${straight}/${sn}`);
   assert.equal(weak, 0, '약한 정면 슛');
+});
+
+// 2026-11-07 "뭔가 너무 어렵다" — 공 주인이 바뀌면 다른 필드 봇은 0.25초(15틱) 동안 가던 쪽으로 계속 간다(결정적).
+test('봇 반응 늦음 — 공 주인이 막 바뀌면 15틱 동안 다른 필드 봇은 가던 쪽 그대로, 그 뒤엔 다시 판단한다', () => {
+  const cfg = five();
+  let s = createMatch(cfg, 3);
+  for (let t = 0; t < 400; t++) s = step(s, cfg, bots(s, cfg));
+  s = JSON.parse(JSON.stringify(s));
+  s.phase = 'play';
+  const owner = 6;   // 상대 편 필드 선수에게 공을 막 넘긴다
+  s.owner = owner; s.lastTouch = owner; s.lastTouchTick = s.tick;
+  const q = 2, p = s.players[q];
+  Object.assign(p, { vx: 3, vy: -1 });
+  const a = botInput(s, cfg, q), v = Math.sqrt(10);
+  assert.ok(Math.abs(a.x - 3 / Math.max(v, BASE_PERF.maxSpeed)) < 1e-9 && Math.abs(a.y + 1 / Math.max(v, BASE_PERF.maxSpeed)) < 1e-9, JSON.stringify(a));
+  assert.equal(a.shoot, false);
+  const later = { ...s, tick: s.lastTouchTick + 15 };
+  const b = botInput(later, cfg, q);
+  assert.notDeepEqual([b.x, b.y], [a.x, a.y], '15틱 뒤엔 다시 판단');
 });
