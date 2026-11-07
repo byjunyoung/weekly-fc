@@ -195,6 +195,22 @@ test('슛 — 오래 누를수록 빠르고 높이 뜬다', () => {
   assert.ok(c.peak > goalH * 0.75 && c.peak < goalH + 0.3, `꽉 채운 슛은 크로스바 근처까지 뜬다(먼 거리에선 넘을 수 있다) ${c.peak}`);
 });
 
+test('슛 보정 — 골문 쪽 ±60도 안을 보고 차면 골문 안으로 간다(2026-11-07 "3d는 슈팅 보정을 해줘야지 골대로 가게")', () => {
+  const cfg = few([0, 1]);
+  // 오른쪽 골대(x = +HW)를 향해 공격하는 편 0. 골문에서 12m 앞, 보는 방향을 골문 쪽에서 0·30·55도 틀어 본다
+  const HW = PITCH3D.HW, GW = PITCH3D.goalHalfW;
+  for (const deg of [0, 30, 55, -55]) {
+    const a = (deg * Math.PI) / 180, fx = Math.cos(a), fy = Math.sin(a);
+    let s = put(createMatch(cfg, 3), { ball: { x: HW - 12 + 0.7 * fx, y: 0.7 * fy }, players: { 0: { x: HW - 12, y: 0, fx, fy }, 1: FAR(1) } });
+    s = step(s, cfg, idle(cfg));
+    for (let t = 0; t < 20; t++) s = step(s, cfg, [{ x: 0, y: 0, shoot: true, pass: false }, NO_INPUT]);
+    s = step(s, cfg, idle(cfg));
+    assert.equal(s.lastKick?.kind, 'shot', `${deg}도`);
+    const yAtLine = s.ball.y + (s.ball.vy * (HW - s.ball.x)) / s.ball.vx;
+    assert.ok(Math.abs(yAtLine) < GW, `${deg}도로 찬 공이 골라인에서 y ${yAtLine.toFixed(2)} (골문 반폭 ${GW})`);
+  }
+});
+
 test('빼앗기 — 공 가진 선수에게 상대가 몸으로 붙으면 빼앗거나 흘러나오고, 잠깐은 다시 못 뺏는다', () => {
   const cfg = few([0, 1]);
   let took = 0, freed = 0;

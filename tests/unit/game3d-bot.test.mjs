@@ -125,7 +125,7 @@ function shotFrom(x0, y0, ty, hold, seed) {
   for (let t = 0; t < 150 && s.phase === 'play'; t++) s = step(s, duel, [{ ...NO_INPUT }, botInput(s, duel, 1)]);
   return s.score[0] > 0;
 }
-test('슛 결과 — 구석으로 모은 슛은 35~70% 들어가고, 골키퍼 정면은 세게 차도 대부분, 약하게 차면 전부 막힌다', () => {
+test('슛 결과 — 구석으로 모은 슛은 35~80% 들어가고, 골키퍼 정면은 세게 차도 대부분, 약하게 차면 전부 막힌다', () => {
   let goals = 0, n = 0, straight = 0, sn = 0, weak = 0;
   let seed = 1;
   for (const x0 of [6, 8, 10]) for (const y0 of [-4, 0, 4]) {
@@ -134,7 +134,8 @@ test('슛 결과 — 구석으로 모은 슛은 35~70% 들어가고, 골키퍼 �
     weak += shotFrom(x0, y0, 0, 8, seed++) ? 1 : 0;
   }
   const rate = goals / n;
-  assert.ok(rate >= 0.35 && rate <= 0.7, `구석 ${goals}/${n}`);
+  // 위 끝 70% → 80%(2026-11-07 "3d는 슈팅 보정을 해줘야지 골대로 가게" — 골문 쪽을 보고 찬 공이 모두 골문 안으로 가니 구석 슛이 더 들어간다)
+  assert.ok(rate >= 0.35 && rate <= 0.8, `구석 ${goals}/${n}`);
   assert.ok(straight / sn <= 0.25, `정면 강슛 ${straight}/${sn}`);
   assert.equal(weak, 0, '약한 정면 슛');
 });
