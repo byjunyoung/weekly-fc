@@ -32,6 +32,9 @@ export const INDEXABLE = [];
 // 넘김 페이지(Redirect.astro)는 셸을 안 쓴다.
 const REDIRECTS = ['matches/potm/index.html', 'teams/index.html', 'rules/index.html', 'record/index.html', 'record/fines/index.html', 'record/duty/index.html', 'about/index.html', 'game3d/index.html'];   // tactics 는 2026-09-26 부터 진짜 페이지
 export const SHELL_PAGES = PAGES.filter((p) => !REDIRECTS.includes(p));
+// 게임 구역(2026-11-07 "게임 메뉴 진입하면 완전 게임 UI처럼") — 포털 머리 대신 게임 띠. 나머지 셸 페이지가 포털 페이지.
+export const GAME_PAGES = ['game/index.html', 'games/index.html', 'games/3d/index.html'];
+export const PORTAL_PAGES = SHELL_PAGES.filter((p) => !GAME_PAGES.includes(p));
 const read = (p) => readFileSync(`dist/${p}`, 'utf8');
 
 test('모든 페이지가 dist에 있다', () => {
@@ -116,7 +119,7 @@ test('antd CSS는 wfc 변수 클래스로 뽑혔고 스펙 부품 규칙을 담�
   assert.ok(/\.ant-btn[^{]*\{[^}]*background/.test(css), '부품 규칙이 비었다 — zeroRuntime 을 켠 채 뽑았다');
 });
 test('상단바 로그인 버튼은 React 섬으로 그려지고, 관리자 버튼은 빌드 때 없다(관리자 계정일 때만), 옛 모달·토스트는 없다', () => {
-  for (const p of SHELL_PAGES) {
+  for (const p of PORTAL_PAGES) {
     const html = read(p);
     const island = html.match(/<astro-island[^>]*component-url="\/weekly-fc\/_astro\/TopbarActions\.[^"]+\.js"[^>]*>/);
     assert.ok(island, `${p}: TopbarActions 섬 없음`);
@@ -280,6 +283,7 @@ test('안내 > 가이드(2026-11-06) — 시작하기와 규칙을 한 페이지
 
 
 // 게임(2026-11-06) — 1단계는 주소로만 들어왔고, 2단계(온라인)와 함께 상단 메뉴 여섯째로 올렸다(탭 줄은 없다).
+// 2026-11-07 게임 구역: 게임 페이지엔 포털 머리가 없다 — 상단 메뉴의 게임이 목록(/games/)으로 가는 건 포털 페이지에서 본다.
 test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단 메뉴의 게임은 목록(/games/)으로 간다', () => {
   const html = read('game/index.html');
   assert.match(html, /<astro-island[^>]*component-url="\/weekly-fc\/_astro\/GameApp\.[^"]+\.js"[^>]*client="load"/, 'GameApp 섬');
@@ -287,13 +291,32 @@ test('게임 페이지는 GameApp 섬(불러오는 중 상태)을 담고, 상단
   assert.ok(html.includes('class="loading"') && html.includes('불러오는 중'), '빌드 때는 불러오는 중 화면');
   assert.ok(!html.includes('class="game-overlay"'), '경기 오버레이는 시작한 뒤에만 생긴다');
   assert.ok(!html.includes('class="subnav"'), '게임은 탭 줄이 없다');
-  for (const p of ['index.html', 'game/index.html', 'tier/index.html']) {
+  for (const p of ['index.html', 'tier/index.html', 'guide/index.html']) {
     const nav = read(p).match(/<nav[\s\S]*?<\/nav>/g) ?? [];
     assert.ok(nav.length > 0, `${p}: 메뉴를 못 찾았다`);
     assert.ok(nav.join('').includes('게임'), `${p}: 상단 메뉴에 게임이 없다`);
     assert.ok(nav.join('').includes('/weekly-fc/games/'), `${p}: 상단 메뉴에 /games/ 링크가 없다`);
   }
-  assert.match(html, /<a href="\/weekly-fc\/games\/"[^>]*class="active"|<a[^>]*class="active"[^>]*href="\/weekly-fc\/games\/"/, '/game/ 에선 게임 메뉴가 켜진다');
+});
+
+// 게임 구역 — 포털 머리(로고·상단 메뉴·로그인) 대신 얇은 게임 띠 하나: [← 포털](라커룸) · WEEKLY FC GAMES · ♪. 포털 페이지엔 띠가 없다.
+test('게임 구역(/games/·/games/3d/·/game/)은 포털 머리 대신 게임 띠, 포털 페이지는 그대로', () => {
+  for (const p of GAME_PAGES) {
+    const html = read(p);
+    const bar = html.match(/<header class="gbar"[^>]*>[\s\S]*?<\/header>/);
+    assert.ok(bar, `${p}: 게임 띠 없음`);
+    assert.match(bar[0], /<a class="gbar-back"[^>]*href="\/weekly-fc\/"[^>]*>← 포털<\/a>/, `${p}: [← 포털] 은 라커룸으로`);
+    assert.ok(bar[0].includes('WEEKLY FC GAMES'), `${p}: 띠 제목`);
+    assert.ok(bar[0].includes('class="gbar-snd"'), `${p}: 띠의 ♪`);
+    assert.ok(!html.includes('class="topbar"') && !html.includes('class="topnav') && !html.includes('id="me-btn"'), `${p}: 포털 머리가 남았다`);
+    assert.ok(!/component-url="[^"]*TopbarActions/.test(html), `${p}: 로그인 섬이 남았다`);
+    assert.match(html, /<body class="[^"]*\bis-game\b/, `${p}: body.is-game`);
+  }
+  for (const p of PORTAL_PAGES) {
+    const html = read(p);
+    assert.ok(html.includes('<header class="topbar"') && !html.includes('class="gbar"'), `${p}: 포털 머리가 아니다`);
+    assert.ok(!/<body class="[^"]*\bis-game\b/.test(html), `${p}: 게임 구역 표시가 붙었다`);
+  }
 });
 
 // 3D 경기(2026-11-07 게임 묶음 4단계) — 시제품 페이지(/game3d/)는 /game/?g=match3d 로 넘기는 페이지가 됐다(이미 퍼진 링크를 살린다).
@@ -304,7 +327,7 @@ test('/game3d/ 는 /game/?g=match3d 로 넘기고, three.js 묶음은 GameApp �
   assert.match(html, /<meta http-equiv="refresh" content="0; url=\/weekly-fc\/game\/\?g=match3d"/, '넘김');
   assert.ok(html.includes('<title>3D 경기 · WEEKLY FC</title>'), '제목(시제품 딱지 없음)');
   assert.ok(!html.includes('시제품'), '시제품 딱지 없음');
-  for (const p of ['index.html', 'game/index.html', 'tier/index.html']) {
+  for (const p of ['index.html', 'tier/index.html']) {
     const nav = (read(p).match(/<nav[\s\S]*?<\/nav>/g) ?? []).join('');
     assert.ok(nav.length > 0, `${p}: 메뉴를 못 찾았다`);
     assert.ok(!nav.includes('/weekly-fc/game3d/'), `${p}: 상단 메뉴에 /game3d/ 가 있다`);

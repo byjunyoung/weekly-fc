@@ -16,11 +16,25 @@ const lastAt: Record<string, number> = {};
 const GAP: Record<Sfx['kind'], number> = { kick: 70, bounce: 60, goal: 1500, whistle: 700, end: 2000, move: 45, confirm: 250, shot: 120, catch: 250, tackle: 150 };
 
 export const isMuted = (): boolean => muted;
-export function setMuted(m: boolean): void {
+/** 소리 켬/끔이 바뀌면 창에 이 이름의 사건을 보낸다(detail = 끔). 게임 띠의 ♪(페이지 스크립트)와 경기 화면의 ♪(섬)가 같은 값을 쓰게
+ *  (2026-11-07 게임 구역 — "지금 소리 켬/끔과 같은 값"). 두 쪽이 이 모듈을 따로 묶어 가져도 사건으로 서로의 값을 맞춘다. */
+export const SOUND_EVENT = 'wfc:sound';
+function apply(m: boolean): void {
   muted = m;
-  try { localStorage.setItem(KEY, m ? 'off' : 'on'); } catch { /* 저장 못 해도 이번 판은 반영된다 */ }
   if (master && ctx) master.gain.setTargetAtTime(m ? 0 : 0.6, ctx.currentTime, 0.02);
 }
+export function setMuted(m: boolean): void {
+  apply(m);
+  try { localStorage.setItem(KEY, m ? 'off' : 'on'); } catch { /* 저장 못 해도 이번 판은 반영된다 */ }
+  try { window.dispatchEvent(new CustomEvent<boolean>(SOUND_EVENT, { detail: m })); } catch { /* 창이 없는 곳(테스트)에선 알릴 데가 없다 */ }
+}
+/** 소리 켬/끔이 바뀔 때 부른다(이 탭의 다른 ♪ 가 바꾼 것 포함). 끊는 함수를 돌려준다. */
+export function onMutedChange(cb: (m: boolean) => void): () => void {
+  const on = (e: Event): void => cb((e as CustomEvent<boolean>).detail === true);
+  window.addEventListener(SOUND_EVENT, on);
+  return () => window.removeEventListener(SOUND_EVENT, on);
+}
+try { window.addEventListener(SOUND_EVENT, (e) => { const m = (e as CustomEvent<boolean>).detail === true; if (m !== muted) apply(m); }); } catch { /* 창이 없으면 사건도 없다 */ }
 
 /** 사람의 누름 안에서 부른다 — 소리 장치를 만들고 깨운다. 여러 번 불러도 된다. */
 /** 다시 깨워야 하나(순수 — 테스트용으로 뗌). 아이폰은 앱을 바꿨다 오면 'interrupted' 가 되고, 'running' 이라고 해도 소리가 안 나는 일이 있어

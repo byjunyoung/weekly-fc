@@ -1,10 +1,11 @@
-// 경기 화면의 소리 켬/끔 버튼(✕ 왼쪽). 고른 값은 기기에 남는다.
+// 경기 화면의 소리 켬/끔 버튼(✕ 왼쪽). 고른 값은 기기에 남는다. 게임 띠의 ♪(GameBar.astro)와 같은 값이다 — 저쪽에서 바꾸면 여기도 따라 바뀐다.
 // 브라우저는 사람이 한 번 누르기 전엔 소리를 못 내서, 경기 화면이 뜨면 첫 누름·키 입력에서 소리 장치를 깨운다(아이폰은 그 안에서만 된다).
 import { useEffect, useState } from 'react';
-import { isMuted, markStale, setMuted, unlock } from './sfx';
+import { isMuted, markStale, onMutedChange, setMuted, unlock } from './sfx';
 
 export default function SoundToggle() {
   const [off, setOff] = useState(() => isMuted());
+  useEffect(() => onMutedChange(setOff), []);
   useEffect(() => {
     unlock();   // 방금 [시작]을 눌렀으니 대개 여기서 바로 깨어난다
     // 표준상 터치의 pointerdown 은 "사용자 활성화"가 아니다 — 아이폰은 pointerup·touchend·click 안에서만 소리 장치를 깨운다(리뷰 #4).

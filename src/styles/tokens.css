@@ -1373,3 +1373,23 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .d3-pop.is-on { display: block; }
 /* 승부차기·프리킥 세기 막대는 아래 안내 줄 위로(폰에서 안내 글을 가리지 않게 — 헤드리스 390px 로 확인) */
 .g3-gauge.p3-gauge:not(.is-touch) { bottom: calc(max(var(--s-xl), env(safe-area-inset-bottom)) + 52px); }
+
+/* ══ 게임 구역(2026-11-07 "게임 메뉴 진입하면 완전 게임 UI처럼 보이게 개선할까") ══════════════════════════════
+   설계: docs/superpowers/specs/2026-11-07-game-arcade-ui-design.md. /games/·/games/3d/·/game/ 는 Shell 이 body 에 is-game 을 단다.
+   포털 머리 대신 게임 띠(.gbar), 목록은 오락실 첫 화면(.arc-*), 설정·방·결과는 오락실 패널 결. 공용 부품(.card·antd)은 body.is-game 아래에서만
+   바꿔 다른 페이지는 그대로다. 선수 고르기(.sel-*)는 이미 이 결이라 손대지 않는다. 경기 화면(캔버스·✕·♪·조이스틱·버튼)도 그대로.
+   꾸밈은 선수 고르기와 같은 재료로만 — 굵은 테두리, 금색 커서, 계단식 깜빡임, 도트 제목. 색은 토큰만. */
+.gbar { position: sticky; top: 0; z-index: 20; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s-xs);
+  height: var(--row-h); padding: 0 max(var(--s-sm), env(safe-area-inset-right)) 0 max(var(--s-sm), env(safe-area-inset-left));
+  background: var(--canvas); border-bottom: 2px solid var(--hairline-strong); }
+.gbar-back { display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--s-xs); border: 2px solid var(--hairline-strong); color: var(--fg);
+  font-size: var(--fs-xs); text-decoration: none; white-space: nowrap; }
+.gbar-back:hover { border-color: var(--fg); color: var(--fg); }
+.gbar-title { min-width: 0; overflow: hidden; color: var(--gold); text-align: center; white-space: nowrap; text-overflow: clip;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
+.gbar-snd { width: 40px; height: 40px; min-height: 0; padding: 0; border: 2px solid var(--hairline-strong); border-radius: 0; background: transparent; color: var(--fg);
+  font-family: var(--font); font-size: var(--fs-body); cursor: pointer; }
+.gbar-snd:hover { border-color: var(--fg); }
+.gbar-snd.is-off { color: var(--muted); text-decoration: line-through; }
+.gbar-back:focus-visible, .gbar-snd:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+@media (max-width: 380px) { .gbar-title { font-size: var(--fs-body); } }   /* 360px 폰 — 띠가 한 줄에 들게 */

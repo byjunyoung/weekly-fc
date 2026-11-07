@@ -1,0 +1,27 @@
+---
+// 게임 구역의 띠(2026-11-07 "게임 메뉴 진입하면 완전 게임 UI처럼 보이게 개선할까" — 포털 상단 메뉴는 숨기고 나가기 버튼 하나).
+// 설계: docs/superpowers/specs/2026-11-07-game-arcade-ui-design.md §1. 왼쪽 [← 포털](라커룸), 가운데 도트 제목, 오른쪽 ♪.
+// ♪ 는 경기 화면의 ♪(SoundToggle)와 같은 저장값(sfx.ts)이다. 스크립트가 붙기 전엔 누를 게 없으니 숨겨 둔다.
+import { href } from '../lib/url';
+---
+<header class="gbar">
+  <a class="gbar-back" href={href('/')}>← 포털</a>
+  <span class="gbar-title">WEEKLY FC GAMES</span>
+  <button type="button" class="gbar-snd" id="gbar-snd" hidden>♪</button>
+</header>
+
+<script>
+  import { isMuted, onMutedChange, setMuted, unlock } from '../react/game/sfx';
+  const btn = document.getElementById('gbar-snd') as HTMLButtonElement | null;
+  if (btn) {
+    const show = (off: boolean): void => {
+      btn.classList.toggle('is-off', off);
+      btn.setAttribute('aria-pressed', String(!off));
+      btn.setAttribute('aria-label', off ? '소리 켜기' : '소리 끄기');
+    };
+    show(isMuted());
+    onMutedChange(show);
+    btn.addEventListener('click', () => { unlock(); setMuted(!isMuted()); });
+    btn.hidden = false;
+  }
+</script>
