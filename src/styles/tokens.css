@@ -1430,3 +1430,42 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 }
 @media (max-width: 719px), (hover: none) { .arc-help { display: none; } }
 @media (prefers-reduced-motion: reduce) { .arc-row.is-cursor .arc-item::before { animation: none; } }
+
+/* 입장·혼자 하기 설정·방 — 오락실 패널: 굵은 테두리 칸, 도트 소제목(금색), 고른 값이 밝은 칸, 누르기 목표 40px 이상, [시작]은 크게 */
+body.is-game .page-head h1 .game-code { font-size: var(--fs-pixel-lg); }
+body.is-game .card { background: var(--elevated); border: 2px solid var(--hairline-strong); }
+body.is-game .card h2 { color: var(--gold); }
+body.is-game .game-conn { border-width: 2px; border-color: var(--gold); }
+body.is-game .ant-btn { min-height: 40px; }
+body.is-game .chip { min-height: 40px; border-width: 2px; }
+body.is-game .game-opt > .muted { color: var(--body); }
+body.is-game .ant-segmented { padding: 2px; border: 2px solid var(--hairline-strong); border-radius: 0; background: var(--canvas); }
+body.is-game .ant-segmented-item, body.is-game .ant-segmented-thumb { border-radius: 0; }
+body.is-game .ant-segmented-item-label { min-height: 40px; padding: 0 var(--s-sm); line-height: 40px; }
+body.is-game .ant-segmented-item-selected, body.is-game .ant-segmented-thumb { background: var(--gold); color: var(--ink); }
+body.is-game .ant-segmented-item-selected .ant-segmented-item-label { color: var(--ink); }
+body.is-game .game-start .ant-btn-primary, body.is-game .game-actions .ant-btn-primary { min-width: 200px; min-height: 56px;
+  font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; }
+body.is-game .game-actions .ant-btn { min-height: 48px; }
+body.is-game .game-col { padding: var(--s-xxs); background: var(--elevated); border: 2px solid var(--hairline-strong); }
+body.is-game .game-col.is-target { border-color: var(--link); }
+body.is-game .game-col-head { min-height: 40px; }
+body.is-game .game-col-head > span:not(.muted):not(.game-col-dot) { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; line-height: 1; }
+body.is-game .game-chip { min-height: 40px; border-width: 2px; }
+body.is-game .game-chip.is-me { box-shadow: none; }
+@media (max-width: 719px) {
+  body.is-game .game-start .ant-btn-primary { width: 100%; }
+  body.is-game .game-actions > .ant-btn { flex: 1 1 auto; }
+  body.is-game .game-col-head > span:not(.muted):not(.game-col-dot) { font-size: var(--fs-xs); font-family: var(--font); }
+}
+
+/* 결과 상자 — 큰 도트 결과 글, 점수, 줄마다 등번호·이름, 큰 버튼. 2D·3D 같은 상자(MatchFrame). 승은 금색 테두리, 패는 경고색 */
+.game-result-box { gap: var(--s-md); max-width: 400px; padding: var(--s-xl) var(--s-lg); background: var(--elevated); border: 3px solid var(--hairline-strong); }
+.game-result-box:has(.game-outcome.is-win) { border-color: var(--gold); }
+.game-result-box:has(.game-outcome.is-lose) { border-color: var(--warn); }
+.game-outcome { font-size: var(--fs-pixel-xl); line-height: 1; }
+.game-final { font-size: var(--fs-pixel-md); line-height: 1.1; }
+.game-result-box .pen-rows li, .game-result-box .fk-rows li, .game-result-box .dr-rows li { min-height: 32px; }
+.game-result-actions { flex-direction: column; align-items: stretch; width: 100%; }
+.game-result-actions .ant-btn { min-height: 48px; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; }
+@media (max-width: 380px) { .game-outcome { font-size: var(--fs-pixel-lg); } .game-result-box { padding: var(--s-lg) var(--s-md); } }
