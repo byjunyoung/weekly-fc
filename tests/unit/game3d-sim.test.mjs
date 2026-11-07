@@ -194,7 +194,7 @@ test('슛 — 오래 누를수록 빠르고 높이 뜬다', () => {
   assert.ok(a.v0 < b.v0 && b.v0 <= c.v0 + 1e-9, `속도 ${a.v0} ${b.v0} ${c.v0}`);
   assert.ok(a.peak < b.peak && b.peak < c.peak, `높이 ${a.peak} ${b.peak} ${c.peak}`);
   assert.ok(b.peak < goalH, `가운데쯤 모은 슛은 크로스바 아래 ${b.peak}`);
-  assert.ok(c.peak > goalH + 0.3, `꽉 채운 슛은 크로스바보다 높이 뜬다 ${c.peak}`);
+  assert.ok(c.peak > b.peak, `꽉 채운 슛은 더 높이(넘친 만큼 높이 폭 — 크로스바를 넘는 비율은 아래 게이지 시험) ${c.peak}`);
 });
 
 test('슛 보정 — 골문 쪽 ±60도 안을 보고 차면 골문 안으로 간다(2026-11-07 "3d는 슈팅 보정을 해줘야지 골대로 가게")', () => {
@@ -491,7 +491,8 @@ test('게이지 — 가까이서 꽉 채운 슛은 가운데쯤 모은 슛보다
   };
   const mid = over(Math.round(RULES3D.chargeTicks * 0.65)), full = over(RULES3D.chargeTicks);
   assert.equal(mid, 0, '가운데쯤 모은 슛은 크로스바 아래');
-  assert.ok(full >= 7, `꽉 채운 슛 아홉 중 ${full}번 크로스바 위`);
+  // 같은 날 "너무 어렵다" — 넘친 슛은 높이에 폭이 있어 꽉 채워도 늘 뜨지는 않는다(대본 슈터 72번 중 절반쯤)
+  assert.ok(full >= 3 && full > mid, `꽉 채운 슛 아홉 중 ${full}번 크로스바 위`);
 });
 
 test('게이지 — 패스 계열을 모으는 동안은 슛을 모을 때처럼 느려진다(공을 가졌을 때)', () => {

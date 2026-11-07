@@ -115,12 +115,12 @@ const CHARGE_TICKS = 54;      // 끝까지 모이는 틱(0.9초)
 const SHOT_MIN = 10.4;        // 톡 친 슛 속도. 13 × 0.8(느리게)
 const SHOT_MAX = 24;          // 꽉 채운 슛 속도. 30 × 0.8(느리게)
 const LOFT_MIN = 0.55;        // 톡 친 슛의 뜨는 속도(세로). 0.6 → 0.55(느리게 — 아래 LOFT_MAX 와 같은 까닭)
-const LOFT_MAX = 12;          // 꽉 채운 슛의 뜨는 속도 — 2026-11-07 "게이지 시스템 피파랑 비슷하게 가자": LOFT_KNEE 를 넘기면 가파르게 올라 가까이서도 크로스바 위로 간다(아래 shotLoft). 전엔 6.85·세기 제곱
+const LOFT_MAX = 11.5;        // 꽉 채운 슛이 뜰 수 있는 가장 큰 세로 속도 — 띠(LOFT_KNEE)를 넘긴 만큼 이 사이 어딘가로(아래 shotLoft). 같은 날 "너무 어렵다" — 넘친 슛이 한꺼번에 뜨지 않게
 const AIM_COS = 0.5;          // 보는 방향이 골문 쪽 ±60도 안이면(2026-11-07 "3d는 슈팅 보정을 해줘야지 골대로 가게" — 0.7·±45도에서 넓힘)
 const AIM_ASSIST = 1;         // 그 안이면 골문 안쪽 점으로 끝까지 당긴다 — 골대 안으로 간다(같은 날 0.55 에서 올림. 0.8·0.9 는 30~55도로 찬 공이 기둥 밖으로 났다). 어느 쪽 구석인지는 보는 방향이 정한다
 const SPEED_FULL = 0.45;      // 이만큼 모으면 슛 속도가 끝까지(아래 shotSpeed) — 그 위는 높이만
-const LOFT_LOW = 10;         // LOFT_KNEE 까지 세기 제곱으로 오르는 뜨는 속도 몫(낮게 깔리는 강슛)
-const LOFT_KNEE = 0.7;       // 이 세기를 넘기면 가파르게 뜬다(꽉 채우면 LOFT_MAX — 가까이서도 크로스바 위)
+const LOFT_LOW = 10;          // LOFT_KNEE 까지 세기 제곱으로 오르는 뜨는 속도 몫(띠 안 슛은 크로스바 아래로 낮게)
+const LOFT_KNEE = 0.76;       // 이 세기를 넘기면 넘친 만큼 뜨는 폭이 커진다(조금 넘치면 가끔, 꽉 채우면 거의 늘 크로스바 위 — 2026-11-07 "너무 어렵다": 벼랑이 아니라 차츰)
 const AIM_INSET = 0.45;       // 골대에서 이만큼 안쪽을 노린다
 const AIM_OPEN = 0.3;         // 모은 만큼(세기 × 이 값) 골키퍼 반대쪽 구석으로 더 당긴다 — 꽉 채운 슛이 보상받게(2026-11-07 "골이 너무 안 난다"; 보정을 끝까지 당기게 바꾸며 0.35 → 0.3 — 정면 강슛이 키퍼 옆으로 새지 않게, 봇끼리 3분 골은 3.8 그대로)
 
@@ -212,7 +212,7 @@ export const RULES3D = {
   passCos: PASS_COS, passMax: PASS_MAX, rollDrag: ROLL_DRAG, goalTicks: GOAL_TICKS, keeperReach: KEEPER_REACH, kickAnim: KICK_ANIM,
   tackleReach: TACKLE_REACH, tackleRecover: TACKLE_RECOVER, passCharge: PASS_CHARGE, lobMin: LOB_MIN, lobCos: LOB_COS,
   /** 슛 게이지에서 잘 들어가는 띠(화면이 표시한다) — 대본 슈터 10~16m 실측 60~75%(2026-11-07 "게이지 시스템 피파랑 비슷하게 가자"). */
-  shotSweet: [0.6, 0.75] as const,
+  shotSweet: [0.6, 0.76] as const,
 } as const;
 
 export type Side = 0 | 1;
@@ -549,7 +549,7 @@ function shoot(s: MatchState, config: MatchConfig, i: number, c: number): void {
   const cc = clamp(c, 0, 1);
   const sp = shotSpeed(cc) * mp.perf.shot;
   if (p.hold > 0) b.z = BALL_R;   // 골키퍼가 들고 있던 공은 발 앞에 떨어뜨려 찬다
-  b.vx = ux * sp; b.vy = uy * sp; b.vz = shotLoft(cc);
+  b.vx = ux * sp; b.vy = uy * sp; b.vz = shotLoft(cc, shotOver(cc) ? rand(s) : 0);   // 넘친 슛만 씨앗을 쓴다
   releaseBall(s, i, 'shot');
   s.passTo = null; s.passTicks = 0;
   s.count.shots[mp.side] += 1;
@@ -559,10 +559,15 @@ function shoot(s: MatchState, config: MatchConfig, i: number, c: number): void {
 /** 슛 속도 — 세기가 SPEED_FULL 에 닿으면 이미 가장 빠르다(그 사이는 부드럽게 오른다). 그 위로 더 모으면 높이만 는다 —
  *  2026-11-07 "게이지 시스템 피파랑 비슷하게 가자": 가운데쯤이 안전한 강슛, 꽉 채우면 가까이서도 크로스바를 넘는다. 3D 훈련장도 같은 식. */
 export function shotSpeed(c: number): number { const k = 1 - clamp(c / SPEED_FULL, 0, 1); return SHOT_MIN + (SHOT_MAX - SHOT_MIN) * (1 - k * k); }
-/** 슛이 뜨는 세로 속도 — 낮게 깔리다가(LOFT_LOW 까지 제곱으로 조금) LOFT_KNEE 를 넘기면 가파르게 뜬다. */
-export function shotLoft(c: number): number {
-  const cc = clamp(c, 0, 1), over = cc > LOFT_KNEE ? (cc - LOFT_KNEE) / (1 - LOFT_KNEE) : 0;
-  return LOFT_MIN + LOFT_LOW * cc * cc + (LOFT_MAX - LOFT_MIN - LOFT_LOW) * over * over;
+/** 슛이 뜨는 세로 속도 — LOFT_KNEE 까지는 세기 제곱으로 낮게(띠 안은 크로스바 아래). 넘치면 그 위로 0 ~ (넘친 정도 × 남은 폭) 사이 어딘가 —
+ *  u(0~1, 상태의 씨앗에서 뽑은 값)가 정한다. 모든 거리에서 크로스바를 넘는 문턱이 거의 같아(약 7m/s) 곡선만으로는 벼랑이 되기에,
+ *  넘친 슛의 높이에 폭을 둬 조금 넘치면 가끔, 꽉 채우면 거의 늘 뜨게 했다(2026-11-07 "너무 어렵다"). */
+/** 이 세기의 슛이 띠를 넘쳤나(넘친 슛만 높이 폭을 뽑는다 — 씨앗을 쓴다). */
+export const shotOver = (c: number): boolean => c > LOFT_KNEE;
+export function shotLoft(c: number, u = 0): number {
+  const cc = clamp(c, 0, 1), k = Math.min(cc, LOFT_KNEE), base = LOFT_MIN + LOFT_LOW * k * k;
+  const over = cc > LOFT_KNEE ? (cc - LOFT_KNEE) / (1 - LOFT_KNEE) : 0;
+  return base + (LOFT_MAX - base) * over * clamp(u, 0, 1) * clamp(u, 0, 1);   // u² — 넘친 슛도 대개는 조금만 뜬다
 }
 
 export type PassKind = 'pass' | 'through' | 'lob';

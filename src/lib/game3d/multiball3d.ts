@@ -12,7 +12,7 @@
 //   - 공끼리는 부딪쳐 튄다(반발 0.7, 2D 훈련장과 같은 값).
 //   - 골대는 둘 다 — 보는 방향이 어느 골대 쪽이든 그쪽으로 조준 보정.
 import type { Ball, Input } from './sim.ts';
-import { NO_INPUT, PITCH3D, TUNE3D, carrySpot, collidePlayers, containBall, containPlayer, gaugeDist, passScore, rand, shotLoft, shotSpeed, steer, turnToward, unit } from './sim.ts';
+import { NO_INPUT, PITCH3D, TUNE3D, carrySpot, collidePlayers, containBall, containPlayer, gaugeDist, passScore, rand, shotLoft, shotOver, shotSpeed, steer, turnToward, unit } from './sim.ts';
 import type { Perf } from './stats.ts';
 
 const T = TUNE3D;
@@ -100,7 +100,7 @@ function shoot(w: MBWorld, perf: Perf, i: number, j: number, c: number): void {
   }
   const cc = clamp(c, 0, 1);
   const sp = shotSpeed(cc) * perf.shot;
-  b.vx = ux * sp; b.vy = uy * sp; b.vz = shotLoft(cc);
+  b.vx = ux * sp; b.vy = uy * sp; b.vz = shotLoft(cc, shotOver(cc) ? rand(w) : 0);   // 넘친 슛은 높이 폭(경기와 같다)
   release(w, i, j);
 }
 
