@@ -42,7 +42,7 @@ const games = gamesOf(mode).map((g) => ({ to: href(`/game/?g=${g.adapter.id}`), 
 
 <script>
   // 커서 — 마우스 올림·터치·↑↓ 가 옮기고, 누름·Enter 가 들어간다. ←→ 는 모드 바꾸기. 소리는 sfx.ts 그대로(♪ 꺼져 있으면 무음).
-  import { play, unlock } from '../react/game/sfx';
+  import { audible, play, unlock } from '../react/game/sfx';
   const hub = document.querySelector<HTMLElement>('[data-hub]');
   if (hub && hub.querySelector('.arc-item')) {
     const items = [...hub.querySelectorAll<HTMLAnchorElement>('.arc-item')];
@@ -53,12 +53,20 @@ const games = gamesOf(mode).map((g) => ({ to: href(`/game/?g=${g.adapter.id}`), 
     hub.addEventListener('pointerdown', (e) => { touchDown = e.pointerType === 'touch' || e.pointerType === 'pen'; }, { capture: true, passive: true });
     const put = (i: number, o: { sound?: boolean; focus?: boolean } = {}): void => {
       const n = (i + items.length) % items.length;
-      if (o.focus) items[n].focus();
-      if (n === cur) return;
-      items[cur].parentElement?.classList.remove('is-cursor');
-      items[n].parentElement?.classList.add('is-cursor');
-      cur = n;
-      if (o.sound) play({ kind: 'move', vol: 1 });
+      if (n !== cur) {
+        items[cur].parentElement?.classList.remove('is-cursor');
+        items[n].parentElement?.classList.add('is-cursor');
+        cur = n;
+        if (o.sound) play({ kind: 'move', vol: 1 });
+      }
+      if (o.focus) items[n].focus();   // 커서를 먼저 옮긴다 — 포커스 사건이 같은 줄로 다시 부른다
+    };
+    /** 들어가기 — confirm 소리를 내고, 소리가 나는 중이면 그 소리(0.15초)를 다 듣고 넘어간다. 소리가 없으면 바로. */
+    const enter = (a: HTMLAnchorElement, e: Event): void => {
+      play({ kind: 'confirm', vol: 1 });
+      if (!audible()) { if (e.type !== 'click') { e.preventDefault(); location.assign(a.href); } return; }
+      e.preventDefault();
+      setTimeout(() => location.assign(a.href), 160);
     };
     items.forEach((a, i) => {
       // 마우스만 — 터치의 pointerenter 는 누름과 같이 와서 아래 click 의 "처음 누른 줄은 펼치기만"을 깨뜨린다.
@@ -66,13 +74,14 @@ const games = gamesOf(mode).map((g) => ({ to: href(`/game/?g=${g.adapter.id}`), 
         if (e.pointerType !== 'mouse') return;
         put(i, { sound: true, focus: items.includes(document.activeElement as HTMLAnchorElement) });
       });
-      a.addEventListener('focus', () => put(i));
+      // Tab 으로 온 포커스만 커서를 끌고 온다 — 누름의 포커스까지 따르면 터치의 "처음 누른 줄은 펼치기만"이 깨진다.
+      a.addEventListener('focus', () => { if (a.matches(':focus-visible')) put(i); });
       a.addEventListener('click', (e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
         unlock();
         // 터치로 커서가 아닌 줄을 누르면 커서만 옮겨 설명을 펼친다(폰엔 올림이 없다). 커서 줄을 누르면 들어간다.
         if (touchDown && i !== cur) { e.preventDefault(); put(i, { sound: true }); return; }
-        play({ kind: 'confirm', vol: 1 });
+        enter(a, e);
       });
     });
     document.addEventListener('keydown', (e) => {
@@ -92,10 +101,8 @@ const games = gamesOf(mode).map((g) => ({ to: href(`/game/?g=${g.adapter.id}`), 
         location.assign(next.href);
       } else if (e.key === 'Enter' && !(t instanceof HTMLAnchorElement)) {
         // 포커스가 링크에 있으면 링크가 스스로 들어간다(click → confirm). 아니면 커서 줄로.
-        e.preventDefault();
         unlock();
-        play({ kind: 'confirm', vol: 1 });
-        location.assign(items[cur].href);
+        enter(items[cur], e);
       }
     });
     hub.classList.add('is-live');

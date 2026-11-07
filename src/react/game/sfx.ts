@@ -16,6 +16,8 @@ const lastAt: Record<string, number> = {};
 const GAP: Record<Sfx['kind'], number> = { kick: 70, bounce: 60, goal: 1500, whistle: 700, end: 2000, move: 45, confirm: 250, shot: 120, catch: 250, tackle: 150 };
 
 export const isMuted = (): boolean => muted;
+/** 지금 소리가 실제로 나는가(장치가 깨어 있고 끄지 않았다) — 게임 목록이 confirm 을 다 듣고 넘어갈지 정한다. */
+export const audible = (): boolean => !!ctx && !muted && ctx.state === 'running';
 /** 소리 켬/끔이 바뀌면 창에 이 이름의 사건을 보낸다(detail = 끔). 게임 띠의 ♪(페이지 스크립트)와 경기 화면의 ♪(섬)가 같은 값을 쓰게
  *  (2026-11-07 게임 구역 — "지금 소리 켬/끔과 같은 값"). 두 쪽이 이 모듈을 따로 묶어 가져도 사건으로 서로의 값을 맞춘다. */
 export const SOUND_EVENT = 'wfc:sound';

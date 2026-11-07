@@ -1384,7 +1384,6 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .gbar-snd:hover { border-color: var(--fg); }
 .gbar-snd.is-off { color: var(--muted); text-decoration: line-through; }
 .gbar-back:focus-visible, .gbar-snd:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
-@media (max-width: 380px) { .gbar-title { font-size: var(--fs-body); } }   /* 360px 폰 — 띠가 한 줄에 들게 */
 
 /* 오락실 첫 화면 — 큰 도트 제목 · 모드 두 칸 · 세로 메뉴(▶ 커서). PC 는 커서 줄의 설명이 오른쪽 큰 칸(.arc-more 를 그 자리로 옮긴다), 폰은 그 줄 아래 펼침 */
 .arc { display: flex; flex-direction: column; gap: var(--s-lg); max-width: 960px; margin: 0 auto; padding: var(--s-lg) 0; }
@@ -1433,7 +1432,7 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 
 /* 입장·혼자 하기 설정·방 — 오락실 패널: 굵은 테두리 칸, 도트 소제목(금색), 고른 값이 밝은 칸, 누르기 목표 40px 이상, [시작]은 크게 */
 body.is-game .page-head h1 .game-code { font-size: var(--fs-pixel-lg); }
-body.is-game .card { background: var(--elevated); border: 2px solid var(--hairline-strong); }
+body.is-game .card { background: var(--elevated); border: 2px solid var(--hairline-strong); scroll-margin-top: calc(var(--row-h) + var(--s-sm)); }   /* 혼자 연습 칸이 열리며 내려올 때 띠 밑에 숨지 않게 */
 body.is-game .card h2 { color: var(--gold); }
 body.is-game .game-conn { border-width: 2px; border-color: var(--gold); }
 body.is-game .ant-btn { min-height: 40px; }
@@ -1450,6 +1449,8 @@ body.is-game .game-actions .ant-btn { min-height: 48px; }
 body.is-game .game-col { padding: var(--s-xxs); background: var(--elevated); border: 2px solid var(--hairline-strong); }
 body.is-game .game-col.is-target { border-color: var(--link); }
 body.is-game .game-col-head { min-height: 40px; }
+body.is-game .game-col-head:disabled { opacity: 1; }   /* 손님·경기 중 — 팀 이름은 흐리지 않는다(누를 수 없다는 건 방 안내 줄이 말한다) */
+body.is-game .card > p:first-child { margin-top: 0; }   /* 손님이 보는 설정 요약 줄 — 패널 테두리 안 위쪽 빈자리 */
 body.is-game .game-col-head > span:not(.muted):not(.game-col-dot) { font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; line-height: 1; }
 body.is-game .game-chip { min-height: 40px; border-width: 2px; }
 body.is-game .game-chip.is-me { box-shadow: none; }
@@ -1467,5 +1468,5 @@ body.is-game .game-chip.is-me { box-shadow: none; }
 .game-final { font-size: var(--fs-pixel-md); line-height: 1.1; }
 .game-result-box .pen-rows li, .game-result-box .fk-rows li, .game-result-box .dr-rows li { min-height: 32px; }
 .game-result-actions { flex-direction: column; align-items: stretch; width: 100%; }
-.game-result-actions .ant-btn { min-height: 48px; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; }
+body.is-game .game-result-actions .ant-btn { min-height: 48px; font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-synthesis: none; letter-spacing: 0; }
 @media (max-width: 380px) { .game-outcome { font-size: var(--fs-pixel-lg); } .game-result-box { padding: var(--s-lg) var(--s-md); } }
