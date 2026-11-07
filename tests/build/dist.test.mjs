@@ -353,23 +353,32 @@ test('/game3d/ 는 /game/?g=match3d 로 넘기고, three.js 묶음은 GameApp �
   for (const p of SHELL_PAGES) for (const f of [...three, ...surface]) assert.ok(!read(p).includes(f), `${p} 가 ${f} 를 싣는다`);
 });
 
-test('게임 목록(2026-11-07) — 2D 모드·3D 모드 두 탭, 모드마다 게임 카드, 가장 왼쪽(2D)이 기본', () => {
+// 2026-11-07 게임 구역: 탭 줄 대신 오락실 첫 화면의 큰 모드 두 칸(진짜 링크, 주소는 그대로). 가장 왼쪽(2D)이 기본.
+test('게임 목록(2026-11-07) — 2D 모드·3D 모드 두 칸, 모드마다 게임 메뉴, 가장 왼쪽(2D)이 기본', () => {
   const d2 = read('games/index.html'), d3 = read('games/3d/index.html');
-  assert.match(d2, /class="subnav"[^>]*>\s*<a[^>]*class="active"[^>]*>2D 모드<\/a>\s*<a[^>]*>3D 모드<\/a>/);
-  assert.match(d3, /class="subnav"[^>]*>\s*<a[^>]*>2D 모드<\/a>\s*<a[^>]*class="active"[^>]*>3D 모드<\/a>/);
-  // 2026-11-07 게임 묶음: 2D 카드는 등록부에서 오고 ?g= 로 그 게임을 고른다(아래 테스트가 등록부와 맞춘다)
-  assert.match(d2, /<a class="card games-card" href="\/weekly-fc\/game\/\?g=match2d"/, '2D 목록에 경기');
-  assert.match(d3, /<a class="card games-card" href="\/weekly-fc\/game\/\?g=match3d"/, '3D 목록에 경기(등록부에서)');
+  const modes = (html) => [...(html.match(/<nav class="arc-modes"[\s\S]*?<\/nav>/)?.[0] ?? '').matchAll(/<a class="arc-mode( is-on)?" href="([^"]+)"( aria-current="page")?[^>]*>\s*<b>([^<]+)<\/b>/g)]
+    .map((m) => ({ on: !!m[1], href: m[2], current: !!m[3], label: m[4] }));
+  assert.deepEqual(modes(d2), [{ on: true, href: '/weekly-fc/games/', current: true, label: '2D' }, { on: false, href: '/weekly-fc/games/3d/', current: false, label: '3D' }]);
+  assert.deepEqual(modes(d3), [{ on: false, href: '/weekly-fc/games/', current: false, label: '2D' }, { on: true, href: '/weekly-fc/games/3d/', current: true, label: '3D' }]);
+  // 2026-11-07 게임 묶음: 메뉴 줄은 등록부에서 오고 ?g= 로 그 게임을 고른다(아래 테스트가 등록부와 맞춘다)
+  assert.match(d2, /<a class="arc-item" href="\/weekly-fc\/game\/\?g=match2d"/, '2D 목록에 경기');
+  assert.match(d3, /<a class="arc-item" href="\/weekly-fc\/game\/\?g=match3d"/, '3D 목록에 경기(등록부에서)');
   assert.ok(!d3.includes('시제품'), '3D 목록에 시제품 딱지 없음');
-  for (const html of [d2, d3]) assert.ok(html.indexOf('class="subnav"') > html.indexOf('class="page-head"'), '탭 줄은 제목 아래');
+  for (const html of [d2, d3]) {
+    assert.ok(html.indexOf('class="arc-modes"') > html.indexOf('class="arc-title"'), '모드 칸은 제목 아래');
+    assert.ok(!html.includes('class="subnav"'), '탭 줄은 모드 칸으로 바뀌었다');
+    // JS 가 없어도 첫 줄에 커서가 있는 링크 목록
+    assert.match(html, /<li class="arc-row is-cursor">\s*<a class="arc-item"/, '첫 줄이 커서');
+    assert.equal((html.match(/arc-row is-cursor/g) ?? []).length, 1, '커서는 한 줄');
+  }
   assert.ok(!d2.includes('surface3d') && !d3.includes('surface3d'), '목록 화면은 three.js 를 부르지 않는다');
 });
 
 // 2026-11-07 게임 묶음 토대 — "만든 게임은 거기에 하나씩 추가하자": 목록 카드는 게임 등록부에서 온다. 등록부의 게임마다 카드 하나(이름·설명·?g= 주소),
 // 3D 도 등록부 것만(2026-11-07 4단계 — 손으로 쓴 시제품 카드를 지웠다). 카드가 가리키는 /game/ 은 GameApp 섬 하나로 모든 게임을 연다(?g= 는 화면에서 읽는다).
-test('게임 목록 카드는 등록부에서 — 모드마다 등록된 게임 수만큼, 주소는 /game/?g=<id>', async () => {
+test('게임 목록 메뉴 줄은 등록부에서 — 모드마다 등록된 게임 수만큼, 주소는 /game/?g=<id>', async () => {
   const { gamesOf } = await import('../../src/lib/games/registry.ts');
-  const cards = (html) => [...html.matchAll(/<a class="card games-card" href="([^"]+)"[^>]*>\s*<b class="games-name">([^<]+)<\/b>\s*<span class="games-desc">([^<]+)<\/span>/g)]
+  const cards = (html) => [...html.matchAll(/<a class="arc-item" href="([^"]+)"[^>]*>\s*<b class="arc-name">([^<]+)<\/b>\s*<span class="arc-more">[\s\S]*?<span class="arc-desc">([^<]+)<\/span>/g)]
     .map((m) => ({ href: m[1], name: m[2], desc: m[3] }));
   const d2 = cards(read('games/index.html')), d3 = cards(read('games/3d/index.html'));
   assert.deepEqual(d2, gamesOf('2d').map((g) => ({ href: `/weekly-fc/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe })));

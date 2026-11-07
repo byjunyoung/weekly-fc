@@ -1102,14 +1102,6 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .game-act { min-height: 0; height: 40px; padding: 0 var(--s-sm); border: 1px solid rgba(255, 255, 255, .5); background: rgba(0, 0, 0, .55); color: var(--fg);
   font-family: var(--font); font-size: var(--fs-xs); }
 .game-act:hover { border-color: var(--fg); }
-/* 게임 목록(/games/) — 모드별 게임 카드. 카드 전체가 링크다. */
-.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s-sm); }
-.games-card { display: flex; flex-direction: column; gap: var(--s-xs); border: 2px solid var(--line); border-radius: 0; color: var(--fg); min-height: 150px; }
-.games-card:hover { border-color: var(--fg); }
-.games-name { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
-.games-desc { color: var(--body); line-height: 1.6; }
-.games-tags { display: flex; flex-wrap: wrap; gap: var(--s-xxs); margin-top: auto; }
-.games-tag { padding: 2px var(--s-xs); border: 1px solid var(--hairline-strong); color: var(--muted); font-size: var(--fs-xs); }
 /* 소리 켬/끔 — ✕ 바로 왼쪽. 꺼져 있으면 흐리게 + 가로줄(2026-11-07 "효과음도 넣어야지"). */
 .game-snd { position: absolute; top: max(var(--s-sm), env(safe-area-inset-top)); right: calc(max(var(--s-sm), env(safe-area-inset-right)) + 48px); z-index: 2;
   width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: var(--r-full); background: rgba(0, 0, 0, .55); font-family: var(--font); font-size: 18px; }
@@ -1393,3 +1385,48 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .gbar-snd.is-off { color: var(--muted); text-decoration: line-through; }
 .gbar-back:focus-visible, .gbar-snd:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 @media (max-width: 380px) { .gbar-title { font-size: var(--fs-body); } }   /* 360px 폰 — 띠가 한 줄에 들게 */
+
+/* 오락실 첫 화면 — 큰 도트 제목 · 모드 두 칸 · 세로 메뉴(▶ 커서). PC 는 커서 줄의 설명이 오른쪽 큰 칸(.arc-more 를 그 자리로 옮긴다), 폰은 그 줄 아래 펼침 */
+.arc { display: flex; flex-direction: column; gap: var(--s-lg); max-width: 960px; margin: 0 auto; padding: var(--s-lg) 0; }
+.arc-title { margin: 0; color: var(--fg); text-align: center; font-family: var(--font-pixel); font-size: var(--fs-pixel-xl); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.1; }
+.arc-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-xs); }
+.arc-mode { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-xxs); min-height: 96px; padding: var(--s-xs);
+  border: 3px solid var(--hairline-strong); background: var(--elevated); color: var(--muted); text-decoration: none; }
+.arc-mode b { font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1; }
+.arc-mode span { font-size: var(--fs-xs); }
+.arc-mode:hover { border-color: var(--fg); color: var(--fg); }
+.arc-mode.is-on { border-color: var(--gold); background: var(--charcoal); color: var(--fg); }
+.arc-mode.is-on b { color: var(--gold); }
+.arc-mode:focus-visible, .arc-item:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.arc-body { position: relative; min-height: 320px; }
+.arc-menu { display: flex; flex-direction: column; gap: var(--s-xxs); width: calc(50% - var(--s-sm)); margin: 0; padding: 0; list-style: none; }
+.arc-item { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--s-sm); min-height: 56px; padding: var(--s-xs) var(--s-md);
+  border: 2px solid transparent; color: var(--muted); text-decoration: none; }
+/* ▶ — 커서 줄에만 금색, 다른 줄은 같은 폭의 빈자리(이름이 줄 맞춰 선다). 선수 고르기 커서와 같은 계단식 깜빡임 */
+.arc-item::before { content: ""; flex: none; width: 0; height: 0; border-top: 9px solid transparent; border-bottom: 9px solid transparent; border-left: 12px solid transparent; }
+.arc-name { font-family: var(--font-pixel); font-size: var(--fs-pixel-md); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.2; }
+.arc-item:hover { color: var(--fg); }
+.arc-row.is-cursor .arc-item { border-color: var(--gold); background: var(--charcoal); color: var(--fg); }
+.arc-row.is-cursor .arc-item::before { border-left-color: var(--gold); animation: sel-blink 900ms steps(1, end) infinite; }
+.arc-row:not(.is-cursor) .arc-more { display: none; }
+.arc-more { display: flex; flex-direction: column; gap: var(--s-sm); color: var(--body); }
+.arc-more-name { color: var(--gold); font-family: var(--font-pixel); font-size: var(--fs-pixel-lg); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; line-height: 1.1; }
+.arc-desc { line-height: 1.6; }
+.arc-tags { display: flex; flex-wrap: wrap; gap: var(--s-xxs); margin-top: auto; }
+.arc-tag { padding: 2px var(--s-xs); border: 1px solid var(--hairline-strong); color: var(--muted); font-size: var(--fs-xs); }
+/* PC — 커서 줄의 설명 묶음을 오른쪽 큰 칸으로. 링크 안에 있어 칸을 눌러도 들어간다 */
+.arc-row.is-cursor .arc-more { position: absolute; top: 0; right: 0; bottom: 0; width: calc(50% - var(--s-sm)); padding: var(--s-lg);
+  border: 3px solid var(--gold); background: var(--elevated); }
+.arc-help { margin: 0; text-align: center; font-size: var(--fs-xs); }
+@media (max-width: 719px) {
+  .arc { gap: var(--s-md); padding: var(--s-xs) 0; }
+  .arc-title { font-size: var(--fs-pixel-lg); }
+  .arc-mode { min-height: 72px; }
+  .arc-body { min-height: 0; }
+  .arc-menu { width: 100%; }
+  .arc-item { padding: var(--s-xs) var(--s-sm); }
+  .arc-more-name { display: none; }
+  .arc-row.is-cursor .arc-more { position: static; flex-basis: 100%; width: auto; margin: var(--s-xs) 0 var(--s-xxs) calc(12px + var(--s-sm)); padding: 0; border: 0; background: transparent; }
+}
+@media (max-width: 719px), (hover: none) { .arc-help { display: none; } }
+@media (prefers-reduced-motion: reduce) { .arc-row.is-cursor .arc-item::before { animation: none; } }

@@ -1,0 +1,103 @@
+---
+// 게임 목록 = 오락실 첫 화면(2026-11-07 "게임 메뉴 진입하면 완전 게임 UI처럼 보이게"). 2D 모드·3D 모드 페이지가 함께 쓴다.
+// 설계: docs/superpowers/specs/2026-11-07-game-arcade-ui-design.md §2. 큰 도트 제목 · 모드 두 칸(2D | 3D, 진짜 링크 — 주소는 /games/·/games/3d/ 그대로) ·
+// 세로 게임 메뉴(진짜 링크 /game/?g=<id>). 줄은 게임 등록부(src/lib/games/registry.ts)에서 온다 — 게임을 등록하면 여기 저절로 한 줄 더 생긴다
+// ("게임 메뉴는 아래 게임 여러개 고를 수 있게 만들고 만든 게임은 거기에 하나씩 추가하자").
+// 스크립트가 붙기 전·JS 가 없을 때도 첫 줄에 커서가 있는 링크 목록이다. 스크립트는 커서(▶)만 옮기고 소리를 낸다 — 들어가기는 늘 링크가.
+// PC: 커서 줄의 설명·꼬리표가 오른쪽 큰 칸에 뜬다(같은 마크업을 CSS 가 옮긴다). 폰: 커서 줄이 펼쳐져 설명이 보인다.
+import { NAV, activeNav } from '../lib/nav';
+import { href } from '../lib/url';
+import { gamesOf } from '../lib/games/registry';
+import type { GameMode } from '../lib/games/entry';
+interface Props { mode: GameMode; path: string }
+const { mode, path } = Astro.props;
+// 모드 칸은 상단 메뉴 「게임」의 하위 탭 정의(nav.ts)를 그대로 쓴다 — 가장 왼쪽(2D)이 기본.
+const modes = NAV.find((n) => n.to === '/games/')?.sub ?? [];
+const { sub: on } = activeNav(path);
+const games = gamesOf(mode).map((g) => ({ to: href(`/game/?g=${g.adapter.id}`), name: g.name, desc: g.describe, tags: [...g.tags] }));
+---
+<section class="arc" data-hub>
+  <h1 class="arc-title">게임 선택</h1>
+  <nav class="arc-modes" aria-label="모드">
+    {modes.map((m) => {
+      const [big, ...rest] = m.label.split(' ');
+      return (
+        <a class:list={['arc-mode', { 'is-on': m === on }]} href={href(m.to)} aria-current={m === on ? 'page' : undefined} data-mode>
+          <b>{big}</b><span>{rest.join(' ')}</span>
+        </a>
+      );
+    })}
+  </nav>
+  <div class="arc-body">
+    <ul class="arc-menu" aria-label="게임">
+      {games.map((g, i) => (
+        <li class:list={['arc-row', { 'is-cursor': i === 0 }]}>
+          <a class="arc-item" href={g.to}><b class="arc-name">{g.name}</b><span class="arc-more"><b class="arc-more-name" aria-hidden="true">{g.name}</b><span class="arc-desc">{g.desc}</span><span class="arc-tags">{g.tags.map((t) => <span class="arc-tag">{t}</span>)}</span></span></a>
+        </li>
+      ))}
+    </ul>
+  </div>
+  <p class="arc-help muted" aria-hidden="true">↑↓ 고르기 · Enter 시작</p>
+</section>
+
+<script>
+  // 커서 — 마우스 올림·터치·↑↓ 가 옮기고, 누름·Enter 가 들어간다. ←→ 는 모드 바꾸기. 소리는 sfx.ts 그대로(♪ 꺼져 있으면 무음).
+  import { play, unlock } from '../react/game/sfx';
+  const hub = document.querySelector<HTMLElement>('[data-hub]');
+  if (hub && hub.querySelector('.arc-item')) {
+    const items = [...hub.querySelectorAll<HTMLAnchorElement>('.arc-item')];
+    const modes = [...hub.querySelectorAll<HTMLAnchorElement>('[data-mode]')];
+    let cur = 0;
+    // 누름이 터치였나 — click 의 pointerType 은 브라우저마다 다 오지 않아 바로 앞 pointerdown 으로 본다.
+    let touchDown = false;
+    hub.addEventListener('pointerdown', (e) => { touchDown = e.pointerType === 'touch' || e.pointerType === 'pen'; }, { capture: true, passive: true });
+    const put = (i: number, o: { sound?: boolean; focus?: boolean } = {}): void => {
+      const n = (i + items.length) % items.length;
+      if (o.focus) items[n].focus();
+      if (n === cur) return;
+      items[cur].parentElement?.classList.remove('is-cursor');
+      items[n].parentElement?.classList.add('is-cursor');
+      cur = n;
+      if (o.sound) play({ kind: 'move', vol: 1 });
+    };
+    items.forEach((a, i) => {
+      // 마우스만 — 터치의 pointerenter 는 누름과 같이 와서 아래 click 의 "처음 누른 줄은 펼치기만"을 깨뜨린다.
+      a.addEventListener('pointerenter', (e) => {
+        if (e.pointerType !== 'mouse') return;
+        put(i, { sound: true, focus: items.includes(document.activeElement as HTMLAnchorElement) });
+      });
+      a.addEventListener('focus', () => put(i));
+      a.addEventListener('click', (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        unlock();
+        // 터치로 커서가 아닌 줄을 누르면 커서만 옮겨 설명을 펼친다(폰엔 올림이 없다). 커서 줄을 누르면 들어간다.
+        if (touchDown && i !== cur) { e.preventDefault(); put(i, { sound: true }); return; }
+        play({ kind: 'confirm', vol: 1 });
+      });
+    });
+    document.addEventListener('keydown', (e) => {
+      touchDown = false;
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && t !== document.body && !hub.contains(t)) return;   // 게임 띠의 링크·버튼은 제 키를 쓴다
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        unlock();
+        put(cur + (e.key === 'ArrowDown' ? 1 : -1), { sound: true, focus: true });
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const i = modes.findIndex((m) => m.classList.contains('is-on'));
+        const next = modes[i + (e.key === 'ArrowRight' ? 1 : -1)];
+        if (!next) return;
+        e.preventDefault();
+        location.assign(next.href);
+      } else if (e.key === 'Enter' && !(t instanceof HTMLAnchorElement)) {
+        // 포커스가 링크에 있으면 링크가 스스로 들어간다(click → confirm). 아니면 커서 줄로.
+        e.preventDefault();
+        unlock();
+        play({ kind: 'confirm', vol: 1 });
+        location.assign(items[cur].href);
+      }
+    });
+    hub.classList.add('is-live');
+  }
+</script>

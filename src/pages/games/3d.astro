@@ -1,14 +1,10 @@
 ---
-// 게임 > 3D 모드(2026-11-07). 입체로 보는 게임들. 카드는 게임 등록부(src/lib/games/registry.ts)의 3D 게임 — 2D 목록과 같은 길이다
+// 게임 > 3D 모드(2026-11-07). 입체로 보는 게임들. 메뉴 줄은 게임 등록부(src/lib/games/registry.ts)의 3D 게임 — 2D 목록과 같은 길이다
 // ("게임 메뉴는 아래 게임 여러개 고를 수 있게 만들고 만든 게임은 거기에 하나씩 추가하자"). 4단계에서 3D 경기가 등록부에 올라 손으로 쓴 시제품 카드를 지웠다.
+// 2026-11-07 게임 구역: 포털 머리 대신 게임 띠, 카드 줄 대신 오락실 첫 화면(GameHub).
 import Shell from '../../layouts/Shell.astro';
-import SubTabs from '../../components/SubTabs.astro';
-import GameCards from '../../components/GameCards.astro';
-import { gamesOf } from '../../lib/games/registry';
-const games = gamesOf('3d').map((g) => ({ to: `/game/?g=${g.adapter.id}`, name: g.name, desc: g.describe, tags: [...g.tags] }));
+import GameHub from '../../components/GameHub.astro';
 ---
 <Shell title="게임" game description="WEEKLY FC 게임 — 3D 모드. 도트 아바타가 입체로 뛰는 축구.">
-  <div class="page-head"><h1>게임 <span class="muted">3D 모드</span></h1></div>
-  <SubTabs path="/games/3d/" />
-  <GameCards games={games} />
+  <GameHub mode="3d" path="/games/3d/" />
 </Shell>
