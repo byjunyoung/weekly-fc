@@ -57,7 +57,7 @@ export function Entry({ game, players, roomCode, reopen = false, message, onSolo
   return (
     <>
       <div className="page-head"><h1>{entry.name} <span className="muted">{roomCode ? `방 ${roomCode}` : gv.entry.sub}</span></h1>
-        <div className="actions"><a className="chip" href={href('/games/')}>게임 목록</a></div></div>
+        <div className="actions"><a className="chip" href={href(entry.mode === '3d' ? '/games/3d/' : '/games/')}>게임 목록</a></div></div>
       <div className="stack">
         {message && <p className="game-conn" role="status">{message}</p>}
         {/* 오락실식 선수 선택 — "선택한 선수 크게 오른쪽에 다른 선수 리스트 … 약간 옛날 오락실게임에서 고르듯이"(2026-11-07).
