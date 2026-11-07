@@ -8,6 +8,7 @@ import { match3d, MATCH3D } from '../../src/lib/games/match3d.ts';
 import { DEFAULT_3D, applySettings3d, botSeats3d, buildMatch3d, humanSlots, okSettings3d, startBlock3d } from '../../src/lib/games/match3d-room.ts';
 import { createRoom, move, join, autoBalance, setBotPick } from '../../src/lib/game/room.ts';
 import { BASE_PERF } from '../../src/lib/game3d/stats.ts';
+import { PITCH3D } from '../../src/lib/game3d/sim.ts';
 import { createPredictor, applySnapshot, advance, setLead } from '../../src/lib/games/predict.ts';
 import { readSnap } from '../../src/lib/games/net.ts';
 import { createHostSession, createGuestSession, STEP_MS } from '../../src/react/game/net/session.ts';
@@ -201,6 +202,8 @@ test('방장 계산과 손님 예측은 같은 양자화 입력이면 스냅샷 
     return { x: Math.cos(heading) * fwd, y: Math.sin(heading) * fwd, shoot: t % 90 > 60, pass: t % 170 === 100, sprint: t % 300 < 120, fx: Math.cos(heading), fy: Math.sin(heading) };
   };
   let host = g.create(config, 2024);
+  // 손님을 공 뒤 1.5m 에 — 처음부터 공을 몰고 차게(2026-11-07 경기장 44m 에서 편성 자리가 넓어져 공을 비켜 갔다). 손님은 첫 스냅샷부터 이 상태를 받는다.
+  host = { ...host, players: host.players.map((p, i) => (i === me ? { ...p, x: host.ball.x - 1.5, y: host.ball.y } : p)) };
   let pred = setLead(createPredictor(g, config, me), LEAD);
   const hist = [];   // 방장 쪽: 틱마다의 상태와 그 틱에 쓴 입력 정수들
   let checked = 0;
@@ -319,7 +322,7 @@ test('방장 + 손님 — 경기가 끝나면 모두 결과, 4초 뒤 로비. �
   w.hub.endpoint().onMessage((m) => { if (m.t === 'snap') { snaps++; bytes += JSON.stringify(m).length; } });
   // 골이 날 때까지 — 방장 디버그로 골 바로 앞에 공을 둔다(골 장면이 손님 스냅샷 점수로 닿는지)
   w.run(3500);
-  w.host.debugPatch((s) => ({ ...s, phase: 'play', owner: null, ball: { x: 17.9, y: 0, z: 0.18, vx: 8, vy: 0, vz: 0 } }));
+  w.host.debugPatch((s) => ({ ...s, phase: 'play', owner: null, ball: { x: PITCH3D.HW - 0.1, y: 0, z: 0.18, vx: 8, vy: 0, vz: 0 } }));   // 골라인 0.1m 앞(경기장 길이와 상관없이)
   w.run(500);
   const sc = w.host.getState().score;
   assert.equal(sc[0] + sc[1], 1, '골');

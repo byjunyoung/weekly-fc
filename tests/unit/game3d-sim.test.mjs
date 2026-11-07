@@ -124,7 +124,7 @@ test('드리블 — 달리는 선수 발 앞에 공이 붙어 따라온다(달�
     assert.ok(d < 1.6, `너무 멀다 ${d}`);
     if (t === 90) gapRun = d;
   });
-  assert.ok(s.players[0].x > 0, '앞으로 갔다');
+  assert.ok(s.players[0].x > -3, '앞으로 갔다');   // 2.5초에 7m 넘게(2026-11-07 선수 ×0.8 — 전엔 x > 0, 10m)
   s = run(s, cfg, 60);
   const p = s.players[0];
   gapStand = Math.sqrt((s.ball.x - p.x) ** 2 + (s.ball.y - p.y) ** 2);
@@ -233,7 +233,8 @@ test('빼앗기 — 공 가진 선수에게 상대가 몸으로 붙으면 빼앗
 test('골키퍼 — 정면 약한 슛은 잡고, 구석으로 세게 찬 슛은 못 막는다', () => {
   const cfg = few([0, 1], { 1: { gk: true } });
   const fire = (fy, hold) => {
-    let s = put(createMatch(cfg, 4), { ball: { x: 6.7, y: 0 }, players: { 0: { x: 6, y: 0, fx: 1, fy }, 1: { x: HW - 1.2, y: 0, fx: -1, fy: 0 } } });
+    // 골대에서 12m — 경기장 길이와 상관없이 같은 거리(2026-11-07 경기장 44m 로 넓힘)
+    let s = put(createMatch(cfg, 4), { ball: { x: HW - 11.3, y: 0 }, players: { 0: { x: HW - 12, y: 0, fx: 1, fy }, 1: { x: HW - 1.2, y: 0, fx: -1, fy: 0 } } });
     s = step(s, cfg, idle(cfg));
     for (let t = 0; t < hold; t++) s = step(s, cfg, [{ x: 0, y: 0, shoot: true, pass: false }, NO_INPUT]);
     return run(s, cfg, 90);

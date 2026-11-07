@@ -85,7 +85,7 @@ test('1인칭 보는 방향 — 입력의 보는 방향(표 값)을 그대로 �
   const y0 = s.players[0].y;
   s = run(s, c, 30, () => [inp]);
   assert.deepEqual([s.players[0].fx, s.players[0].fy], [...FACE64[k]].map((v) => v / Math.sqrt(FACE64[k][0] ** 2 + FACE64[k][1] ** 2)));
-  assert.ok(s.players[0].y - y0 > 2);
+  assert.ok(s.players[0].y - y0 > 1.6);   // 0.5초에 1.6m 넘게(2026-11-07 선수 ×0.8 "3d 캐릭터 너무 빠른듯" — 전엔 2m)
 });
 
 test('봇 넷 + 공 셋 1분 — 실제로 차고 넣는다, 상태는 내내 성하고 한 사람 한 공', () => {
