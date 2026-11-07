@@ -25,15 +25,15 @@ import { MAX_BALLS, MAX_BOTS, POP_TICKS, ballsFor } from './free2d.ts';
 
 const { HW, ballR: BR } = PITCH3D;
 const MAX_POPS = 4;
-/** 공이 돌아오는 가운데 자리(m) — 2D 표를 3D 경기장 크기로(가운데 원 반지름 3 안팎). */
+/** 공이 돌아오는 가운데 자리(m) — 2D 표를 3D 경기장 크기로(가운데 원 반지름 3.6 안팎). 2026-11-07 경기장 44×28m("경기장은 너무 좁은 것 같기도 하고")에 맞춰 × 1.2. */
 const CENTER: readonly (readonly [number, number])[] = [
-  [0, 0], [0, -3], [0, 3], [-3, 0], [3, 0], [-2.2, -2.2], [2.2, 2.2], [-2.2, 2.2], [2.2, -2.2], [0, -6],
+  [0, 0], [0, -3.6], [0, 3.6], [-3.6, 0], [3.6, 0], [-2.6, -2.6], [2.6, 2.6], [-2.6, 2.6], [2.6, -2.6], [0, -7.2],
 ];
 const spotAt = (k: number): readonly [number, number] => CENTER[((k % CENTER.length) + CENTER.length) % CENTER.length];
 /** 몸 자리 — 가운데(공)를 피해 위아래 두 줄에 넷씩, 넘치면 셋째 줄. 모두 오른쪽 골대를 본다. */
 function startSpot(i: number): { x: number; y: number } {
   const col = i % 4, row = Math.floor(i / 4);
-  return { x: (col - 1.5) * 5, y: [-6.5, 6.5, -9.5][row] ?? 0 };
+  return { x: (col - 1.5) * 6, y: [-8.2, 8.2, -12][row] ?? 0 };   // 경기장 44×28m 에 맞춰 넓힘(같은 날)
 }
 
 export type Free3Input = Input & { gather?: boolean };
