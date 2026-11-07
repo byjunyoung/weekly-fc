@@ -22,7 +22,7 @@ import { FK_SPOTS, FREEKICK2D, fkKeeperPlan, fkTotal, fkTurn, nearSide, READY_TI
 import { AUTO_POWER, CHARGE_TICKS, planRand } from './penalty2d.ts';
 import type { Aim3, Capsule, Keeper3, Pen3Input, Striker3 } from './penalty3d.ts';
 import {
-  AIM_MAX, BODY_R, BODY_Z0, BODY_Z1, PEN3_CODES, PEN3_IDLE, STAND_ARM, crossing, decodePen3, encodePen3, keeper3Step, keeperCapsules, launch3, moveBall3, penalty3d,
+  AIM_MAX, SLOW3, BODY_R, BODY_Z0, BODY_Z1, PEN3_CODES, PEN3_IDLE, STAND_ARM, crossing, decodePen3, encodePen3, keeper3Step, keeperCapsules, launch3, moveBall3, penalty3d,
 } from './penalty3d.ts';
 import type { GameAdapter, Point } from './adapter.ts';
 import type { GameEntry } from './entry.ts';
@@ -39,11 +39,11 @@ export const FK3_AIM_MAX = AIM_MAX * FK3_AIM_SCALE;
 /** 벽 — 가까운 기둥 쪽 골라인 위 WALL_AIM m 을 향해, 공에서 그 거리의 WALL_FRAC 지점에 가로로 셋(가운데끼리 WALL_GAP). */
 const WALL_AIM = 1.65, WALL_FRAC = 0.4, WALL_GAP = 0.55;
 export const WALL_R = BODY_R;
-const WALL_REACT = 5;                 // 공이 나가고 이만큼 뒤 뛴다(틱)
-const WALL_JUMP_V = 3.0;              // 뛰는 세로 속도(높이 v²/2g ≈ 0.3m)
+const WALL_REACT = 6;                 // 공이 나가고 이만큼 뒤 뛴다(틱). 5 → 6 — 공이 ×0.85 라 같은 자리에서 뛰게(2026-11-07 "느리게")
+const WALL_JUMP_V = 2.74;             // 뛰는 세로 속도(높이 v²/2g ≈ 0.3m). 3.0 → 2.74 — 중력 15 → 12.5 에서 같은 높이(2026-11-07 "3d 캐릭터 너무 빠른듯. 공이랑 선수 다")
 const KEEPER_HOME = 0.45;             // 키퍼는 벽 반대쪽(열린 쪽)으로 이만큼
 const GUESS_Y = 1.8;                  // 못 읽으면 짐작하는 자리(가운데에서)
-const SLOW_READ = 19;                 // 이보다 느린 공(m/s, 가로)은 키퍼가 늘 읽는다
+const SLOW_READ = 16.2;               // 이보다 느린 공(m/s, 가로)은 키퍼가 늘 읽는다. 19 × 0.85 — 차는 공이 ×0.85 가 된 만큼(같은 날 "느리게")
 const FLIGHT_MAX = 150;
 /** 대본 키커가 벽 쪽 길을 고를 때 벽 몸에서 남기는 여유(m) — 흔들림에도 벽에 덜 걸리게. */
 const WALL_MARGIN = 0.1;
@@ -140,7 +140,7 @@ function keeperInput(s: Fk3State): Pen3Input {
   }
   if (s.phase !== 'flight') return PEN3_IDLE;
   const p = fkKeeperPlan(s.kickSeed);
-  if (s.phaseTicks < p.react) return PEN3_IDLE;
+  if (s.phaseTicks < Math.round(p.react / SLOW3)) return PEN3_IDLE;   // 2D 반응 틱을 느려진 만큼 늘린다(차는 공이 ×0.85 — 2026-11-07 "느리게")
   // 느린 공(띄워 넘긴 공)은 짐작하지 않고 읽는다 — 시간이 넉넉해서(3D 에서 벽을 넘기는 슛이 공짜가 되지 않게)
   const b = s.ball, slow = b.vx * b.vx + b.vy * b.vy < SLOW_READ * SLOW_READ;
   const c = p.reads || slow ? crossing(b) : null;

@@ -35,10 +35,13 @@ const DIST_M = SPOT_DIST / SPOT_Y_2D;
 /** 키퍼가 서는 줄(골라인 바로 앞)과 갈 수 있는 끝(기둥 바로 바깥). */
 export const KEEPER_X = HW - 0.35;
 export const KEEPER_Y_MAX = GW + 0.3;
-const KEEPER_SPEED = 3.9;             // 서서 옆걸음 최고 속도(m/s, 능력치 페이스 ±10%) — 2D 190 을 골문 폭 비율로
+// 2026-11-07 "뭔가 너무 어렵다. 그리고 3d 캐릭터 너무 빠른듯. 공이랑 선수 다" — 차는 공과 키퍼를 같이 ×0.85(느리게). 던지는 시간은 늘려 몸이 닿는 거리는 그대로, 뛰는 높이는 중력(12.5)에 맞춰 그대로.
+export const SLOW3 = 0.85;
+const SLOW = SLOW3;
+const KEEPER_SPEED = 3.9 * SLOW;      // 서서 옆걸음 최고 속도(m/s, 능력치 페이스 ±10%) — 2D 190 을 골문 폭 비율로, ×0.85(느리게)
 const KEEPER_ACCEL = 0.25;            // 옆걸음이 목표 속도로 따라가는 비율(틱당)
-export const DIVE_SPEED = 6.4;        // 던지는 동안 옆으로 가는 속도(m/s)
-export const DIVE_TICKS = 20;         // 2D 와 같다
+export const DIVE_SPEED = 6.4 * SLOW; // 던지는 동안 옆으로 가는 속도(m/s), ×0.85(느리게)
+export const DIVE_TICKS = 24;         // 2D 는 20 — 느려진 만큼 길게(20 ÷ 0.85 ≈ 24), 던진 거리는 그대로
 export const LIE_TICKS = 34;
 /** 몸 부피 — 몸통(발목~머리, 반지름 BODY_R), 팔(어깨 높이 가로, 반지름 ARM_R). */
 export const BODY_R = 0.26, ARM_R = 0.11;
@@ -48,7 +51,7 @@ export const SPREAD_ARM = 0.95;       // 제자리 팔 벌리기
 export const DIVE_LEN = 1.55;         // 던진 몸의 길이(몸 가운데 → 손끝)
 /** 던지는 높이(낮게·가운데·높이)의 몸 중심 높이(m). */
 export const DIVE_H = [0.35, 0.85, 1.45] as const;
-const JUMP_V = 3.4;                   // 제자리 뛰기(팔 벌리기) 처음 세로 속도
+const JUMP_V = 3.1;                   // 제자리 뛰기(팔 벌리기) 처음 세로 속도. 3.4 → 3.1 — 중력 15 → 12.5 에서 같은 높이(v²/2g)(느리게)
 /** 조준 — 옆 0.2m 칸 ±18(±3.6m, 골문 밖도 겨눌 수 있다), 높이 0.25m 칸 0..12(0~3m, 크로스바 2.1 위도). */
 export const AIM_STEP = 0.2, AIM_STEPS = 18, AIM_Z_STEP = 0.25, AIM_Z_STEPS = 12;
 export const AIM_MAX = AIM_STEP * AIM_STEPS, AIM_Z_MAX = AIM_Z_STEP * AIM_Z_STEPS;
@@ -107,7 +110,7 @@ export function createPenalty3(config: PenConfig, seed: number): Pen3State {
 const fin = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
 /** 2D 세기 곡선을 m/s 로. */
-export const speed3 = (power: number): number => speedOf(power) * DIST_M;
+export const speed3 = (power: number): number => speedOf(power) * DIST_M * SLOW;   // ×0.85(느리게) — 3D 프리킥도 이것으로 찬다
 /** 옆 흔들림 폭(m) — 2D deviationOf 를 골문 폭 비율로. 높이 흔들림은 이것 × DEV_Z. */
 export const deviation3 = (power: number, perf: PenConfig['players'][number]['perf']): number => deviationOf(power, perf) * SIDE_M;
 
@@ -362,7 +365,7 @@ export function penalty3Bot(s: Pen3State, config: PenConfig, slot: number): Pen3
     const gk = s.gk;
     if (s.phase === 'aim') return { x: gk.y > 0.1 ? -0.5 : gk.y < -0.1 ? 0.5 : 0, y: 0, kick: false, aim: null };
     const p = keeperPlan(s.kickSeed);
-    if (s.phaseTicks < p.react) return PEN3_IDLE;
+    if (s.phaseTicks < Math.round(p.react / SLOW)) return PEN3_IDLE;   // 2D 반응 틱을 느려진 만큼 늘린다(공이 ×0.85 — 같은 날 "느리게")
     const c = p.reads ? crossing(s.ball) : null;
     const ty = c ? c.y : p.guess * 85 * SIDE_M;
     const hz = c ? (c.z > 1.25 ? 1 : c.z < 0.55 ? -1 : 0) : 0;
