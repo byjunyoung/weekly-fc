@@ -7,7 +7,7 @@ import { avatarFaceSvg, avatarSvg } from '../../components/avatar';
 import { vote } from '../../lib/api';
 import { avatarSpecFor } from '../../lib/avatar';
 import { ovr, STAT_KO } from '../../lib/stats';
-import { pairKey, pickPair, QUESTION, rivalPairs, tierRows, type TierKey } from '../../lib/tier';
+import { pairKey, pickPair, QUESTION, rivalPairs, tierRows, tierRules, type TierKey } from '../../lib/tier';
 import { STAT_KEYS, type Placing, type Player, type StatKey } from '../../lib/types';
 import { href } from '../../lib/url';
 import Loading from '../Loading';
@@ -218,6 +218,14 @@ function Tier() {
           <p className="muted tier-help">둘 중 누가 더 나은지 고르면 그 자리에서 능력치가 바뀝니다. 칸은 순위 — 위에서부터 S 10% · A 20% · B 40% · C 20% · D 10%. 같은 숫자면 여섯 항목 합계로 가릅니다.</p>
           <Board players={players} tierKey={tierKey} />
           <Pending players={players} placing={data.placing ?? { need: 3, count: {} }} me={me.num ?? null} placed={me.placed ?? []} />
+        </div>
+        <div className="card">
+          <div className="card-head"><h2>티어 게임 기준</h2></div>
+          <dl className="tier-rules">
+            {tierRules({ daily: DAILY, perPlayer: PER_PLAYER, placeNeed: data.placing?.need ?? 3 }).map((r) => (
+              <div key={r.label}><dt>{r.label}</dt><dd>{r.text}</dd></div>
+            ))}
+          </dl>
         </div>
       </div>
       <TierShareModal open={shareOpen} onClose={() => setShareOpen(false)} players={players} tierKey={tierKey} />

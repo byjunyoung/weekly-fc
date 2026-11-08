@@ -121,7 +121,17 @@ test('QUESTION — 여섯 항목 모두 질문 문구가 있다', () => {
   for (const k of STAT_KEYS) assert.match(QUESTION[k], /^누가 .+\?$/);
 });
 
-import { rivalPairs } from '../../src/lib/tier.ts';
+import { rivalPairs, tierRules } from '../../src/lib/tier.ts';
+
+test('티어 게임 기준 — 화면의 제한·배치 인원과 순위 비율이 글에 그대로 들어간다', () => {
+  const rules = tierRules({ daily: 30, perPlayer: 3, placeNeed: 3 });
+  assert.deepEqual(rules.map((r) => r.label), ['대결', '제한', '티어', '본인 판정', '점수 정리', '판정자', '배치', '등번호']);
+  const text = (l) => rules.find((r) => r.label === l).text;
+  assert.match(text('제한'), /하루 30판, 같은 선수는 하루 3번/);
+  assert.match(text('티어'), /S 10% · A 20% · B 40% · C 20% · D 10%/);
+  assert.match(text('배치'), /팀원 3명/);
+  assert.match(tierRules({ daily: 5, perPlayer: 2, placeNeed: 4 }).find((r) => r.label === '제한').text, /하루 5판, 같은 선수는 하루 2번/);
+});
 
 test('rivalPairs — 종합 순 이웃끼리 둘씩, 서로가 서로의 라이벌', () => {
   const ps = [P(1, 90), P(2, 60), P(3, 88), P(4, 61), P(5, 75), P(6, 74)];

@@ -28,6 +28,7 @@ export const playerFromForm = (v: PlayerFormValues, prevAvatar: string): Player 
  *  본인이 낀 대결의 판정만은 누구에게나 「본인 판정」(2026-11-08). */
 export function why(r: StatLogRow, showJudge: boolean): string {
   if (r.via === 'potm') return 'POTM 보상';
+  if (r.via === 'adjust') return '기준 변경 정리';
   if (r.via === 'game' && r.oppName && r.by != null && (r.by === r.num || r.by === r.opp)) return `vs ${r.oppName} · 본인 판정`;
   if (!showJudge || !r.byName) {
     if (r.via === 'game') return r.oppName ? `vs ${r.oppName}` : '대결';

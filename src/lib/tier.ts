@@ -22,6 +22,21 @@ export type Tier = (typeof TIERS)[number];
  *  30명이면 S 3 · A 6 · B 12 · C 6 · D 3. 인원이 바뀌어도 모양이 유지된다. */
 export const TIER_RATIO: Record<Tier, number> = { S: 0.1, A: 0.2, B: 0.4, C: 0.2, D: 0.1 };
 
+/** 티어 게임 기준 — 티어 화면에 누구나 보게 적는 글(2026-11-08). 지금 서버가 실제로 하는 것만 적는다. */
+export function tierRules(opt: { daily: number; perPlayer: number; placeNeed: number }): Array<{ label: string; text: string }> {
+  const ratio = TIERS.map((t) => `${t} ${Math.round(TIER_RATIO[t] * 100)}%`).join(' · ');
+  return [
+    { label: '대결', text: `둘 중 더 나은 선수를 고르면 바로 반영됩니다. 이긴 쪽이 오른 만큼 진 쪽이 내려가고, 한 판에 1~${VOTE_K}점이 움직입니다. 예상을 뒤집을수록 많이 움직입니다.` },
+    { label: '제한', text: `로그인한 팀원만 할 수 있고, 하루 ${opt.daily}판, 같은 선수는 하루 ${opt.perPlayer}번까지입니다.` },
+    { label: '티어', text: `점수가 아니라 순위로 나눕니다. 위에서부터 ${ratio}. 같은 숫자면 여섯 항목 합계로 가릅니다.` },
+    { label: '본인 판정', text: '내가 낀 대결도 판정할 수 있습니다. 2026-11-08부터 이런 판정은 선수 기록에 「본인 판정」으로 누구에게나 보입니다.' },
+    { label: '점수 정리', text: '2026-11-08에 과거 본인 판정으로 한 항목에서 5점을 넘게 오른 몫을 깎아, 그 판의 상대에게 돌려줬습니다.' },
+    { label: '판정자', text: '남을 판정한 기록은 관리자만 볼 수 있습니다.' },
+    { label: '배치', text: `능력치가 없는 선수는 본인을 뺀 팀원 ${opt.placeNeed}명의 판정을 모아 항목마다 가운데 값으로 정합니다.` },
+    { label: '등번호', text: '종합 티어가 한 칸 이상 높으면 다른 선수의 등번호를 맞바꿀 수 있습니다.' },
+  ];
+}
+
 /** 인원 n 을 비율대로 나눈 명수. 소수점은 **큰 나머지 순**으로 채워 합이 정확히 n 이 된다. */
 export function tierQuota(n: number): Record<Tier, number> {
   const raw = TIERS.map((t) => n * TIER_RATIO[t]);

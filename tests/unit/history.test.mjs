@@ -62,4 +62,5 @@ test("why: via 'potm' 줄은 계속 「POTM 보상」(기능은 2026-11-06 뺐�
   assert.equal(why(game(null, '', 5), false), 'vs P5');
   assert.equal(why(game(9, 'P9', 5), false), 'vs P5');
   assert.equal(why(game(9, 'P9', 5), true), 'vs P5 · P9의 판정');
+  assert.equal(why(R('2026-11-08T00:05:00Z', 'pace', 99, 97, null, 'adjust', ''), false), '기준 변경 정리');
 });

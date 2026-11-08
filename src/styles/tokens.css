@@ -732,6 +732,10 @@ details.year[open] > summary::before { content: "▾ "; }
 
 /* ══ 티어 게임(2026-09-24) ═════════════════════════════════ */
 .tier-help { font-size: var(--fs-xs); margin: 0 0 var(--s-sm); }
+.tier-rules { display: flex; flex-direction: column; gap: var(--s-xs); margin: 0; font-size: var(--fs-sm); }
+.tier-rules > div { display: grid; grid-template-columns: 5em 1fr; gap: var(--s-xs); }
+.tier-rules dt { font-weight: 600; }
+.tier-rules dd { margin: 0; }
 .tier-board { display: flex; flex-direction: column; }
 .tier-row { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--s-xs); align-items: stretch;
   padding: var(--s-xs) 0; border-bottom: 1px solid var(--hairline); }
