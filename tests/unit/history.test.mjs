@@ -55,4 +55,11 @@ test('normalizeStatLog — 대결 상대는 있을 때만 붙는다(2026-09-29)'
 test("why: via 'potm' 줄은 계속 「POTM 보상」(기능은 2026-11-06 뺐지만 옛 기록은 남는다)", () => {
   assert.equal(why(R('2026-09-28T00:05:00Z', 'pace', 70, 71, null, 'potm', ''), false), 'POTM 보상');
   assert.equal(why(R('2026-09-28T00:05:00Z', 'pace', 70, 71, null, 'potm', ''), true), 'POTM 보상');
+  // 본인이 낀 대결의 판정만 팀원에게도 보인다 — 내 줄(by=num)과 상대 줄(by=opp) 둘 다, 남의 판정은 관리자에게만
+  const game = (by, byName, opp) => ({ ...R('2026-09-28T00:05:00Z', 'pace', 70, 72, by, 'game', byName), opp, oppName: `P${opp}` });
+  assert.equal(why(game(2, 'P2', 5), false), 'vs P5 · 본인 판정');
+  assert.equal(why(game(5, 'P5', 5), false), 'vs P5 · 본인 판정');
+  assert.equal(why(game(null, '', 5), false), 'vs P5');
+  assert.equal(why(game(9, 'P9', 5), false), 'vs P5');
+  assert.equal(why(game(9, 'P9', 5), true), 'vs P5 · P9의 판정');
 });
