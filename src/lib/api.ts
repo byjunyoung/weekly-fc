@@ -173,15 +173,17 @@ export async function refreshMe(): Promise<Me> {
   setCachedMe(r);
   return r;
 }
-/** 명단 번호 차지 — 먼저 고른 사람이 차지한다(관리자가 풀어 준다). */
-export async function claim(num: number): Promise<Me> { await rpc('claim', { p_num: num }); return refreshMe(); }
+/** 번호 확인이 틀렸거나 막혔으면 서버는 raise 대신 {ok:false, error} 로 답한다(틀린 시도 기록이 되돌려지지 않게) — 그 문구로 던진다. */
+function proofOk(r: Raw): void { if (r.ok === false) throw new Error(String(r.error ?? '본인 확인에 실패했습니다')); }
+/** 명단 번호 차지 — 그 선수의 등록 전화번호 뒤 4자리로 본인 확인(2026-11-13). 먼저 고른 사람이 차지한다(관리자가 풀어 준다). */
+export async function claim(num: number, last4: string): Promise<Me> { proofOk(await rpc('claim', { p_num: num, p_last4: last4 })); return refreshMe(); }
 /** 이미 차지된 번호들(누가인지는 안 알려 준다). */
 export async function claimedNums(): Promise<number[]> { const r = await rpc('claimed_nums'); return Array.isArray(r) ? (r as unknown[]).map(Number) : []; }
 export type MemberRow = { num: number; email: string; claimed_at: string };
 export async function adminMembers(): Promise<MemberRow[]> { const r = await rpc('admin_members'); return Array.isArray(r) ? (r as MemberRow[]) : []; }
 export async function adminRelease(num: number): Promise<void> { await rpc('admin_release', { p_num: num }); }
-/** 잘못 고른 이름 바꾸기 — 본인은 한 번만. 그 계정이 옛 이름으로 한 판정도 따라 옮겨진다. */
-export async function changeClaim(num: number): Promise<Me> { await rpc('change_claim', { p_num: num }); return refreshMe(); }
+/** 잘못 고른 이름 바꾸기 — 본인은 한 번만, 고를 때처럼 번호 뒤 4자리 확인. 그 계정이 옛 이름으로 한 판정도 따라 옮겨진다. */
+export async function changeClaim(num: number, last4: string): Promise<Me> { proofOk(await rpc('change_claim', { p_num: num, p_last4: last4 })); return refreshMe(); }
 /** 관리자: from 번에 붙은 계정을 to 번으로(기록도 같이). */
 export async function adminMove(from: number, to: number): Promise<void> { await rpc('admin_move', { p_from: from, p_to: to }); }
 

@@ -1,6 +1,7 @@
 // 상단바 오른쪽 — 로그인(이메일 코드)·이름 차지·관리자 버튼, 토스트(window.wfcToast).
 // 2026-09-24 본인인증: 자칭 "나" 고르기와 관리자 PIN 을 걷고 로그인으로 바꿨다. 설계: specs/2026-09-24-email-auth-design.md
 // 2026-11-01 잘못 고름: 이름을 누르면 바로 차지하던 걸 "이 선수가 맞나요?" 한 번 더 묻게 하고, 「내 계정」에서 한 번은 직접 바꾼다.
+// 2026-11-13 본인 확인: 그 확인 단계에서 선수의 등록 전화번호 뒤 4자리를 넣어야 고른다(고르면 팀 연락처가 열려서). 설계: specs/2026-11-13-claim-phone-check-design.md
 // 옛 화면이 듣는 wfc:me · wfc:admin 은 auth.ts 가 계속 보낸다. 홈 「라커룸」 빈 자리는 wfc:open-me 로 이 창을 연다.
 import { App, Button, Dropdown, Input, Modal } from 'antd';
 import type { MenuProps } from 'antd';
@@ -40,6 +41,7 @@ function Actions() {
   const [busy, setBusy] = useState(false);
   const [taken, setTaken] = useState<number[]>([]);
   const [pick, setPick] = useState<number | null>(null); // 고른 이름 — 확인 누르기 전
+  const [last4, setLast4] = useState(''); // 고른 선수 전화번호 뒤 4자리 — 본인 확인
   const codeRef = useRef<InputRef>(null);
 
   // 페이지마다 한 번 서버에서 다시 읽는다 — 다른 기기에서 차지했거나 관리자가 풀었으면 여기서 맞춰진다.
@@ -90,7 +92,8 @@ function Actions() {
     else { setTaken(await claimedNums().catch(() => [])); setStep('claim'); }
   });
   const onClaim = (num: number) => run(async () => {
-    const m = step === 'change' ? await changeClaim(num) : await claim(num);
+    if (!/^\d{4}$/.test(last4)) throw new Error('전화번호 뒤 4자리를 넣어 주세요');
+    const m = step === 'change' ? await changeClaim(num, last4) : await claim(num, last4);
     setOpen(false); setPick(null);
     message.success(`${m.name ?? ''}(으)로 ${step === 'change' ? '바꿨습니다' : '등록했습니다'}`);
   });
@@ -137,7 +140,7 @@ function Actions() {
           <Button key="go" type="primary" loading={busy} onClick={onVerify}>확인</Button>,
         ] : choosing && picked ? [
           <Button key="back" disabled={busy} onClick={() => { setPick(null); setErr(null); }}>다시 고르기</Button>,
-          <Button key="go" type="primary" loading={busy} onClick={() => onClaim(picked.num)}>네, {picked.name}입니다</Button>,
+          <Button key="go" type="primary" loading={busy} disabled={last4.length !== 4} onClick={() => onClaim(picked.num)}>네, {picked.name}입니다</Button>,
         ] : step === 'claim' ? [
           <Button key="out" disabled={busy} onClick={onLogout}>로그아웃</Button>,
         ] : step === 'change' ? [
@@ -166,6 +169,9 @@ function Actions() {
             <p className="muted">{step === 'change'
               ? `${me.name ?? ''}에서 ${picked.name}(으)로 바꿉니다. 지금까지 한 대결 판정도 ${picked.name} 이름으로 옮겨집니다. 직접 바꾸기는 한 번뿐입니다.`
               : '이 선수가 맞나요? 대결 판정이 이 이름으로 남습니다.'}</p>
+            <p className="muted">본인 확인 — 이 선수로 등록된 전화번호 뒤 4자리를 넣어 주세요.</p>
+            <Input id="me-last4" inputMode="numeric" autoComplete="off" maxLength={4} placeholder="0000" autoFocus
+              value={last4} onChange={(e) => setLast4(e.target.value.replace(/\D/g, ''))} onPressEnter={() => onClaim(picked.num)} />
           </div>
         )}
         {choosing && !picked && (
@@ -175,7 +181,7 @@ function Actions() {
               : '명단에서 본인을 고르세요. 회색 이름은 이미 다른 사람이 골랐습니다 — 내 이름이 회색이면 누가 잘못 골랐을 수 있으니 관리자에게 알려 주세요.'}</p>
             <div className="pick-list" id="me-list">
               {pickOrder(players).map((p) => (
-                <Button key={p.num} disabled={busy || taken.includes(p.num)} onClick={() => setPick(p.num)}>{p.jersey} {p.name}</Button>
+                <Button key={p.num} disabled={busy || taken.includes(p.num)} onClick={() => { setPick(p.num); setLast4(''); }}>{p.jersey} {p.name}</Button>
               ))}
             </div>
           </>

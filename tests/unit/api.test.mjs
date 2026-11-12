@@ -201,3 +201,35 @@ test('pickJersey: 서버 거절 문구를 그대로 던지고 데이터는 다�
     assert.equal(calls.length, 1);
   } finally { globalThis.fetch = orig; }
 });
+
+// ── 이름 고르기 본인 확인(2026-11-13) ─────────────────────────────
+import { readFileSync } from 'node:fs';
+import { claim, changeClaim } from '../../src/lib/api.ts';
+
+test('claim·changeClaim 은 번호 뒤 4자리를 함께 보내고, {ok:false} 답이면 서버 문구로 던진다', async () => {
+  const orig = globalThis.fetch; const bodies = [];
+  globalThis.fetch = async (url, init) => {
+    bodies.push({ fn: String(url).split('/').pop(), body: JSON.parse(init.body) });
+    return { ok: true, status: 200, text: async () => '{"ok":false,"error":"전화번호 뒤 4자리가 맞지 않습니다 (오늘 남은 기회 4번)"}' };
+  };
+  try {
+    await assert.rejects(claim(7, '1234'), (e) => e.message === '전화번호 뒤 4자리가 맞지 않습니다 (오늘 남은 기회 4번)');
+    await assert.rejects(changeClaim(8, '5678'), /맞지 않습니다/);
+    assert.deepEqual(bodies, [
+      { fn: 'claim', body: { p_num: 7, p_last4: '1234' } },
+      { fn: 'change_claim', body: { p_num: 8, p_last4: '5678' } },
+    ]);
+  } finally { globalThis.fetch = orig; }
+});
+
+test('SQL — claim·change_claim 둘 다 phone_proof 를 거치고, 틀림은 raise 가 아니라 ok:false 로 돌려준다', () => {
+  const sql = readFileSync('supabase/migrations/20261113000000_claim_phone_check.sql', 'utf8');
+  const body = (fn) => sql.slice(sql.indexOf(`function public.${fn}(`), sql.indexOf('end $$;', sql.indexOf(`function public.${fn}(`)));
+  for (const fn of ['claim', 'change_claim']) {
+    assert.match(body(fn), /why := private\.phone_proof\(p_num, p_last4\);/, `${fn} 이 번호 확인을 거치지 않는다`);
+    assert.match(body(fn), /return jsonb_build_object\('ok', false, 'error', why\)/, `${fn} 이 틀림을 raise 로 알리면 시도 기록이 되돌려진다`);
+  }
+  assert.match(sql, /drop function if exists public\.claim\(int\);/, '옛 claim(int) 이 남으면 번호 없이 차지할 수 있다');
+  assert.match(sql, /drop function if exists public\.change_claim\(int\);/);
+  assert.match(sql, /revoke all on public\.claim_fails from public, anon, authenticated;/);
+});
