@@ -727,8 +727,8 @@ details.year[open] > summary::before { content: "▾ "; }
   background: var(--canvas); color: var(--fg); font-family: var(--font); font-size: var(--fs-sm); line-height: 1.6; resize: vertical; }
 /* 용병 빼기 칩 — 참석 칩(.is-on)과 같은 모양이면 누르는 즉시 지워지는 걸 모른다. */
 .tm-chip-remove { border-style: dashed; color: var(--muted); }
-.tm-chip-remove:hover { border-color: var(--warn, #e0c23c); color: var(--fg); }
-.tm-warn { margin: 0 0 var(--s-sm); font-size: var(--fs-xs); color: var(--cond-mid, #e0c23c); }
+.tm-chip-remove:hover { border-color: var(--warn); color: var(--fg); }
+.tm-warn { margin: 0 0 var(--s-sm); font-size: var(--fs-xs); color: var(--cond-mid); }
 
 /* ══ 티어 게임(2026-09-24) ═════════════════════════════════ */
 .tier-help { font-size: var(--fs-xs); margin: 0 0 var(--s-sm); }

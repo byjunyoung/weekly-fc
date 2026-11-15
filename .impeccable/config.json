@@ -1,0 +1,130 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "src/lib/avatar.ts"
+        ],
+        "createdAt": "2026-11-15T10:34:24.444Z",
+        "reason": "Agent: avatar part colors (hair, skin, kit) are illustration data, not chrome; DESIGN.md covers chrome only (docs/design.md)"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "src/lib/teams.ts",
+          "src/react/game/teams.ts"
+        ],
+        "createdAt": "2026-11-15T10:34:34.897Z",
+        "reason": "Agent: vest and team colors are real-world bib colors used as data, not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "src/react/game/views/dribble2d/render.ts",
+          "src/react/game/views/dribble3d/surface.ts"
+        ],
+        "createdAt": "2026-11-15T10:34:34.936Z",
+        "reason": "Agent: canvas and 3D scene colors (medals, cones, pitch lines) are game illustration, not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "src/react/Loading.tsx"
+        ],
+        "createdAt": "2026-11-15T10:34:34.962Z",
+        "reason": "Agent: pixel-art ball fill for the loading mark, illustration"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#05060f",
+        "createdAt": "2026-11-15T10:34:34.988Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#0b1a13",
+        "createdAt": "2026-11-15T10:34:35.014Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#0d0a08",
+        "createdAt": "2026-11-15T10:34:35.040Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#6e1c1c",
+        "createdAt": "2026-11-15T10:34:35.070Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#b52828",
+        "createdAt": "2026-11-15T10:34:35.097Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(220, 50, 40, .4)",
+        "createdAt": "2026-11-15T10:34:35.121Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#0b0806",
+        "createdAt": "2026-11-15T10:34:35.145Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(255, 226, 170, .45)",
+        "createdAt": "2026-11-15T10:34:35.169Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "rgba(255, 200, 120, .08)",
+        "createdAt": "2026-11-15T10:34:35.193Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#120d0a",
+        "createdAt": "2026-11-15T10:34:35.219Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#26221f",
+        "createdAt": "2026-11-15T10:34:35.243Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#3a3430",
+        "createdAt": "2026-11-15T10:34:35.271Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#8a8f98",
+        "createdAt": "2026-11-15T10:34:35.302Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#17402a",
+        "createdAt": "2026-11-15T10:34:35.326Z",
+        "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      }
+    ]
+  }
+}
