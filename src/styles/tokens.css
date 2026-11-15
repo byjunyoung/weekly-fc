@@ -315,7 +315,7 @@ a.card:hover { background: var(--charcoal); }
 /* 등번호 격자 — 열 칸씩, 쓰는 번호는 흐리게(누르면 누가 쓰는지만 알려 준다) */
 .numpick-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
 .numpick-n { min-width: 0; height: 32px; padding: 0; border: 1px solid var(--hairline-strong); border-radius: var(--r-sm); background: none;
-  color: var(--fg); font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; }
+  color: var(--fg); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; cursor: pointer; }
 .numpick-n:hover { border-color: var(--fg); }
 .numpick-n.is-locked { border-color: transparent; background: var(--charcoal); color: var(--muted); opacity: .45; cursor: help; }
 .numpick-n.is-mine { border-color: var(--primary); background: var(--primary); color: var(--on-primary); cursor: default; }
@@ -701,6 +701,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .tm-team { border: 2px solid var(--line); background: var(--elevated); }
 .tm-rest { margin-bottom: var(--s-lg); }
 .tm-head { display: flex; align-items: center; gap: var(--s-xs); width: 100%; min-height: 44px; padding: var(--s-xs) var(--s-sm);
+  /* impeccable-disable-next-line border-accent-on-rounded -- 모서리가 0 인 제목 밑줄이다 */
   border: 0; border-bottom: 3px solid var(--line); border-radius: 0; background: none; text-align: left;
   font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .tm-head .muted { margin-left: auto; font-family: var(--font); font-size: var(--fs-xs); }
@@ -909,6 +910,7 @@ details.year[open] > summary::before { content: "▾ "; }
 
 /* ── 전술 법칙(2026-09-26) — 카드뉴스의 전술 보드를 그대로. 보드 위, 번호·제목·한 문장 아래. */
 .tl-jump { display: flex; flex-wrap: wrap; gap: var(--s-xs); margin-bottom: var(--s-lg); }
+/* impeccable-disable-next-line side-tab -- 왼쪽 띠는 전술마다 다른 색(--tc)으로 법칙을 구분하는 표지다 */
 .tl-jump a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 2px solid var(--line); border-left: 6px solid var(--tc); color: var(--fg); text-decoration: none;
   font-family: var(--font-pixel); font-size: var(--fs-pixel-sm); font-weight: var(--fw-body); font-synthesis: none; letter-spacing: 0; }
 .tl-jump a .muted { font-family: var(--font); font-size: var(--fs-xs); }
@@ -941,6 +943,7 @@ details.year[open] > summary::before { content: "▾ "; }
 .sh-chart { margin-top: var(--s-xs); }
 .sh-chart svg { display: block; max-width: 100%; touch-action: pan-y; cursor: crosshair; }
 .sh-grid { stroke: var(--hairline); stroke-width: 1; }
+/* impeccable-disable-next-line design-system-font-size -- SVG 안의 축 글자다. 크기는 viewBox 단위라 화면에서 그림과 함께 늘고 준다 */
 .sh-axis { fill: var(--muted); font-size: 11px; }
 .sh-line { fill: none; stroke: var(--link); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .sh-dot { fill: var(--link); stroke: var(--card); stroke-width: 2; }
@@ -1320,6 +1323,7 @@ html.game-lock, html.game-lock body { overflow: hidden; overscroll-behavior: non
 .g3-view b { margin-left: var(--s-xxs); color: var(--fg); font-weight: var(--fw-body); }
 /* 화면 밖·뒤 공을 가리키는 화살표(1인칭·뒤에서) — 오른쪽을 가리키는 삼각형을 각도만큼 돌린다 */
 .g3-arrow { position: absolute; left: 0; top: 0; z-index: 2; display: none; width: 0; height: 0; pointer-events: none;
+  /* impeccable-disable-next-line side-tab -- 테두리로 그린 삼각형 화살표다. 카드의 액센트 띠가 아니다 */
   border-top: 12px solid transparent; border-bottom: 12px solid transparent; border-left: 22px solid var(--gold); filter: drop-shadow(0 0 2px rgba(0, 0, 0, .8)); }
 .g3-arrow.is-on { display: block; }
 /* 경기 화면 위 DOM 층(2026-11-07 게임 묶음 4단계) — 화면이 직접 다는 점수판·이름표·말풍선·버튼(3D). ✕·한마디·결과 상자(z 2~3)보다 아래.

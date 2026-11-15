@@ -124,6 +124,24 @@
         "value": "#17402a",
         "createdAt": "2026-11-15T10:34:35.326Z",
         "reason": "Agent: illustrated scene color in tokens.css (kit preview, pitch board, locker room), not chrome"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "galmuri9",
+        "createdAt": "2026-11-15T10:39:13.797Z",
+        "reason": "Agent: pixel display font chosen for the dot-game refresh (docs/superpowers/specs pixel-refresh; tokens.css header comment)"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "galmuri14",
+        "createdAt": "2026-11-15T10:39:14.041Z",
+        "reason": "Agent: pixel body font chosen for the dot-game refresh; the whole --fs ladder is built on its 14px grid (tokens.css header comment)"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "wfc-bounce",
+        "createdAt": "2026-11-15T10:40:08.821Z",
+        "reason": "Agent: literal bouncing-ball loading animation, the bounce is the subject"
       }
     ]
   }
